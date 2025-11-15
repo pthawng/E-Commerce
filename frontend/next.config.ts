@@ -1,22 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import type { NextConfig } from "next";
+import {NextConfig} from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
+ 
+const nextConfig: NextConfig = {};
 
-// Extend NextConfig to allow webpackDevMiddleware (some Next versions' types omit it)
-type NextConfigWithWebpackDevMiddleware = NextConfig & {
-  webpackDevMiddleware?: (config: any) => any;
-};
+const withNextIntl = createNextIntlPlugin('./src/lib/i18n/request.ts');
 
-const nextConfig: NextConfigWithWebpackDevMiddleware = {
-  webpackDevMiddleware: (config: any) => {
-    // defensive check - only modify if object is present
-    if (config && typeof config === "object") {
-      config.watchOptions = {
-        poll: 1000,
-        aggregateTimeout: 300,
-      };
-    }
-    return config;
-  },
-};
-
-export default nextConfig;
+export default withNextIntl(nextConfig);

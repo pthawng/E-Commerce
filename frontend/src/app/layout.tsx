@@ -1,18 +1,12 @@
-import '@/src/styles/globals.css';
-import React from 'react';
+import '@/styles/globals.css';
+import '@/styles/typography.css';
 
-export const metadata = {
-  title: 'My E-Commerce',
-  description: 'Starter layout',
-};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <body>
-        <div id="root">
-          {children}
-        </div>
+        {children}
       </body>
     </html>
   );
