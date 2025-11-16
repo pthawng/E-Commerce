@@ -12,5 +12,5 @@
     c. Container đã tồn tại nhưng bị stop
         docker compose -f docker-compose.dev.yaml start
         
-    d. Muốn xoá sạch môi trường và rebuild
+    d. Muốn xoá sạch môi trường và rebuildcom
         docker compose -f docker-compose.dev.yaml down -v && docker compose -f docker-compose.dev.yaml up --build --watch

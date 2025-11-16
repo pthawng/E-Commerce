@@ -1,13 +1,19 @@
-import { routing } from "@/lib/i18n/routing";
-import { useTranslations } from "next-intl";
-import Link from "next/link";
+// src/app/[locale]/page.tsx
+import { routing } from "@/i18n/routing";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 
 export async function generateStaticParams() {
   return routing.locales.map(locale => ({ locale }));
 }
 
-export default function HomePage() {
-  const t = useTranslations("home");
+export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+  const resolvedParams = await params;
+
+  const t = await getTranslations({
+    locale: resolvedParams.locale,
+    namespace: "home",
+  });
 
   const featuredItems = [
     { name: "Aurora Necklace", price: "$890" },
@@ -28,7 +34,7 @@ export default function HomePage() {
       <section style={{ marginTop: "6rem" }}>
         <h2>{t("philosophyTitle")}</h2>
         <p>{t("philosophyText")}</p>
-        <Link href="/about">{t("readMore")}</Link>
+        <Link href={`/${resolvedParams.locale}/about`}>{t("readMore")}</Link>
       </section>
 
       {/* Featured Collection */}
