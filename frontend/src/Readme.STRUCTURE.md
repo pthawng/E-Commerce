@@ -19,7 +19,7 @@ src/
  │   ├── layout/               # Header, Footer, Sidebar...
  │   └── composite/            # Component phức tạp: ProductCard, CartItem...
  │
- ├── providers/                # ✅ Tách riêng các provider
+ ├── providers/                # Tách riêng các provider
  │   ├── AuthProvider.tsx
  │   ├── ThemeProvider.tsx
  │   ├── CartProvider.tsx      # Nếu bạn dùng Context cho cart
@@ -36,6 +36,13 @@ src/
  │   ├── cart/
  │   ├── product/
  │   └── user/
+ │
+ ├── theme/                   # ⭐ Folder chuyên quản lý Theme
+ │   ├── config.ts            # Khai báo theme tokens (primary, secondary…)
+ │   ├── variables.css        # CSS root variables — màu, radius, typography
+ │   ├── dark.css             # Override biến khi dark mode
+ │   ├── index.ts             # Export helpers
+ │   └── utils.ts             # Hàm getColor, map theme → CSS
  │
  ├── hooks/                    # Custom hooks (e.g. useAuth, useDebounce) global reusables
  ├── lib/                      # Helper logic (fetcher, API client, utils, constants)
