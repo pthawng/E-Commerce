@@ -1,121 +1,78 @@
-/** @type {import('tailwindcss').Config} */
+import plugin from 'tailwindcss/plugin';
+import type { PluginAPI } from 'tailwindcss/types/config';
+
 module.exports = {
-  darkMode: 'class',
+  darkMode: ['class', '[data-theme="dark"]'],
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/features/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/providers/**/*.{js,ts,jsx,tsx,mdx}',
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './features/**/*.{js,ts,jsx,tsx,mdx}',
+    './providers/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/styles/**/*.css',
   ],
   theme: {
     container: {
       center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
+      padding: '2rem',
+      screens: { '2xl': '1400px' },
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        // === CẦU VỒNG 7 SẮC - RAINBOW COLORS ===
-        'rainbow-red': "hsl(var(--rainbow-red))",
-        'rainbow-orange': "hsl(var(--rainbow-orange))",
-        'rainbow-yellow': "hsl(var(--rainbow-yellow))",
-        'rainbow-green': "hsl(var(--rainbow-green))",
-        'rainbow-blue': "hsl(var(--rainbow-blue))",
-        'rainbow-indigo': "hsl(var(--rainbow-indigo))",
-        'rainbow-violet': "hsl(var(--rainbow-violet))",
-        // === SEMANTIC COLORS ===
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
-        },
-        info: {
-          DEFAULT: "hsl(var(--info))",
-          foreground: "hsl(var(--info-foreground))",
-        },
+        'bg-primary': 'var(--color-bg-primary)',
+        'bg-secondary': 'var(--color-bg-secondary)',
+        'bg-tertiary': 'var(--color-bg-tertiary)',
+        'text-primary': 'var(--color-text-primary)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'primary': 'var(--color-primary)',
+        'primary-hover': 'var(--color-primary-hover)',
+        'secondary': 'var(--color-secondary)',
+        'secondary-hover': 'var(--color-secondary-hover)',
+        'button-bg': 'var(--color-button-bg)',
+        'button-bg-hover': 'var(--color-button-bg-hover)',
+        'button-text': 'var(--color-button-text)',
+        'border-light': 'var(--color-border-light)',
+        'border-heavy': 'var(--color-border-heavy)',
       },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+      fontSize: {
+        base: ['1rem', '1.75'],       // p
+        lg: ['1.125rem', '1.75'],     // smaill heading
+        xl: ['1.25rem', '1.5'],       // h3
+        '2xl': ['1.5rem', '1.3'],     // h2 
+        '3xl': ['2rem', '1.2'],       // h1 
       },
-      fontFamily: {
-        sans: ["var(--font-geist-sans)"],
-        mono: ["var(--font-geist-mono)"],
+
+      fontFamily: { sans: ['var(--font-sans)', 'sans-serif'] },
+      boxShadow: {
+        lux: '0 4px 20px var(--color-shadow)',
+        glow: '0 0 20px var(--color-glow-accent)',
       },
-      keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        "rainbow-shift": {
-          "0%, 100%": { backgroundPosition: "0% 50%" },
-          "50%": { backgroundPosition: "100% 50%" },
-        },
-        "float": {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" },
-        },
-        "glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(var(--primary)/0.3)" },
-          "50%": { boxShadow: "0 0 40px hsl(var(--primary)/0.6)" },
-        }
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "rainbow-shift": "rainbow-shift 3s ease-in-out infinite",
-        "float": "float 3s ease-in-out infinite",
-        "glow": "glow 2s ease-in-out infinite",
-      },
-      backgroundImage: {
-        'rainbow-gradient': 'linear-gradient(45deg, hsl(var(--rainbow-red)) 0%, hsl(var(--rainbow-orange)) 20%, hsl(var(--rainbow-yellow)) 40%, hsl(var(--rainbow-green)) 60%, hsl(var(--rainbow-blue)) 80%, hsl(var(--rainbow-violet)) 100%)',
-        'heavenly-gradient': 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--rainbow-blue)) 50%, hsl(var(--rainbow-violet)) 100%)',
-      },
+      borderRadius: { lg: '12px', xl: '20px' },
     },
   },
-  plugins: [],
-}
+  plugins: [
+    plugin(({ addComponents }) => {
+      addComponents({
+        '.flex-center': {
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        '.card': {
+          backgroundColor: 'var(--color-bg-secondary)',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px var(--color-shadow)',
+          padding: '1rem',
+        },
+        '.btn': {
+          padding: '0.5rem 1rem',
+          borderRadius: '8px',
+          fontWeight: '500',
+          cursor: 'pointer',
+          transition: '0.2s',
+        },
+      });
+    }),
+  ],
+};

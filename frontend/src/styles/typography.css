@@ -1,115 +1,96 @@
-/* Quản lý cấu trúc chữ, hierarchy, scale, font system */
+/* =========================
+   TYPOGRAPHY: LUXURY BRAND
+   Designer: Ray Paradis
+   Compatible: Light / Dark Mode
+========================= */
 
-/* =============================
-   TYPOGRAPHY SYSTEM - RAY PARADIS
-   ============================= */
+@layer base {
+  /* -------------------------
+     HEADINGS
+  ------------------------- */
+  h1 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.2;
+    letter-spacing: 0.015em;
+    color: var(--color-text-primary);
+    margin-bottom: 1rem;
+  }
 
-:root {
-  /* FONT SIZE SCALE */
-  --fs-h1: clamp(2.4rem, 5vw, 3.2rem);
-  --fs-h2: clamp(1.8rem, 3.5vw, 2.3rem);
-  --fs-h3: clamp(1.4rem, 2.5vw, 1.8rem);
-  --fs-body: clamp(1rem, 1.2vw, 1.125rem);
-  --fs-small: 0.875rem;
-  --fs-caption: 0.75rem;
+  h2 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: clamp(1.75rem, 4vw, 2.8rem);
+    line-height: 1.25;
+    letter-spacing: 0.012em;
+    color: var(--color-text-primary);
+    margin-bottom: 0.8rem;
+  }
 
-  /* WEIGHTS */
-  --fw-light: 300;
-  --fw-regular: 400;
-  --fw-medium: 500;
-  --fw-bold: 700;
+  h3 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    color: var(--color-text-primary);
+    margin-bottom: 0.6rem;
+  }
+
+  /* -------------------------
+     BODY TEXT
+  ------------------------- */
+  p {
+    font-family: var(--font-sans);
+    font-size: clamp(1rem, 1.2vw, 1.125rem);
+    line-height: 1.75;
+    letter-spacing: 0.005em;
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  /* -------------------------
+     SMALL TEXT
+  ------------------------- */
+  .small-text {
+    font-family: var(--font-sans);
+    font-size: clamp(0.8rem, 1vw, 0.875rem);
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    color: var(--color-text-secondary);
+  }
+
+  .caption {
+    font-family: var(--font-sans);
+    font-size: clamp(0.7rem, 0.8vw, 0.75rem);
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-secondary);
+    transition: color 0.2s ease-in-out;
+  }
+
+  /* -------------------------
+     LINKS / INTERACTIVE TEXT
+  ------------------------- */
+  a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+  }
+
+  a:hover {
+    color: var(--color-primary-hover);
+  }
+
+  /* Optional: emphasize text */
+  strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  em {
+    font-style: italic;
+  }
 }
-
-/* ------------------------------------------------ */
-/* TEXT HIERARCHY */
-/* ------------------------------------------------ */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: var(--fw-medium);
-  letter-spacing: 0.05em;
-  color: var(--foreground); 
-}
-
-h1 {
-  font-size: var(--fs-h1);
-  line-height: 1.2;
-}
-h2 {
-  font-size: var(--fs-h2);
-  line-height: 1.3;
-}
-h3 {
-  font-size: var(--fs-h3);
-  line-height: 1.4;
-}
-
-p {
-  font-size: var(--fs-body);
-  line-height: 1.7;
-  color: var(--muted-foreground); /* <-- THAY ĐỔI */
-  margin-bottom: 1em;
-}
-
-/* ------------------------------------------------ */
-/* SUPPORTING TEXTS */
-/* ------------------------------------------------ */
-.small-text {
-  font-size: var(--fs-small);
-  color: var(--muted-foreground); /* <-- THAY ĐỔI */
-}
-
-.caption {
-  font-size: var(--fs-caption);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-foreground); /* <-- THAY ĐỔI */
-}
-
-/* ------------------------------------------------ */
-/* RHYTHM & SPACING */
-/* ------------------------------------------------ */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p {
-  margin-top: 0;
-  margin-bottom: 0.75em;
-}
-
-/* Spacing token */
-:root {
-  --space-xs: 0.5rem;
-  --space-sm: 1rem;
-  --space-md: 2rem;
-  --space-lg: 4rem;
-  --space-xl: 6rem;
-  --space-2xl: 8rem;
-}
-
-/* Section layout */
-.section { margin-top: var(--space-xl); padding: 0 var(--space-md); }
-.section-hero { text-align: center; padding: var(--space-lg) 0; margin-top: 0; }
-
-/* Footer */
-.footer-text {
-  text-align: center;
-  margin-top: var(--space-2xl);
-  padding: var(--space-md) 0;
-  color: var(--muted-foreground); /* <-- THAY ĐỔI */
-}
-
-/* Link accent */
-.link-accent { color: var(--accent); text-decoration: none; } /* <-- THAY ĐỔI */
-.link-accent:hover { opacity: 0.8; }
-
-/* Card typography */
-.card h3 { font-size: var(--fs-h3); margin-bottom: var(--space-xs); } /* Giữ lại nếu bạn muốn style chữ trong card */
-.card p { color: var(--muted-foreground); margin-bottom: var(--space-sm); } /* <-- THAY ĐỔI */

@@ -1,67 +1,50 @@
-/* ==============================
-   GLOBAL.CSS – CORE STYLES
-   ============================== */
+/* =========================
+   GLOBAL STYLES
+   Designer: Ray Paradis
+   Tailwind + Dark/Light Theme + Luxury Branding
+========================= */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* =========================
+   TYPOGRAPHY
+========================= */
 @import './typography.css';
-@import '../theme/base-mode.css';
-@import '../theme/dark-mode.css';
 
-/* 4. Luxury Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
+/* =========================
+   THEMES
+========================= */
+@import './theme/base-mode.css';
+@import './theme/dark-mode.css';
+
+/* =========================
+   CUSTOM GLOBAL CLASSES / OVERRIDES
+========================= */
+@layer components {
+  .flex-center {
+    @apply flex justify-center items-center;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .card {
+    background-color: var(--color-bg-secondary);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px var(--color-shadow);
+    padding: 1rem;
   }
-}
 
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+    background-color: var(--color-button-bg);
+    color: var(--color-button-text);
   }
-  100% {
-    background-position: 1000px 0;
+
+  .btn:hover {
+    background-color: var(--color-button-bg-hover);
   }
-}
-
-.fade-in {
-  animation: fadeIn 0.6s ease forwards;
-}
-
-.shimmer {
-  animation: shimmer 2s infinite linear;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  background-size: 1000px 100%;
-}
-
-/* 5. Base styles – apply globally */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  border-color: hsl(var(--border));
-}
-
-body {
-  font-feature-settings: "kern";
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-
-  font-family: var(--font-sans);
 }

@@ -3,6 +3,8 @@
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { ButtonIcon } from '@/components/base/Button';
+import { MapPin, Phone, User } from "lucide-react";
 
 export function Header() {
   const [mounted, setMounted] = useState(false);
@@ -22,7 +24,8 @@ export function Header() {
             </span>
           </a>
         </div>
-        
+        <ButtonIcon className="sm:bg-red-500 md:bg-green-400 lg:bg-blue-500" icon={MapPin} />
+
         {/* Navigation & Theme Toggle */}
         <div className="flex items-center gap-6">
           <nav className="flex items-center space-x-6 text-sm font-medium">

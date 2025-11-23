@@ -1,62 +1,51 @@
-import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
-
+import { ButtonShadcn } from "@/components/ui/shadcn-UI/button";
 import { cn } from "@/lib/utils";
 
-// Đây là nơi bạn định nghĩa tất cả các style cho Button của mình
-const buttonVariants = cva(
-  // Các class chung cho tất cả các button
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        // Giữ lại các variant gốc của shadcn và tùy chỉnh nếu cần
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        // Thêm các variant tùy chỉnh của riêng bạn
-        premium:
-          "bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-black border-yellow-600 border shadow-lg hover:shadow-xl transition-shadow",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-);
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
+interface ButtonIconProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: React.ElementType;
+  size?: number; // optional icon base size
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
-Button.displayName = "Button";
+export function ButtonIcon({
+  icon: Icon,
+  size = 20,
+  className,
+  ...props
+}: ButtonIconProps) {
+  return (
+    <ButtonShadcn
+      variant="ghost"
+      size="icon"
+      className={cn(
+        "rounded-full text-primary bg-transparent",
+        "transition-all duration-200 ease-in-out",
+        "hover:bg-button-bg-hover hover:scale-105 hover:shadow-md",
+        "cursor-pointer",
+        "p-2",
+        "border-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
 
-export { Button, buttonVariants };
+        /* -------------------------
+           RESPONSIVE SIZE
+        ------------------------- */
+        "h-9 w-9",            // mobile default
+        "sm:h-10 sm:w-10",    // tablet
+        "md:h-11 md:w-11",    // desktop
+        "lg:h-12 lg:w-12",    // large desktop
+
+        className
+      )}
+      {...props}
+    >
+      <Icon
+        style={{
+          width: size,   
+          height: size,
+        }}
+        className={cn(
+          "sm:w-[calc(20px*1.1)] md:w-[calc(20px*1.2)] lg:w-[calc(20px*1.3)]",
+          "sm:h-[calc(20px*1.1)] md:h-[calc(20px*1.2)] lg:h-[calc(20px*1.3)]"
+        )}
+      />
+    </ButtonShadcn>
+  );
+}
