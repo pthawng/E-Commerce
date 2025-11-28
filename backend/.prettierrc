@@ -5,15 +5,5 @@
   "tabWidth": 2,
   "semi": true,
   "endOfLine": "auto",
-  "plugins": ["@trivago/prettier-plugin-sort-imports"],
-  "importOrder": [
-    "^@nestjs/(.*)$", 
-    "<THIRD_PARTY_MODULES>", 
-    "^@modules/(.*)$", 
-    "^@common/(.*)$", 
-    "^@database/(.*)$", 
-    "^[./]"
-  ],
-  "importOrderSeparation": true,
-  "importOrderSortSpecifiers": true
+  "plugins": ["prettier-plugin-organize-imports"]
 }
