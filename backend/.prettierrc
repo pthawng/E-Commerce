@@ -3,5 +3,17 @@
   "trailingComma": "all",
   "printWidth": 100,
   "tabWidth": 2,
-  "endOfLine": "auto"
+  "semi": true,
+  "endOfLine": "auto",
+  "plugins": ["@trivago/prettier-plugin-sort-imports"],
+  "importOrder": [
+    "^@nestjs/(.*)$", 
+    "<THIRD_PARTY_MODULES>", 
+    "^@modules/(.*)$", 
+    "^@common/(.*)$", 
+    "^@database/(.*)$", 
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
 }

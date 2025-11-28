@@ -1,13 +1,15 @@
-:root,
-[data-theme="light"] {
-  --font-sans: 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial';
+/* ===========================
+   LIGHT THEME — Tailwind v4
+   Auto-generate utilities
+=========================== */
 
+@theme {
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #f5faff;
   --color-bg-tertiary: #f0f5ff;
 
   --color-text-primary: #111111;
-  --color-text-secondary: #4b4b4b;
+  --color-text-secondary: #ffffff ;
 
   --color-primary: #00aaff;
   --color-primary-hover: #0090dd;
@@ -15,9 +17,14 @@
   --color-secondary: #ffb6c1;
   --color-secondary-hover: #ff9ab0;
 
-  /* gradient chỉ dùng cho background-image — không dùng như colors */
   --gradient-accent: linear-gradient(90deg, #ffd700, #ff5f6d, #4facfe, #00f2fe);
-  --gradient-accent-hover: linear-gradient(90deg, #ffe066, #ff7f7f, #5fc0ff, #33e5ff);
+  --gradient-accent-hover: linear-gradient(
+    90deg,
+    #ffe066,
+    #ff7f7f,
+    #5fc0ff,
+    #33e5ff
+  );
 
   --color-button-bg: var(--color-primary);
   --color-button-bg-hover: var(--color-primary-hover);
@@ -30,3 +37,4 @@
   --color-shadow: rgba(0, 170, 255, 0.05);
   --color-glow-accent: rgba(212, 175, 55, 0.3);
 }
+

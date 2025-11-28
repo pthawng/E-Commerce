@@ -1,0 +1,12 @@
+:root {
+      /* Button */
+  --btn-font-size: clamp(0.875rem, 2vw, 1.125rem);
+  --btn-padding-x: clamp(0.75rem, 2vw, 1rem);
+  --btn-padding-y: clamp(0.5rem, 1.5vw, 0.75rem);
+
+    /* Icon sizes */
+  --icon-size-sm: clamp(16px, 2vw, 20px);
+  --icon-size-md: clamp(20px, 3vw, 28px);
+  --icon-size-lg: clamp(28px, 4vw, 36px);
+
+}
