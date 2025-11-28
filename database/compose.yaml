@@ -1,18 +1,19 @@
 services:
   ecommerce_db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: ecommerce_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: e_commerce
-      POSTGRES_USER: lephuocthang_psql
-      POSTGRES_PASSWORD: thangle1710
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: ecommerce_user
+      POSTGRES_PASSWORD: ecommerce_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lephuocthang_psql -d e_commerce"]
+      test: ["CMD-SHELL", "pg_isready -U ecommerce_user -d ecommerce"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,3 +22,7 @@ services:
 
 volumes:
   db-data:
+
+networks:
+  ecommerce_net:
+    driver: bridge
