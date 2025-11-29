@@ -2,6 +2,7 @@ import { AllExceptionFilter } from '@common/filters/all-exception.filter';
 import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -19,9 +20,17 @@ async function bootstrap() {
 
   // Bật global response interceptor ( Chuẩn hóa dữ liệu đầu ra )
   app.useGlobalInterceptors(new ResponseInterceptor());
-
   // Bật global exception filter ( Chuẩn hóa lỗi trả về )
   app.useGlobalFilters(new AllExceptionFilter());
+
+  const config = new DocumentBuilder()
+    .setTitle('Ray Paradis API')
+    .setDescription('Dự án E-Commerce Ray Paradis REST API description')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(process.env.PORT ?? 4000);
 }
