@@ -15,11 +15,525 @@ datasource db {
   provider = "postgresql"
 }
 
+model Permission {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String?
+  module      String?
+  createdAt   DateTime @default(now())
+
+  roles       RolePermission[]
+  
+  @@index([slug], name: "idx_permissions_slug")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime @default(now())
+  assignedBy   String?
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId], name: "idx_role_permissions_perm")
+}
+
 model User {
-  id         String    @id @default(uuid())
-  email      String    @unique
-  password   String
-  name       String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id              String     @id @default(uuid())
+  email           String
+  phone           String? 
+  passwordHash    String?
+  fullName        String?
+  isActive        Boolean    @default(true)
+  isEmailVerified Boolean    @default(false)
+  lastLoginAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+
+  userRoles       UserRole[]
+  reviews         Review[]
+  discountUsages  DiscountUsage[]
+  posts           Post[]
+  auditLogs       AuditLog[]
+
+  @@unique([email], map: "idx_users_email_unique")
+  @@unique([phone], map: "idx_users_phone_unique")
+  @@index([email], map: "idx_users_active_email") // partial index sẽ tạo manual bằng migration
+}
+
+model UserRole {
+  userId   String
+  roleId   String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([userId], name: "idx_user_roles_user")
+}
+
+enum MediaType {
+  image
+  video
+  model_3d
+}
+
+enum ActionType {
+  IMPORT
+  SALE
+  RETURN
+  TRANSFER_OUT
+  TRANSFER_IN
+  ADJUSTMENT
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  parent    Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: SetNull)
+  parentId  String?
+  name      Json
+  slug      String     @unique
+  isActive  Boolean    @default(true)
+  order     Int        @default(0)
+  path      String?
+  children  Category[] @relation("CategoryToCategory")
+  products  Product[]
+
+  @@index([parentId])
+  @@index([slug])
+}
+
+model Attribute {
+  id         String           @id @default(uuid())
+  code       String           @unique
+  name       Json
+  filterType String           @default("checkbox")
+  values     AttributeValue[]
+}
+
+model AttributeValue {
+  id          String     @id @default(uuid())
+  attribute   Attribute  @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  attributeId String
+  value       Json
+  metaValue   String?
+  order       Int        @default(0)
+
+  variantAttributes VariantAttributeValue[]
+
+  @@index([attributeId])
+}
+
+
+model Product {
+  id                String           @id @default(uuid())
+  category          Category?        @relation(fields: [categoryId], references: [id])
+  categoryId        String?
+  name              Json
+  slug              String           @unique
+  description       Json?
+  displayPriceMin   Decimal?
+  displayPriceMax   Decimal?
+  hasVariants       Boolean          @default(true)
+  isActive          Boolean          @default(true)
+  isFeatured        Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @default(now())
+  deletedAt         DateTime?
+  variants          ProductVariant[]
+  media             ProductMedia[]
+  reviews           Review[]
+
+  @@index([categoryId], map: "idx_products_category")
+  @@index([slug], map: "idx_products_slug")
+}
+
+model ProductVariant {
+  id             String                 @id @default(uuid())
+  product        Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId      String
+  sku            String                 @unique
+  variantTitle   Json?
+  price          Decimal
+  compareAtPrice Decimal?
+  costPrice      Decimal?
+  weightGram     Decimal?
+  isDefault      Boolean                @default(false)
+  isActive       Boolean                @default(true)
+  position       Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @default(now())
+  deletedAt      DateTime?
+  attributes     VariantAttributeValue[]
+  inventoryItems InventoryItem[]
+  inventoryLogs  InventoryLog[]
+
+
+  @@index([productId], map: "idx_variants_product_id")
+  @@index([sku], map: "idx_variants_sku")
+  @@index([price], map: "idx_variants_price")
+}
+
+model VariantAttributeValue {
+  variant        ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId      String
+  attributeValue AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Restrict)
+  attributeValueId String
+
+  @@id([variantId, attributeValueId])
+  @@index([attributeValueId, variantId], map: "idx_variant_attr_lookup")
+}
+
+model ProductMedia {
+  id         String       @id @default(uuid())
+  product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+  url        String
+  type       MediaType    @default(image)
+  altText    Json?
+  isThumbnail Boolean     @default(false)
+  order      Int          @default(0)
+  createdAt  DateTime     @default(now())
+
+  @@index([productId, order], map: "idx_product_media_product")
+}
+
+model Warehouse {
+  id        String           @id @default(uuid())
+  name      String
+  code      String           @unique
+  address   Json?
+  isActive  Boolean          @default(true)
+  inventory InventoryItem[]
+  inventoryLogs InventoryLog[]
+}
+
+model InventoryItem {
+  id               String          @id @default(uuid())
+  productVariant   ProductVariant  @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  productVariantId String
+  warehouse        Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  warehouseId      String
+  quantity         Int             @default(0)
+  reservedQuantity Int             @default(0)
+  shelfLocation    String?
+  updatedAt        DateTime        @default(now())
+  logs             InventoryLog[]
+
+  @@unique([productVariantId, warehouseId])
+  @@index([productVariantId], map: "idx_inventory_variant")
+}
+
+model InventoryLog {
+  id              String           @id @default(uuid())
+  inventoryItem   InventoryItem    @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String
+  productVariant  ProductVariant?  @relation(fields: [productVariantId], references: [id])
+  productVariantId String?
+  warehouse       Warehouse?       @relation(fields: [warehouseId], references: [id])
+  warehouseId     String?
+  actionType      ActionType
+  quantityChange  Int
+  stockAfter      Int
+  referenceId     String?
+  referenceCode   String?
+  actorId         String?
+  note            String?
+  createdAt       DateTime         @default(now())
+
+  @@index([productVariantId, createdAt], map: "idx_inv_logs_variant")
+  @@index([referenceId], map: "idx_inv_logs_ref")
+}
+
+enum OrderStatusEnum {
+  pending
+  confirmed
+  processing
+  shipping
+  delivered
+  completed
+  cancelled
+  returned
+  refunded
+}
+
+enum PaymentStatusEnum {
+  unpaid
+  partially_paid
+  paid
+  refunded
+}
+
+enum TransactionTypeEnum {
+  payment
+  refund
+}
+
+enum TransactionStatusEnum {
+  pending
+  success
+  failed
+  reversed
+}
+
+//////////////////////
+// CART
+//////////////////////
+
+model Cart {
+  id         String      @id @default(uuid())
+  userId     String?     @db.Uuid
+  sessionId  String?     @db.VarChar(100)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @default(now())
+  items      CartItem[]
+  
+  @@unique([userId, sessionId])
+}
+
+model CartItem {
+  id               String   @id @default(uuid())
+  cart             Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartId           String   @db.Uuid
+  productVariantId String   @db.Uuid
+  quantity         Int      @default(1)
+  cachedPrice      Decimal  @db.Decimal(19,2)
+  addedAt          DateTime @default(now())
+
+  @@unique([cartId, productVariantId])
+}
+
+//////////////////////
+// SHIPPING METHODS
+//////////////////////
+
+model ShippingMethod {
+  id          String   @id @default(uuid())
+  name        String
+  providerCode String?  @db.VarChar(50)
+  baseFee     Decimal  @default(0) @db.Decimal(19,2)
+  description Json?
+  rules       Json?
+  isActive    Boolean  @default(true)
+  position    Int      @default(0)
+  orders      Order[]
+}
+
+//////////////////////
+// ORDER & ORDER ITEMS
+//////////////////////
+
+model Order {
+  id                    String            @id @default(uuid())
+  code                  String            @unique
+  userId                String?           @db.Uuid
+  status                OrderStatusEnum   @default(pending)
+  paymentStatus         PaymentStatusEnum @default(unpaid)
+  shippingAddress       Json
+  billingAddress        Json?
+  shippingMethodId      String?           @db.Uuid
+  shippingMethodName    String?
+  trackingCode          String?
+  estimatedDeliveryAt   DateTime?
+  currency              String            @default("VND")
+  subTotal              Decimal           @db.Decimal(19,2)
+  shippingFee           Decimal           @default(0) @db.Decimal(19,2)
+  discountAmount        Decimal           @default(0) @db.Decimal(19,2)
+  taxAmount             Decimal           @default(0) @db.Decimal(19,2)
+  totalAmount           Decimal           @db.Decimal(19,2)
+  note                  String?
+  cancelReason          String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @default(now())
+  confirmedAt           DateTime?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+  completedAt           DateTime?
+  cancelledAt           DateTime?
+
+  shippingMethod        ShippingMethod?   @relation(fields: [shippingMethodId], references: [id])
+  items                 OrderItem[]
+  transactions          PaymentTransaction[]
+  timelines             OrderTimeline[]
+  reviews               Review[]
+  discountUsages        DiscountUsage[]
+}
+
+model OrderItem {
+  id               String   @id @default(uuid())
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId          String   @db.Uuid
+  productVariantId String?  @db.Uuid
+  productName      String
+  sku              String
+  variantTitle     Json
+  thumbnailUrl     String?
+  quantity         Int      @default(1)
+  price            Decimal  @db.Decimal(19,2)
+  totalLine        Decimal  @db.Decimal(19,2) @default(0) // Prisma chưa hỗ trợ GENERATED, tính ở BE
+
+  @@index([orderId])
+}
+
+//////////////////////
+// PAYMENT TRANSACTIONS
+//////////////////////
+
+model PaymentTransaction {
+  id               String              @id @default(uuid())
+  order            Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId          String              @db.Uuid
+  amount           Decimal             @db.Decimal(19,2)
+  currency         String              @default("VND")
+  type             TransactionTypeEnum
+  status           TransactionStatusEnum @default(pending)
+  provider         String
+  method           String?
+  transactionCode  String?
+  gatewayResponse  Json?
+  note             String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @default(now())
+
+  @@index([orderId])
+  @@index([transactionCode])
+}
+
+//////////////////////
+// ORDER TIMELINES
+//////////////////////
+
+model OrderTimeline {
+  id         String          @id @default(uuid())
+  order      Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String          @db.Uuid
+  action     String
+  fromStatus OrderStatusEnum?
+  toStatus   OrderStatusEnum?
+  description String?
+  actorId    String?         @db.Uuid
+  actorType  String          @default("system")
+  metadata   Json?
+  createdAt  DateTime        @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model Review {
+  id          String        @id @default(uuid())
+  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   String
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
+  order       Order         @relation(fields: [orderId], references: [id])
+  orderId     String
+  rating      Int           @db.SmallInt
+  title       String?
+  content     String?
+  status      String        @default("pending") // pending, approved, rejected, hidden
+  helpfulCount Int          @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+
+  reviewMedia ReviewMedia[]
+
+  @@unique([orderId, productId])
+  @@index([productId], map: "idx_reviews_product_status") // Prisma không hỗ trợ partial index trực tiếp
+}
+
+model ReviewMedia {
+  id         String   @id @default(uuid())
+  review     Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reviewId   String
+  url        String
+  type       String   @default("image") // image, video
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model Discount {
+  id                   String   @id @default(uuid())
+  code                 String   @unique
+  name                 String
+  description          String?
+  type                 String   // percentage, fixed_amount, shipping
+  value                Decimal  @db.Decimal(19,2)
+  maxDiscountAmount    Decimal? @db.Decimal(19,2)
+  startAt              DateTime
+  endAt                DateTime?
+  usageLimit           Int?
+  usageCount           Int      @default(0)
+  usageLimitPerUser    Int      @default(1)
+  minOrderValue        Decimal  @default(0) @db.Decimal(19,2)
+  isActive             Boolean  @default(true)
+  appliesTo            Json     @default("{}") // JSON structure
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+
+  discountUsages       DiscountUsage[]
+}
+
+model DiscountUsage {
+  id             String   @id @default(uuid())
+  discount       Discount @relation(fields: [discountId], references: [id], onDelete: Restrict)
+  discountId     String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId        String
+  usedAt         DateTime @default(now())
+  discountAmount Decimal  @db.Decimal(19,2)
+
+  @@unique([orderId, discountId])
+  @@index([userId, discountId], map: "idx_discount_usage_check")
+}
+
+model Post {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  title           String
+  excerpt         String?
+  content         String?
+  thumbnailUrl    String?
+  author          User?    @relation(fields: [authorId], references: [id])
+  authorId        String?
+  status          String   @default("draft") // draft, published, archived
+  publishedAt     DateTime?
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+  action      String
+  entityTable String
+  entityId    String
+  changes     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  @@index([entityTable, entityId], map: "idx_audit_entity")
+  @@index([createdAt], map: "idx_audit_created")
 }
