@@ -31,7 +31,6 @@ export class UserResponseDto {
   @Expose()
   deletedAt?: Date;
 
-  // Không include passwordHash
   @Exclude()
   passwordHash?: string;
 }
