@@ -9,7 +9,65 @@
 * 🟢 You can import this file directly.
 */
 
+export const MediaType = {
+  image: 'image',
+  video: 'video',
+  model_3d: 'model_3d'
+} as const
+
+export type MediaType = (typeof MediaType)[keyof typeof MediaType]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const ActionType = {
+  IMPORT: 'IMPORT',
+  SALE: 'SALE',
+  RETURN: 'RETURN',
+  TRANSFER_OUT: 'TRANSFER_OUT',
+  TRANSFER_IN: 'TRANSFER_IN',
+  ADJUSTMENT: 'ADJUSTMENT'
+} as const
+
+export type ActionType = (typeof ActionType)[keyof typeof ActionType]
+
+
+export const OrderStatusEnum = {
+  pending: 'pending',
+  confirmed: 'confirmed',
+  processing: 'processing',
+  shipping: 'shipping',
+  delivered: 'delivered',
+  completed: 'completed',
+  cancelled: 'cancelled',
+  returned: 'returned',
+  refunded: 'refunded'
+} as const
+
+export type OrderStatusEnum = (typeof OrderStatusEnum)[keyof typeof OrderStatusEnum]
+
+
+export const PaymentStatusEnum = {
+  unpaid: 'unpaid',
+  partially_paid: 'partially_paid',
+  paid: 'paid',
+  refunded: 'refunded'
+} as const
+
+export type PaymentStatusEnum = (typeof PaymentStatusEnum)[keyof typeof PaymentStatusEnum]
+
+
+export const TransactionTypeEnum = {
+  payment: 'payment',
+  refund: 'refund'
+} as const
+
+export type TransactionTypeEnum = (typeof TransactionTypeEnum)[keyof typeof TransactionTypeEnum]
+
+
+export const TransactionStatusEnum = {
+  pending: 'pending',
+  success: 'success',
+  failed: 'failed',
+  reversed: 'reversed'
+} as const
+
+export type TransactionStatusEnum = (typeof TransactionStatusEnum)[keyof typeof TransactionStatusEnum]

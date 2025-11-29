@@ -1,22 +1,71 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider       = "prisma-client"
   output         = "../src/generated/prisma"
   moduleFormat   = "commonjs"
-  engineType  = "client" 
+  engineType     = "client"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+
+//////////////////////////////////////
+// ENUMS
+//////////////////////////////////////
+
+// Media types cho ProductMedia
+enum MediaType {
+  image
+  video
+  model_3d
+}
+// Các loại hành động kho (InventoryLog)
+enum ActionType {
+  IMPORT
+  SALE
+  RETURN
+  TRANSFER_OUT
+  TRANSFER_IN
+  ADJUSTMENT
+}
+// Trạng thái đơn hàng
+enum OrderStatusEnum {
+  pending
+  confirmed
+  processing
+  shipping
+  delivered
+  completed
+  cancelled
+  returned
+  refunded
+}
+// Trạng thái thanh toán
+enum PaymentStatusEnum {
+  unpaid
+  partially_paid
+  paid
+  refunded
+}
+// Loại giao dịch (PaymentTransaction)
+enum TransactionTypeEnum {
+  payment
+  refund
+}
+// Trạng thái giao dịch
+enum TransactionStatusEnum {
+  pending
+  success
+  failed
+  reversed
+}
+
+//////////////////////////////////////
+// PERMISSION & ROLE & USER
+//////////////////////////////////////
 model Permission {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   slug        String   @unique
   name        String
   description String?
@@ -29,7 +78,7 @@ model Permission {
 }
 
 model Role {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String   @unique
   description String?
   isSystem    Boolean  @default(false)
@@ -41,8 +90,8 @@ model Role {
 }
 
 model RolePermission {
-  roleId       String
-  permissionId String
+  roleId       String   @db.Uuid
+  permissionId String   @db.Uuid
   assignedAt   DateTime @default(now())
   assignedBy   String?
 
@@ -54,9 +103,9 @@ model RolePermission {
 }
 
 model User {
-  id              String     @id @default(uuid())
-  email           String
-  phone           String? 
+  id              String     @id @default(uuid()) @db.Uuid
+  email           String     @unique
+  phone           String?    @unique
   passwordHash    String?
   fullName        String?
   isActive        Boolean    @default(true)
@@ -74,12 +123,12 @@ model User {
 
   @@unique([email], map: "idx_users_email_unique")
   @@unique([phone], map: "idx_users_phone_unique")
-  @@index([email], map: "idx_users_active_email") // partial index sẽ tạo manual bằng migration
+  @@index([email], map: "idx_users_active_email") // partial index sẽ tạo bằng migration
 }
 
 model UserRole {
-  userId   String
-  roleId   String
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
   assignedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -89,25 +138,13 @@ model UserRole {
   @@index([userId], name: "idx_user_roles_user")
 }
 
-enum MediaType {
-  image
-  video
-  model_3d
-}
-
-enum ActionType {
-  IMPORT
-  SALE
-  RETURN
-  TRANSFER_OUT
-  TRANSFER_IN
-  ADJUSTMENT
-}
-
+//////////////////////////////////////
+// CATEGORY & ATTRIBUTE & PRODUCT
+//////////////////////////////////////
 model Category {
-  id        String     @id @default(uuid())
+  id        String     @id @default(uuid()) @db.Uuid
   parent    Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: SetNull)
-  parentId  String?
+  parentId  String?    @db.Uuid
   name      Json
   slug      String     @unique
   isActive  Boolean    @default(true)
@@ -121,7 +158,7 @@ model Category {
 }
 
 model Attribute {
-  id         String           @id @default(uuid())
+  id         String           @id @default(uuid()) @db.Uuid
   code       String           @unique
   name       Json
   filterType String           @default("checkbox")
@@ -129,28 +166,27 @@ model Attribute {
 }
 
 model AttributeValue {
-  id          String     @id @default(uuid())
-  attribute   Attribute  @relation(fields: [attributeId], references: [id], onDelete: Cascade)
-  attributeId String
+  id          String           @id @default(uuid()) @db.Uuid
+  attribute   Attribute        @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  attributeId String           @db.Uuid
   value       Json
   metaValue   String?
-  order       Int        @default(0)
+  order       Int              @default(0)
 
   variantAttributes VariantAttributeValue[]
 
   @@index([attributeId])
 }
 
-
 model Product {
-  id                String           @id @default(uuid())
+  id                String           @id @default(uuid()) @db.Uuid
   category          Category?        @relation(fields: [categoryId], references: [id])
-  categoryId        String?
+  categoryId        String?          @db.Uuid
   name              Json
   slug              String           @unique
   description       Json?
-  displayPriceMin   Decimal?
-  displayPriceMax   Decimal?
+  displayPriceMin   Decimal?         @db.Decimal(19,2)
+  displayPriceMax   Decimal?         @db.Decimal(19,2)
   hasVariants       Boolean          @default(true)
   isActive          Boolean          @default(true)
   isFeatured        Boolean          @default(false)
@@ -166,15 +202,15 @@ model Product {
 }
 
 model ProductVariant {
-  id             String                 @id @default(uuid())
+  id             String                 @id @default(uuid()) @db.Uuid
   product        Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId      String
+  productId      String                 @db.Uuid
   sku            String                 @unique
   variantTitle   Json?
-  price          Decimal
-  compareAtPrice Decimal?
-  costPrice      Decimal?
-  weightGram     Decimal?
+  price          Decimal                @db.Decimal(19,2)
+  compareAtPrice Decimal?               @db.Decimal(19,2)
+  costPrice      Decimal?               @db.Decimal(19,2)
+  weightGram     Decimal?               @db.Decimal(19,2)
   isDefault      Boolean                @default(false)
   isActive       Boolean                @default(true)
   position       Int                    @default(0)
@@ -185,26 +221,25 @@ model ProductVariant {
   inventoryItems InventoryItem[]
   inventoryLogs  InventoryLog[]
 
-
   @@index([productId], map: "idx_variants_product_id")
   @@index([sku], map: "idx_variants_sku")
   @@index([price], map: "idx_variants_price")
 }
 
 model VariantAttributeValue {
-  variant        ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  variantId      String
-  attributeValue AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Restrict)
-  attributeValueId String
+  variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId         String         @db.Uuid
+  attributeValue    AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Restrict)
+  attributeValueId  String         @db.Uuid
 
   @@id([variantId, attributeValueId])
   @@index([attributeValueId, variantId], map: "idx_variant_attr_lookup")
 }
 
 model ProductMedia {
-  id         String       @id @default(uuid())
+  id         String       @id @default(uuid()) @db.Uuid
   product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId  String
+  productId  String       @db.Uuid
   url        String
   type       MediaType    @default(image)
   altText    Json?
@@ -215,8 +250,11 @@ model ProductMedia {
   @@index([productId, order], map: "idx_product_media_product")
 }
 
+//////////////////////////////////////
+// WAREHOUSE & INVENTORY
+//////////////////////////////////////
 model Warehouse {
-  id        String           @id @default(uuid())
+  id        String           @id @default(uuid()) @db.Uuid
   name      String
   code      String           @unique
   address   Json?
@@ -226,11 +264,11 @@ model Warehouse {
 }
 
 model InventoryItem {
-  id               String          @id @default(uuid())
+  id               String          @id @default(uuid()) @db.Uuid
   productVariant   ProductVariant  @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
-  productVariantId String
+  productVariantId String          @db.Uuid
   warehouse        Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
-  warehouseId      String
+  warehouseId      String          @db.Uuid
   quantity         Int             @default(0)
   reservedQuantity Int             @default(0)
   shelfLocation    String?
@@ -242,63 +280,31 @@ model InventoryItem {
 }
 
 model InventoryLog {
-  id              String           @id @default(uuid())
-  inventoryItem   InventoryItem    @relation(fields: [inventoryItemId], references: [id])
-  inventoryItemId String
-  productVariant  ProductVariant?  @relation(fields: [productVariantId], references: [id])
-  productVariantId String?
-  warehouse       Warehouse?       @relation(fields: [warehouseId], references: [id])
-  warehouseId     String?
-  actionType      ActionType
-  quantityChange  Int
-  stockAfter      Int
-  referenceId     String?
-  referenceCode   String?
-  actorId         String?
-  note            String?
-  createdAt       DateTime         @default(now())
+  id               String           @id @default(uuid()) @db.Uuid
+  inventoryItem    InventoryItem    @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId  String           @db.Uuid
+  productVariant   ProductVariant?  @relation(fields: [productVariantId], references: [id])
+  productVariantId String?          @db.Uuid
+  warehouse        Warehouse?       @relation(fields: [warehouseId], references: [id])
+  warehouseId      String?          @db.Uuid
+  actionType       ActionType
+  quantityChange   Int
+  stockAfter       Int
+  referenceId      String?
+  referenceCode    String?
+  actorId          String?          @db.Uuid
+  note             String?
+  createdAt        DateTime         @default(now())
 
   @@index([productVariantId, createdAt], map: "idx_inv_logs_variant")
   @@index([referenceId], map: "idx_inv_logs_ref")
 }
 
-enum OrderStatusEnum {
-  pending
-  confirmed
-  processing
-  shipping
-  delivered
-  completed
-  cancelled
-  returned
-  refunded
-}
-
-enum PaymentStatusEnum {
-  unpaid
-  partially_paid
-  paid
-  refunded
-}
-
-enum TransactionTypeEnum {
-  payment
-  refund
-}
-
-enum TransactionStatusEnum {
-  pending
-  success
-  failed
-  reversed
-}
-
-//////////////////////
+//////////////////////////////////////
 // CART
-//////////////////////
-
+//////////////////////////////////////
 model Cart {
-  id         String      @id @default(uuid())
+  id         String      @id @default(uuid()) @db.Uuid
   userId     String?     @db.Uuid
   sessionId  String?     @db.VarChar(100)
   createdAt  DateTime    @default(now())
@@ -309,7 +315,7 @@ model Cart {
 }
 
 model CartItem {
-  id               String   @id @default(uuid())
+  id               String   @id @default(uuid()) @db.Uuid
   cart             Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   cartId           String   @db.Uuid
   productVariantId String   @db.Uuid
@@ -320,12 +326,11 @@ model CartItem {
   @@unique([cartId, productVariantId])
 }
 
-//////////////////////
-// SHIPPING METHODS
-//////////////////////
-
+//////////////////////////////////////
+// ORDER & PAYMENT
+//////////////////////////////////////
 model ShippingMethod {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String
   providerCode String?  @db.VarChar(50)
   baseFee     Decimal  @default(0) @db.Decimal(19,2)
@@ -336,12 +341,8 @@ model ShippingMethod {
   orders      Order[]
 }
 
-//////////////////////
-// ORDER & ORDER ITEMS
-//////////////////////
-
 model Order {
-  id                    String            @id @default(uuid())
+  id                    String            @id @default(uuid()) @db.Uuid
   code                  String            @unique
   userId                String?           @db.Uuid
   status                OrderStatusEnum   @default(pending)
@@ -377,7 +378,7 @@ model Order {
 }
 
 model OrderItem {
-  id               String   @id @default(uuid())
+  id               String   @id @default(uuid()) @db.Uuid
   order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId          String   @db.Uuid
   productVariantId String?  @db.Uuid
@@ -387,17 +388,13 @@ model OrderItem {
   thumbnailUrl     String?
   quantity         Int      @default(1)
   price            Decimal  @db.Decimal(19,2)
-  totalLine        Decimal  @db.Decimal(19,2) @default(0) // Prisma chưa hỗ trợ GENERATED, tính ở BE
+  totalLine        Decimal  @db.Decimal(19,2) @default(0)
 
   @@index([orderId])
 }
 
-//////////////////////
-// PAYMENT TRANSACTIONS
-//////////////////////
-
 model PaymentTransaction {
-  id               String              @id @default(uuid())
+  id               String              @id @default(uuid()) @db.Uuid
   order            Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId          String              @db.Uuid
   amount           Decimal             @db.Decimal(19,2)
@@ -416,12 +413,8 @@ model PaymentTransaction {
   @@index([transactionCode])
 }
 
-//////////////////////
-// ORDER TIMELINES
-//////////////////////
-
 model OrderTimeline {
-  id         String          @id @default(uuid())
+  id         String          @id @default(uuid()) @db.Uuid
   order      Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId    String          @db.Uuid
   action     String
@@ -436,18 +429,21 @@ model OrderTimeline {
   @@index([orderId, createdAt])
 }
 
+//////////////////////////////////////
+// REVIEW
+//////////////////////////////////////
 model Review {
-  id          String        @id @default(uuid())
+  id          String        @id @default(uuid()) @db.Uuid
   product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  productId   String
+  productId   String        @db.Uuid
   user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId      String?
+  userId      String?       @db.Uuid
   order       Order         @relation(fields: [orderId], references: [id])
-  orderId     String
+  orderId     String       @db.Uuid
   rating      Int           @db.SmallInt
   title       String?
   content     String?
-  status      String        @default("pending") // pending, approved, rejected, hidden
+  status      String        @default("pending")
   helpfulCount Int          @default(0)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @default(now()) @updatedAt
@@ -455,25 +451,28 @@ model Review {
   reviewMedia ReviewMedia[]
 
   @@unique([orderId, productId])
-  @@index([productId], map: "idx_reviews_product_status") // Prisma không hỗ trợ partial index trực tiếp
+  @@index([productId], map: "idx_reviews_product_status")
 }
 
 model ReviewMedia {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid()) @db.Uuid
   review     Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  reviewId   String
+  reviewId   String   @db.Uuid
   url        String
-  type       String   @default("image") // image, video
+  type       String   @default("image")
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
 }
 
+//////////////////////////////////////
+// DISCOUNT
+//////////////////////////////////////
 model Discount {
-  id                   String   @id @default(uuid())
+  id                   String   @id @default(uuid()) @db.Uuid
   code                 String   @unique
   name                 String
   description          String?
-  type                 String   // percentage, fixed_amount, shipping
+  type                 String
   value                Decimal  @db.Decimal(19,2)
   maxDiscountAmount    Decimal? @db.Decimal(19,2)
   startAt              DateTime
@@ -483,7 +482,7 @@ model Discount {
   usageLimitPerUser    Int      @default(1)
   minOrderValue        Decimal  @default(0) @db.Decimal(19,2)
   isActive             Boolean  @default(true)
-  appliesTo            Json     @default("{}") // JSON structure
+  appliesTo            Json     @default("{}")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
 
@@ -491,13 +490,13 @@ model Discount {
 }
 
 model DiscountUsage {
-  id             String   @id @default(uuid())
+  id             String   @id @default(uuid()) @db.Uuid
   discount       Discount @relation(fields: [discountId], references: [id], onDelete: Restrict)
-  discountId     String
+  discountId     String   @db.Uuid
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String
+  userId         String   @db.Uuid
   order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId        String
+  orderId        String   @db.Uuid
   usedAt         DateTime @default(now())
   discountAmount Decimal  @db.Decimal(19,2)
 
@@ -505,16 +504,19 @@ model DiscountUsage {
   @@index([userId, discountId], map: "idx_discount_usage_check")
 }
 
+//////////////////////////////////////
+// POST & AUDIT
+//////////////////////////////////////
 model Post {
-  id              String   @id @default(uuid())
+  id              String   @id @default(uuid()) @db.Uuid
   slug            String   @unique
   title           String
   excerpt         String?
   content         String?
   thumbnailUrl    String?
   author          User?    @relation(fields: [authorId], references: [id])
-  authorId        String?
-  status          String   @default("draft") // draft, published, archived
+  authorId        String?  @db.Uuid
+  status          String   @default("draft")
   publishedAt     DateTime?
   metaTitle       String?
   metaDescription String?
@@ -523,9 +525,9 @@ model Post {
 }
 
 model AuditLog {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   user        User?    @relation(fields: [userId], references: [id])
-  userId      String?
+  userId      String?  @db.Uuid
   action      String
   entityTable String
   entityId    String

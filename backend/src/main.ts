@@ -8,6 +8,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.setGlobalPrefix('api');
+  app.enableCors();
+
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )
   app.useGlobalPipes(
     new ValidationPipe({

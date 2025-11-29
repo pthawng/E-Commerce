@@ -27,8 +27,8 @@ export * from "./enums.js"
  * @example
  * ```
  * const prisma = new PrismaClient()
- * // Fetch zero or more Users
- * const users = await prisma.user.findMany()
+ * // Fetch zero or more Permissions
+ * const permissions = await prisma.permission.findMany()
  * ```
  * 
  * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
@@ -38,7 +38,150 @@ export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts exten
 export { Prisma }
 
 /**
+ * Model Permission
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type Permission = Prisma.PermissionModel
+/**
+ * Model Role
+ * 
+ */
+export type Role = Prisma.RoleModel
+/**
+ * Model RolePermission
+ * 
+ */
+export type RolePermission = Prisma.RolePermissionModel
+/**
  * Model User
  * 
  */
 export type User = Prisma.UserModel
+/**
+ * Model UserRole
+ * 
+ */
+export type UserRole = Prisma.UserRoleModel
+/**
+ * Model Category
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type Category = Prisma.CategoryModel
+/**
+ * Model Attribute
+ * 
+ */
+export type Attribute = Prisma.AttributeModel
+/**
+ * Model AttributeValue
+ * 
+ */
+export type AttributeValue = Prisma.AttributeValueModel
+/**
+ * Model Product
+ * 
+ */
+export type Product = Prisma.ProductModel
+/**
+ * Model ProductVariant
+ * 
+ */
+export type ProductVariant = Prisma.ProductVariantModel
+/**
+ * Model VariantAttributeValue
+ * 
+ */
+export type VariantAttributeValue = Prisma.VariantAttributeValueModel
+/**
+ * Model ProductMedia
+ * 
+ */
+export type ProductMedia = Prisma.ProductMediaModel
+/**
+ * Model Warehouse
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type Warehouse = Prisma.WarehouseModel
+/**
+ * Model InventoryItem
+ * 
+ */
+export type InventoryItem = Prisma.InventoryItemModel
+/**
+ * Model InventoryLog
+ * 
+ */
+export type InventoryLog = Prisma.InventoryLogModel
+/**
+ * Model Cart
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type Cart = Prisma.CartModel
+/**
+ * Model CartItem
+ * 
+ */
+export type CartItem = Prisma.CartItemModel
+/**
+ * Model ShippingMethod
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type ShippingMethod = Prisma.ShippingMethodModel
+/**
+ * Model Order
+ * 
+ */
+export type Order = Prisma.OrderModel
+/**
+ * Model OrderItem
+ * 
+ */
+export type OrderItem = Prisma.OrderItemModel
+/**
+ * Model PaymentTransaction
+ * 
+ */
+export type PaymentTransaction = Prisma.PaymentTransactionModel
+/**
+ * Model OrderTimeline
+ * 
+ */
+export type OrderTimeline = Prisma.OrderTimelineModel
+/**
+ * Model Review
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type Review = Prisma.ReviewModel
+/**
+ * Model ReviewMedia
+ * 
+ */
+export type ReviewMedia = Prisma.ReviewMediaModel
+/**
+ * Model Discount
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type Discount = Prisma.DiscountModel
+/**
+ * Model DiscountUsage
+ * 
+ */
+export type DiscountUsage = Prisma.DiscountUsageModel
+/**
+ * Model Post
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type Post = Prisma.PostModel
+/**
+ * Model AuditLog
+ * 
+ */
+export type AuditLog = Prisma.AuditLogModel
