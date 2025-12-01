@@ -2,8 +2,10 @@ import { AuthController } from '@modules/auth/auth.controller';
 import { AuthService } from '@modules/auth/auth.service';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
+import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { JwtAccessStrategy } from '@modules/auth/strategies/access-jwt.strategy';
 import { JwtRefreshStrategy } from '@modules/auth/strategies/refresh-jwt.strategy';
+import { MailModule } from '@modules/mail/mail.module';
 import { UserModule } from '@modules/user/user.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -16,6 +18,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     PrismaModule,
     UserModule,
     PassportModule,
+    MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (_configService: ConfigService) => ({
@@ -26,7 +29,14 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAccessStrategy, JwtRefreshStrategy, JwtAccessGuard, JwtRefreshGuard],
+  providers: [
+    AuthService,
+    JwtAccessStrategy,
+    JwtRefreshStrategy,
+    JwtAccessGuard,
+    JwtRefreshGuard,
+    VerifyEmailService,
+  ],
   exports: [AuthService, JwtAccessGuard, JwtRefreshGuard],
 })
 export class AuthModule {}

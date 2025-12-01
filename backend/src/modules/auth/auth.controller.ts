@@ -3,7 +3,8 @@ import { AuthService } from '@modules/auth/auth.service';
 import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
@@ -40,6 +41,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Làm mới access token' })

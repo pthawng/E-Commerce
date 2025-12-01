@@ -2,6 +2,7 @@ import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
 import { sanitizeUser } from '@modules/auth/sanitize/user.sanitize';
+import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { UserService } from '@modules/user/user.service';
 import {
   BadRequestException,
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly verifyEmailService: VerifyEmailService,
   ) {}
 
   // ---------------------------
@@ -48,7 +50,21 @@ export class AuthService {
         passwordHash,
       },
     });
-    // Tạo AccessToken và Refresh Token
+    // Send verify email (fail => rollback user creation)
+    try {
+      await this.verifyEmailService.sendVerifyEmail({
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName ?? user.email,
+      });
+    } catch (error) {
+      await this.prismaService.user.delete({ where: { id: user.id } });
+      throw error instanceof BadRequestException
+        ? error
+        : new BadRequestException('Không thể gửi email xác minh, vui lòng thử lại.');
+    }
+
+    // Tạo AccessToken và Refresh Token sau khi gửi mail thành công
     const { accessToken, refreshToken } = await this.issueTokenPair(user.id);
 
     return {

@@ -105,9 +105,9 @@ model RolePermission {
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique
-  phone           String?    @unique
-  passwordHash    String?
-  fullName        String?
+  phone           String     @unique
+  passwordHash    String
+  fullName        String
   isActive        Boolean    @default(true)
   isEmailVerified Boolean    @default(false)
   lastLoginAt     DateTime?
@@ -120,6 +120,7 @@ model User {
   discountUsages  DiscountUsage[]
   posts           Post[]
   auditLogs       AuditLog[]
+  verifyEmailTokens VerifyEmailToken[]
 
   @@unique([email], map: "idx_users_email_unique")
   @@unique([phone], map: "idx_users_phone_unique")
@@ -154,7 +155,8 @@ model RefreshToken {
 model VerifyEmailToken {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
-  token     String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
