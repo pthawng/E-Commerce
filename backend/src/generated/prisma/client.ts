@@ -64,6 +64,22 @@ export type User = Prisma.UserModel
  */
 export type UserRole = Prisma.UserRoleModel
 /**
+ * Model RefreshToken
+ * ///////////////////////////////////
+ * ///////////////////////////////////
+ */
+export type RefreshToken = Prisma.RefreshTokenModel
+/**
+ * Model VerifyEmailToken
+ * 
+ */
+export type VerifyEmailToken = Prisma.VerifyEmailTokenModel
+/**
+ * Model ResetPasswordToken
+ * 
+ */
+export type ResetPasswordToken = Prisma.ResetPasswordTokenModel
+/**
  * Model Category
  * ///////////////////////////////////
  * ///////////////////////////////////

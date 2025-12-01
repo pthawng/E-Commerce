@@ -56,6 +56,9 @@ export const ModelName = {
   RolePermission: 'RolePermission',
   User: 'User',
   UserRole: 'UserRole',
+  RefreshToken: 'RefreshToken',
+  VerifyEmailToken: 'VerifyEmailToken',
+  ResetPasswordToken: 'ResetPasswordToken',
   Category: 'Category',
   Attribute: 'Attribute',
   AttributeValue: 'AttributeValue',
@@ -155,6 +158,43 @@ export const UserRoleScalarFieldEnum = {
 } as const
 
 export type UserRoleScalarFieldEnum = (typeof UserRoleScalarFieldEnum)[keyof typeof UserRoleScalarFieldEnum]
+
+
+export const RefreshTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  revokedAt: 'revokedAt'
+} as const
+
+export type RefreshTokenScalarFieldEnum = (typeof RefreshTokenScalarFieldEnum)[keyof typeof RefreshTokenScalarFieldEnum]
+
+
+export const VerifyEmailTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type VerifyEmailTokenScalarFieldEnum = (typeof VerifyEmailTokenScalarFieldEnum)[keyof typeof VerifyEmailTokenScalarFieldEnum]
+
+
+export const ResetPasswordTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ResetPasswordTokenScalarFieldEnum = (typeof ResetPasswordTokenScalarFieldEnum)[keyof typeof ResetPasswordTokenScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {
