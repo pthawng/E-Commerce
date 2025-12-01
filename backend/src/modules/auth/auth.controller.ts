@@ -1,3 +1,4 @@
+import { Public } from '@common/decorators/public.decorator';
 import { AuthService } from '@modules/auth/auth.service';
 import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
@@ -17,6 +18,7 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Đăng ký tài khoản mới' })
@@ -26,6 +28,7 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng nhập' })
@@ -36,6 +39,7 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Làm mới access token' })

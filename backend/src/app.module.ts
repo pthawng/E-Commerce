@@ -1,6 +1,8 @@
 import { AuthModule } from '@modules/auth/auth.module';
+import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { UserModule } from '@modules/user/user.module';
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import { PrismaModule } from 'src/prisma/prisma.module';
@@ -25,6 +27,15 @@ import { AppService } from './app.service';
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Set JwtAccessGuard làm global guard
+    // Tất cả routes sẽ được bảo vệ bởi authentication
+    // Trừ các routes có @Public() decorator
+    {
+      provide: APP_GUARD,
+      useClass: JwtAccessGuard,
+    },
+  ],
 })
 export class AppModule {}

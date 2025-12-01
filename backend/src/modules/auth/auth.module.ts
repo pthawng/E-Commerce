@@ -1,5 +1,7 @@
 import { AuthController } from '@modules/auth/auth.controller';
 import { AuthService } from '@modules/auth/auth.service';
+import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
+import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
 import { JwtAccessStrategy } from '@modules/auth/strategies/access-jwt.strategy';
 import { JwtRefreshStrategy } from '@modules/auth/strategies/refresh-jwt.strategy';
 import { UserModule } from '@modules/user/user.module';
@@ -24,7 +26,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAccessStrategy, JwtRefreshStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtAccessStrategy, JwtRefreshStrategy, JwtAccessGuard, JwtRefreshGuard],
+  exports: [AuthService, JwtAccessGuard, JwtRefreshGuard],
 })
 export class AuthModule {}
