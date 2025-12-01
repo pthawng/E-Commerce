@@ -3,7 +3,9 @@ import { AuthService } from '@modules/auth/auth.service';
 import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
+import { VerifyEmailDto } from '@modules/auth/dto/verify-email.dto';
 import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
+import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -17,7 +19,10 @@ import {
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly verifyEmailService: VerifyEmailService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -49,5 +54,15 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Refresh token không hợp lệ hoặc đã hết hạn' })
   async refreshToken(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshToken(dto);
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Xác minh email' })
+  @ApiOkResponse({ description: 'Xác minh email thành công' })
+  @ApiBadRequestResponse({ description: 'Token không hợp lệ hoặc đã hết hạn' })
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.verifyEmailService.verifyToken(dto);
   }
 }

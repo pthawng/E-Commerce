@@ -1,3 +1,4 @@
+import { VerifyEmailDto } from '@modules/auth/dto/verify-email.dto';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
@@ -49,9 +50,9 @@ export class VerifyEmailService {
     return true;
   }
 
-  async verifyToken(token: string) {
+  async verifyToken(dto: VerifyEmailDto) {
     const record = await this.prisma.verifyEmailToken.findUnique({
-      where: { token },
+      where: { token: dto.token },
       include: { user: true },
     });
 
@@ -64,7 +65,7 @@ export class VerifyEmailService {
     // active user
     await this.prisma.user.update({
       where: { id: record.userId },
-      data: { isActive: true },
+      data: { isEmailVerified: true },
     });
 
     // delete token after use
