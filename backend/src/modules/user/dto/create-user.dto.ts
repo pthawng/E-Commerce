@@ -8,12 +8,12 @@ export class CreateUserDto {
   @IsString()
   phone?: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  fullName?: string;
+  fullName: string;
 
   @IsString()
   @MinLength(6)
   @IsNotEmpty()
-  password?: string; // để hash thành passwordHash
+  password: string; // để hash thành passwordHash
 }

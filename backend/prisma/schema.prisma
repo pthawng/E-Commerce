@@ -64,26 +64,46 @@ enum TransactionStatusEnum {
 //////////////////////////////////////
 // PERMISSION & ROLE & USER
 //////////////////////////////////////
+enum PermissionModule {
+  USER
+  PRODUCT
+  ORDER
+  DISCOUNT
+  CMS
+  SYSTEM
+}
+
+enum PermissionAction {
+  READ
+  CREATE
+  UPDATE
+  DELETE
+  MANAGE
+}
+
 model Permission {
-  id          String   @id @default(uuid()) @db.Uuid
-  slug        String   @unique
+  id          String            @id @default(uuid()) @db.Uuid
+  slug        String            @unique
   name        String
   description String?
-  module      String?
-  createdAt   DateTime @default(now())
+  module      PermissionModule?
+  action      PermissionAction?
+  createdAt   DateTime          @default(now())
 
   roles       RolePermission[]
-  
-  @@index([slug], name: "idx_permissions_slug")
+
+  userPermissions UserPermission[]
 }
 
 model Role {
   id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
   name        String   @unique
   description String?
   isSystem    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 
   rolePermissions RolePermission[]
   userRoles       UserRole[]
@@ -95,17 +115,42 @@ model RolePermission {
   assignedAt   DateTime @default(now())
   assignedBy   String?
 
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
-  @@index([permissionId], name: "idx_role_permissions_perm")
+}
+
+model UserRole {
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([userId], name: "idx_user_roles_user")
+}
+
+model UserPermission {
+  userId       String   @db.Uuid
+  permissionId String   @db.Uuid
+  assignedAt   DateTime @default(now())
+  assignedBy   String?
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+  @@index([permissionId], name: "idx_user_permissions_perm")
 }
 
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique
-  phone           String     @unique
+  phone           String?    @unique
   passwordHash    String
   fullName        String
   isActive        Boolean    @default(true)
@@ -121,22 +166,12 @@ model User {
   posts           Post[]
   auditLogs       AuditLog[]
   verifyEmailTokens VerifyEmailToken[]
+  resetPasswordTokens ResetPasswordToken[]
 
   @@unique([email], map: "idx_users_email_unique")
   @@unique([phone], map: "idx_users_phone_unique")
   @@index([email], map: "idx_users_active_email") // partial index sẽ tạo bằng migration
-}
-
-model UserRole {
-  userId     String   @db.Uuid
-  roleId     String   @db.Uuid
-  assignedAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@id([userId, roleId])
-  @@index([userId], name: "idx_user_roles_user")
+  userPermissions UserPermission[]
 }
 
 //////////////////////////////////////
@@ -165,6 +200,7 @@ model VerifyEmailToken {
 model ResetPasswordToken {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String
   expiresAt DateTime
   createdAt DateTime @default(now())

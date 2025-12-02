@@ -39,8 +39,7 @@ export { Prisma }
 
 /**
  * Model Permission
- * ///////////////////////////////////
- * ///////////////////////////////////
+ * 
  */
 export type Permission = Prisma.PermissionModel
 /**
@@ -54,15 +53,20 @@ export type Role = Prisma.RoleModel
  */
 export type RolePermission = Prisma.RolePermissionModel
 /**
- * Model User
- * 
- */
-export type User = Prisma.UserModel
-/**
  * Model UserRole
  * 
  */
 export type UserRole = Prisma.UserRoleModel
+/**
+ * Model UserPermission
+ * 
+ */
+export type UserPermission = Prisma.UserPermissionModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
 /**
  * Model RefreshToken
  * ///////////////////////////////////

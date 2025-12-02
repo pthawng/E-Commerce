@@ -1,7 +1,10 @@
+import { ChangePasswordDto } from '@modules/auth/dto/change-password.dto';
+import { ForgotPasswordDto } from '@modules/auth/dto/forgot-password.dto';
 import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
 import { sanitizeUser } from '@modules/auth/sanitize/user.sanitize';
+import { ForgotPassEmailService } from '@modules/auth/services/forgot-pass-email.auth.service';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { UserService } from '@modules/user/user.service';
 import {
@@ -23,6 +26,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly verifyEmailService: VerifyEmailService,
+    private readonly forgotPassEmailService: ForgotPassEmailService,
   ) {}
 
   // ---------------------------
@@ -78,16 +82,10 @@ export class AuthService {
   // LOGIN
   // ---------------------------
   async login(dto: LoginDto) {
-    if (!dto.email && !dto.phone) {
-      throw new BadRequestException('Email hoặc phone bắt buộc');
-    }
-
     const user = await this.prismaService.user.findFirst({
       where: {
-        OR: [
-          dto.email ? { email: dto.email } : undefined,
-          dto.phone ? { phone: dto.phone } : undefined,
-        ].filter(Boolean) as any,
+        // Login bằng email hoặc phone, LoginDto đã đảm bảo ít nhất 1 trong 2 field
+        ...(dto.email ? { email: dto.email } : { phone: dto.phone }),
       },
     });
 
@@ -99,7 +97,7 @@ export class AuthService {
       throw new UnauthorizedException('Tài khoản chưa được thiết lập mật khẩu');
     }
 
-    const isMatch = await argon2.verify(dto.password, user.passwordHash);
+    const isMatch = await argon2.verify(user.passwordHash, dto.password);
     if (!isMatch) {
       throw new UnauthorizedException('Mật khẩu không đúng');
     }
@@ -161,15 +159,11 @@ export class AuthService {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
 
-    const roles = user.userRoles.map((ur) => ur.role.name);
-
     // Tạo Access Token với đầy đủ thông tin
     const accessToken = await this.jwtService.signAsync(
       {
         sub: userId,
         type: 'access',
-        email: user.email,
-        roles,
       },
       {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
@@ -271,5 +265,63 @@ export class AuthService {
       email: user.email,
       roles: user.userRoles.map((ur) => ur.role.name),
     };
+  }
+
+  // ---------------------------
+  // FORGOT PASSWORD
+  // ---------------------------
+  async forgotPassword(dto: ForgotPasswordDto) {
+    if (!dto.email && !dto.phone) {
+      throw new BadRequestException('Email hoặc phone là bắt buộc');
+    }
+
+    const user = await this.prismaService.user.findFirst({
+      where: dto.email ? { email: dto.email } : { phone: dto.phone },
+    });
+
+    if (!user || !user.email || !user.isEmailVerified) {
+      throw new BadRequestException(
+        'Thông tin xác thực không hợp lệ hoặc tài khoản chưa được xác nhận',
+      );
+    }
+
+    await this.forgotPassEmailService.sendForgotPasswordEmail(user.id, user.email, user.fullName);
+
+    return { message: 'Nếu tài khoản tồn tại, chúng tôi đã gửi email hướng dẫn đặt lại mật khẩu.' };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) throw new BadRequestException('Người dùng không tồn tại');
+
+    // Xác thực current password
+    const isCurrentPasswordValid = await argon2.verify(user.passwordHash!, dto.currentPassword);
+
+    if (!isCurrentPasswordValid) {
+      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+    }
+
+    // Hash mật khẩu mới
+    const newPasswordHash = await argon2.hash(dto.newPassword, {
+      type: argon2.argon2id,
+      timeCost: 2,
+      memoryCost: 19456,
+      parallelism: 1,
+    });
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { passwordHash: newPasswordHash },
+    });
+
+    // Invalidate tất cả refresh token cũ
+    await this.prismaService.refreshToken.deleteMany({
+      where: { userId },
+    });
+
+    return { message: 'Đổi mật khẩu thành công' };
   }
 }

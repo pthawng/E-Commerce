@@ -2,6 +2,7 @@ import { AuthController } from '@modules/auth/auth.controller';
 import { AuthService } from '@modules/auth/auth.service';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
+import { ForgotPassEmailService } from '@modules/auth/services/forgot-pass-email.auth.service';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { JwtAccessStrategy } from '@modules/auth/strategies/access-jwt.strategy';
 import { JwtRefreshStrategy } from '@modules/auth/strategies/refresh-jwt.strategy';
@@ -36,6 +37,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     JwtAccessGuard,
     JwtRefreshGuard,
     VerifyEmailService,
+    ForgotPassEmailService,
   ],
   exports: [AuthService, JwtAccessGuard, JwtRefreshGuard],
 })

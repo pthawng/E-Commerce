@@ -1,0 +1,8 @@
+Request	@GetUserId(), @ClientIp(), @RawBody(), @GetDevice()
+Auth	@Roles(), @Permissions(), @Public(), @AuthType()
+List/Paging	@Pagination(), @Filters()
+Upload	@UploadedImage(), @UploadedFiles()
+Logging	@LogRoute(), @Trace()
+Cache	@CacheKey(), @DisableCache()
+Microservice	@ServiceAuth(), @EventMeta()
+E-Commerce	@CartUser(), @StoreId(), @Country(), @Currency()

@@ -1,0 +1,20 @@
+{{!-- password-changed.hbs --}}
+<h2 style="margin:0 0 8px 0; font-size:22px;">Thông báo thay đổi mật khẩu</h2>
+
+<p style="margin:0 0 16px 0;">
+  Chào {{#if name}}{{name}}{{else}}bạn{{/if}},<br/>
+  Tài khoản <strong>{{companyName}}</strong> của bạn vừa được thay đổi mật khẩu thành công.
+</p>
+
+<p style="margin:0 0 16px 0;">
+  Thời gian: <strong>{{changedAt}}</strong><br/>
+  Địa chỉ IP: <strong>{{ipAddress}}</strong>
+</p>
+
+<p style="margin:0 0 16px 0;">
+  Nếu bạn không thực hiện thay đổi này, vui lòng <a href="{{supportUrl}}" class="btn">Liên hệ hỗ trợ ngay</a>.
+</p>
+
+<p class="muted" style="margin:0;">
+  Đây là email tự động, vui lòng không trả lời.
+</p>

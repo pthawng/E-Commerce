@@ -71,3 +71,26 @@ export const TransactionStatusEnum = {
 } as const
 
 export type TransactionStatusEnum = (typeof TransactionStatusEnum)[keyof typeof TransactionStatusEnum]
+
+
+export const PermissionModule = {
+  USER: 'USER',
+  PRODUCT: 'PRODUCT',
+  ORDER: 'ORDER',
+  DISCOUNT: 'DISCOUNT',
+  CMS: 'CMS',
+  SYSTEM: 'SYSTEM'
+} as const
+
+export type PermissionModule = (typeof PermissionModule)[keyof typeof PermissionModule]
+
+
+export const PermissionAction = {
+  READ: 'READ',
+  CREATE: 'CREATE',
+  UPDATE: 'UPDATE',
+  DELETE: 'DELETE',
+  MANAGE: 'MANAGE'
+} as const
+
+export type PermissionAction = (typeof PermissionAction)[keyof typeof PermissionAction]

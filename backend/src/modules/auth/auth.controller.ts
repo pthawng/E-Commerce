@@ -1,5 +1,8 @@
+import { CurrentUserId } from '@common/decorators/get-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { AuthService } from '@modules/auth/auth.service';
+import { ChangePasswordDto } from '@modules/auth/dto/change-password.dto';
+import { ForgotPasswordDto } from '@modules/auth/dto/forgot-password.dto';
 import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
@@ -46,6 +49,16 @@ export class AuthController {
   }
 
   @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Yêu cầu đặt lại mật khẩu' })
+  @ApiOkResponse({ description: 'Nếu tài khoản tồn tại, email đặt lại sẽ được gửi.' })
+  @ApiBadRequestResponse({ description: 'Dữ liệu không hợp lệ' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Public()
   @UseGuards(JwtRefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -64,5 +77,14 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Token không hợp lệ hoặc đã hết hạn' })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.verifyEmailService.verifyToken(dto);
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Đổi mật khẩu' })
+  @ApiOkResponse({ description: 'Đổi mật khẩu thành công' })
+  @ApiBadRequestResponse({ description: 'Dữ liệu không hợp lệ hoặc mật khẩu hiện tại không đúng' })
+  async changePassword(@CurrentUserId() userId: string, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(userId, dto);
   }
 }

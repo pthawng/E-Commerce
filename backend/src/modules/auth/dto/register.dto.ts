@@ -1,11 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({
     description: 'Email đăng ký',
     example: 'user@example.com',
   })
+  @IsNotEmpty()
   @IsEmail({}, { message: 'Email không hợp lệ' })
   email: string;
 
@@ -13,6 +14,7 @@ export class RegisterDto {
     description: 'Mật khẩu (>= 6 ký tự)',
     example: 'Abc12345',
   })
+  @IsNotEmpty()
   @IsString()
   @MinLength(6, { message: 'Mật khẩu phải >= 6 ký tự' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
@@ -25,6 +27,7 @@ export class RegisterDto {
     example: 'Nguyễn Văn A',
     required: false,
   })
+  @IsNotEmpty()
   @IsString()
-  fullName?: string;
+  fullName: string;
 }

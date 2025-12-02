@@ -1,0 +1,60 @@
+{{!-- layout.hbs --}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{subject}}</title>
+  <style>
+    body { margin:0; padding:0; background:#f4f6f8; font-family: Arial, Helvetica, sans-serif; }
+    .wrapper { width:100%; table-layout:fixed; padding:20px 0; background:#f4f6f8; }
+    .main { background:#fff; width:100%; max-width:600px; margin:0 auto; border-radius:8px; overflow:hidden; }
+    .spacer { height:24px; }
+    .content { padding:24px; color:#333; line-height:1.5; font-size:16px; }
+    .logo { padding:20px 24px 0 24px; text-align:left; }
+    .btn { display:inline-block; text-decoration:none; padding:12px 20px; border-radius:6px; background:#2563eb; color:#fff; font-weight:600; }
+    .muted { color:#6b7280; font-size:14px; }
+    .footer { padding:18px 24px; font-size:13px; color:#9ca3af; text-align:center; }
+    @media screen and (max-width:420px) {
+      .content { padding:16px; font-size:15px; }
+      .logo { padding-left:16px; padding-right:16px; }
+    }
+  </style>
+</head>
+<body>
+  <center class="wrapper">
+    <table class="main" role="presentation" cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="logo">
+          {{#if logoUrl}}
+            <img src="{{logoUrl}}" alt="{{companyName}}" width="140" style="display:block; border:0;" />
+          {{else}}
+            <strong style="font-size:20px">{{companyName}}</strong>
+          {{/if}}
+        </td>
+      </tr>
+
+      <tr><td class="spacer"></td></tr>
+
+      <tr>
+        <td class="content">
+          {{{body}}}
+        </td>
+      </tr>
+
+      <tr><td class="spacer"></td></tr>
+
+      <tr>
+        <td class="footer">
+          <div>
+            Bạn cần hỗ trợ? Gửi email tới <a href="mailto:{{supportEmail}}" style="color:#6b7280; text-decoration:underline;">{{supportEmail}}</a>
+          </div>
+          <div style="margin-top:8px;">
+            © {{companyName}} — All rights reserved.
+          </div>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

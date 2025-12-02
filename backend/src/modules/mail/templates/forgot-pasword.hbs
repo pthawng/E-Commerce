@@ -1,13 +1,13 @@
-{{!-- verify-email.hbs --}}
-<h2 style="margin:0 0 8px 0; font-size:22px;">Xác minh email của bạn</h2>
+{{!-- forgot-password.hbs --}}
+<h2 style="margin:0 0 8px 0; font-size:22px;">Đặt lại mật khẩu</h2>
 
 <p style="margin:0 0 16px 0;">
   Chào {{#if name}}{{name}}{{else}}bạn{{/if}},<br/>
-  Cám ơn bạn đã đăng ký với <strong>{{companyName}}</strong>. Vui lòng bấm nút dưới đây để xác minh địa chỉ email của bạn.
+  Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản <strong>{{companyName}}</strong>.
 </p>
 
 <p style="text-align:center; margin:20px 0;">
-  <a href="{{verificationUrl}}" class="btn" target="_blank" rel="noopener noreferrer">Xác minh email</a>
+  <a href="{{resetUrl}}" class="btn" target="_blank" rel="noopener noreferrer">Đặt lại mật khẩu</a>
 </p>
 
 <p style="margin:0 0 12px 0;" class="muted">
@@ -15,7 +15,7 @@
 </p>
 
 <p style="word-break:break-all; font-size:13px; color:#374151; margin:0 0 18px 0;">
-  <a href="{{verificationUrl}}" style="color:#2563eb; text-decoration:underline;" target="_blank" rel="noopener noreferrer">{{verificationUrl}}</a>
+  <a href="{{resetUrl}}" style="color:#2563eb; text-decoration:underline;" target="_blank" rel="noopener noreferrer">{{resetUrl}}</a>
 </p>
 
 {{#if expiryMinutes}}
@@ -25,5 +25,5 @@
 {{/if}}
 
 <p style="margin:0 0 6px 0;">
-  Nếu bạn không yêu cầu xác minh này, hãy bỏ qua email này.
+  Nếu bạn không yêu cầu đặt lại mật khẩu này, vui lòng bỏ qua email này.
 </p>

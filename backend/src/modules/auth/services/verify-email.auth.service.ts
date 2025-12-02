@@ -15,7 +15,7 @@ export class VerifyEmailService {
 
   async generateVerifyToken(userId: string) {
     const token = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 60 phút
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
     const verifyToken = await this.prisma.verifyEmailToken.create({
       data: { token, userId, expiresAt },
