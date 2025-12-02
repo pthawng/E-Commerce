@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -28,7 +28,9 @@ export class RbacService {
   /** Gán role cho user */
   async assignRoleToUser(userId: string, roleSlug: string, assignedBy?: string) {
     const role = await this.prisma.role.findUnique({ where: { slug: roleSlug } });
-    if (!role) throw new Error('Role not found');
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
 
     return this.prisma.userRole.upsert({
       where: { userId_roleId: { userId, roleId: role.id } },
@@ -40,7 +42,9 @@ export class RbacService {
   /** Gán permission trực tiếp cho user */
   async assignPermissionToUser(userId: string, permissionSlug: string, assignedBy?: string) {
     const permission = await this.prisma.permission.findUnique({ where: { slug: permissionSlug } });
-    if (!permission) throw new Error('Permission not found');
+    if (!permission) {
+      throw new NotFoundException('Permission not found');
+    }
 
     return this.prisma.userPermission.upsert({
       where: { userId_permissionId: { userId, permissionId: permission.id } },
@@ -53,7 +57,9 @@ export class RbacService {
   async assignPermissionToRole(roleSlug: string, permissionSlug: string, assignedBy?: string) {
     const role = await this.prisma.role.findUnique({ where: { slug: roleSlug } });
     const permission = await this.prisma.permission.findUnique({ where: { slug: permissionSlug } });
-    if (!role || !permission) throw new Error('Role or Permission not found');
+    if (!role || !permission) {
+      throw new NotFoundException('Role or Permission not found');
+    }
 
     return this.prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },

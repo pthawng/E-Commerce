@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaModule } from 'src/prisma/prisma.module';
 import { PermissionGuard } from './guards/rbac.guard';
 import { RbacService } from './rbac.service';
 
 @Module({
-  providers: [RbacService, PermissionGuard, PrismaService, Reflector],
+  imports: [PrismaModule],
+  providers: [RbacService, PermissionGuard],
   exports: [RbacService, PermissionGuard],
 })
 export class RbacModule {}
