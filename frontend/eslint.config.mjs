@@ -19,5 +19,5 @@ export default tseslint.config(
       ...nextPlugin.configs['core-web-vitals'].rules,
     },
   },
-  prettierConfig // Luôn đặt ở cuối để ghi đè các config khác
+  prettierConfig
 );

@@ -1,14 +1,12 @@
 /**
- * Frontend Config
+ * Back Office Config
  * Re-export và extend từ shared config
  */
 import { API_BASE_URL, buildApiUrl, API_ENDPOINTS } from '@shared/config';
 
-// Re-export shared config
-export { API_BASE_URL, buildApiUrl, API_ENDPOINTS } from '@shared/config';
-
-// Alias for backward compatibility
+// Alias for convenience
 export const API_URL = API_BASE_URL;
 
 // Helper to build full API URLs
 export { buildApiUrl };
+

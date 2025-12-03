@@ -6,7 +6,7 @@ function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-brrom-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full text-center">
         {/* Logo Section */}
         <div className="flex justify-center items-center gap-8 mb-8">
@@ -35,7 +35,7 @@ function App() {
         </div>
 
         {/* Title */}
-        <h1 className="text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+        <h1 className="text-5xl font-bold mb-2 bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-purple-400">
           Vite + React
         </h1>
         <p className="text-slate-300 text-lg mb-8">
@@ -46,7 +46,7 @@ function App() {
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20 mb-6">
           <button 
             onClick={() => setCount((count) => count + 1)}
-            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 active:scale-95 mb-4"
+            className="px-8 py-4 bg-linear-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 active:scale-95 mb-4"
           >
             count is {count}
           </button>

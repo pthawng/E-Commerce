@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import type { ApiError } from '@shared/types';
 
 @Catch()
 export class AllExceptionFilter implements ExceptionFilter {
@@ -31,7 +32,7 @@ export class AllExceptionFilter implements ExceptionFilter {
       }
     }
 
-    response.status(status).json({
+    const errorResponse: ApiError = {
       success: false,
       statusCode: status,
       message,
@@ -40,6 +41,8 @@ export class AllExceptionFilter implements ExceptionFilter {
       errors,
       meta: null,
       data: null,
-    });
+    };
+
+    response.status(status).json(errorResponse);
   }
 }

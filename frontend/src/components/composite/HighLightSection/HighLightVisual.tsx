@@ -16,7 +16,7 @@ export default function HighlightVisual({ src, alt }: Props) {
       viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: 1, ease: "easeOut" }}
     >
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-gray-100">
+      <div className="relative aspect-4/5 w-full overflow-hidden bg-gray-100">
         <Image
           src={src}
           alt={alt}

@@ -51,7 +51,7 @@ export default function HeroSection({
       </div>
 
       {/* LAYER 2: Overlay (Gradient luxury) */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+      <div className="absolute inset-0 z-10 bg-linear-to-t from-black/70 via-black/20 to-black/10" />
 
       {/* LAYER 3: Content với Animation Stagger */}
       <div className="relative z-20 flex h-full flex-col items-center justify-center px-4 text-center text-white">
@@ -71,7 +71,7 @@ export default function HeroSection({
           <button className="group relative border border-white px-8 py-3 text-sm font-semibold tracking-widest uppercase transition-all duration-300 hover:bg-white hover:text-black">
             Explore This Snowy Universe
             {/* Hiệu ứng line chạy dưới chân (đã tối ưu) */}
-            <span className="absolute bottom-0 left-0 h-[1px] w-0 bg-black transition-all duration-300 group-hover:w-full"></span>
+            <span className="absolute bottom-0 left-0 h-px w-0 bg-black transition-all duration-300 group-hover:w-full"></span>
           </button>
         </div>
 

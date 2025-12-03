@@ -1,9 +1,12 @@
+/**
+ * API Client for Back Office
+ * Sử dụng shared config
+ */
 import type { ApiResponse, ApiError } from '@shared/types';
 import { buildApiUrl } from '@shared/config';
 
 /**
- * API Client
- * Wrapper cho fetch API với shared config
+ * API GET
  */
 export async function apiGet<T = any>(path: string): Promise<ApiResponse<T>> {
   const url = buildApiUrl(path);
@@ -83,3 +86,4 @@ export async function apiDelete<T = any>(
   }
   return res.json();
 }
+
