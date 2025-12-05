@@ -4,6 +4,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 import { UserResponseDto } from '@modules/user/dto/user-response.dto';
+import type { User } from '@shared';
 import argon2 from 'argon2';
 import { plainToInstance } from 'class-transformer';
 
@@ -14,7 +15,7 @@ export class UserService {
   // ---------------------------
   // CREATE USER
   // ---------------------------
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto): Promise<User> {
     // Check unique email
     const existEmail = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -52,7 +53,7 @@ export class UserService {
   // ---------------------------
   // GET ALL USERS
   // ---------------------------
-  async findAll() {
+  async findAll(): Promise<User[]> {
     const users = await this.prisma.user.findMany({
       where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
@@ -66,7 +67,7 @@ export class UserService {
   // ---------------------------
   // GET ONE USER
   // ---------------------------
-  async findOne(id: string) {
+  async findOne(id: string): Promise<User> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
@@ -78,7 +79,7 @@ export class UserService {
   // ---------------------------
   // UPDATE USER
   // ---------------------------
-  async update(id: string, dto: UpdateUserDto) {
+  async update(id: string, dto: UpdateUserDto): Promise<User> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });

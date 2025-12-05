@@ -1,6 +1,12 @@
+import type { User } from '@shared';
 import { Exclude, Expose } from 'class-transformer';
 
-export class UserResponseDto {
+/**
+ * User Response DTO
+ * Implements User interface from @shared/types
+ * Used for API responses with class-transformer serialization
+ */
+export class UserResponseDto implements Omit<User, 'deletedAt'> {
   @Expose()
   id: string;
 

@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import type { AuthResponse, AuthTokens } from '@shared';
 import argon2 from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -32,7 +33,7 @@ export class AuthService {
   // ---------------------------
   // REGISTER
   // ---------------------------
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<AuthResponse> {
     // Check unique email
     const existEmail = await this.prismaService.user.findUnique({
       where: { email: dto.email },
@@ -69,19 +70,18 @@ export class AuthService {
     }
 
     // Tạo AccessToken và Refresh Token sau khi gửi mail thành công
-    const { accessToken, refreshToken } = await this.issueTokenPair(user.id);
+    const { user: userData, tokens } = await this.issueTokenPair(user.id);
 
     return {
-      user: sanitizeUser(user),
-      accessToken,
-      refreshToken,
+      user: userData,
+      tokens,
     };
   }
 
   // ---------------------------
   // LOGIN
   // ---------------------------
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.prismaService.user.findFirst({
       where: {
         // Login bằng email hoặc phone, LoginDto đã đảm bảo ít nhất 1 trong 2 field
@@ -108,7 +108,7 @@ export class AuthService {
   // ---------------------------
   // REFRESH TOKEN
   // ---------------------------
-  async refreshToken(dto: RefreshTokenDto) {
+  async refreshToken(dto: RefreshTokenDto): Promise<AuthResponse> {
     const payload = await this.verifyRefreshToken(dto.refreshToken);
 
     const tokenRecord = await this.prismaService.refreshToken.findFirst({
@@ -142,7 +142,7 @@ export class AuthService {
   // -------------------------------------------------------------------------
   // PRIVATE METHODS
   // -------------------------------------------------------------------------
-  private async issueTokenPair(userId: string) {
+  private async issueTokenPair(userId: string): Promise<AuthResponse> {
     // Lấy thông tin user trước để đưa vào JWT payload
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
@@ -185,10 +185,14 @@ export class AuthService {
 
     await this.saveRefreshToken(userId, refreshToken);
 
-    return {
-      user: sanitizeUser(user),
+    const tokens: AuthTokens = {
       accessToken,
       refreshToken,
+    };
+
+    return {
+      user: sanitizeUser(user),
+      tokens,
     };
   }
 
