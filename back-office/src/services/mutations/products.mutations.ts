@@ -5,8 +5,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { apiPost, apiPut, apiDelete } from '../apiClient';
-import type { Product } from '@shared/types';
-import { API_ENDPOINTS } from '@shared/config';
+import type { Product } from '@shared';
+import { API_ENDPOINTS } from '@shared';
 
 /**
  * Create product mutation

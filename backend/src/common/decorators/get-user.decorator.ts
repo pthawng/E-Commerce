@@ -1,11 +1,5 @@
+import type { RequestUserPayload } from '@common/types/jwt.types';
 import { createParamDecorator, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-
-type RequestUserPayload = {
-  userId: string;
-  email?: string;
-  roles?: string[];
-  [key: string]: unknown;
-};
 
 const getRequestUser = (ctx: ExecutionContext): RequestUserPayload | undefined => {
   const request = ctx.switchToHttp().getRequest();

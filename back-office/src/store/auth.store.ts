@@ -4,8 +4,8 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, AuthTokens } from '@shared/types';
-import { SESSION } from '@shared/config';
+import type { User, AuthTokens } from '@shared';
+import { SESSION } from '@shared';
 
 interface AuthState {
   user: User | null;
@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: SESSION.USER_KEY, // Storage key
+            name: SESSION.USER_KEY, // Storage key
       partialize: (state) => ({
         user: state.user,
         tokens: state.tokens,

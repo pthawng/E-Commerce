@@ -17,6 +17,9 @@ export type {
   PaginationMeta,
   PaginationQuery,
   Permission,
+  // Enums
+  PermissionAction,
+  PermissionModule,
   RefreshTokenPayload,
   RegisterPayload,
   ResetPasswordPayload,
@@ -26,7 +29,4 @@ export type {
   UserSummary,
   UserWithRoles,
   VerifyEmailPayload,
-  // Enums
-  PermissionAction,
-  PermissionModule,
 } from '@shared';

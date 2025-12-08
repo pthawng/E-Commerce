@@ -159,11 +159,17 @@ export class AuthService {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
 
-    // Tạo Access Token với đầy đủ thông tin
+    // Extract roles từ user (dùng slug để nhẹ hơn)
+    // Roles sẽ được encode vào JWT để dùng cho RBAC
+    const roles = user.userRoles.map((ur) => ur.role.slug);
+
+    // Tạo Access Token với đầy đủ thông tin cho Hybrid RBAC/ABAC
+    // Payload: { sub, type, roles, iat, exp }
     const accessToken = await this.jwtService.signAsync(
       {
         sub: userId,
         type: 'access',
+        roles, // Roles cho RBAC - được validate trong JwtAccessStrategy
       },
       {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),

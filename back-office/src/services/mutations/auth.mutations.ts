@@ -6,8 +6,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { apiPost } from '../apiClient';
 import { useAuthStore } from '@/store/auth.store';
-import type { LoginPayload, RegisterPayload, AuthResponse } from '@shared/types';
-import { API_ENDPOINTS } from '@shared/config';
+import type { LoginPayload, RegisterPayload, AuthResponse } from '@shared';
+import { API_ENDPOINTS } from '@shared';
 
 /**
  * Login mutation
@@ -23,7 +23,13 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       if (data?.user && data?.tokens) {
-        setAuth(data.user, data.tokens);
+        // Convert AuthResponse.user to User type
+        const user = {
+          ...data.user,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setAuth(user, data.tokens);
         // Invalidate auth queries
         queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
       }
@@ -48,7 +54,13 @@ export function useRegister() {
     },
     onSuccess: (data) => {
       if (data?.user && data?.tokens) {
-        setAuth(data.user, data.tokens);
+        // Convert AuthResponse.user to User type
+        const user = {
+          ...data.user,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setAuth(user, data.tokens);
         queryClient.invalidateQueries({ queryKey: queryKeys.auth.all });
       }
     },

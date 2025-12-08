@@ -10,9 +10,22 @@ shared/
 │   ├── utils/
 │   ├── constants/
 │   └── config/
-├── dist/             # Build output (JavaScript + .d.ts)
-└── package.json      # Package config
+├── dist/             # Build output (Dual package: CJS + ESM)
+│   ├── index.js      # CommonJS (cho backend)
+│   ├── index.mjs     # ESM (cho frontend)
+│   └── index.d.ts    # TypeScript types
+└── package.json      # Package config với exports field
 ```
+
+## Dual Package Setup
+
+Package này được build ra **cả CommonJS và ESM** để tương thích với:
+- **Backend**: Dùng CommonJS (`dist/index.js`)
+- **Frontend/Back Office**: Dùng ESM (`dist/index.mjs`)
+
+Package.json sử dụng `exports` field để tự động resolve đúng format:
+- `import` → ESM (`.mjs`)
+- `require` → CommonJS (`.js`)
 
 ## Build
 
@@ -30,20 +43,40 @@ npm run watch
 
 ## Sử dụng trong Backend
 
-Backend đã được cấu hình để import từ `dist/`:
+Backend import từ `@shared` (tự động resolve CommonJS):
 
 ```typescript
 // backend/tsconfig.json
 "paths": {
+  "@shared": ["../shared/dist/index"],
   "@shared/*": ["../shared/dist/*"]
 }
+
+// Usage
+import type { User, AuthResponse } from '@shared';
+import { API_ENDPOINTS, buildApiUrl } from '@shared';
 ```
 
 **Lưu ý**: Backend chỉ compile code trong `src/`, không compile shared. Shared phải được build trước.
 
 ## Sử dụng trong Frontend/Back Office
 
-Frontend và Back Office có thể import trực tiếp từ source hoặc từ dist (tùy cấu hình bundler).
+Frontend/Back Office import từ `@shared` (tự động resolve ESM):
+
+```typescript
+// back-office/vite.config.ts
+resolve: {
+  alias: {
+    '@shared': path.resolve(__dirname, '../shared'),
+  }
+}
+
+// Usage
+import { API_ENDPOINTS, buildApiUrl, SESSION } from '@shared';
+import type { User, AuthResponse } from '@shared';
+```
+
+Vite sẽ tự động resolve ESM format thông qua `package.json` exports field.
 
 ## Workflow
 

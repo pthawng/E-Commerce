@@ -5,9 +5,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { apiGet } from '../apiClient';
-import type { User, PaginatedResponse } from '@shared/types';
-import { API_ENDPOINTS } from '@shared/config';
-import type { PaginationQuery } from '@shared/types';
+import type { User, PaginatedResponse, PaginationQuery } from '@shared';
+import { API_ENDPOINTS } from '@shared';
 
 /**
  * Get users list

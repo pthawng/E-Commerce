@@ -5,9 +5,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { apiGet } from '../apiClient';
-import type { Order, OrderSummary, PaginatedResponse } from '@shared/types';
-import { API_ENDPOINTS } from '@shared/config';
-import type { PaginationQuery } from '@shared/types';
+import type { Order, OrderSummary, PaginatedResponse, PaginationQuery } from '@shared';
+import { API_ENDPOINTS } from '@shared';
 
 /**
  * Get orders list

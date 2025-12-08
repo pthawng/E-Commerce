@@ -6,8 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { apiGet } from '../apiClient';
 import { useAuthStore } from '@/store/auth.store';
-import type { User } from '@shared/types';
-import { API_ENDPOINTS } from '@shared/config';
+import type { User } from '@shared';
+import { API_ENDPOINTS } from '@shared';
 
 /**
  * Get current user

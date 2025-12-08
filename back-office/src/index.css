@@ -1,14 +1,53 @@
 @import "tailwindcss";
 
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Thiết lập tối giản cho admin (dark theme) */
+:root {
+  --font-body: "Inter", "SF Pro Display", system-ui, sans-serif;
+  --font-heading: "Playfair Display", serif;
+
+  /* Dark surfaces & accent */
+  --surface-dark-card: rgba(15, 23, 42, 0.85);
+  --surface-dark-border: rgba(245, 158, 11, 0.2); /* amber-500/20 */
+  --surface-dark-shadow: 0 20px 60px -30px rgba(0, 0, 0, 0.6);
+  --accent-gold: #e6c068;
 }
 
-.animate-spin-slow {
-  animation: spin-slow 20s linear infinite;
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  background: #0f172a; /* khớp gradient tối trong layout */
+  color: #e5e7eb;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-heading);
+}
+
+/* Helpers dùng cho layout admin */
+.card-dark {
+  background: var(--surface-dark-card);
+  border: 1px solid var(--surface-dark-border);
+  border-radius: 16px;
+  box-shadow: var(--surface-dark-shadow);
+}
+
+.text-accent-gold {
+  color: var(--accent-gold);
+}
+
+.bg-hero-dark {
+  background: linear-gradient(135deg, #0b1223 0%, #0f172a 40%, #0d111f 100%);
+}
+
+/* Scrollbar tối giản */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.6);
+  border-radius: 20px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
