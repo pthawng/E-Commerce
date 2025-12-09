@@ -215,17 +215,23 @@ model Category {
   id        String     @id @default(uuid()) @db.Uuid
   parent    Category?  @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: SetNull)
   parentId  String?    @db.Uuid
+
   name      Json
   slug      String     @unique
-  isActive  Boolean    @default(true)
-  order     Int        @default(0)
+  isActive  Boolean   @default(true)
+  order     Int       @default(0)
   path      String?
+  level     Int?     
+
   children  Category[] @relation("CategoryToCategory")
-  products  Product[]
+
+  productLinks ProductCategory[]   
 
   @@index([parentId])
   @@index([slug])
+  @@map("categories")
 }
+
 
 model Attribute {
   id         String           @id @default(uuid()) @db.Uuid
@@ -250,25 +256,44 @@ model AttributeValue {
 
 model Product {
   id                String           @id @default(uuid()) @db.Uuid
-  category          Category?        @relation(fields: [categoryId], references: [id])
-  categoryId        String?          @db.Uuid
+
   name              Json
   slug              String           @unique
   description       Json?
+
   displayPriceMin   Decimal?         @db.Decimal(19,2)
   displayPriceMax   Decimal?         @db.Decimal(19,2)
+
   hasVariants       Boolean          @default(true)
   isActive          Boolean          @default(true)
   isFeatured        Boolean          @default(false)
+
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @default(now())
   deletedAt         DateTime?
+
   variants          ProductVariant[]
   media             ProductMedia[]
   reviews           Review[]
 
-  @@index([categoryId], map: "idx_products_category")
+  categories        ProductCategory[]  
+
   @@index([slug], map: "idx_products_slug")
+  @@map("products")
+}
+
+model ProductCategory {
+  productId  String   @db.Uuid
+  categoryId String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+  @@index([productId])
+  @@map("product_categories")
 }
 
 model ProductVariant {

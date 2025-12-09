@@ -1,6 +1,7 @@
 import { AuthModule } from '@modules/auth/auth.module';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { MailModule } from '@modules/mail/mail.module';
+import { ProductModule } from '@modules/product/product.module';
 import { RbacModule } from '@modules/rbac/rbac.module';
 import { StorageModule } from '@modules/storage/storage.module';
 import { UserModule } from '@modules/user/user.module';
@@ -68,6 +69,7 @@ import { AppService } from './app.service';
     MailModule,
     RbacModule,
     StorageModule,
+    ProductModule,
   ],
   controllers: [AppController],
   providers: [

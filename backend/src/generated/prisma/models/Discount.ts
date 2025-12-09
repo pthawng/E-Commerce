@@ -650,14 +650,6 @@ export type DiscountScalarRelationFilter = {
   isNot?: Prisma.DiscountWhereInput
 }
 
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type DiscountCreateNestedOneWithoutDiscountUsagesInput = {
   create?: Prisma.XOR<Prisma.DiscountCreateWithoutDiscountUsagesInput, Prisma.DiscountUncheckedCreateWithoutDiscountUsagesInput>
   connectOrCreate?: Prisma.DiscountCreateOrConnectWithoutDiscountUsagesInput

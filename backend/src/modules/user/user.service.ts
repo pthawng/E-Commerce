@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { PaginationDto, PaginationService, type PaginatedResult } from 'src/common/pagination';
+import type { Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -10,7 +12,10 @@ import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paginationService: PaginationService,
+  ) {}
 
   // ---------------------------
   // CREATE USER
@@ -62,6 +67,44 @@ export class UserService {
     return users.map((u) => {
       return plainToInstance(UserResponseDto, u);
     });
+  }
+
+  // ---------------------------
+  // GET ALL USERS (PAGINATED)
+  // ---------------------------
+  async findAllUserPaginated(dto: PaginationDto): Promise<PaginatedResult<User>> {
+    type PrismaUser = Prisma.UserGetPayload<Record<string, never>>;
+    type UserWhereInput = Prisma.UserWhereInput;
+
+    const baseWhere: UserWhereInput = { deletedAt: null };
+
+    const result = await this.paginationService.paginate<PrismaUser>({
+      findMany: (args) => {
+        const where: UserWhereInput = args.where ? { ...baseWhere, ...args.where } : baseWhere;
+
+        return this.prisma.user.findMany({
+          where,
+          orderBy: args.orderBy as Prisma.UserOrderByWithRelationInput,
+          skip: args.skip,
+          take: args.take,
+        });
+      },
+      count: (args) => {
+        const where: UserWhereInput = args.where ? { ...baseWhere, ...args.where } : baseWhere;
+
+        return this.prisma.user.count({ where });
+      },
+      dto,
+      where: baseWhere,
+      allowedSortFields: ['createdAt', 'email', 'fullName', 'updatedAt'],
+      defaultSort: { field: 'createdAt', order: 'desc' },
+      basePath: '/users',
+    });
+
+    return {
+      ...result,
+      items: result.items.map((u) => plainToInstance(UserResponseDto, u)),
+    };
   }
 
   // ---------------------------

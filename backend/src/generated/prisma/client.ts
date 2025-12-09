@@ -105,6 +105,11 @@ export type AttributeValue = Prisma.AttributeValueModel
  */
 export type Product = Prisma.ProductModel
 /**
+ * Model ProductCategory
+ * 
+ */
+export type ProductCategory = Prisma.ProductCategoryModel
+/**
  * Model ProductVariant
  * 
  */

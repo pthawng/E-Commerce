@@ -1,6 +1,5 @@
 import type { User } from '@shared';
 import { Exclude, Expose } from 'class-transformer';
-
 /**
  * User Response DTO
  * Implements User interface from @shared/types

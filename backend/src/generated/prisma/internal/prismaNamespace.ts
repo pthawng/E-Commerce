@@ -397,6 +397,7 @@ export const ModelName = {
   Attribute: 'Attribute',
   AttributeValue: 'AttributeValue',
   Product: 'Product',
+  ProductCategory: 'ProductCategory',
   ProductVariant: 'ProductVariant',
   VariantAttributeValue: 'VariantAttributeValue',
   ProductMedia: 'ProductMedia',
@@ -431,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "permission" | "role" | "rolePermission" | "userRole" | "userPermission" | "user" | "refreshToken" | "verifyEmailToken" | "resetPasswordToken" | "category" | "attribute" | "attributeValue" | "product" | "productVariant" | "variantAttributeValue" | "productMedia" | "warehouse" | "inventoryItem" | "inventoryLog" | "cart" | "cartItem" | "shippingMethod" | "order" | "orderItem" | "paymentTransaction" | "orderTimeline" | "review" | "reviewMedia" | "discount" | "discountUsage" | "post" | "auditLog"
+    modelProps: "permission" | "role" | "rolePermission" | "userRole" | "userPermission" | "user" | "refreshToken" | "verifyEmailToken" | "resetPasswordToken" | "category" | "attribute" | "attributeValue" | "product" | "productCategory" | "productVariant" | "variantAttributeValue" | "productMedia" | "warehouse" | "inventoryItem" | "inventoryLog" | "cart" | "cartItem" | "shippingMethod" | "order" | "orderItem" | "paymentTransaction" | "orderTimeline" | "review" | "reviewMedia" | "discount" | "discountUsage" | "post" | "auditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1394,6 +1395,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ProductCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ProductCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProductCategory: {
+      payload: Prisma.$ProductCategoryPayload<ExtArgs>
+      fields: Prisma.ProductCategoryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProductCategoryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProductCategoryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>
+        }
+        findFirst: {
+          args: Prisma.ProductCategoryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProductCategoryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>
+        }
+        findMany: {
+          args: Prisma.ProductCategoryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>[]
+        }
+        create: {
+          args: Prisma.ProductCategoryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>
+        }
+        createMany: {
+          args: Prisma.ProductCategoryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProductCategoryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>[]
+        }
+        delete: {
+          args: Prisma.ProductCategoryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>
+        }
+        update: {
+          args: Prisma.ProductCategoryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>
+        }
+        deleteMany: {
+          args: Prisma.ProductCategoryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProductCategoryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProductCategoryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>[]
+        }
+        upsert: {
+          args: Prisma.ProductCategoryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProductCategoryPayload>
+        }
+        aggregate: {
+          args: Prisma.ProductCategoryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProductCategory>
+        }
+        groupBy: {
+          args: Prisma.ProductCategoryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProductCategoryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProductCategoryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProductCategoryCountAggregateOutputType> | number
         }
       }
     }
@@ -2960,7 +3035,8 @@ export const CategoryScalarFieldEnum = {
   slug: 'slug',
   isActive: 'isActive',
   order: 'order',
-  path: 'path'
+  path: 'path',
+  level: 'level'
 } as const
 
 export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
@@ -2989,7 +3065,6 @@ export type AttributeValueScalarFieldEnum = (typeof AttributeValueScalarFieldEnu
 
 export const ProductScalarFieldEnum = {
   id: 'id',
-  categoryId: 'categoryId',
   name: 'name',
   slug: 'slug',
   description: 'description',
@@ -3004,6 +3079,15 @@ export const ProductScalarFieldEnum = {
 } as const
 
 export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]
+
+
+export const ProductCategoryScalarFieldEnum = {
+  productId: 'productId',
+  categoryId: 'categoryId',
+  createdAt: 'createdAt'
+} as const
+
+export type ProductCategoryScalarFieldEnum = (typeof ProductCategoryScalarFieldEnum)[keyof typeof ProductCategoryScalarFieldEnum]
 
 
 export const ProductVariantScalarFieldEnum = {
@@ -3656,6 +3740,7 @@ export type GlobalOmitConfig = {
   attribute?: Prisma.AttributeOmit
   attributeValue?: Prisma.AttributeValueOmit
   product?: Prisma.ProductOmit
+  productCategory?: Prisma.ProductCategoryOmit
   productVariant?: Prisma.ProductVariantOmit
   variantAttributeValue?: Prisma.VariantAttributeValueOmit
   productMedia?: Prisma.ProductMediaOmit
