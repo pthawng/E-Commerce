@@ -7,4 +7,6 @@ export * from './auth.queries';
 export * from './users.queries';
 export * from './products.queries';
 export * from './orders.queries';
+export * from './categories.queries';
+export * from './rbac.queries';
 

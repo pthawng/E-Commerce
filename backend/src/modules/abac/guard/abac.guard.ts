@@ -113,7 +113,7 @@ export class AbacGuard implements CanActivate {
     return {
       user: {
         ...user,
-        permissions: user.permissions || [], // Lazy load nếu chưa có
+        permissions: user.permissions || [],
       },
       resource,
       action: metadata.action,

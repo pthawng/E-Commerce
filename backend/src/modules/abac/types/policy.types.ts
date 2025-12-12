@@ -98,4 +98,3 @@ export interface PolicyEvaluationOptions {
   /** Additional context */
   additionalContext?: Record<string, unknown>;
 }
-

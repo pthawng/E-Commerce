@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -27,6 +28,16 @@ export class CreateProductDto {
     description: 'Tên sản phẩm (đa ngôn ngữ - JSON object)',
     example: { vi: 'Áo thun nam', en: 'Men T-Shirt' },
   })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  })
   @IsNotEmpty({ message: 'Tên sản phẩm không được để trống' })
   @IsObject({ message: 'Tên sản phẩm phải là object (đa ngôn ngữ)' })
   name: Record<string, string>;
@@ -47,6 +58,17 @@ export class CreateProductDto {
     description: 'Mô tả sản phẩm (đa ngôn ngữ - JSON object)',
     example: { vi: 'Mô tả sản phẩm', en: 'Product description' },
   })
+  @Transform(({ value }) => {
+    // Nếu là string (từ FormData), parse JSON
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  })
   @IsOptional()
   @IsObject({ message: 'Mô tả phải là object (đa ngôn ngữ)' })
   description?: Record<string, string>;
@@ -66,6 +88,12 @@ export class CreateProductDto {
     example: true,
     default: true,
   })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1';
+    }
+    return value;
+  })
   @IsOptional()
   @IsBoolean({ message: 'hasVariants phải là boolean' })
   hasVariants?: boolean;
@@ -75,6 +103,12 @@ export class CreateProductDto {
     example: true,
     default: true,
   })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1';
+    }
+    return value;
+  })
   @IsOptional()
   @IsBoolean({ message: 'isActive phải là boolean' })
   isActive?: boolean;
@@ -83,6 +117,12 @@ export class CreateProductDto {
     description: 'Sản phẩm có nổi bật không (mặc định: false)',
     example: false,
     default: false,
+  })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1';
+    }
+    return value;
   })
   @IsOptional()
   @IsBoolean({ message: 'isFeatured phải là boolean' })

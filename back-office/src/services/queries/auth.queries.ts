@@ -22,9 +22,9 @@ export function useMe() {
       const response = await apiGet<User>(API_ENDPOINTS.USERS.ME);
       return response.data;
     },
-    enabled: isAuthenticated && !!getAccessToken(), // Chỉ fetch khi đã authenticated
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: false, // Không retry khi fail (tránh loop)
+    enabled: isAuthenticated && !!getAccessToken(), 
+    staleTime: 1000 * 60 * 5, 
+    retry: false, 
   });
 }
 

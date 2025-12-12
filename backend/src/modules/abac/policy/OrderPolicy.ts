@@ -4,9 +4,9 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { BasePolicy } from './base/base-policy';
-import type { PolicyContext, PolicyResult } from './types/policy.types';
-import { PolicyAction } from './types/policy.types';
+import { BasePolicy } from '../base/base-policy';
+import type { PolicyContext, PolicyResult } from '../types/policy.types';
+import { PolicyAction } from '../types/policy.types';
 
 interface Order {
   id: string;

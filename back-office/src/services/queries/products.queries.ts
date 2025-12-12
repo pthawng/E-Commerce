@@ -28,7 +28,50 @@ export function useProducts(filters?: PaginationQuery) {
         : API_ENDPOINTS.PRODUCTS.BASE;
 
       const response = await apiGet<PaginatedResponse<ProductSummary>>(path);
-      return response.data;
+
+      const items = Array.isArray(response.data) ? response.data : response.data?.items || [];
+
+      type RawMeta = {
+        page?: number;
+        limit?: number;
+        total?: number;
+        totalItems?: number;
+        totalPages?: number;
+        hasNext?: boolean;
+        hasPrev?: boolean;
+      };
+
+      const rawMeta: RawMeta | null =
+        (response.meta as RawMeta | null | undefined) ??
+        ((response as unknown as { meta?: RawMeta }).meta ?? null);
+
+      const normalizedMeta = rawMeta
+        ? {
+            page: rawMeta.page ?? 1,
+            limit: rawMeta.limit ?? items.length ?? 0,
+            total: rawMeta.total ?? rawMeta.totalItems ?? items.length ?? 0,
+            totalPages:
+              rawMeta.totalPages ??
+              Math.max(
+                1,
+                Math.ceil(
+                  (rawMeta.totalItems ?? items.length ?? 0) /
+                    (rawMeta.limit || items.length || 1),
+                ),
+              ),
+            hasNext: rawMeta.hasNext ?? false,
+            hasPrev: rawMeta.hasPrev ?? false,
+          }
+        : {
+            page: 1,
+            limit: items.length,
+            total: items.length,
+            totalPages: 1,
+            hasNext: false,
+            hasPrev: false,
+          };
+
+      return { items, meta: normalizedMeta } satisfies PaginatedResponse<ProductSummary>;
     },
   });
 }

@@ -25,14 +25,14 @@ export interface PolicyMetadata {
 
 /**
  * Check Policy Decorator
- * 
+ *
  * @example
  * @CheckPolicy(OrderPolicy, PolicyAction.UPDATE, 'id')
  * @Patch(':id')
  * async updateOrder(@Param('id') id: string) {
  *   // Policy sẽ check OrderPolicy.canUpdate()
  * }
- * 
+ *
  * @example With custom resource resolver
  * @CheckPolicy(OrderPolicy, PolicyAction.READ, 'id', async (req) => {
  *   return await this.orderService.findOne(req.params.id);
@@ -56,4 +56,3 @@ export const CheckPolicy = (
   };
   return SetMetadata(CHECK_POLICY_KEY, metadata);
 };
-

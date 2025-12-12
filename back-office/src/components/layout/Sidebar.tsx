@@ -7,8 +7,10 @@ interface SidebarProps {
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: "💎" },
-  { to: "/orders", label: "Đơn hàng", icon: "📦" },
   { to: "/products", label: "Sản phẩm", icon: "💍" },
+  { to: "/rbac", label: "RBAC", icon: "🛡️" },
+  { to: "/category", label: "Danh mục", icon: "📁" },
+  { to: "/orders", label: "Đơn hàng", icon: "📦" },
   { to: "/customers", label: "Khách hàng", icon: "👤" },
   { to: "/reports", label: "Báo cáo", icon: "📊" },
   { to: "/settings", label: "Cài đặt", icon: "⚙️" },

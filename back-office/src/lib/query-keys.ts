@@ -28,7 +28,7 @@ export const queryKeys = {
   products: {
     all: ['products'] as const,
     lists: () => [...queryKeys.products.all, 'list'] as const,
-    list: (filters?: Record<string, unknown>) =>
+    list: (filters?: import('@shared').PaginationQuery) =>
       [...queryKeys.products.lists(), filters] as const,
     details: () => [...queryKeys.products.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.products.details(), id] as const,
@@ -66,6 +66,21 @@ export const queryKeys = {
     details: () => [...queryKeys.discounts.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.discounts.details(), id] as const,
     byCode: (code: string) => [...queryKeys.discounts.details(), 'code', code] as const,
+  },
+
+  // RBAC
+  rbac: {
+    all: ['rbac'] as const,
+    roles: {
+      all: ['rbac', 'roles'] as const,
+      list: () => [...queryKeys.rbac.roles.all, 'list'] as const,
+      detail: (slug: string) => [...queryKeys.rbac.roles.all, 'detail', slug] as const,
+    },
+    permissions: {
+      all: ['rbac', 'permissions'] as const,
+      list: () => [...queryKeys.rbac.permissions.all, 'list'] as const,
+      detail: (slug: string) => [...queryKeys.rbac.permissions.all, 'detail', slug] as const,
+    },
   },
 } as const;
 

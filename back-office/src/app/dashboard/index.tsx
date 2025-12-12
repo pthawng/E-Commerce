@@ -1,12 +1,15 @@
-import { Card, Statistic, Row, Col, Alert, Spin } from "antd";
-import { ArrowUpOutlined, ShoppingCartOutlined, UserOutlined } from "@ant-design/icons";
+import { Card, Statistic, Row, Col, Alert, Spin, Button } from "antd";
+import { ArrowUpOutlined, ShoppingCartOutlined, UserOutlined, FolderOutlined, RightOutlined } from "@ant-design/icons";
 import { useUsers } from "@/services/queries/users.queries";
 import { useOrders } from "@/services/queries/orders.queries";
 import { useMe } from "@/services/queries/auth.queries";
-import BackendConnection from "@/components/BackendConnection";
+import { useCategories } from "@/services/queries/categories.queries";
+import { useNavigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  
   // Real API calls - với error handling tốt hơn
   const { 
     data: usersData, 
@@ -26,26 +29,35 @@ export default function DashboardPage() {
     error: meError 
   } = useMe();
 
+  const {
+    data: categories,
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useCategories(true); // Include inactive để đếm tổng
+
   // Calculate stats from real data
+  const countCategories = (cats: typeof categories): number => {
+    if (!cats) return 0;
+    return cats.reduce((acc, cat) => {
+      return acc + 1 + (cat.children && cat.children.length > 0 ? countCategories(cat.children) : 0);
+    }, 0);
+  };
+
   const stats = {
     totalOrders: ordersData?.meta?.total || 0,
     totalUsers: usersData?.meta?.total || 0,
+    totalCategories: countCategories(categories),
     revenue: 0, // TODO: Calculate from orders
   };
 
-  const isLoading = usersLoading || ordersLoading || meLoading;
-  const hasError = usersError || ordersError || meError;
+  const isLoading = usersLoading || ordersLoading || meLoading || categoriesLoading;
+  const hasError = usersError || ordersError || meError || categoriesError;
 
   return (
     <ErrorBoundary>
       <div className="space-y-6">
         {/* PAGE TITLE */}
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-
-        {/* BACKEND CONNECTION TEST */}
-        <ErrorBoundary>
-          <BackendConnection />
-        </ErrorBoundary>
 
       {/* ERROR ALERT */}
       {hasError && (
@@ -110,6 +122,45 @@ export default function DashboardPage() {
                 suffix={<ArrowUpOutlined />}
               />
             )}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* CATEGORIES MANAGEMENT CARD */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24}>
+          <Card
+            title={
+              <div className="flex items-center gap-2">
+                <FolderOutlined />
+                <span>Quản lý Danh mục</span>
+              </div>
+            }
+            extra={
+              <Button
+                type="primary"
+                icon={<RightOutlined />}
+                onClick={() => navigate("/category")}
+              >
+                Quản lý danh mục
+              </Button>
+            }
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12} md={8}>
+                <Statistic
+                  title="Tổng số danh mục"
+                  value={stats.totalCategories}
+                  prefix={<FolderOutlined />}
+                  loading={categoriesLoading}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={16}>
+                <div className="text-slate-400 text-sm">
+                  Quản lý cấu trúc danh mục sản phẩm dạng cây. Tạo, chỉnh sửa và xóa danh mục để tổ chức sản phẩm một cách hiệu quả.
+                </div>
+              </Col>
+            </Row>
           </Card>
         </Col>
       </Row>

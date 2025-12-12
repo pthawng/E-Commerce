@@ -36,12 +36,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">💎</div>
-          <Title level={2} className="!text-amber-100 !mb-2">
+          <Title level={2} className="text-amber-100! mb-2!">
             Back Office
           </Title>
           <Text className="text-slate-400">Đăng nhập để tiếp tục</Text>
@@ -167,7 +167,7 @@ export default function LoginPage() {
                 size="large"
                 loading={login.isPending}
                 icon={<LoginOutlined />}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 border-0 text-white font-semibold h-12 rounded-lg shadow-lg"
+                className="bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 border-0 text-white font-semibold h-12 rounded-lg shadow-lg"
               >
                 {login.isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
@@ -193,7 +193,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <Text className="text-slate-500 text-sm">
-            © 2024 E-Commerce Back Office. All rights reserved.
+            © 2025 E-Commerce Back Office. All rights reserved.
           </Text>
         </div>
       </div>

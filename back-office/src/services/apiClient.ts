@@ -28,13 +28,27 @@ export class ApiClientError extends Error {
 
 
 /**
- * Get auth headers
+ * Get auth headers (for JSON requests)
  */
 function getAuthHeaders(): HeadersInit {
   const token = useAuthStore.getState().getAccessToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+/**
+ * Get auth headers (for FormData requests - không set Content-Type để browser tự set với boundary)
+ */
+function getAuthHeadersForFormData(): HeadersInit {
+  const token = useAuthStore.getState().getAccessToken();
+  const headers: HeadersInit = {};
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -157,6 +171,44 @@ export async function apiDelete<T = unknown>(
   const response = await fetch(url, {
     method: 'DELETE',
     headers: getAuthHeaders(),
+    ...options,
+  });
+
+  return handleResponse<T>(response);
+}
+
+/**
+ * API POST request with FormData (for file uploads)
+ */
+export async function apiPostFormData<T = unknown>(
+  endpoint: string,
+  formData: FormData,
+  options?: RequestInit,
+): Promise<ApiResponse<T>> {
+  const url = buildApiUrl(endpoint);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: getAuthHeadersForFormData(),
+    body: formData,
+    ...options,
+  });
+
+  return handleResponse<T>(response);
+}
+
+/**
+ * API PATCH request with FormData (for file uploads)
+ */
+export async function apiPatchFormData<T = unknown>(
+  endpoint: string,
+  formData: FormData,
+  options?: RequestInit,
+): Promise<ApiResponse<T>> {
+  const url = buildApiUrl(endpoint);
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: getAuthHeadersForFormData(),
+    body: formData,
     ...options,
   });
 
