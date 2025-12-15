@@ -27,13 +27,13 @@ export type AggregateAttribute = {
 export type AttributeMinAggregateOutputType = {
   id: string | null
   code: string | null
-  filterType: string | null
+  filterType: $Enums.AttributeInputType | null
 }
 
 export type AttributeMaxAggregateOutputType = {
   id: string | null
   code: string | null
-  filterType: string | null
+  filterType: $Enums.AttributeInputType | null
 }
 
 export type AttributeCountAggregateOutputType = {
@@ -141,7 +141,7 @@ export type AttributeGroupByOutputType = {
   id: string
   code: string
   name: runtime.JsonValue
-  filterType: string
+  filterType: $Enums.AttributeInputType
   _count: AttributeCountAggregateOutputType | null
   _min: AttributeMinAggregateOutputType | null
   _max: AttributeMaxAggregateOutputType | null
@@ -169,7 +169,7 @@ export type AttributeWhereInput = {
   id?: Prisma.UuidFilter<"Attribute"> | string
   code?: Prisma.StringFilter<"Attribute"> | string
   name?: Prisma.JsonFilter<"Attribute">
-  filterType?: Prisma.StringFilter<"Attribute"> | string
+  filterType?: Prisma.EnumAttributeInputTypeFilter<"Attribute"> | $Enums.AttributeInputType
   values?: Prisma.AttributeValueListRelationFilter
 }
 
@@ -188,7 +188,7 @@ export type AttributeWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.AttributeWhereInput[]
   NOT?: Prisma.AttributeWhereInput | Prisma.AttributeWhereInput[]
   name?: Prisma.JsonFilter<"Attribute">
-  filterType?: Prisma.StringFilter<"Attribute"> | string
+  filterType?: Prisma.EnumAttributeInputTypeFilter<"Attribute"> | $Enums.AttributeInputType
   values?: Prisma.AttributeValueListRelationFilter
 }, "id" | "code">
 
@@ -209,14 +209,14 @@ export type AttributeScalarWhereWithAggregatesInput = {
   id?: Prisma.UuidWithAggregatesFilter<"Attribute"> | string
   code?: Prisma.StringWithAggregatesFilter<"Attribute"> | string
   name?: Prisma.JsonWithAggregatesFilter<"Attribute">
-  filterType?: Prisma.StringWithAggregatesFilter<"Attribute"> | string
+  filterType?: Prisma.EnumAttributeInputTypeWithAggregatesFilter<"Attribute"> | $Enums.AttributeInputType
 }
 
 export type AttributeCreateInput = {
   id?: string
   code: string
   name: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: string
+  filterType?: $Enums.AttributeInputType
   values?: Prisma.AttributeValueCreateNestedManyWithoutAttributeInput
 }
 
@@ -224,7 +224,7 @@ export type AttributeUncheckedCreateInput = {
   id?: string
   code: string
   name: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: string
+  filterType?: $Enums.AttributeInputType
   values?: Prisma.AttributeValueUncheckedCreateNestedManyWithoutAttributeInput
 }
 
@@ -232,7 +232,7 @@ export type AttributeUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: Prisma.StringFieldUpdateOperationsInput | string
+  filterType?: Prisma.EnumAttributeInputTypeFieldUpdateOperationsInput | $Enums.AttributeInputType
   values?: Prisma.AttributeValueUpdateManyWithoutAttributeNestedInput
 }
 
@@ -240,7 +240,7 @@ export type AttributeUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: Prisma.StringFieldUpdateOperationsInput | string
+  filterType?: Prisma.EnumAttributeInputTypeFieldUpdateOperationsInput | $Enums.AttributeInputType
   values?: Prisma.AttributeValueUncheckedUpdateManyWithoutAttributeNestedInput
 }
 
@@ -248,21 +248,21 @@ export type AttributeCreateManyInput = {
   id?: string
   code: string
   name: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: string
+  filterType?: $Enums.AttributeInputType
 }
 
 export type AttributeUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: Prisma.StringFieldUpdateOperationsInput | string
+  filterType?: Prisma.EnumAttributeInputTypeFieldUpdateOperationsInput | $Enums.AttributeInputType
 }
 
 export type AttributeUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: Prisma.StringFieldUpdateOperationsInput | string
+  filterType?: Prisma.EnumAttributeInputTypeFieldUpdateOperationsInput | $Enums.AttributeInputType
 }
 
 export type AttributeCountOrderByAggregateInput = {
@@ -289,6 +289,10 @@ export type AttributeScalarRelationFilter = {
   isNot?: Prisma.AttributeWhereInput
 }
 
+export type EnumAttributeInputTypeFieldUpdateOperationsInput = {
+  set?: $Enums.AttributeInputType
+}
+
 export type AttributeCreateNestedOneWithoutValuesInput = {
   create?: Prisma.XOR<Prisma.AttributeCreateWithoutValuesInput, Prisma.AttributeUncheckedCreateWithoutValuesInput>
   connectOrCreate?: Prisma.AttributeCreateOrConnectWithoutValuesInput
@@ -307,14 +311,14 @@ export type AttributeCreateWithoutValuesInput = {
   id?: string
   code: string
   name: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: string
+  filterType?: $Enums.AttributeInputType
 }
 
 export type AttributeUncheckedCreateWithoutValuesInput = {
   id?: string
   code: string
   name: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: string
+  filterType?: $Enums.AttributeInputType
 }
 
 export type AttributeCreateOrConnectWithoutValuesInput = {
@@ -337,14 +341,14 @@ export type AttributeUpdateWithoutValuesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: Prisma.StringFieldUpdateOperationsInput | string
+  filterType?: Prisma.EnumAttributeInputTypeFieldUpdateOperationsInput | $Enums.AttributeInputType
 }
 
 export type AttributeUncheckedUpdateWithoutValuesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  filterType?: Prisma.StringFieldUpdateOperationsInput | string
+  filterType?: Prisma.EnumAttributeInputTypeFieldUpdateOperationsInput | $Enums.AttributeInputType
 }
 
 
@@ -425,7 +429,7 @@ export type $AttributePayload<ExtArgs extends runtime.Types.Extensions.InternalA
     id: string
     code: string
     name: runtime.JsonValue
-    filterType: string
+    filterType: $Enums.AttributeInputType
   }, ExtArgs["result"]["attribute"]>
   composites: {}
 }
@@ -853,7 +857,7 @@ export interface AttributeFieldRefs {
   readonly id: Prisma.FieldRef<"Attribute", 'String'>
   readonly code: Prisma.FieldRef<"Attribute", 'String'>
   readonly name: Prisma.FieldRef<"Attribute", 'Json'>
-  readonly filterType: Prisma.FieldRef<"Attribute", 'String'>
+  readonly filterType: Prisma.FieldRef<"Attribute", 'AttributeInputType'>
 }
     
 

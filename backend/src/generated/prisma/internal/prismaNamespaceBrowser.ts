@@ -104,7 +104,6 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 
 export const PermissionScalarFieldEnum = {
   id: 'id',
-  slug: 'slug',
   name: 'name',
   description: 'description',
   module: 'module',
@@ -289,7 +288,8 @@ export const ProductVariantScalarFieldEnum = {
   position: 'position',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  deletedAt: 'deletedAt'
+  deletedAt: 'deletedAt',
+  thumbnailUrl: 'thumbnailUrl'
 } as const
 
 export type ProductVariantScalarFieldEnum = (typeof ProductVariantScalarFieldEnum)[keyof typeof ProductVariantScalarFieldEnum]

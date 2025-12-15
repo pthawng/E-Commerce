@@ -11,6 +11,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { PermissionGuard } from './guards/rbac.guard';
+import { PERMISSIONS } from './permissions.constants';
 import { RbacService } from './rbac.service';
 
 /**
@@ -35,7 +36,10 @@ import { RbacService } from './rbac.service';
 @ApiTags('rbac-admin')
 @Controller('admin/rbac')
 @UseGuards(JwtAccessGuard, PermissionGuard)
-@Permission('rbac.manage') // Tất cả endpoints trong controller này đều yêu cầu permission này
+@Permission({
+  permissions: [PERMISSIONS.RBAC?.MANAGE ?? 'rbac.manage', 'rbac.manage'],
+  mode: 'any',
+}) // fallback nếu chưa seed RBAC constants
 export class RbacAdminController {
   constructor(private readonly rbacService: RbacService) {}
 

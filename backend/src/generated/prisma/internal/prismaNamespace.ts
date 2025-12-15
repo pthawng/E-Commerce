@@ -2919,7 +2919,6 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 
 export const PermissionScalarFieldEnum = {
   id: 'id',
-  slug: 'slug',
   name: 'name',
   description: 'description',
   module: 'module',
@@ -3104,7 +3103,8 @@ export const ProductVariantScalarFieldEnum = {
   position: 'position',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  deletedAt: 'deletedAt'
+  deletedAt: 'deletedAt',
+  thumbnailUrl: 'thumbnailUrl'
 } as const
 
 export type ProductVariantScalarFieldEnum = (typeof ProductVariantScalarFieldEnum)[keyof typeof ProductVariantScalarFieldEnum]
@@ -3475,20 +3475,6 @@ export type ListEnumPermissionModuleFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
- * Reference to a field of type 'PermissionAction'
- */
-export type EnumPermissionActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PermissionAction'>
-    
-
-
-/**
- * Reference to a field of type 'PermissionAction[]'
- */
-export type ListEnumPermissionActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PermissionAction[]'>
-    
-
-
-/**
  * Reference to a field of type 'DateTime'
  */
 export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
@@ -3534,6 +3520,20 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'AttributeInputType'
+ */
+export type EnumAttributeInputTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttributeInputType'>
+    
+
+
+/**
+ * Reference to a field of type 'AttributeInputType[]'
+ */
+export type ListEnumAttributeInputTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AttributeInputType[]'>
     
 
 

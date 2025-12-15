@@ -14,6 +14,21 @@ datasource db {
 // ENUMS
 //////////////////////////////////////
 
+enum AttributeInputType {
+  // 1. Nhập liệu cơ bản
+  text            // Ô nhập text ngắn (VD: Khắc tên lên nhẫn)
+  textarea        // Ô nhập text dài (Hiếm dùng cho attribute, nhưng cứ define)
+  
+  // 2. Chọn lựa (Selection)
+  select          // Dropdown menu (Chọn 1) - VD: Size nhẫn (6, 7, 8)
+  multiselect     // Dropdown chọn nhiều - VD: Phong cách (Boho, Minimalist)
+  boolean         // Toggle/Switch (Yes/No) - VD: Có hộp quà không?
+  
+  // 3. Hiển thị trực quan (Visual - Quan trọng cho Jewelry)
+  swatch_color    // Hiển thị ô tròn màu - VD: Màu kim loại (Vàng, Bạc)
+  swatch_image    // Hiển thị ô ảnh pattern - VD: Loại đá (Kim cương, Ruby - cần nhìn vân đá)
+}
+
 // Media types cho ProductMedia
 enum MediaType {
   image
@@ -65,7 +80,7 @@ enum TransactionStatusEnum {
 // PERMISSION & ROLE & USER
 //////////////////////////////////////
 enum PermissionModule {
-  USER
+  AUTH
   PRODUCT
   ORDER
   DISCOUNT
@@ -73,21 +88,12 @@ enum PermissionModule {
   SYSTEM
 }
 
-enum PermissionAction {
-  READ
-  CREATE
-  UPDATE
-  DELETE
-  MANAGE
-}
-
 model Permission {
   id          String            @id @default(uuid()) @db.Uuid
-  slug        String            @unique
   name        String
   description String?
   module      PermissionModule?
-  action      PermissionAction?
+  action      String?           @unique
   createdAt   DateTime          @default(now())
 
   roles       RolePermission[]
@@ -161,6 +167,7 @@ model User {
   deletedAt       DateTime?
 
   userRoles       UserRole[]
+  userPermissions UserPermission[]
   reviews         Review[]
   discountUsages  DiscountUsage[]
   posts           Post[]
@@ -170,8 +177,7 @@ model User {
 
   @@unique([email], map: "idx_users_email_unique")
   @@unique([phone], map: "idx_users_phone_unique")
-  @@index([email], map: "idx_users_active_email") // partial index sẽ tạo bằng migration
-  userPermissions UserPermission[]
+  @@index([email], map: "idx_users_active_email") 
 }
 
 //////////////////////////////////////
@@ -237,7 +243,7 @@ model Attribute {
   id         String           @id @default(uuid()) @db.Uuid
   code       String           @unique
   name       Json
-  filterType String           @default("checkbox")
+  filterType AttributeInputType @default(select)
   values     AttributeValue[]
 }
 
@@ -312,6 +318,10 @@ model ProductVariant {
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @default(now())
   deletedAt      DateTime?
+
+  thumbnailUrl   String?
+
+  media          ProductMedia[]
   attributes     VariantAttributeValue[]
   inventoryItems InventoryItem[]
   inventoryLogs  InventoryLog[]
@@ -341,6 +351,7 @@ model ProductMedia {
   isThumbnail Boolean     @default(false)
   order      Int          @default(0)
   createdAt  DateTime     @default(now())
+  variants    ProductVariant[]
 
   @@index([productId, order], map: "idx_product_media_product")
 }

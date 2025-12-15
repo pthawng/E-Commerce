@@ -9,6 +9,19 @@
 * 🟢 You can import this file directly.
 */
 
+export const AttributeInputType = {
+  text: 'text',
+  textarea: 'textarea',
+  select: 'select',
+  multiselect: 'multiselect',
+  boolean: 'boolean',
+  swatch_color: 'swatch_color',
+  swatch_image: 'swatch_image'
+} as const
+
+export type AttributeInputType = (typeof AttributeInputType)[keyof typeof AttributeInputType]
+
+
 export const MediaType = {
   image: 'image',
   video: 'video',
@@ -74,7 +87,7 @@ export type TransactionStatusEnum = (typeof TransactionStatusEnum)[keyof typeof 
 
 
 export const PermissionModule = {
-  USER: 'USER',
+  AUTH: 'AUTH',
   PRODUCT: 'PRODUCT',
   ORDER: 'ORDER',
   DISCOUNT: 'DISCOUNT',
@@ -83,14 +96,3 @@ export const PermissionModule = {
 } as const
 
 export type PermissionModule = (typeof PermissionModule)[keyof typeof PermissionModule]
-
-
-export const PermissionAction = {
-  READ: 'READ',
-  CREATE: 'CREATE',
-  UPDATE: 'UPDATE',
-  DELETE: 'DELETE',
-  MANAGE: 'MANAGE'
-} as const
-
-export type PermissionAction = (typeof PermissionAction)[keyof typeof PermissionAction]

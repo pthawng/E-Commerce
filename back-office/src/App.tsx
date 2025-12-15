@@ -1,12 +1,13 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import AdminLayout from "./components/layout/AdminLayout";
-import DashboardPage from "./app/dashboard";
-import ProductsPage from "./app/product";
-import CategoriesPage from "./app/category";
-import RbacPage from "./app/rbac";
+import { AdminLayout } from "@/features/layout";
+import DashboardPage from "./app/dashboard/page";
+import ProductsPage from "./app/product/page";
+import CategoriesPage from "./app/category/page";
+import RbacPage from "./app/rbac/page";
+import UsersPage from "./app/user/page";
 import LoginPage from "./app/auth/login";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ProtectedRoute } from "@/features/auth";
+import { ErrorBoundary } from "@/shared/ui";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="users" element={<UsersPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="category" element={<CategoriesPage />} />
           <Route path="rbac" element={<RbacPage />} />

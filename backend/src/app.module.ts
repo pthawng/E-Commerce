@@ -3,6 +3,7 @@ import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { CategoryModule } from '@modules/category/category.module';
 import { MailModule } from '@modules/mail/mail.module';
 import { ProductModule } from '@modules/product/product.module';
+import { AttributeModule } from '@modules/attribute/attribute.module';
 import { RbacModule } from '@modules/rbac/rbac.module';
 import { StorageModule } from '@modules/storage/storage.module';
 import { UserModule } from '@modules/user/user.module';
@@ -72,6 +73,7 @@ import { AppService } from './app.service';
     StorageModule,
     ProductModule,
     CategoryModule,
+    AttributeModule,
   ],
   controllers: [AppController],
   providers: [

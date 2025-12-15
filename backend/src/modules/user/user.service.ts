@@ -144,14 +144,15 @@ export class UserService {
       if (existPhone) throw new BadRequestException('Phone already exists');
     }
 
-    // Hash password with argon2
-
-    const passwordHash = await argon2.hash(dto.password!, {
-      type: argon2.argon2id,
-      timeCost: 2,
-      memoryCost: 19456,
-      parallelism: 1,
-    });
+    // Hash password nếu client gửi
+    const passwordHash = dto.password
+      ? await argon2.hash(dto.password, {
+          type: argon2.argon2id,
+          timeCost: 2,
+          memoryCost: 19456,
+          parallelism: 1,
+        })
+      : undefined;
 
     const updated = await this.prisma.user.update({
       where: { id },
@@ -160,6 +161,8 @@ export class UserService {
         phone: dto.phone ?? user.phone,
         fullName: dto.fullName ?? user.fullName,
         passwordHash: passwordHash ?? user.passwordHash,
+        isActive: dto.isActive ?? user.isActive,
+        isEmailVerified: dto.isEmailVerified ?? user.isEmailVerified,
       },
     });
 

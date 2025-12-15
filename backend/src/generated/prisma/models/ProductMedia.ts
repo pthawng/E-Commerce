@@ -237,6 +237,7 @@ export type ProductMediaWhereInput = {
   order?: Prisma.IntFilter<"ProductMedia"> | number
   createdAt?: Prisma.DateTimeFilter<"ProductMedia"> | Date | string
   product?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
+  variants?: Prisma.ProductVariantListRelationFilter
 }
 
 export type ProductMediaOrderByWithRelationInput = {
@@ -249,6 +250,7 @@ export type ProductMediaOrderByWithRelationInput = {
   order?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   product?: Prisma.ProductOrderByWithRelationInput
+  variants?: Prisma.ProductVariantOrderByRelationAggregateInput
 }
 
 export type ProductMediaWhereUniqueInput = Prisma.AtLeast<{
@@ -264,6 +266,7 @@ export type ProductMediaWhereUniqueInput = Prisma.AtLeast<{
   order?: Prisma.IntFilter<"ProductMedia"> | number
   createdAt?: Prisma.DateTimeFilter<"ProductMedia"> | Date | string
   product?: Prisma.XOR<Prisma.ProductScalarRelationFilter, Prisma.ProductWhereInput>
+  variants?: Prisma.ProductVariantListRelationFilter
 }, "id">
 
 export type ProductMediaOrderByWithAggregationInput = {
@@ -305,6 +308,7 @@ export type ProductMediaCreateInput = {
   order?: number
   createdAt?: Date | string
   product: Prisma.ProductCreateNestedOneWithoutMediaInput
+  variants?: Prisma.ProductVariantCreateNestedManyWithoutMediaInput
 }
 
 export type ProductMediaUncheckedCreateInput = {
@@ -316,6 +320,7 @@ export type ProductMediaUncheckedCreateInput = {
   isThumbnail?: boolean
   order?: number
   createdAt?: Date | string
+  variants?: Prisma.ProductVariantUncheckedCreateNestedManyWithoutMediaInput
 }
 
 export type ProductMediaUpdateInput = {
@@ -327,6 +332,7 @@ export type ProductMediaUpdateInput = {
   order?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   product?: Prisma.ProductUpdateOneRequiredWithoutMediaNestedInput
+  variants?: Prisma.ProductVariantUpdateManyWithoutMediaNestedInput
 }
 
 export type ProductMediaUncheckedUpdateInput = {
@@ -338,6 +344,7 @@ export type ProductMediaUncheckedUpdateInput = {
   isThumbnail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   order?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  variants?: Prisma.ProductVariantUncheckedUpdateManyWithoutMediaNestedInput
 }
 
 export type ProductMediaCreateManyInput = {
@@ -463,6 +470,44 @@ export type ProductMediaUncheckedUpdateManyWithoutProductNestedInput = {
   deleteMany?: Prisma.ProductMediaScalarWhereInput | Prisma.ProductMediaScalarWhereInput[]
 }
 
+export type ProductMediaCreateNestedManyWithoutVariantsInput = {
+  create?: Prisma.XOR<Prisma.ProductMediaCreateWithoutVariantsInput, Prisma.ProductMediaUncheckedCreateWithoutVariantsInput> | Prisma.ProductMediaCreateWithoutVariantsInput[] | Prisma.ProductMediaUncheckedCreateWithoutVariantsInput[]
+  connectOrCreate?: Prisma.ProductMediaCreateOrConnectWithoutVariantsInput | Prisma.ProductMediaCreateOrConnectWithoutVariantsInput[]
+  connect?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+}
+
+export type ProductMediaUncheckedCreateNestedManyWithoutVariantsInput = {
+  create?: Prisma.XOR<Prisma.ProductMediaCreateWithoutVariantsInput, Prisma.ProductMediaUncheckedCreateWithoutVariantsInput> | Prisma.ProductMediaCreateWithoutVariantsInput[] | Prisma.ProductMediaUncheckedCreateWithoutVariantsInput[]
+  connectOrCreate?: Prisma.ProductMediaCreateOrConnectWithoutVariantsInput | Prisma.ProductMediaCreateOrConnectWithoutVariantsInput[]
+  connect?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+}
+
+export type ProductMediaUpdateManyWithoutVariantsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProductMediaCreateWithoutVariantsInput, Prisma.ProductMediaUncheckedCreateWithoutVariantsInput> | Prisma.ProductMediaCreateWithoutVariantsInput[] | Prisma.ProductMediaUncheckedCreateWithoutVariantsInput[]
+  connectOrCreate?: Prisma.ProductMediaCreateOrConnectWithoutVariantsInput | Prisma.ProductMediaCreateOrConnectWithoutVariantsInput[]
+  upsert?: Prisma.ProductMediaUpsertWithWhereUniqueWithoutVariantsInput | Prisma.ProductMediaUpsertWithWhereUniqueWithoutVariantsInput[]
+  set?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  disconnect?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  delete?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  connect?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  update?: Prisma.ProductMediaUpdateWithWhereUniqueWithoutVariantsInput | Prisma.ProductMediaUpdateWithWhereUniqueWithoutVariantsInput[]
+  updateMany?: Prisma.ProductMediaUpdateManyWithWhereWithoutVariantsInput | Prisma.ProductMediaUpdateManyWithWhereWithoutVariantsInput[]
+  deleteMany?: Prisma.ProductMediaScalarWhereInput | Prisma.ProductMediaScalarWhereInput[]
+}
+
+export type ProductMediaUncheckedUpdateManyWithoutVariantsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProductMediaCreateWithoutVariantsInput, Prisma.ProductMediaUncheckedCreateWithoutVariantsInput> | Prisma.ProductMediaCreateWithoutVariantsInput[] | Prisma.ProductMediaUncheckedCreateWithoutVariantsInput[]
+  connectOrCreate?: Prisma.ProductMediaCreateOrConnectWithoutVariantsInput | Prisma.ProductMediaCreateOrConnectWithoutVariantsInput[]
+  upsert?: Prisma.ProductMediaUpsertWithWhereUniqueWithoutVariantsInput | Prisma.ProductMediaUpsertWithWhereUniqueWithoutVariantsInput[]
+  set?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  disconnect?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  delete?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  connect?: Prisma.ProductMediaWhereUniqueInput | Prisma.ProductMediaWhereUniqueInput[]
+  update?: Prisma.ProductMediaUpdateWithWhereUniqueWithoutVariantsInput | Prisma.ProductMediaUpdateWithWhereUniqueWithoutVariantsInput[]
+  updateMany?: Prisma.ProductMediaUpdateManyWithWhereWithoutVariantsInput | Prisma.ProductMediaUpdateManyWithWhereWithoutVariantsInput[]
+  deleteMany?: Prisma.ProductMediaScalarWhereInput | Prisma.ProductMediaScalarWhereInput[]
+}
+
 export type EnumMediaTypeFieldUpdateOperationsInput = {
   set?: $Enums.MediaType
 }
@@ -475,6 +520,7 @@ export type ProductMediaCreateWithoutProductInput = {
   isThumbnail?: boolean
   order?: number
   createdAt?: Date | string
+  variants?: Prisma.ProductVariantCreateNestedManyWithoutMediaInput
 }
 
 export type ProductMediaUncheckedCreateWithoutProductInput = {
@@ -485,6 +531,7 @@ export type ProductMediaUncheckedCreateWithoutProductInput = {
   isThumbnail?: boolean
   order?: number
   createdAt?: Date | string
+  variants?: Prisma.ProductVariantUncheckedCreateNestedManyWithoutMediaInput
 }
 
 export type ProductMediaCreateOrConnectWithoutProductInput = {
@@ -527,6 +574,49 @@ export type ProductMediaScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"ProductMedia"> | Date | string
 }
 
+export type ProductMediaCreateWithoutVariantsInput = {
+  id?: string
+  url: string
+  type?: $Enums.MediaType
+  altText?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isThumbnail?: boolean
+  order?: number
+  createdAt?: Date | string
+  product: Prisma.ProductCreateNestedOneWithoutMediaInput
+}
+
+export type ProductMediaUncheckedCreateWithoutVariantsInput = {
+  id?: string
+  productId: string
+  url: string
+  type?: $Enums.MediaType
+  altText?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isThumbnail?: boolean
+  order?: number
+  createdAt?: Date | string
+}
+
+export type ProductMediaCreateOrConnectWithoutVariantsInput = {
+  where: Prisma.ProductMediaWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProductMediaCreateWithoutVariantsInput, Prisma.ProductMediaUncheckedCreateWithoutVariantsInput>
+}
+
+export type ProductMediaUpsertWithWhereUniqueWithoutVariantsInput = {
+  where: Prisma.ProductMediaWhereUniqueInput
+  update: Prisma.XOR<Prisma.ProductMediaUpdateWithoutVariantsInput, Prisma.ProductMediaUncheckedUpdateWithoutVariantsInput>
+  create: Prisma.XOR<Prisma.ProductMediaCreateWithoutVariantsInput, Prisma.ProductMediaUncheckedCreateWithoutVariantsInput>
+}
+
+export type ProductMediaUpdateWithWhereUniqueWithoutVariantsInput = {
+  where: Prisma.ProductMediaWhereUniqueInput
+  data: Prisma.XOR<Prisma.ProductMediaUpdateWithoutVariantsInput, Prisma.ProductMediaUncheckedUpdateWithoutVariantsInput>
+}
+
+export type ProductMediaUpdateManyWithWhereWithoutVariantsInput = {
+  where: Prisma.ProductMediaScalarWhereInput
+  data: Prisma.XOR<Prisma.ProductMediaUpdateManyMutationInput, Prisma.ProductMediaUncheckedUpdateManyWithoutVariantsInput>
+}
+
 export type ProductMediaCreateManyProductInput = {
   id?: string
   url: string
@@ -545,6 +635,7 @@ export type ProductMediaUpdateWithoutProductInput = {
   isThumbnail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   order?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  variants?: Prisma.ProductVariantUpdateManyWithoutMediaNestedInput
 }
 
 export type ProductMediaUncheckedUpdateWithoutProductInput = {
@@ -555,6 +646,7 @@ export type ProductMediaUncheckedUpdateWithoutProductInput = {
   isThumbnail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   order?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  variants?: Prisma.ProductVariantUncheckedUpdateManyWithoutMediaNestedInput
 }
 
 export type ProductMediaUncheckedUpdateManyWithoutProductInput = {
@@ -567,6 +659,68 @@ export type ProductMediaUncheckedUpdateManyWithoutProductInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type ProductMediaUpdateWithoutVariantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumMediaTypeFieldUpdateOperationsInput | $Enums.MediaType
+  altText?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isThumbnail?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  order?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  product?: Prisma.ProductUpdateOneRequiredWithoutMediaNestedInput
+}
+
+export type ProductMediaUncheckedUpdateWithoutVariantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumMediaTypeFieldUpdateOperationsInput | $Enums.MediaType
+  altText?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isThumbnail?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  order?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type ProductMediaUncheckedUpdateManyWithoutVariantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.StringFieldUpdateOperationsInput | string
+  url?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumMediaTypeFieldUpdateOperationsInput | $Enums.MediaType
+  altText?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isThumbnail?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  order?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+
+/**
+ * Count Type ProductMediaCountOutputType
+ */
+
+export type ProductMediaCountOutputType = {
+  variants: number
+}
+
+export type ProductMediaCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  variants?: boolean | ProductMediaCountOutputTypeCountVariantsArgs
+}
+
+/**
+ * ProductMediaCountOutputType without action
+ */
+export type ProductMediaCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProductMediaCountOutputType
+   */
+  select?: Prisma.ProductMediaCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * ProductMediaCountOutputType without action
+ */
+export type ProductMediaCountOutputTypeCountVariantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ProductVariantWhereInput
+}
 
 
 export type ProductMediaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -579,6 +733,8 @@ export type ProductMediaSelect<ExtArgs extends runtime.Types.Extensions.Internal
   order?: boolean
   createdAt?: boolean
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
+  variants?: boolean | Prisma.ProductMedia$variantsArgs<ExtArgs>
+  _count?: boolean | Prisma.ProductMediaCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["productMedia"]>
 
 export type ProductMediaSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -619,6 +775,8 @@ export type ProductMediaSelectScalar = {
 export type ProductMediaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "productId" | "url" | "type" | "altText" | "isThumbnail" | "order" | "createdAt", ExtArgs["result"]["productMedia"]>
 export type ProductMediaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
+  variants?: boolean | Prisma.ProductMedia$variantsArgs<ExtArgs>
+  _count?: boolean | Prisma.ProductMediaCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ProductMediaIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   product?: boolean | Prisma.ProductDefaultArgs<ExtArgs>
@@ -631,6 +789,7 @@ export type $ProductMediaPayload<ExtArgs extends runtime.Types.Extensions.Intern
   name: "ProductMedia"
   objects: {
     product: Prisma.$ProductPayload<ExtArgs>
+    variants: Prisma.$ProductVariantPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1036,6 +1195,7 @@ readonly fields: ProductMediaFieldRefs;
 export interface Prisma__ProductMediaClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   product<T extends Prisma.ProductDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductDefaultArgs<ExtArgs>>): Prisma.Prisma__ProductClient<runtime.Types.Result.GetResult<Prisma.$ProductPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  variants<T extends Prisma.ProductMedia$variantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductMedia$variantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProductVariantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1466,6 +1626,30 @@ export type ProductMediaDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many ProductMedias to delete.
    */
   limit?: number
+}
+
+/**
+ * ProductMedia.variants
+ */
+export type ProductMedia$variantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProductVariant
+   */
+  select?: Prisma.ProductVariantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ProductVariant
+   */
+  omit?: Prisma.ProductVariantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProductVariantInclude<ExtArgs> | null
+  where?: Prisma.ProductVariantWhereInput
+  orderBy?: Prisma.ProductVariantOrderByWithRelationInput | Prisma.ProductVariantOrderByWithRelationInput[]
+  cursor?: Prisma.ProductVariantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ProductVariantScalarFieldEnum | Prisma.ProductVariantScalarFieldEnum[]
 }
 
 /**

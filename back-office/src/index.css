@@ -1,53 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
-/* Thiết lập tối giản cho admin (dark theme) */
+/* Luxury Jewelry Theme Tokens */
 :root {
-  --font-body: "Inter", "SF Pro Display", system-ui, sans-serif;
-  --font-heading: "Playfair Display", serif;
+  /* Colors */
+  --color-violet-royal: #6D28D9;
+  --color-midnight-indigo: #4C1D95;
+  --color-rose-gold: #B76E79;
+  --color-champagne-gold: #D4AF37;
+  --color-sand-white: #FAF8F5;
+  --color-warm-gray: #D6D3D1;
+  --color-text-primary: #1F2937; /* gray-800 */
+  --color-text-secondary: #6B7280; /* gray-500 */
 
-  /* Dark surfaces & accent */
-  --surface-dark-card: rgba(15, 23, 42, 0.85);
-  --surface-dark-border: rgba(245, 158, 11, 0.2); /* amber-500/20 */
-  --surface-dark-shadow: 0 20px 60px -30px rgba(0, 0, 0, 0.6);
-  --accent-gold: #e6c068;
+  /* Fonts */
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  /* Shadows */
+  --shadow-violet-soft: 0 10px 40px -10px rgba(109, 40, 217, 0.15);
+  --shadow-gold-glow: 0 4px 20px -5px rgba(212, 175, 55, 0.25);
 }
 
 body {
   margin: 0;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
+  background-color: var(--color-sand-white);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
-  background: #0f172a; /* khớp gradient tối trong layout */
-  color: #e5e7eb;
 }
 
-h1, h2, h3, h4, h5 {
-  font-family: var(--font-heading);
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: var(--font-serif);
 }
 
-/* Helpers dùng cho layout admin */
-.card-dark {
-  background: var(--surface-dark-card);
-  border: 1px solid var(--surface-dark-border);
-  border-radius: 16px;
-  box-shadow: var(--surface-dark-shadow);
+/* Luxury Utilities */
+.glass-gold {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 0.5px solid rgba(212, 175, 55, 0.3);
 }
 
-.text-accent-gold {
-  color: var(--accent-gold);
+.card-luxury {
+  background: white;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  box-shadow: var(--shadow-violet-soft);
+  position: relative;
+  overflow: hidden;
 }
 
-.bg-hero-dark {
-  background: linear-gradient(135deg, #0b1223 0%, #0f172a 40%, #0d111f 100%);
+/* Shimmer Animation */
+@keyframes shimmer {
+  0% { transform: translateX(-150%) skewX(-15deg); }
+  100% { transform: translateX(150%) skewX(-15deg); }
 }
 
-/* Scrollbar tối giản */
+.hover-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.hover-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  transform: skewX(-15deg) translateX(-150%);
+  transition: transform 0.5s;
+  pointer-events: none;
+}
+
+.hover-shimmer:hover::after {
+  animation: shimmer 1s ease-in-out;
+}
+
+/* Custom Scrollbar for Luxury Feel */
 ::-webkit-scrollbar {
   width: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(245, 158, 11, 0.6);
-  border-radius: 20px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.6);
 }

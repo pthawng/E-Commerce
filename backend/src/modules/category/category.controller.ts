@@ -1,3 +1,6 @@
+import { Permission } from '@modules/rbac/decorators/permission.decorator';
+import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
+import { PERMISSIONS } from '@modules/rbac/permissions.constants';
 import {
   Body,
   Controller,
@@ -8,6 +11,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -18,6 +22,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('categories')
 @Controller('categories')
+@UseGuards(PermissionGuard)
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
@@ -49,10 +54,13 @@ export class CategoryController {
   }
 
   // CREATE
-  @Public()
   @Post()
   @ApiOperation({ summary: 'Tạo mới danh mục' })
   @ApiResponse({ status: 201, description: 'Danh mục mới được tạo' })
+  @Permission({
+    permissions: [PERMISSIONS.PRODUCT.CATEGORY.CREATE],
+    mode: 'any',
+  })
   create(@Body() dto: CreateCategoryDto) {
     return this.categoryService.create(dto);
   }
@@ -61,6 +69,10 @@ export class CategoryController {
   @Patch(':id')
   @ApiOperation({ summary: 'Cập nhật danh mục' })
   @ApiResponse({ status: 200, description: 'Danh mục sau khi cập nhật' })
+  @Permission({
+    permissions: [PERMISSIONS.PRODUCT.CATEGORY.UPDATE],
+    mode: 'any',
+  })
   update(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoryService.update(id, dto);
   }
@@ -69,6 +81,10 @@ export class CategoryController {
   @Delete(':id')
   @ApiOperation({ summary: 'Xoá danh mục' })
   @ApiResponse({ status: 200, description: 'Thông báo xoá danh mục' })
+  @Permission({
+    permissions: [PERMISSIONS.PRODUCT.CATEGORY.DELETE],
+    mode: 'any',
+  })
   remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.categoryService.remove(id);
   }

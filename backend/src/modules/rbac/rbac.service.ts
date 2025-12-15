@@ -2,13 +2,19 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PERMISSIONS } from './permissions.constants';
 
 @Injectable()
-export class RbacService {
+export class RbacService implements OnModuleInit {
   constructor(private prisma: PrismaService) {}
+
+  async onModuleInit() {
+    await this.seedProductPermissions();
+  }
 
   /** Đảm bảo user tồn tại và đang hoạt động */
   async ensureActiveUser(userId: string) {
@@ -46,9 +52,12 @@ export class RbacService {
 
     const permissionsFromRoles = rolePermissions
       .flatMap((ur) => ur.role.rolePermissions)
-      .map((rp) => rp.permission.slug);
+      .map((rp) => rp.permission.action)
+      .filter((slug): slug is string => Boolean(slug));
 
-    const permissionsFromUser = userPermissions.map((up) => up.permission.slug);
+    const permissionsFromUser = userPermissions
+      .map((up) => up.permission.action)
+      .filter((slug): slug is string => Boolean(slug));
 
     return [...new Set([...permissionsFromRoles, ...permissionsFromUser])];
   }
@@ -73,7 +82,9 @@ export class RbacService {
   async assignPermissionToUser(userId: string, permissionSlug: string, assignedBy?: string) {
     await this.ensureActiveUser(userId);
 
-    const permission = await this.prisma.permission.findUnique({ where: { slug: permissionSlug } });
+    const permission = await this.prisma.permission.findUnique({
+      where: { action: permissionSlug },
+    });
     if (!permission) {
       throw new NotFoundException('Permission not found');
     }
@@ -88,7 +99,9 @@ export class RbacService {
   /** Gán permission cho role */
   async assignPermissionToRole(roleSlug: string, permissionSlug: string, assignedBy?: string) {
     const role = await this.prisma.role.findUnique({ where: { slug: roleSlug } });
-    const permission = await this.prisma.permission.findUnique({ where: { slug: permissionSlug } });
+    const permission = await this.prisma.permission.findUnique({
+      where: { action: permissionSlug },
+    });
     if (!role || !permission) {
       throw new NotFoundException('Role or Permission not found');
     }
@@ -228,7 +241,9 @@ export class RbacService {
   async removePermissionFromUser(userId: string, permissionSlug: string) {
     await this.ensureActiveUser(userId);
 
-    const permission = await this.prisma.permission.findUnique({ where: { slug: permissionSlug } });
+    const permission = await this.prisma.permission.findUnique({
+      where: { action: permissionSlug },
+    });
     if (!permission) {
       throw new NotFoundException('Permission not found');
     }
@@ -241,7 +256,9 @@ export class RbacService {
   /** Gỡ permission khỏi role */
   async removePermissionFromRole(roleSlug: string, permissionSlug: string) {
     const role = await this.prisma.role.findUnique({ where: { slug: roleSlug } });
-    const permission = await this.prisma.permission.findUnique({ where: { slug: permissionSlug } });
+    const permission = await this.prisma.permission.findUnique({
+      where: { action: permissionSlug },
+    });
     if (!role || !permission) {
       throw new NotFoundException('Role or Permission not found');
     }
@@ -268,10 +285,10 @@ export class RbacService {
     });
   }
 
-  /** Lấy permission theo slug */
+  /** Lấy permission theo slug (slug được lưu ở cột `action`) */
   async findPermissionBySlug(slug: string) {
     const permission = await this.prisma.permission.findUnique({
-      where: { slug },
+      where: { action: slug },
       include: {
         _count: {
           select: {
@@ -297,19 +314,19 @@ export class RbacService {
     module?: string;
     action?: string;
   }) {
-    // Kiểm tra slug đã tồn tại chưa
-    const existing = await this.prisma.permission.findUnique({ where: { slug: data.slug } });
+    // Kiểm tra slug (được map vào cột action) đã tồn tại chưa
+    const existing = await this.prisma.permission.findUnique({ where: { action: data.slug } });
     if (existing) {
       throw new ForbiddenException(`Permission với slug "${data.slug}" đã tồn tại`);
     }
 
     return this.prisma.permission.create({
       data: {
-        slug: data.slug,
         name: data.name,
         description: data.description,
         module: data.module as any,
-        action: data.action as any,
+        // Lưu business slug (vd: "product.category.create") vào cột `action`
+        action: data.slug,
       },
     });
   }
@@ -322,7 +339,8 @@ export class RbacService {
     await this.findPermissionBySlug(slug);
 
     return this.prisma.permission.update({
-      where: { slug },
+      // slug map vào cột action
+      where: { action: slug },
       data: {
         name: data.name,
         description: data.description,
@@ -350,6 +368,74 @@ export class RbacService {
       );
     }
 
-    return this.prisma.permission.delete({ where: { slug } });
+    // slug map vào cột action
+    return this.prisma.permission.delete({ where: { action: slug } });
+  }
+
+  // ==================== SEED DEFAULT PERMISSIONS ====================
+  private async seedProductPermissions() {
+    const seeds = [
+      // Category
+      {
+        action: PERMISSIONS.PRODUCT.CATEGORY.CREATE,
+        name: 'Tạo danh mục',
+        module: 'product',
+      },
+      {
+        action: PERMISSIONS.PRODUCT.CATEGORY.READ,
+        name: 'Xem danh mục',
+        module: 'product',
+      },
+      {
+        action: PERMISSIONS.PRODUCT.CATEGORY.UPDATE,
+        name: 'Cập nhật danh mục',
+        module: 'product',
+      },
+      {
+        action: PERMISSIONS.PRODUCT.CATEGORY.DELETE,
+        name: 'Xóa danh mục',
+        module: 'product',
+      },
+      // Attribute
+      {
+        action: PERMISSIONS.PRODUCT.ATTRIBUTE.CREATE,
+        name: 'Tạo thuộc tính',
+        module: 'product',
+      },
+      {
+        action: PERMISSIONS.PRODUCT.ATTRIBUTE.READ,
+        name: 'Xem thuộc tính',
+        module: 'product',
+      },
+      {
+        action: PERMISSIONS.PRODUCT.ATTRIBUTE.UPDATE,
+        name: 'Cập nhật thuộc tính',
+        module: 'product',
+      },
+      {
+        action: PERMISSIONS.PRODUCT.ATTRIBUTE.DELETE,
+        name: 'Xóa thuộc tính',
+        module: 'product',
+      },
+    ];
+
+    await Promise.all(
+      seeds.map((p) =>
+        this.prisma.permission.upsert({
+          // business slug (vd: "product.category.create") lưu ở cột action
+          where: { action: p.action },
+          update: {
+            name: p.name,
+            module: p.module as any,
+            action: p.action,
+          },
+          create: {
+            name: p.name,
+            module: p.module as any,
+            action: p.action,
+          },
+        }),
+      ),
+    );
   }
 }
