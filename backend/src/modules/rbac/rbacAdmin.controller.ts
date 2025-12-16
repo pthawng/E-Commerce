@@ -37,9 +37,15 @@ import { RbacService } from './rbac.service';
 @Controller('admin/rbac')
 @UseGuards(JwtAccessGuard, PermissionGuard)
 @Permission({
-  permissions: [PERMISSIONS.RBAC?.MANAGE ?? 'rbac.manage', 'rbac.manage'],
+  // Chỉ cho phép user có quyền quản lý role HOẶC user
+  permissions: [
+    PERMISSIONS.AUTH.ROLE.UPDATE,
+    PERMISSIONS.AUTH.USER.UPDATE,
+    PERMISSIONS.AUTH.USER.ASSIGN_ROLE,
+    PERMISSIONS.AUTH.USER.ASSIGN_PERMISSION,
+  ],
   mode: 'any',
-}) // fallback nếu chưa seed RBAC constants
+})
 export class RbacAdminController {
   constructor(private readonly rbacService: RbacService) {}
 

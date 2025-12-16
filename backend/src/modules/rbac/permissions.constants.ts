@@ -20,11 +20,9 @@ export const PERMISSIONS = {
       READ: 'auth.user.read',
       UPDATE: 'auth.user.update',
       DELETE: 'auth.user.delete',
+      ASSIGN_ROLE: 'auth.user.assign-role',
+      ASSIGN_PERMISSION: 'auth.user.assign-permission',
     },
-  },
-
-  RBAC: {
-    MANAGE: 'rbac.manage',
   },
 
   PRODUCT: {

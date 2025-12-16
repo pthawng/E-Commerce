@@ -7,6 +7,7 @@ import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.ser
 import { JwtAccessStrategy } from '@modules/auth/strategies/access-jwt.strategy';
 import { JwtRefreshStrategy } from '@modules/auth/strategies/refresh-jwt.strategy';
 import { MailModule } from '@modules/mail/mail.module';
+import { PermissionCacheService } from '@modules/rbac/cache/permission-cache.service';
 import { UserModule } from '@modules/user/user.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -38,6 +39,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     JwtRefreshGuard,
     VerifyEmailService,
     ForgotPassEmailService,
+    PermissionCacheService,
   ],
   exports: [AuthService, JwtAccessGuard, JwtRefreshGuard],
 })

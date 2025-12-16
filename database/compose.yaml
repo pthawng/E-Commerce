@@ -20,9 +20,26 @@ services:
     networks:
       - ecommerce_net
 
+  ecommerce_redis:
+    image: redis:7-alpine
+    container_name: ecommerce_redis
+    restart: unless-stopped
+    command: redis-server --requirepass "redis_pass"
+    ports:
+      - "6379:6379"
+    networks:
+      - ecommerce_net
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_secure_pass_123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   db-data:
-
+  redis-data:
+  
 networks:
   ecommerce_net:
     driver: bridge

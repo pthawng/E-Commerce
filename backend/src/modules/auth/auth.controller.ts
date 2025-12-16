@@ -7,9 +7,12 @@ import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
 import { VerifyEmailDto } from '@modules/auth/dto/verify-email.dto';
+import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { PermissionCacheService } from '@modules/rbac/cache/permission-cache.service';
+
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
@@ -25,6 +28,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly verifyEmailService: VerifyEmailService,
+    private readonly permissionCacheService: PermissionCacheService,
   ) {}
 
   @Public()
@@ -86,5 +90,13 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Dữ liệu không hợp lệ hoặc mật khẩu hiện tại không đúng' })
   async changePassword(@CurrentUserId() userId: string, @Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(userId, dto);
+  }
+
+  @UseGuards(JwtAccessGuard)
+  @Get('permissions')
+  @ApiOperation({ summary: 'Lấy danh sách quyền của người dùng hiện tại' })
+  @ApiOkResponse({ description: 'Danh sách quyền (permission action) của user' })
+  async getPermissions(@CurrentUserId() userId: string) {
+    return this.permissionCacheService.getPermissions(userId);
   }
 }
