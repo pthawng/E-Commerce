@@ -9,9 +9,13 @@ import {
   Query,
   UploadedFiles,
   UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Permission } from '@modules/rbac/decorators/permission.decorator';
+import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
+import { PERMISSIONS } from '@modules/rbac/permissions.constants';
 import { Public } from 'src/common/decorators/public.decorator';
 import { PaginationDto } from 'src/common/pagination';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -20,8 +24,10 @@ import { ProductService } from './product.service';
 
 @ApiTags('products')
 @Controller('products')
+// [SECURE] Chỉ Admin mới có quyền ghi (C/U/D), User thường chỉ được xem (Get Public)
+@UseGuards(PermissionGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(private readonly productService: ProductService) { }
 
   // GET ALL PRODUCTS (PAGINATED)
   @Public()
@@ -33,6 +39,7 @@ export class ProductController {
   }
 
   // GET PRODUCT BY ID
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Lấy sản phẩm theo ID' })
   @ApiResponse({ status: 200, description: 'Chi tiết sản phẩm' })
@@ -41,6 +48,7 @@ export class ProductController {
   }
 
   // GET PRODUCT BY SLUG
+  @Public()
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Lấy sản phẩm theo slug' })
   @ApiResponse({ status: 200, description: 'Chi tiết sản phẩm theo slug' })
@@ -49,8 +57,9 @@ export class ProductController {
   }
 
   // CREATE PRODUCT
-  @Public()
+  // [SECURE] Remove @Public() -> Require Login + Permission
   @Post()
+  @Permission(PERMISSIONS.PRODUCT.ITEM.CREATE)
   @UseInterceptors(FilesInterceptor('images', 10))
   @ApiOperation({ summary: 'Tạo mới sản phẩm (có thể upload nhiều ảnh)' })
   @ApiConsumes('multipart/form-data')
@@ -62,6 +71,7 @@ export class ProductController {
 
   // UPDATE PRODUCT
   @Patch(':id')
+  @Permission(PERMISSIONS.PRODUCT.ITEM.UPDATE)
   @UseInterceptors(FilesInterceptor('images', 10))
   @ApiOperation({ summary: 'Cập nhật sản phẩm (có thể upload thêm ảnh)' })
   @ApiConsumes('multipart/form-data')

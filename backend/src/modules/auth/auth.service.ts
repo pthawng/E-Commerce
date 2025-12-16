@@ -28,7 +28,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly forgotPassEmailService: ForgotPassEmailService,
-  ) {}
+  ) { }
 
   // ---------------------------
   // REGISTER
@@ -79,7 +79,7 @@ export class AuthService {
   }
 
   // ---------------------------
-  // LOGIN
+  // LOGIN CUSTOMER (FRONTEND)
   // ---------------------------
   async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.prismaService.user.findFirst({
@@ -102,7 +102,44 @@ export class AuthService {
       throw new UnauthorizedException('Mật khẩu không đúng');
     }
 
-    return this.issueTokenPair(user.id);
+    // Chỉ cho phép CUSTOMER đăng nhập qua flow này (frontend)
+    if ((user as any).userType && (user as any).userType !== 'CUSTOMER') {
+      throw new UnauthorizedException('Không thể đăng nhập bằng luồng khách hàng');
+    }
+
+    return this.issueTokenPair(user.id, 'customer');
+  }
+
+  // ---------------------------
+  // LOGIN ADMIN (BACK-OFFICE)
+  // ---------------------------
+  async loginAdmin(dto: LoginDto): Promise<AuthResponse> {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        ...(dto.email ? { email: dto.email } : { phone: dto.phone }),
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Thông tin đăng nhập không đúng');
+    }
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedException('Tài khoản chưa được thiết lập mật khẩu');
+    }
+
+    const isMatch = await argon2.verify(user.passwordHash, dto.password);
+    if (!isMatch) {
+      throw new UnauthorizedException('Mật khẩu không đúng');
+    }
+
+    // Chỉ cho phép STAFF/SUPER_ADMIN vào back-office
+    const userType = (user as any).userType || 'CUSTOMER';
+    if (userType === 'CUSTOMER') {
+      throw new UnauthorizedException('Tài khoản không có quyền truy cập back-office');
+    }
+
+    return this.issueTokenPair(user.id, 'admin');
   }
 
   // ---------------------------
@@ -136,13 +173,18 @@ export class AuthService {
       where: { id: tokenRecord.id },
     });
 
-    return this.issueTokenPair(payload.sub);
+    // Giữ nguyên audience (customer/admin) theo refresh token cũ
+    const audience = (payload as any).aud === 'admin' ? 'admin' : 'customer';
+    return this.issueTokenPair(payload.sub, audience);
   }
 
   // -------------------------------------------------------------------------
   // PRIVATE METHODS
   // -------------------------------------------------------------------------
-  private async issueTokenPair(userId: string): Promise<AuthResponse> {
+  private async issueTokenPair(
+    userId: string,
+    audience: 'customer' | 'admin' = 'customer',
+  ): Promise<AuthResponse> {
     // Lấy thông tin user trước để đưa vào JWT payload
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
@@ -169,6 +211,7 @@ export class AuthService {
       {
         sub: userId,
         type: 'access',
+        aud: audience,
         roles, // Roles cho RBAC - được validate trong JwtAccessStrategy
       },
       {
@@ -182,6 +225,7 @@ export class AuthService {
       {
         sub: userId,
         type: 'refresh',
+        aud: audience,
       },
       {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
@@ -218,7 +262,7 @@ export class AuthService {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
-      return payload as { sub: string };
+      return payload as import('@common/types/jwt.types').JwtRefreshPayload;
     } catch {
       throw new ForbiddenException('Refresh token không hợp lệ');
     }

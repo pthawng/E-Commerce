@@ -96,3 +96,12 @@ export const PermissionModule = {
 } as const
 
 export type PermissionModule = (typeof PermissionModule)[keyof typeof PermissionModule]
+
+
+export const UserType = {
+  CUSTOMER: 'CUSTOMER',
+  STAFF: 'STAFF',
+  SUPER_ADMIN: 'SUPER_ADMIN'
+} as const
+
+export type UserType = (typeof UserType)[keyof typeof UserType]

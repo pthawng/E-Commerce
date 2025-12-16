@@ -8,11 +8,12 @@ import { ProductStorageModule } from './product.storage/product-storage.module';
 import { VariantController } from './variants/variant.controller';
 import { VariantPolicy } from './variants/variant.policy';
 import { VariantService } from './variants/variant.service';
+import { RbacModule } from '@modules/rbac/rbac.module';
 
 @Module({
-  imports: [PrismaModule, PaginationModule, AbacModule, ProductStorageModule],
+  imports: [PrismaModule, PaginationModule, AbacModule, ProductStorageModule, RbacModule],
   controllers: [ProductController, VariantController],
   providers: [ProductService, VariantService, VariantPolicy],
   exports: [ProductService, VariantService],
 })
-export class ProductModule {}
+export class ProductModule { }

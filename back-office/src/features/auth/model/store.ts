@@ -6,9 +6,11 @@ import { SESSION } from '@shared';
 interface AuthState {
     user: User | null;
     tokens: AuthTokens | null;
+    permissions: string[];
     isAuthenticated: boolean;
-    setAuth: (user: User, tokens: AuthTokens) => void;
+    setAuth: (user: User, tokens: AuthTokens, permissions?: string[]) => void;
     setUser: (user: User) => void;
+    setPermissions: (permissions: string[]) => void;
     setTokens: (tokens: AuthTokens) => void;
     clearAuth: () => void;
     getAccessToken: () => string | null;
@@ -19,18 +21,24 @@ export const useAuthStore = create<AuthState>()(
         (set, get) => ({
             user: null,
             tokens: null,
+            permissions: [],
             isAuthenticated: false,
 
-            setAuth: (user, tokens) => {
+            setAuth: (user, tokens, permissions = []) => {
                 set({
                     user,
                     tokens,
+                    permissions,
                     isAuthenticated: true,
                 });
             },
 
             setUser: (user) => {
                 set({ user });
+            },
+
+            setPermissions: (permissions) => {
+                set({ permissions });
             },
 
             setTokens: (tokens) => {
@@ -41,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
                 set({
                     user: null,
                     tokens: null,
+                    permissions: [],
                     isAuthenticated: false,
                 });
             },
@@ -54,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
             partialize: (state) => ({
                 user: state.user,
                 tokens: state.tokens,
+                permissions: state.permissions,
                 isAuthenticated: state.isAuthenticated,
             }),
         },

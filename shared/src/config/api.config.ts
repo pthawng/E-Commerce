@@ -29,11 +29,11 @@ function resolveGlobalApiBaseUrl(): string | undefined {
   const globalObj = globalThis as Record<string, any>;
   return normalizeUrl(
     runtimeApiBaseUrl ??
-      globalObj[GLOBAL_API_BASE_URL_KEY] ??
-      globalObj.__APP_API_BASE_URL__ ??
-      globalObj.__VITE_API_URL__ ??
-      globalObj.__NEXT_PUBLIC_API_URL__ ??
-      globalObj.API_BASE_URL,
+    globalObj[GLOBAL_API_BASE_URL_KEY] ??
+    globalObj.__APP_API_BASE_URL__ ??
+    globalObj.__VITE_API_URL__ ??
+    globalObj.__NEXT_PUBLIC_API_URL__ ??
+    globalObj.API_BASE_URL,
   );
 }
 
@@ -41,9 +41,9 @@ function resolveProcessEnvApiUrl(): string | undefined {
   if (typeof process === 'undefined') return undefined;
   return normalizeUrl(
     process.env?.NEXT_PUBLIC_API_URL ??
-      process.env?.VITE_API_URL ??
-      process.env?.API_URL ??
-      process.env?.BACKEND_URL,
+    process.env?.VITE_API_URL ??
+    process.env?.API_URL ??
+    process.env?.BACKEND_URL,
   );
 }
 
@@ -93,14 +93,21 @@ export const API_ENDPOINTS = {
     VERIFY_EMAIL: '/api/auth/verify-email',
     CHANGE_PASSWORD: '/api/auth/change-password',
   },
-  
+
+  // Admin Auth
+  ADMIN: {
+    AUTH: {
+      LOGIN: '/api/admin/auth/login',
+    },
+  },
+
   // Users
   USERS: {
     BASE: '/api/users',
     ME: '/api/users/me',
     BY_ID: (id: string) => `/api/users/${id}`,
   },
-  
+
   // Products
   PRODUCTS: {
     BASE: '/api/products',
@@ -108,14 +115,14 @@ export const API_ENDPOINTS = {
     BY_SLUG: (slug: string) => `/api/products/slug/${slug}`,
     SEARCH: '/api/products/search',
   },
-  
+
   // Categories
   CATEGORIES: {
     BASE: '/api/categories',
     BY_ID: (id: string) => `/api/categories/${id}`,
     BY_SLUG: (slug: string) => `/api/categories/slug/${slug}`,
   },
-  
+
   // Orders
   ORDERS: {
     BASE: '/api/orders',
@@ -123,21 +130,21 @@ export const API_ENDPOINTS = {
     BY_CODE: (code: string) => `/api/orders/code/${code}`,
     MY_ORDERS: '/api/orders/my',
   },
-  
+
   // Cart
   CART: {
     BASE: '/api/cart',
     ITEMS: '/api/cart/items',
     CLEAR: '/api/cart/clear',
   },
-  
+
   // Discounts
   DISCOUNTS: {
     BASE: '/api/discounts',
     BY_CODE: (code: string) => `/api/discounts/code/${code}`,
     VALIDATE: '/api/discounts/validate',
   },
-  
+
   // Reviews
   REVIEWS: {
     BASE: '/api/reviews',

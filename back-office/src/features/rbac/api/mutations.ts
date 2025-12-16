@@ -106,3 +106,89 @@ export function useDeletePermission() {
         },
     });
 }
+
+// -------- User assignments --------
+
+export function useAssignRoleToUser() {
+    return useMutation({
+        mutationFn: async (params: { userId: string; roleSlug: string }) => {
+            const { userId, roleSlug } = params;
+            const res = await apiPost(`${RBAC_BASE}/users/${userId}/roles`, {
+                userId,
+                roleSlug,
+            });
+            return res.data;
+        },
+    });
+}
+
+export function useRemoveRoleFromUser() {
+    return useMutation({
+        mutationFn: async (params: { userId: string; roleSlug: string }) => {
+            const { userId, roleSlug } = params;
+            const res = await apiDelete(`${RBAC_BASE}/users/${userId}/roles/${roleSlug}`);
+            return res.data;
+        },
+    });
+}
+
+export function useAssignPermissionToUser() {
+    return useMutation({
+        mutationFn: async (params: { userId: string; permissionSlug: string }) => {
+            const { userId, permissionSlug } = params;
+            const res = await apiPost(`${RBAC_BASE}/users/${userId}/permissions`, {
+                targetId: userId,
+                permissionSlug,
+            });
+            return res.data;
+        },
+    });
+}
+
+export function useRemovePermissionFromUser() {
+    return useMutation({
+        mutationFn: async (params: { userId: string; permissionSlug: string }) => {
+            const { userId, permissionSlug } = params;
+            const res = await apiDelete(
+                `${RBAC_BASE}/users/${userId}/permissions/${permissionSlug}`,
+            );
+            return res.data;
+        },
+    });
+}
+
+// -------- Role - Permission assignments --------
+
+export function useAssignPermissionToRole() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (params: { roleSlug: string; permissionSlug: string }) => {
+            const { roleSlug, permissionSlug } = params;
+            const res = await apiPost(`${RBAC_BASE}/roles/${roleSlug}/permissions`, {
+                permissionSlug,
+            });
+            return res.data;
+        },
+        onSuccess: (_data, { roleSlug }) => {
+            qc.invalidateQueries({ queryKey: queryKeys.rbac.roles.list() });
+            qc.invalidateQueries({ queryKey: queryKeys.rbac.roles.detail(roleSlug) });
+        },
+    });
+}
+
+export function useRemovePermissionFromRole() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (params: { roleSlug: string; permissionSlug: string }) => {
+            const { roleSlug, permissionSlug } = params;
+            const res = await apiDelete(
+                `${RBAC_BASE}/roles/${roleSlug}/permissions/${permissionSlug}`,
+            );
+            return res.data;
+        },
+        onSuccess: (_data, { roleSlug }) => {
+            qc.invalidateQueries({ queryKey: queryKeys.rbac.roles.list() });
+            qc.invalidateQueries({ queryKey: queryKeys.rbac.roles.detail(roleSlug) });
+        },
+    });
+}

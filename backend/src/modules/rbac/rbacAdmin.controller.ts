@@ -1,6 +1,6 @@
 import { CurrentUser } from '@common/decorators/get-user.decorator';
 import type { RequestUserPayload } from '@common/types/jwt.types';
-import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
+import { AdminJwtAccessGuard } from '@modules/auth/guard/admin-access-jwt.guard';
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Permission } from './decorators/permission.decorator';
@@ -35,7 +35,7 @@ import { RbacService } from './rbac.service';
  */
 @ApiTags('rbac-admin')
 @Controller('admin/rbac')
-@UseGuards(JwtAccessGuard, PermissionGuard)
+@UseGuards(AdminJwtAccessGuard, PermissionGuard)
 @Permission({
   // Chỉ cho phép user có quyền quản lý role HOẶC user
   permissions: [
@@ -299,6 +299,17 @@ export class RbacAdminController {
   }
 
   /**
+   * GET /admin/rbac/users/:userId/roles
+   * Lấy danh sách roles của user (UserRole + Role)
+   */
+  @Get('users/:userId/roles')
+  @ApiOperation({ summary: 'Lấy roles của user' })
+  @ApiResponse({ status: 200, description: 'Danh sách roles của user' })
+  async getUserRoles(@Param('userId') userId: string) {
+    return this.rbacService.getUserRoles(userId);
+  }
+
+  /**
    * POST /admin/rbac/users/:userId/permissions
    * Gán permission trực tiếp cho user
    *
@@ -343,6 +354,17 @@ export class RbacAdminController {
     @Param('permissionSlug') permissionSlug: string,
   ) {
     return this.rbacService.removePermissionFromUser(userId, permissionSlug);
+  }
+
+  /**
+   * GET /admin/rbac/users/:userId/permissions
+   * Lấy danh sách permissions direct của user (UserPermission + Permission)
+   */
+  @Get('users/:userId/permissions')
+  @ApiOperation({ summary: 'Lấy permissions trực tiếp của user' })
+  @ApiResponse({ status: 200, description: 'Danh sách permissions của user' })
+  async getUserPermissions(@Param('userId') userId: string) {
+    return this.rbacService.getUserPermissionAssignments(userId);
   }
 
   /**

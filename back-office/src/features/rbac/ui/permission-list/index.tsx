@@ -15,8 +15,8 @@ export function PermissionList({ permissions, isLoading, onEdit, onDelete, isDel
     const permissionColumns: ColumnsType<RbacPermission> = [
         {
             title: 'Slug',
-            dataIndex: 'slug',
-            render: (slug) => <span className="font-mono text-xs">{slug}</span>,
+            dataIndex: 'action',
+            render: (action) => <span className="font-mono text-xs">{action}</span>,
         },
         {
             title: 'Tên',
@@ -54,7 +54,7 @@ export function PermissionList({ permissions, isLoading, onEdit, onDelete, isDel
                         okText="Xóa"
                         cancelText="Hủy"
                         okButtonProps={{ danger: true, loading: isDeleting }}
-                        onConfirm={() => onDelete(record.slug)}
+                        onConfirm={() => onDelete(record.action)}
                     >
                         <Button size="small" danger icon={<DeleteOutlined />} />
                     </Popconfirm>

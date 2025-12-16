@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from '@shared';
 
 const USERS_LIST = `${API_ENDPOINTS.USERS.BASE}/list`;
 
-export function useUsers(filters?: PaginationQuery) {
+export function useUsers(filters?: PaginationQuery & { role?: string; permission?: string }) {
     return useQuery({
         queryKey: queryKeys.users.list(filters as any),
         queryFn: async () => {
@@ -16,6 +16,8 @@ export function useUsers(filters?: PaginationQuery) {
             if (filters?.search) params.append('search', filters.search);
             if (filters?.sort) params.append('sort', filters.sort);
             if (filters?.order) params.append('order', filters.order);
+            if (filters?.role) params.append('role', filters.role);
+            if (filters?.permission) params.append('permission', filters.permission);
 
             const queryString = params.toString();
             const path = queryString ? `${USERS_LIST}?${queryString}` : USERS_LIST;

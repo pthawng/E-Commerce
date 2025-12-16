@@ -13,7 +13,7 @@ export class RbacService implements OnModuleInit {
   constructor(private prisma: PrismaService) {}
 
   async onModuleInit() {
-    await this.seedProductPermissions();
+    await this.seedDefaultPermissions();
   }
 
   /** Đảm bảo user tồn tại và đang hoạt động */
@@ -237,6 +237,19 @@ export class RbacService implements OnModuleInit {
     });
   }
 
+  /** Lấy danh sách roles của user */
+  async getUserRoles(userId: string) {
+    await this.ensureActiveUser(userId);
+
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId },
+      include: { role: true },
+      orderBy: { assignedAt: 'asc' },
+    });
+
+    return userRoles;
+  }
+
   /** Gỡ permission khỏi user */
   async removePermissionFromUser(userId: string, permissionSlug: string) {
     await this.ensureActiveUser(userId);
@@ -251,6 +264,19 @@ export class RbacService implements OnModuleInit {
     return this.prisma.userPermission.delete({
       where: { userId_permissionId: { userId, permissionId: permission.id } },
     });
+  }
+
+  /** Lấy danh sách permissions direct của user (UserPermission + Permission) */
+  async getUserPermissionAssignments(userId: string) {
+    await this.ensureActiveUser(userId);
+
+    const userPermissions = await this.prisma.userPermission.findMany({
+      where: { userId },
+      include: { permission: true },
+      orderBy: { assignedAt: 'asc' },
+    });
+
+    return userPermissions;
   }
 
   /** Gỡ permission khỏi role */
@@ -373,50 +399,41 @@ export class RbacService implements OnModuleInit {
   }
 
   // ==================== SEED DEFAULT PERMISSIONS ====================
-  private async seedProductPermissions() {
+  private async seedDefaultPermissions() {
     const seeds = [
-      // Category
+      // AUTH - ROLE
+      { action: PERMISSIONS.AUTH.ROLE.CREATE, name: 'Tạo role', module: 'AUTH' },
+      { action: PERMISSIONS.AUTH.ROLE.READ, name: 'Xem role', module: 'AUTH' },
+      { action: PERMISSIONS.AUTH.ROLE.UPDATE, name: 'Cập nhật role', module: 'AUTH' },
+      { action: PERMISSIONS.AUTH.ROLE.DELETE, name: 'Xóa role', module: 'AUTH' },
+
+      // AUTH - USER
+      { action: PERMISSIONS.AUTH.USER.CREATE, name: 'Tạo user', module: 'AUTH' },
+      { action: PERMISSIONS.AUTH.USER.READ, name: 'Xem user', module: 'AUTH' },
+      { action: PERMISSIONS.AUTH.USER.UPDATE, name: 'Cập nhật user', module: 'AUTH' },
+      { action: PERMISSIONS.AUTH.USER.DELETE, name: 'Xóa user', module: 'AUTH' },
+      { action: PERMISSIONS.AUTH.USER.ASSIGN_ROLE, name: 'Gán role cho user', module: 'AUTH' },
       {
-        action: PERMISSIONS.PRODUCT.CATEGORY.CREATE,
-        name: 'Tạo danh mục',
-        module: 'product',
+        action: PERMISSIONS.AUTH.USER.ASSIGN_PERMISSION,
+        name: 'Gán permission cho user',
+        module: 'AUTH',
       },
-      {
-        action: PERMISSIONS.PRODUCT.CATEGORY.READ,
-        name: 'Xem danh mục',
-        module: 'product',
-      },
-      {
-        action: PERMISSIONS.PRODUCT.CATEGORY.UPDATE,
-        name: 'Cập nhật danh mục',
-        module: 'product',
-      },
-      {
-        action: PERMISSIONS.PRODUCT.CATEGORY.DELETE,
-        name: 'Xóa danh mục',
-        module: 'product',
-      },
-      // Attribute
-      {
-        action: PERMISSIONS.PRODUCT.ATTRIBUTE.CREATE,
-        name: 'Tạo thuộc tính',
-        module: 'product',
-      },
-      {
-        action: PERMISSIONS.PRODUCT.ATTRIBUTE.READ,
-        name: 'Xem thuộc tính',
-        module: 'product',
-      },
+
+      // PRODUCT - CATEGORY
+      { action: PERMISSIONS.PRODUCT.CATEGORY.CREATE, name: 'Tạo danh mục', module: 'PRODUCT' },
+      { action: PERMISSIONS.PRODUCT.CATEGORY.READ, name: 'Xem danh mục', module: 'PRODUCT' },
+      { action: PERMISSIONS.PRODUCT.CATEGORY.UPDATE, name: 'Cập nhật danh mục', module: 'PRODUCT' },
+      { action: PERMISSIONS.PRODUCT.CATEGORY.DELETE, name: 'Xóa danh mục', module: 'PRODUCT' },
+
+      // PRODUCT - ATTRIBUTE
+      { action: PERMISSIONS.PRODUCT.ATTRIBUTE.CREATE, name: 'Tạo thuộc tính', module: 'PRODUCT' },
+      { action: PERMISSIONS.PRODUCT.ATTRIBUTE.READ, name: 'Xem thuộc tính', module: 'PRODUCT' },
       {
         action: PERMISSIONS.PRODUCT.ATTRIBUTE.UPDATE,
         name: 'Cập nhật thuộc tính',
-        module: 'product',
+        module: 'PRODUCT',
       },
-      {
-        action: PERMISSIONS.PRODUCT.ATTRIBUTE.DELETE,
-        name: 'Xóa thuộc tính',
-        module: 'product',
-      },
+      { action: PERMISSIONS.PRODUCT.ATTRIBUTE.DELETE, name: 'Xóa thuộc tính', module: 'PRODUCT' },
     ];
 
     await Promise.all(

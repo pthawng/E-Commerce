@@ -4,6 +4,7 @@ import { CreateAttributeValueDto } from './dto/create-attribute-value.dto';
 import { CreateAttributeDto } from './dto/create-attribute.dto';
 import { UpdateAttributeValueDto } from './dto/update-attribute-value.dto';
 import { UpdateAttributeDto } from './dto/update-attribute.dto';
+import { AttributeValueUpsertDto } from './dto/upsert-attribute-value.dto';
 
 @Injectable()
 export class AttributeService {
@@ -33,37 +34,74 @@ export class AttributeService {
     const exist = await this.prisma.attribute.findUnique({ where: { code: dto.code } });
     if (exist) throw new BadRequestException('Mã attribute đã tồn tại');
 
-    return this.prisma.attribute.create({
-      data: {
-        code: dto.code,
-        name: dto.name as any,
-        filterType: dto.filterType,
-      },
+    // Transaction: create attribute + optional values
+    return this.prisma.$transaction(async (tx) => {
+      const attribute = await tx.attribute.create({
+        data: {
+          code: dto.code,
+          name: dto.name as any,
+          filterType: dto.filterType,
+        },
+      });
+
+      if (dto.values?.length) {
+        const valuesToCreate = dto.values.map((v, idx) => ({
+          attributeId: attribute.id,
+          value: v.value as any,
+          metaValue: v.metaValue,
+          order: v.order ?? idx,
+        }));
+        await tx.attributeValue.createMany({ data: valuesToCreate });
+      }
+
+      const values = await tx.attributeValue.findMany({
+        where: { attributeId: attribute.id },
+        orderBy: { order: 'asc' },
+      });
+
+      return { ...attribute, values };
     });
   }
 
   async update(id: string, dto: UpdateAttributeDto) {
-    const attribute = await this.prisma.attribute.findUnique({ where: { id } });
-    if (!attribute) throw new NotFoundException('Attribute không tồn tại');
+    return this.prisma.$transaction(async (tx) => {
+      const attribute = await tx.attribute.findUnique({ where: { id } });
+      if (!attribute) throw new NotFoundException('Attribute không tồn tại');
 
-    if (dto.code && dto.code !== attribute.code) {
-      const exist = await this.prisma.attribute.findUnique({ where: { code: dto.code } });
-      if (exist) throw new BadRequestException('Mã attribute đã tồn tại');
-    }
+      if (dto.code && dto.code !== attribute.code) {
+        const exist = await tx.attribute.findUnique({ where: { code: dto.code } });
+        if (exist) throw new BadRequestException('Mã attribute đã tồn tại');
+      }
 
-    return this.prisma.attribute.update({
-      where: { id },
-      data: {
-        code: dto.code ?? attribute.code,
-        name: (dto.name as any) ?? attribute.name,
-        filterType: dto.filterType ?? attribute.filterType,
-      },
+      const updated = await tx.attribute.update({
+        where: { id },
+        data: {
+          code: dto.code ?? attribute.code,
+          name: (dto.name as any) ?? attribute.name,
+          filterType: dto.filterType ?? attribute.filterType,
+        },
+      });
+
+      if (dto.values) {
+        await this.syncValuesTx(tx as PrismaService, id, dto.values);
+      }
+
+      const values = await tx.attributeValue.findMany({
+        where: { attributeId: id },
+        orderBy: { order: 'asc' },
+      });
+
+      return { ...updated, values };
     });
   }
 
   async remove(id: string) {
     await this.ensureAttributeExists(id);
-    await this.prisma.attribute.delete({ where: { id } });
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.attributeValue.deleteMany({ where: { attributeId: id } });
+      await tx.attribute.delete({ where: { id } });
+    });
     return { message: 'Đã xoá attribute' };
   }
 
@@ -125,5 +163,34 @@ export class AttributeService {
   private async ensureAttributeExists(id: string) {
     const attribute = await this.prisma.attribute.findUnique({ where: { id } });
     if (!attribute) throw new NotFoundException('Attribute không tồn tại');
+  }
+
+  private async syncValuesTx(
+    tx: PrismaService,
+    attributeId: string,
+    values: AttributeValueUpsertDto[],
+  ) {
+    // Strategy: only add/update the provided items; do NOT delete missing ones.
+    for (const [index, v] of values.entries()) {
+      if (v.id) {
+        await tx.attributeValue.update({
+          where: { id: v.id },
+          data: {
+            value: (v.value as any) ?? undefined,
+            metaValue: v.metaValue ?? undefined,
+            order: v.order ?? index,
+          },
+        });
+      } else {
+        await tx.attributeValue.create({
+          data: {
+            attributeId,
+            value: v.value as any,
+            metaValue: v.metaValue,
+            order: v.order ?? index,
+          },
+        });
+      }
+    }
   }
 }

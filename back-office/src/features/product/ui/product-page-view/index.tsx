@@ -154,6 +154,7 @@ export function ProductPageView() {
             <Modal
                 title={<span className="text-xl font-heading font-bold text-[#1F2937]">Tạo mới sản phẩm</span>}
                 open={isCreateOpen}
+                centered
                 onCancel={() => setIsCreateOpen(false)}
                 footer={null}
                 width={900}
@@ -169,6 +170,7 @@ export function ProductPageView() {
             <Modal
                 title={<span className="text-xl font-heading font-bold text-[#1F2937]">Chỉnh sửa sản phẩm</span>}
                 open={isEditOpen}
+                centered
                 onCancel={() => {
                     setIsEditOpen(false);
                     setSelectedProductId(null);
@@ -193,6 +195,7 @@ export function ProductPageView() {
             <Modal
                 title={<span className="text-xl font-heading font-bold text-[#1F2937]">Chi tiết sản phẩm</span>}
                 open={isViewOpen}
+                centered
                 onCancel={() => {
                     setIsViewOpen(false);
                     setSelectedProductId(null);

@@ -71,6 +71,7 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
         id: true,
         email: true,
         isActive: true,
+        userType: true,
       },
     });
 
@@ -102,7 +103,9 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
     return {
       userId: payload.sub,
       email: user.email,
-      roles, // Từ JWT payload - RBAC
+      roles,
+      aud: payload.aud,
+      userType: user.userType,
       // permissions sẽ được lazy load trong PermissionGuard khi cần
     };
   }

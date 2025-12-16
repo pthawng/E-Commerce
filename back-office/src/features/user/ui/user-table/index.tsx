@@ -4,15 +4,26 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { User } from '@shared';
 
+export interface UserWithRelations extends User {
+    userRoles?: Array<{
+        role: {
+            slug: string;
+            name: string;
+            isSystem?: boolean;
+        };
+    }>;
+}
+
 interface UserTableProps {
-    users: User[];
+    users: UserWithRelations[];
     isLoading: boolean;
     page: number;
     limit: number;
     total: number;
     onPageChange: (page: number, limit: number) => void;
-    onEdit: (user: User) => void;
-    onDelete: (user: User) => void;
+    onEdit: (user: UserWithRelations) => void;
+    onDelete: (user: UserWithRelations) => void;
+    onManageAccess?: (user: UserWithRelations) => void;
 }
 
 export function UserTable({
@@ -24,8 +35,9 @@ export function UserTable({
     onPageChange,
     onEdit,
     onDelete,
+    onManageAccess,
 }: UserTableProps) {
-    const columns: ColumnsType<User> = useMemo(
+    const columns: ColumnsType<UserWithRelations> = useMemo(
         () => [
             {
                 title: 'Email',
@@ -42,6 +54,23 @@ export function UserTable({
                 dataIndex: 'phone',
                 key: 'phone',
                 render: (value?: string) => value || '-',
+            },
+            {
+                title: 'Role',
+                key: 'roles',
+                render: (_, record) => {
+                    const roles = record.userRoles?.map((ur) => ur.role) || [];
+                    if (!roles.length) return <Tag>Mặc định</Tag>;
+                    return (
+                        <Space size={[4, 4]} wrap>
+                            {roles.map((r) => (
+                                <Tag key={r.slug} color={r.isSystem ? 'gold' : 'blue'}>
+                                    {r.name}
+                                </Tag>
+                            ))}
+                        </Space>
+                    );
+                },
             },
             {
                 title: 'Kích hoạt',
@@ -71,6 +100,11 @@ export function UserTable({
                         <Button type="link" onClick={() => onEdit(record)}>
                             Sửa
                         </Button>
+                        {onManageAccess && (
+                            <Button type="link" onClick={() => onManageAccess(record)}>
+                                Phân quyền
+                            </Button>
+                        )}
                         <Button type="link" danger onClick={() => onDelete(record)}>
                             Xóa
                         </Button>
@@ -78,11 +112,11 @@ export function UserTable({
                 ),
             },
         ],
-        [onEdit, onDelete],
+        [onEdit, onDelete, onManageAccess],
     );
 
     return (
-        <Table<User>
+        <Table<UserWithRelations>
             rowKey="id"
             loading={isLoading}
             columns={columns}

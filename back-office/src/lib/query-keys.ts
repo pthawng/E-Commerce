@@ -68,6 +68,16 @@ export const queryKeys = {
     byCode: (code: string) => [...queryKeys.discounts.details(), 'code', code] as const,
   },
 
+  // Attributes
+  attributes: {
+    all: ['attributes'] as const,
+    lists: () => [...queryKeys.attributes.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.attributes.lists(), filters] as const,
+    details: () => [...queryKeys.attributes.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.attributes.details(), id] as const,
+  },
+
   // RBAC
   rbac: {
     all: ['rbac'] as const,
@@ -81,6 +91,9 @@ export const queryKeys = {
       list: () => [...queryKeys.rbac.permissions.all, 'list'] as const,
       detail: (slug: string) => [...queryKeys.rbac.permissions.all, 'detail', slug] as const,
     },
+    userRoles: (userId: string) => [...queryKeys.rbac.all, 'userRoles', userId] as const,
+    userPermissions: (userId: string) =>
+      [...queryKeys.rbac.all, 'userPermissions', userId] as const,
   },
 } as const;
 

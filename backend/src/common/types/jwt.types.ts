@@ -12,6 +12,8 @@ export interface JwtAccessPayload {
   sub: string;
   /** Token type - để phân biệt access/refresh */
   type: 'access';
+  /** Audience - phân biệt token cho customer vs admin */
+  aud?: 'customer' | 'admin';
   /** User roles - dùng cho RBAC (Role-Based Access Control) */
   roles: string[];
   /** Issued at - timestamp khi token được tạo */
@@ -26,6 +28,7 @@ export interface JwtAccessPayload {
 export interface JwtRefreshPayload {
   sub: string;
   type: 'refresh';
+  aud?: 'customer' | 'admin';
   iat?: number;
   exp?: number;
 }
@@ -39,6 +42,10 @@ export interface RequestUserPayload {
   userId: string;
   /** User email */
   email?: string;
+  /** Audience - customer hay admin token */
+  aud?: 'customer' | 'admin';
+  /** User type từ DB */
+  userType?: string;
   /** User roles - từ JWT payload (RBAC) */
   roles: string[];
   /** Permissions - có thể lazy load khi cần (ABAC) */

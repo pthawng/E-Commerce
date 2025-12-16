@@ -14,7 +14,8 @@ export function useLogin() {
 
     return useMutation({
         mutationFn: async (data: LoginPayload) => {
-            const response = await apiPost<AuthResponse>(API_ENDPOINTS.AUTH.LOGIN, data);
+            // [ADMIN] Use Admin Login Endpoint
+            const response = await apiPost<AuthResponse>(API_ENDPOINTS.ADMIN.AUTH.LOGIN, data);
             return response.data;
         },
         onSuccess: (data) => {

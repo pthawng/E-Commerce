@@ -9,9 +9,10 @@ interface RoleListProps {
     onEdit: (role: RbacRole) => void;
     onDelete: (slug: string) => void;
     isDeleting: boolean;
+    onManagePermissions?: (role: RbacRole) => void;
 }
 
-export function RoleList({ roles, isLoading, onEdit, onDelete, isDeleting }: RoleListProps) {
+export function RoleList({ roles, isLoading, onEdit, onDelete, isDeleting, onManagePermissions }: RoleListProps) {
     const roleColumns: ColumnsType<RbacRole> = [
         {
             title: 'Slug',
@@ -51,6 +52,16 @@ export function RoleList({ roles, isLoading, onEdit, onDelete, isDeleting }: Rol
                             onClick={() => onEdit(record)}
                         />
                     </Tooltip>
+                    {onManagePermissions && (
+                        <Tooltip title="Gán quyền mặc định">
+                            <Button
+                                size="small"
+                                onClick={() => onManagePermissions(record)}
+                            >
+                                Quyền
+                            </Button>
+                        </Tooltip>
+                    )}
                     <Popconfirm
                         title="Xóa role?"
                         okText="Xóa"

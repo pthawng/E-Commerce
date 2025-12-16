@@ -223,6 +223,12 @@ var API_ENDPOINTS = {
     VERIFY_EMAIL: "/api/auth/verify-email",
     CHANGE_PASSWORD: "/api/auth/change-password"
   },
+  // Admin Auth
+  ADMIN: {
+    AUTH: {
+      LOGIN: "/api/admin/auth/login"
+    }
+  },
   // Users
   USERS: {
     BASE: "/api/users",

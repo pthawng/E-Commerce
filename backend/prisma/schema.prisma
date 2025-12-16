@@ -166,6 +166,9 @@ model User {
   updatedAt       DateTime   @updatedAt
   deletedAt       DateTime?
 
+  /// Loại tài khoản: CUSTOMER cho storefront, STAFF/SUPER_ADMIN cho back-office
+  userType        UserType   @default(CUSTOMER)
+
   userRoles       UserRole[]
   userPermissions UserPermission[]
   reviews         Review[]
@@ -178,6 +181,12 @@ model User {
   @@unique([email], map: "idx_users_email_unique")
   @@unique([phone], map: "idx_users_phone_unique")
   @@index([email], map: "idx_users_active_email") 
+}
+
+enum UserType {
+  CUSTOMER
+  STAFF
+  SUPER_ADMIN
 }
 
 //////////////////////////////////////

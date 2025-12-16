@@ -172,6 +172,7 @@ export function CategoryPageView() {
             <Modal
                 title={<span className="font-heading text-lg">Tạo danh mục mới</span>}
                 open={isCreateOpen}
+                centered
                 onCancel={() => setIsCreateOpen(false)}
                 onOk={handleCreate}
                 okText="Tạo"
@@ -186,6 +187,7 @@ export function CategoryPageView() {
             <Modal
                 title={<span className="font-heading text-lg">Chỉnh sửa danh mục</span>}
                 open={isEditOpen}
+                centered
                 onCancel={() => {
                     setIsEditOpen(false);
                     setSelectedCategoryId(null);
@@ -218,6 +220,7 @@ export function CategoryPageView() {
             <Modal
                 title={<span className="font-heading text-lg">Chi tiết danh mục</span>}
                 open={isViewOpen}
+                centered
                 onCancel={() => {
                     setIsViewOpen(false);
                     setSelectedCategoryId(null);

@@ -566,6 +566,11 @@ declare const API_ENDPOINTS: {
         readonly VERIFY_EMAIL: "/api/auth/verify-email";
         readonly CHANGE_PASSWORD: "/api/auth/change-password";
     };
+    readonly ADMIN: {
+        readonly AUTH: {
+            readonly LOGIN: "/api/admin/auth/login";
+        };
+    };
     readonly USERS: {
         readonly BASE: "/api/users";
         readonly ME: "/api/users/me";
