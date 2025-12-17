@@ -177,6 +177,17 @@ var DEFAULT_PAGE = 1;
 var DEFAULT_LIMIT = 20;
 var MAX_LIMIT = 100;
 
+// src/constants/attribute.constants.ts
+var ATTRIBUTE_INPUT_TYPES = [
+  "text",
+  "textarea",
+  "select",
+  "multiselect",
+  "boolean",
+  "swatch_color",
+  "swatch_image"
+];
+
 // src/config/api.config.ts
 var GLOBAL_API_BASE_URL_KEY = "__APP_API_BASE_URL__";
 var runtimeApiBaseUrl;
@@ -312,6 +323,6 @@ var SESSION = {
   USER_KEY: "user"
 };
 
-export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ActionType, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, MAX_LIMIT, MediaType, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, OrderStatus, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, PaymentStatus, PermissionAction, PermissionModule, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
+export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, MAX_LIMIT, MediaType, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, OrderStatus, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, PaymentStatus, PermissionAction, PermissionModule, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

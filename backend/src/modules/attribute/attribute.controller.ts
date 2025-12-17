@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -66,6 +67,16 @@ export class AttributeController {
   })
   remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.attributeService.remove(id);
+  }
+
+  @Get('values/all')
+  @ApiOperation({ summary: 'Danh sách tất cả attribute values (để chọn khi tạo/sửa attribute)' })
+  @Permission({
+    permissions: [PERMISSIONS.PRODUCT.ATTRIBUTE.READ],
+    mode: 'any',
+  })
+  listAllValues(@Query('search') search?: string) {
+    return this.attributeService.listAllValues(search);
   }
 
   @Get(':attributeId/values')

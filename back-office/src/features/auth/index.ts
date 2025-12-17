@@ -1,5 +1,9 @@
-export * from './model/store';
-export * from './api/mutations';
-export * from './api/queries';
-export * from './ui/login-form';
-export { default as ProtectedRoute } from './ui/ProtectedRoute';
+/**
+ * Auth Feature
+ * Export tất cả từ auth feature theo cấu trúc README
+ */
+
+export * from './hooks';
+export * from './services';
+export * from './components';
+export * from './types';

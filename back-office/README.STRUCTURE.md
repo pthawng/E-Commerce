@@ -69,7 +69,7 @@ import { Button } from '@/components/ui/Button';
 1. **Features**: Mỗi feature là một module độc lập với components, hooks, services, types riêng
 2. **Shared Code**: Sử dụng `@shared/*` cho types, enums, utils, config dùng chung
 3. **Local Code**: Sử dụng `@/` cho code riêng của back-office
-4. **State Management**: Dùng Zustand hoặc Redux trong `store/`
+4. **State Management**: Dùng Zustand trong `store/`
 5. **API Calls**: Tất cả API calls qua `services/apiClient.ts`
 6. **Components**: Tách UI components (ui/), layout components (layout/), và composite components (composite/)
 

@@ -1,3 +1,4 @@
-export { ProductPageView } from './ui/product-page-view';
-export * from './model/types';
-// Selective exports - we don't export internal stores or hooks unless needed
+export * from './services';
+export * from './components';
+export * from './hooks';
+export * from './types';

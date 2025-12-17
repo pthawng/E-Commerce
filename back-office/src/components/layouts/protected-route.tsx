@@ -1,6 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@/features/auth/model/store';
-import { useGetPermissions } from '@/features/auth/api/permissions';
+import { useAuthStore, useGetPermissions } from '@/features/auth';
 import { Spin, Result } from 'antd';
 
 import type { PropsWithChildren } from 'react';

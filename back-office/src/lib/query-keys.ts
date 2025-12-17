@@ -76,6 +76,7 @@ export const queryKeys = {
       [...queryKeys.attributes.lists(), filters] as const,
     details: () => [...queryKeys.attributes.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.attributes.details(), id] as const,
+    allValues: (search?: string) => [...queryKeys.attributes.all, 'allValues', search] as const,
   },
 
   // RBAC

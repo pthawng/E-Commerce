@@ -1,12 +1,12 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AdminLayout } from "@/features/layout";
+import { AdminLayout } from "@/components/layout";
 import DashboardPage from "./app/dashboard/page";
 import ProductsPage from "./app/product/page";
 import CategoriesPage from "./app/category/page";
 import AttributesPage from "./app/attribute/page";
 import RbacPage from "./app/rbac/page";
 import UsersPage from "./app/user/page";
-import LoginPage from "@/pages/auth/login";
+import LoginPage from "./app/auth/login";
 import { ProtectedRoute } from "@/components/layouts/protected-route";
 import { ErrorBoundary } from "@/shared/ui";
 

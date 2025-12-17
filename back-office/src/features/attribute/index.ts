@@ -1,4 +1,2 @@
-export { AttributePageView } from './ui/attribute-page-view';
-export * from './api/queries';
-
-
+export * from './services';
+export * from './components';

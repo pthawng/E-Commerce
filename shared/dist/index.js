@@ -179,6 +179,17 @@ var DEFAULT_PAGE = 1;
 var DEFAULT_LIMIT = 20;
 var MAX_LIMIT = 100;
 
+// src/constants/attribute.constants.ts
+var ATTRIBUTE_INPUT_TYPES = [
+  "text",
+  "textarea",
+  "select",
+  "multiselect",
+  "boolean",
+  "swatch_color",
+  "swatch_image"
+];
+
 // src/config/api.config.ts
 var GLOBAL_API_BASE_URL_KEY = "__APP_API_BASE_URL__";
 var runtimeApiBaseUrl;
@@ -317,6 +328,7 @@ var SESSION = {
 exports.API_ENDPOINTS = API_ENDPOINTS;
 exports.APP_NAME = APP_NAME;
 exports.APP_VERSION = APP_VERSION;
+exports.ATTRIBUTE_INPUT_TYPES = ATTRIBUTE_INPUT_TYPES;
 exports.ActionType = ActionType;
 exports.DATE_FORMATS = DATE_FORMATS;
 exports.DEFAULT_API_BASE_URL = DEFAULT_API_BASE_URL;

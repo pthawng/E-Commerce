@@ -532,6 +532,17 @@ declare const DEFAULT_LIMIT = 20;
 declare const MAX_LIMIT = 100;
 
 /**
+ * Attribute Constants
+ * Enum-like values for AttributeInputType dùng chung BE/FE.
+ *
+ * NOTE:
+ * - Phải luôn đồng bộ với enum AttributeInputType trong Prisma schema.
+ * - Khi thay đổi enum ở Prisma, cập nhật lại list này rồi build lại shared.
+ */
+declare const ATTRIBUTE_INPUT_TYPES: readonly ["text", "textarea", "select", "multiselect", "boolean", "swatch_color", "swatch_image"];
+type AttributeInputType = (typeof ATTRIBUTE_INPUT_TYPES)[number];
+
+/**
  * API Configuration
  * Cấu hình API dùng chung giữa Frontend và Back Office
  */
@@ -680,4 +691,4 @@ declare const SESSION: {
     readonly USER_KEY: "user";
 };
 
-export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ActionType, type ApiError, type ApiResponse, type AuthResponse, type AuthTokens, type Category, type ChangePasswordPayload, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, type ForgotPasswordPayload, type LoginPayload, MAX_LIMIT, MediaType, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, type Order, type OrderItem, OrderStatus, type OrderSummary, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaginatedResponse, type PaginationMeta, type PaginationQuery, PaymentStatus, type Permission, PermissionAction, PermissionModule, type Product, type ProductMedia, type ProductSummary, type ProductVariant, type RefreshTokenPayload, type RegisterPayload, type ResetPasswordPayload, type Role, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, type User, type UserSummary, type UserWithRoles, type VerifyEmailPayload, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
+export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, type ApiError, type ApiResponse, type AttributeInputType, type AuthResponse, type AuthTokens, type Category, type ChangePasswordPayload, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, type ForgotPasswordPayload, type LoginPayload, MAX_LIMIT, MediaType, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, type Order, type OrderItem, OrderStatus, type OrderSummary, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaginatedResponse, type PaginationMeta, type PaginationQuery, PaymentStatus, type Permission, PermissionAction, PermissionModule, type Product, type ProductMedia, type ProductSummary, type ProductVariant, type RefreshTokenPayload, type RegisterPayload, type ResetPasswordPayload, type Role, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, type User, type UserSummary, type UserWithRoles, type VerifyEmailPayload, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };

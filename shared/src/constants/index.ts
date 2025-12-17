@@ -5,4 +5,5 @@
 
 export * from './order.constants';
 export * from './common.constants';
+export * from './attribute.constants';
 

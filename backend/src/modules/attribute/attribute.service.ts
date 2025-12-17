@@ -108,6 +108,33 @@ export class AttributeService {
   // ---------------------------
   // Attribute Value CRUD
   // ---------------------------
+  async listAllValues(search?: string) {
+    const where: any = {};
+
+    // Search trong value JSON field (vi, en, ...)
+    if (search) {
+      where.OR = [
+        { metaValue: { contains: search, mode: 'insensitive' } },
+        // Note: Prisma không hỗ trợ search trực tiếp trong JSON field
+        // Có thể cần dùng raw query hoặc full-text search nếu cần
+      ];
+    }
+
+    return this.prisma.attributeValue.findMany({
+      where,
+      include: {
+        attribute: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: [{ attribute: { code: 'asc' } }, { order: 'asc' }],
+    });
+  }
+
   async listValues(attributeId: string) {
     await this.ensureAttributeExists(attributeId);
     return this.prisma.attributeValue.findMany({

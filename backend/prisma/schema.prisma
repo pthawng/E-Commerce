@@ -166,7 +166,6 @@ model User {
   updatedAt       DateTime   @updatedAt
   deletedAt       DateTime?
 
-  /// Loại tài khoản: CUSTOMER cho storefront, STAFF/SUPER_ADMIN cho back-office
   userType        UserType   @default(CUSTOMER)
 
   userRoles       UserRole[]
