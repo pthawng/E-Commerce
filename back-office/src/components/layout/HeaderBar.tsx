@@ -81,7 +81,7 @@ export default function HeaderBar({ onToggleSidebar, sidebarOpen }: HeaderBarPro
           <Input
             prefix={<SearchOutlined className="text-[#D4AF37] group-hover:text-[#6D28D9] transition-colors" />}
             placeholder="Tìm kiếm..."
-            className="!bg-white/80 !border-[#D4AF37]/30 focus:!border-[#6D28D9] !rounded-full !shadow-inner placeholder:text-slate-400"
+            className="bg-white/80! border-[#D4AF37]/30! focus:border-[#6D28D9]! rounded-full! shadow-inner! placeholder:text-slate-400"
             allowClear
           />
         </div>

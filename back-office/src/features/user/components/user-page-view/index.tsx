@@ -94,6 +94,14 @@ export function UserPageView() {
 
     const openEditModal = (user: User) => {
         setEditingUser(user);
+        form.setFieldsValue({
+            email: user.email,
+            fullName: user.fullName,
+            phone: user.phone,
+            isActive: user.isActive,
+            isEmailVerified: user.isEmailVerified,
+            password: undefined,
+        });
         setIsModalOpen(true);
     };
 
@@ -185,12 +193,39 @@ export function UserPageView() {
     );
 
     // Initialize modal state when access modal opens with data
+    // Initialize selected roles/permissions when assignments load.
+    // Use a microtask (setTimeout 0) to defer setState so it's not a synchronous setState inside the effect.
     useEffect(() => {
         if (accessUser && userRoleAssignments !== undefined && userPermissionAssignments !== undefined) {
-            setSelectedRolesInModal(currentRoleSlugs);
-            setSelectedPermsInModal(currentPermissionSlugs);
+            // Avoid unconditional setState inside effect to prevent cascading renders.
+            const arraysEqual = (a?: string[], b?: string[]) => {
+                if (a === b) return true;
+                if (!a || !b) return false;
+                if (a.length !== b.length) return false;
+                const aSorted = [...a].sort();
+                const bSorted = [...b].sort();
+                return aSorted.every((v, i) => v === bSorted[i]);
+            };
+
+            const timeout = setTimeout(() => {
+                if (!arraysEqual(selectedRolesInModal, currentRoleSlugs)) {
+                    setSelectedRolesInModal(currentRoleSlugs);
+                }
+                if (!arraysEqual(selectedPermsInModal, currentPermissionSlugs)) {
+                    setSelectedPermsInModal(currentPermissionSlugs);
+                }
+            }, 0);
+
+            return () => clearTimeout(timeout);
         }
-    }, [accessUser, userRoleAssignments, userPermissionAssignments, currentRoleSlugs, currentPermissionSlugs]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        accessUser,
+        userRoleAssignments,
+        userPermissionAssignments,
+        currentRoleSlugs,
+        currentPermissionSlugs,
+    ]);
 
 
     const drawerModuleOptions = useMemo(
@@ -230,9 +265,6 @@ export function UserPageView() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-xl font-semibold text-slate-800 font-heading">Quản lý User</h1>
-                    <p className="text-sm text-slate-500">
-                        CRUD user đồng bộ với API backend
-                    </p>
                 </div>
                 <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal} className="bg-linear-to-r from-amber-500 to-amber-600 border-none">
                     Thêm user
