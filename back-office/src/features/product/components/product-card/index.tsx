@@ -6,10 +6,10 @@ import {
     StopOutlined,
 } from '@ant-design/icons';
 import { formatCurrency } from '@shared';
-import type { ProductSummary } from '@shared';
+import type { ProductSummary, ProductMedia } from '@shared';
 
 interface ProductCardProps {
-    product: ProductSummary;
+    product: ProductSummary & { media?: ProductMedia[] };
     onView: (id: string) => void;
     onEdit: (id: string) => void;
     onDelete: (id: string) => void;
@@ -31,14 +31,18 @@ export function ProductCard({
     const displayName = getDisplayName(product.name);
     const minPrice = product.displayPriceMin;
     const maxPrice = product.displayPriceMax;
+    const thumbnailUrl =
+        product.thumbnailUrl ||
+        product.media?.find((m) => m.isThumbnail)?.url ||
+        product.media?.[0]?.url;
 
     return (
         <div className="group relative bg-white rounded-xl border border-[#D4AF37]/30 transition-all duration-300 overflow-hidden hover:shadow-[0_10px_40px_-5px_rgba(109,40,217,0.15)] h-full flex flex-col hover:-translate-y-1">
             {/* Thumbnail Area */}
-            <div className="relative aspect-[4/3] w-full bg-[#FAF8F5] overflow-hidden p-4 flex items-center justify-center">
-                {product.thumbnailUrl ? (
+            <div className="relative aspect-4/3 w-full bg-[#FAF8F5] overflow-hidden p-4 flex items-center justify-center">
+                {thumbnailUrl ? (
                     <img
-                        src={product.thumbnailUrl}
+                        src={thumbnailUrl}
                         alt={displayName}
                         className="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-105"
                     />
@@ -51,7 +55,7 @@ export function ProductCard({
                 {/* Status Badges - Floating */}
                 <div className="absolute top-3 left-3 flex flex-col gap-2">
                     {product.isFeatured && (
-                        <span className="bg-gradient-to-r from-[#D4AF37] to-[#B76E79] text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg tracking-wider">
+                        <span className="bg-linear-to-r from-[#D4AF37] to-[#B76E79] text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg tracking-wider">
                             FEATURED
                         </span>
                     )}

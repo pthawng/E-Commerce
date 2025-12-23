@@ -38,10 +38,26 @@ export default function App() {
               <ProductsPage />
             </ProtectedRoute>
           } />
-          <Route path="category" element={<CategoriesPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="attributes" element={<AttributesPage />} />
-          <Route path="rbac" element={<RbacPage />} />
+          <Route path="category" element={
+            <ProtectedRoute requiredPermission="product.category.read">
+              <CategoriesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="categories" element={
+            <ProtectedRoute requiredPermission="product.category.read">
+              <CategoriesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="attributes" element={
+            <ProtectedRoute requiredPermission="product.attribute.read">
+              <AttributesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="rbac" element={
+            <ProtectedRoute requiredPermission="auth.role.read">
+              <RbacPage />
+            </ProtectedRoute>
+          } />
           {/* Thêm các routes khác ở đây */}
           {/* <Route path="orders" element={<OrdersPage />} /> */}
           {/* <Route path="customers" element={<CustomersPage />} /> */}

@@ -47,7 +47,7 @@ import { RbacService } from './rbac.service';
   mode: 'any',
 })
 export class RbacAdminController {
-  constructor(private readonly rbacService: RbacService) {}
+  constructor(private readonly rbacService: RbacService) { }
 
   // ==================== ROLE ENDPOINTS ====================
 
@@ -275,11 +275,6 @@ export class RbacAdminController {
     @Body() dto: AssignRoleDto,
     @CurrentUser() user: RequestUserPayload,
   ) {
-    // Validate userId trong body phải khớp với userId trong URL
-    if (dto.userId !== userId) {
-      throw new Error('userId trong body phải khớp với userId trong URL');
-    }
-
     return this.rbacService.assignRoleToUser(userId, dto.roleSlug, user.userId);
   }
 

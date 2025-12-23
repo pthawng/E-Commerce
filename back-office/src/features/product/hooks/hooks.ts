@@ -5,6 +5,15 @@ import { getProduct } from '../services/get-product';
 import { createProduct, type CreateProductDTO } from '../services/create-product';
 import { updateProduct, type UpdateProductDTO } from '../services/update-product';
 import { deleteProduct } from '../services/delete-product';
+import {
+    getVariants,
+    createVariant as createVariantApi,
+    updateVariant as updateVariantApi,
+    deleteVariant as deleteVariantApi,
+    type ProductVariant,
+    type CreateVariantPayload,
+    type UpdateVariantPayload,
+} from '../services/variants';
 import type { PaginationQuery } from '@shared';
 
 export function useProducts(filters?: PaginationQuery) {
@@ -81,6 +90,55 @@ export function useSetProductThumbnail() {
         },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(variables.productId) });
+        },
+    });
+}
+
+export function useVariants(productId: string | null) {
+    return useQuery({
+        queryKey: productId ? ['product', productId, 'variants'] : ['product', 'variants', 'idle'],
+        queryFn: () => getVariants(productId as string),
+        enabled: !!productId,
+    });
+}
+
+export function useCreateVariant(productId: string | null) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (payload: CreateVariantPayload) =>
+            createVariantApi(productId as string, payload),
+        onSuccess: () => {
+            if (productId) {
+                queryClient.invalidateQueries({ queryKey: ['product', productId, 'variants'] });
+                queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(productId) });
+            }
+        },
+    });
+}
+
+export function useUpdateVariant(productId: string | null) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (args: { id: string; payload: UpdateVariantPayload }) =>
+            updateVariantApi(productId as string, args.id, args.payload),
+        onSuccess: (_, variables) => {
+            if (productId) {
+                queryClient.invalidateQueries({ queryKey: ['product', productId, 'variants'] });
+                queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(productId) });
+            }
+        },
+    });
+}
+
+export function useDeleteVariant(productId: string | null) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => deleteVariantApi(productId as string, id),
+        onSuccess: () => {
+            if (productId) {
+                queryClient.invalidateQueries({ queryKey: ['product', productId, 'variants'] });
+                queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(productId) });
+            }
         },
     });
 }

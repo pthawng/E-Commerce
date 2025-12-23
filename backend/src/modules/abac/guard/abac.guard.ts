@@ -139,6 +139,7 @@ export class AbacGuard implements CanActivate {
       order: 'order',
       product: 'product',
       user: 'user',
+      variant: 'productVariant',
       // Add more mappings as needed
     };
 

@@ -29,9 +29,16 @@ export class ProductStorageService {
    * @param dto - DTO chứa altText, isThumbnail, order
    * @returns ProductMedia đã được tạo
    */
-  async uploadMedia(productId: string, file: Express.Multer.File, dto: UploadMediaDto) {
+  async uploadMedia(
+    productId: string,
+    file: Express.Multer.File,
+    dto: UploadMediaDto,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = tx ?? this.prisma;
+
     // 1. Kiểm tra product tồn tại
-    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    const product = await client.product.findUnique({ where: { id: productId } });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
@@ -58,7 +65,7 @@ export class ProductStorageService {
 
     // 6. Nếu set làm thumbnail, unset các thumbnail khác
     if (dto.isThumbnail) {
-      await this.prisma.productMedia.updateMany({
+      await client.productMedia.updateMany({
         where: { productId, isThumbnail: true },
         data: { isThumbnail: false },
       });
@@ -67,7 +74,7 @@ export class ProductStorageService {
     // 7. Lấy order mặc định (max order + 1)
     let order = dto.order ?? 0;
     if (dto.order === undefined) {
-      const maxOrder = await this.prisma.productMedia.findFirst({
+      const maxOrder = await client.productMedia.findFirst({
         where: { productId },
         orderBy: { order: 'desc' },
         select: { order: true },
@@ -76,7 +83,7 @@ export class ProductStorageService {
     }
 
     // 8. Lưu vào database
-    return this.prisma.productMedia.create({
+    return client.productMedia.create({
       data: {
         productId,
         url,

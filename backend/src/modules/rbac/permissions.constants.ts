@@ -46,6 +46,14 @@ export const PERMISSIONS = {
       UPDATE: 'product.item.update',
       DELETE: 'product.item.delete',
     },
+
+    VARIANT: {
+      CREATE: 'product.variant.create',
+      READ: 'product.variant.read',
+      UPDATE: 'product.variant.update',
+      DELETE: 'product.variant.delete',
+      MANAGE: 'product.variant.manage',
+    },
   },
 } as const;
 
@@ -53,8 +61,8 @@ export const PERMISSIONS = {
 type NestedValues<T> = T extends string
   ? T
   : T extends object
-  ? { [K in keyof T]: NestedValues<T[K]> }[keyof T]
-  : never;
+    ? { [K in keyof T]: NestedValues<T[K]> }[keyof T]
+    : never;
 
 // Union type của tất cả slug hợp lệ (tự động, không cần sửa tay)
 export type PermissionValue = NestedValues<typeof PERMISSIONS>;

@@ -1,8 +1,9 @@
 import { apiPatch, apiPatchFormData } from '@/services/apiClient';
 import type { Product } from '@shared';
 import { API_ENDPOINTS } from '@shared';
+import type { CreateProductDTO } from './create-product';
 
-export type UpdateProductDTO = Partial<Product> & {
+export type UpdateProductDTO = Partial<CreateProductDTO> & {
     categoryIds?: string[];
 };
 
@@ -18,6 +19,17 @@ export async function updateProduct(id: string, data: UpdateProductDTO, images?:
         if (data.hasVariants !== undefined) formData.append('hasVariants', String(data.hasVariants));
         if (data.isActive !== undefined) formData.append('isActive', String(data.isActive));
         if (data.isFeatured !== undefined) formData.append('isFeatured', String(data.isFeatured));
+        if (data.basePrice !== undefined) formData.append('basePrice', String(data.basePrice));
+        if (data.baseCompareAtPrice !== undefined) {
+            formData.append('baseCompareAtPrice', String(data.baseCompareAtPrice));
+        }
+        if (data.baseCostPrice !== undefined) formData.append('baseCostPrice', String(data.baseCostPrice));
+        if (data.baseWeightGram !== undefined) {
+            formData.append('baseWeightGram', String(data.baseWeightGram));
+        }
+        if (data.baseVariantTitle) {
+            formData.append('baseVariantTitle', JSON.stringify(data.baseVariantTitle));
+        }
 
         images.forEach((image) => formData.append('images', image));
 

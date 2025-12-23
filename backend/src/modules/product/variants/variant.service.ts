@@ -25,27 +25,48 @@ export class VariantService {
   // ---------------------------
   // CREATE VARIANT
   // ---------------------------
-  async createVariant(productId: string, dto: CreateVariantDto) {
+  async createVariant(
+    productId: string,
+    dto: CreateVariantDto,
+    tx?: Prisma.TransactionClient,
+    options?: {
+      mediaRecords?: Array<{ id: string; order: number }>;
+      skipRecalc?: boolean;
+      autoAssignDefault?: boolean;
+    },
+  ) {
+    const client = tx ?? this.prisma;
+
     // Ensure product exists
-    await this.ensureProductExists(productId);
+    const product = await this.ensureProductExists(productId, client);
 
-    // Ensure SKU unique
-    if (dto.sku) {
-      const exists = await this.prisma.productVariant.findUnique({ where: { sku: dto.sku } });
-      if (exists) {
-        throw new BadRequestException('SKU đã tồn tại');
-      }
-    }
-
-    // If creating first variant, set isDefault = true
-    const variantCount = await this.prisma.productVariant.count({
+    // Ensure SKU unique / auto-gen
+    const rawSku = dto.sku?.trim();
+    // If creating first variant, set isDefault = true (opt-in)
+    const variantCount = await client.productVariant.count({
       where: { productId, deletedAt: null },
     });
-    const shouldBeDefault = variantCount === 0;
 
-    const variant = await this.prisma.productVariant.create({
+    const finalSku = rawSku || this.generateSku(product.slug, dto.variantTitle, variantCount + 1);
+
+    const exists = await client.productVariant.findUnique({ where: { sku: finalSku } });
+    if (exists) {
+      throw new BadRequestException('SKU đã tồn tại');
+    }
+
+    const shouldBeDefault =
+      options?.autoAssignDefault === undefined || options.autoAssignDefault
+        ? variantCount === 0
+        : false;
+
+    // Validate attribute values nếu có
+    if (dto.attributeValueIds?.length) {
+      await this.validateAttributeValues(dto.attributeValueIds, client);
+    }
+
+    const variant = await client.productVariant.create({
       data: {
-        sku: dto.sku,
+        sku: finalSku,
         price: dto.price,
         compareAtPrice: dto.compareAtPrice,
         costPrice: dto.costPrice,
@@ -60,10 +81,55 @@ export class VariantService {
 
     // If mark as default, unset others
     if (variant.isDefault) {
-      await this.unsetOtherDefaults(productId, variant.id);
+      await this.unsetOtherDefaults(productId, variant.id, client);
     }
 
-    await this.recalculateDisplayPrice(productId);
+    // Attribute values
+    if (dto.attributeValueIds?.length) {
+      await client.variantAttributeValue.createMany({
+        data: dto.attributeValueIds.map((attributeValueId) => ({
+          variantId: variant.id,
+          attributeValueId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Map media via index
+    if (dto.mediaIndexes?.length) {
+      let medias = options?.mediaRecords;
+      if (!medias) {
+        const dbMedias = await client.productMedia.findMany({
+          where: { productId },
+          orderBy: { order: 'asc' },
+          select: { id: true, order: true },
+        });
+        medias = dbMedias;
+      }
+
+      const connectIds = dto.mediaIndexes.map((idx) => {
+        const media = medias?.[idx];
+        if (!media) {
+          throw new BadRequestException(`mediaIndex ${idx} không hợp lệ`);
+        }
+        return { id: media.id };
+      });
+
+      if (connectIds.length) {
+        await client.productVariant.update({
+          where: { id: variant.id },
+          data: {
+            media: {
+              connect: connectIds,
+            },
+          },
+        });
+      }
+    }
+
+    if (!options?.skipRecalc) {
+      await this.recalculateDisplayPrice(productId, client);
+    }
     return variant;
   }
 
@@ -172,29 +238,43 @@ export class VariantService {
   // ---------------------------
   // Helpers
   // ---------------------------
-  private async ensureProductExists(productId: string) {
-    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+  private async ensureProductExists(
+    productId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const product = await client.product.findUnique({
+      where: { id: productId },
+      select: { id: true, slug: true },
+    });
     if (!product) {
       throw new BadRequestException('Product không tồn tại');
     }
+    return product;
   }
 
-  private async unsetOtherDefaults(productId: string, variantId: string) {
-    await this.prisma.productVariant.updateMany({
+  private async unsetOtherDefaults(
+    productId: string,
+    variantId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    await client.productVariant.updateMany({
       where: { productId, NOT: { id: variantId } },
       data: { isDefault: false },
     });
   }
 
-  private async recalculateDisplayPrice(productId: string) {
+  async recalculateDisplayPrice(
+    productId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
     // Lấy min/max price của các variant đang active và chưa xoá
-    const prices = await this.prisma.productVariant.findMany({
+    const prices = await client.productVariant.findMany({
       where: { productId, deletedAt: null, isActive: true },
       select: { price: true },
     });
 
     if (!prices.length) {
-      await this.prisma.product.update({
+      await client.product.update({
         where: { id: productId },
         data: {
           displayPriceMin: null,
@@ -208,13 +288,41 @@ export class VariantService {
     const min = Math.min(...nums);
     const max = Math.max(...nums);
 
-    await this.prisma.product.update({
+    await client.product.update({
       where: { id: productId },
       data: {
         displayPriceMin: min,
         displayPriceMax: max,
       },
     });
+  }
+
+  private async validateAttributeValues(
+    attributeValueIds: string[],
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const uniqueIds = Array.from(new Set(attributeValueIds));
+    const found = await client.attributeValue.count({
+      where: { id: { in: uniqueIds } },
+    });
+    if (found !== uniqueIds.length) {
+      throw new BadRequestException('Một hoặc nhiều attributeValueId không tồn tại');
+    }
+  }
+
+  private generateSku(baseSlug: string, variantTitle: any, seq: number) {
+    const parts = [baseSlug];
+    if (variantTitle && typeof variantTitle === 'object') {
+      const values = Object.values(variantTitle)
+        .map((v) => (typeof v === 'string' ? v : ''))
+        .filter(Boolean)
+        .map((v) => v.replace(/\s+/g, '').toUpperCase());
+      if (values.length) {
+        parts.push(...values);
+      }
+    }
+    parts.push(String(seq).padStart(2, '0'));
+    return parts.join('-').toUpperCase();
   }
 
   private pickDefined<T extends Record<string, any>>(obj: T): Partial<T> {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Modal, Space, Typography, message, Descriptions, Tag, Image } from 'antd';
+import { Button, Modal, Space, Typography, message, Descriptions, Tag, Image, Tabs } from 'antd';
 import {
     AppstoreOutlined,
     ReloadOutlined,
@@ -9,9 +9,11 @@ import {
 } from '@ant-design/icons';
 import { ProductTable } from '../product-table';
 import { ProductForm } from '../product-form';
+import { VariantTable } from '../variant-table';
+import type { Product } from '@shared';
 import { useProductStore } from '../../hooks/store';
 import { useProducts, useCreateProduct, useUpdateProduct, useProduct, useDeleteProductMedia, useSetProductThumbnail } from '../../hooks/hooks';
-import type { Product } from '@shared';
+import type { CreateProductDTO } from '../../services/create-product';
 
 const { Title, Text } = Typography;
 
@@ -40,7 +42,7 @@ export function ProductPageView() {
         setSearch(searchValue.trim());
     };
 
-    const handleCreate = async (values: { data: Partial<Product>; images: File[] }) => {
+    const handleCreate = async (values: { data: CreateProductDTO; images: File[] }) => {
         try {
             await createProduct.mutateAsync(values);
             message.success('Tạo sản phẩm thành công');
@@ -50,7 +52,7 @@ export function ProductPageView() {
         }
     };
 
-    const handleEdit = async (values: { data: Partial<Product>; images: File[] }) => {
+    const handleEdit = async (values: { data: Partial<CreateProductDTO>; images: File[] }) => {
         if (!selectedProductId) return;
         try {
             await updateProduct.mutateAsync({
@@ -201,76 +203,138 @@ export function ProductPageView() {
                     setSelectedProductId(null);
                 }}
                 footer={null}
-                width={900}
+                width={960}
                 destroyOnHidden
             >
                 {isLoadingProduct ? (
                     <div className="p-12 text-center text-slate-400">Đang tải...</div>
                 ) : selectedProduct ? (
-                    <div className="space-y-8">
-                        <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }} className="bg-white">
-                            <Descriptions.Item label="Tên (VI)">
-                                <span className="text-[#1F2937] font-medium font-serif text-lg">{(selectedProduct.name as Record<string, string>)?.vi || 'N/A'}</span>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Tên (EN)">
-                                <span className="text-slate-600 font-medium font-serif text-lg">{(selectedProduct.name as Record<string, string>)?.en || 'N/A'}</span>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Slug"><code className="text-[#6D28D9] bg-violet-50 px-2 py-1 rounded">{selectedProduct.slug}</code></Descriptions.Item>
-                            <Descriptions.Item label="Trạng thái">
-                                <Tag color={selectedProduct.isActive ? 'success' : 'error'} className="px-3 py-1 rounded-full font-bold">
-                                    {selectedProduct.isActive ? 'ACTIVE' : 'INACTIVE'}
-                                </Tag>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Nổi bật">
-                                <Tag color={selectedProduct.isFeatured ? 'gold' : 'default'} className="px-3 py-1 rounded-full font-bold">
-                                    {selectedProduct.isFeatured ? 'FEATURED' : 'NORMAL'}
-                                </Tag>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Biến thể">
-                                <Tag>{selectedProduct.hasVariants ? 'Có' : 'Không'}</Tag>
-                            </Descriptions.Item>
-                        </Descriptions>
-
-                        {selectedProduct.media && selectedProduct.media.length > 0 && (
-                            <div className="bg-[#FAF8F5] p-6 rounded-2xl border border-[#D4AF37]/10">
-                                <Title level={5} className="text-[#1F2937] font-heading mb-4 border-b border-[#D4AF37]/10 pb-2 inline-block">Thư viện ảnh</Title>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                    {selectedProduct.media.map((media) => (
-                                        <div key={media.id} className="group relative rounded-xl overflow-hidden border border-white shadow-sm hover:shadow-lg transition-all duration-300">
-                                            <div className="aspect-square bg-white flex items-center justify-center p-2">
-                                                <Image src={media.url} alt="Product" className="w-full! h-full! object-contain!" />
-                                            </div>
-
-                                            {/* Overlay actions */}
-                                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center gap-3">
-                                                {media.isThumbnail ? (
-                                                    <Tag color="gold" className="m-0 px-3 py-1 text-xs font-bold shadow-lg ring-2 ring-white/20">THUMBNAIL</Tag>
-                                                ) : (
-                                                    <Button
-                                                        size="small"
-                                                        className="bg-[#D4AF37] text-white border-none font-bold shadow-lg"
-                                                        onClick={() => handleSetThumbnail(selectedProduct.id, media.id)}
-                                                        loading={setThumbnail.isPending}
-                                                    >
-                                                        Set Thumbnail
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    size="small"
-                                                    className="bg-white text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200"
-                                                    icon={<DeleteOutlined />}
-                                                    onClick={() => handleDeleteMedia(selectedProduct.id, media.id)}
-                                                    loading={deleteMedia.isPending}
+                    <Tabs
+                        defaultActiveKey="general"
+                        items={[
+                            {
+                                key: 'general',
+                                label: 'Thông tin chung',
+                                children: (
+                                    <div className="space-y-8">
+                                        <Descriptions
+                                            bordered
+                                            column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
+                                            className="bg-white"
+                                        >
+                                            <Descriptions.Item label="Tên (VI)">
+                                                <span className="text-[#1F2937] font-medium font-serif text-lg">
+                                                    {(selectedProduct.name as Record<string, string>)?.vi ||
+                                                        'N/A'}
+                                                </span>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Tên (EN)">
+                                                <span className="text-slate-600 font-medium font-serif text-lg">
+                                                    {(selectedProduct.name as Record<string, string>)?.en ||
+                                                        'N/A'}
+                                                </span>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Slug">
+                                                <code className="text-[#6D28D9] bg-violet-50 px-2 py-1 rounded">
+                                                    {selectedProduct.slug}
+                                                </code>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Trạng thái">
+                                                <Tag
+                                                    color={selectedProduct.isActive ? 'success' : 'error'}
+                                                    className="px-3 py-1 rounded-full font-bold"
                                                 >
-                                                    Xóa
-                                                </Button>
+                                                    {selectedProduct.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                                </Tag>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Nổi bật">
+                                                <Tag
+                                                    color={selectedProduct.isFeatured ? 'gold' : 'default'}
+                                                    className="px-3 py-1 rounded-full font-bold"
+                                                >
+                                                    {selectedProduct.isFeatured ? 'FEATURED' : 'NORMAL'}
+                                                </Tag>
+                                            </Descriptions.Item>
+                                        </Descriptions>
+                                    </div>
+                                ),
+                            },
+                            {
+                                key: 'variants',
+                                label: 'Biến thể',
+                                children: <VariantTable product={selectedProduct as Product} />,
+                            },
+                            {
+                                key: 'media',
+                                label: 'Hình ảnh',
+                                children:
+                                    selectedProduct.media && selectedProduct.media.length > 0 ? (
+                                        <div className="bg-[#FAF8F5] p-6 rounded-2xl border border-[#D4AF37]/10">
+                                            <Title
+                                                level={5}
+                                                className="text-[#1F2937] font-heading mb-4 border-b border-[#D4AF37]/10 pb-2 inline-block"
+                                            >
+                                                Thư viện ảnh
+                                            </Title>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                                {selectedProduct.media.map((media) => (
+                                                    <div
+                                                        key={media.id}
+                                                        className="group relative rounded-xl overflow-hidden border border-white shadow-sm hover:shadow-lg transition-all duration-300"
+                                                    >
+                                                        <div className="aspect-square bg-white flex items-center justify-center p-2">
+                                                            <Image
+                                                                src={media.url}
+                                                                alt="Product"
+                                                                className="w-full! h-full! object-contain!"
+                                                            />
+                                                        </div>
+
+                                                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center gap-3">
+                                                            {media.isThumbnail ? (
+                                                                <Tag className="m-0 px-3 py-1 text-xs font-bold shadow-lg ring-2 ring-white/20">
+                                                                    THUMBNAIL
+                                                                </Tag>
+                                                            ) : (
+                                                                <Button
+                                                                    size="small"
+                                                                    className="bg-[#D4AF37] text-white border-none font-bold shadow-lg"
+                                                                    onClick={() =>
+                                                                        handleSetThumbnail(
+                                                                            selectedProduct.id,
+                                                                            media.id,
+                                                                        )
+                                                                    }
+                                                                    loading={setThumbnail.isPending}
+                                                                >
+                                                                    Set Thumbnail
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                size="small"
+                                                                className="bg-white text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200"
+                                                                icon={<DeleteOutlined />}
+                                                                onClick={() =>
+                                                                    handleDeleteMedia(
+                                                                        selectedProduct.id,
+                                                                        media.id,
+                                                                    )
+                                                                }
+                                                                loading={deleteMedia.isPending}
+                                                            >
+                                                                Xóa
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                                    ) : (
+                                        <div className="p-6 text-slate-400">Chưa có hình ảnh</div>
+                                    ),
+                            },
+                        ]}
+                    />
                 ) : (
                     <div>Không tìm thấy sản phẩm</div>
                 )}

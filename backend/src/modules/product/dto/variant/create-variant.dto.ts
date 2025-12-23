@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -23,15 +23,19 @@ import {
  * - position: thứ tự sắp xếp
  */
 export class CreateVariantDto {
-  @ApiProperty({ description: 'Product ID', example: '123e4567-e89b-12d3-a456-426614174000' })
+  @ApiPropertyOptional({
+    description: 'Product ID (lấy từ param, không bắt buộc trong body)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
   @IsUUID('4', { message: 'productId phải là UUID hợp lệ' })
-  productId: string;
+  productId?: string;
 
-  @ApiProperty({ description: 'SKU', example: 'SKU-001' })
+  @ApiPropertyOptional({ description: 'SKU (để trống nếu muốn BE auto-gen)', example: 'SKU-001' })
+  @IsOptional()
   @IsString({ message: 'SKU phải là chuỗi' })
-  @IsNotEmpty({ message: 'SKU không được để trống' })
   @MaxLength(100, { message: 'SKU không được quá 100 ký tự' })
-  sku: string;
+  sku?: string;
 
   @ApiProperty({ description: 'Giá bán', example: 199000 })
   @IsNumber({}, { message: 'price phải là số' })
@@ -77,4 +81,22 @@ export class CreateVariantDto {
   @IsOptional()
   @IsNumber({}, { message: 'position phải là số' })
   position?: number;
+
+  @ApiPropertyOptional({
+    description: 'Danh sách attributeValueId gắn cho variant này',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray({ message: 'attributeValueIds phải là mảng' })
+  @IsUUID('4', { each: true, message: 'attributeValueId phải là UUID hợp lệ' })
+  attributeValueIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Danh sách index media (theo thứ tự media của product) để gán vào variant',
+    type: [Number],
+  })
+  @IsOptional()
+  @IsArray({ message: 'mediaIndexes phải là mảng' })
+  @IsNumber({}, { each: true, message: 'mediaIndex phải là số' })
+  mediaIndexes?: number[];
 }

@@ -19,8 +19,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     // parse connection string ra host/port/db/user
     const parsed = parse(connStr);
     this.dbInfo = {
-      host: parsed.host ?? 'unknown', // nếu null → 'unknown'
-      port: parsed.port ?? '5432', // nếu null → default 5432
+      host: parsed.host ?? 'unknown',
+      port: parsed.port ?? '5432',
       database: parsed.database ?? 'unknown',
       user: parsed.user ?? 'unknown',
     };

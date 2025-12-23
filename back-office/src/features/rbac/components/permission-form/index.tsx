@@ -17,12 +17,14 @@ export function PermissionForm({ form, isEditing, initialValues }: PermissionFor
                     rules={[
                         { required: true, message: 'Vui lòng nhập slug' },
                         {
-                            pattern: /^[a-z0-9]+(?:\\.[a-z0-9]+)*(?:-[a-z0-9]+)*$/,
+                            // Ví dụ hợp lệ: "auth.role.read", "product.variant.create"
+                            // Chỉ cho phép chữ thường, số, dấu chấm và dấu gạch ngang
+                            pattern: /^[a-z0-9]+(?:\.[a-z0-9]+)*(?:-[a-z0-9]+)*$/,
                             message: 'Slug chỉ được chứa chữ thường, số, dấu chấm và dấu gạch ngang',
                         },
                     ]}
                 >
-                    <Input placeholder="vd: rbac.manage" />
+                    <Input placeholder="vd: auth.role.read, product.variant.create" />
                 </Form.Item>
             )}
             <Form.Item

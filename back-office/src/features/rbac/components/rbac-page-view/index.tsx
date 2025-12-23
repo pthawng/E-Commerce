@@ -395,6 +395,7 @@ export function RbacPageView() {
                                             ...toAdd.map((slug) =>
                                                 assignPermissionToRole.mutateAsync({
                                                     roleSlug: permissionRole.slug,
+                                                    roleId: permissionRole.id,
                                                     permissionSlug: slug,
                                                 }),
                                             ),

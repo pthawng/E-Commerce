@@ -108,7 +108,7 @@ export function useRbacPermission(slug: string) {
     });
 }
 
-export function useUserRoles(userId?: string) {
+export function useUserRoles(userId?: string, options?: { staleTime?: number; gcTime?: number }) {
     return useQuery({
         queryKey: queryKeys.rbac.userRoles(userId || ''),
         queryFn: async () => {
@@ -116,10 +116,11 @@ export function useUserRoles(userId?: string) {
             return Array.isArray(res.data) ? res.data : [];
         },
         enabled: !!userId,
+        ...options,
     });
 }
 
-export function useUserPermissions(userId?: string) {
+export function useUserPermissions(userId?: string, options?: { staleTime?: number; gcTime?: number }) {
     return useQuery({
         queryKey: queryKeys.rbac.userPermissions(userId || ''),
         queryFn: async () => {
@@ -132,5 +133,6 @@ export function useUserPermissions(userId?: string) {
             })) : [];
         },
         enabled: !!userId,
+        ...options,
     });
 }

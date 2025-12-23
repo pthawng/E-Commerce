@@ -3,9 +3,10 @@ import { PaginationDto, PaginationService, type PaginatedResult } from 'src/comm
 import { slugify } from 'src/common/utils/string.helper';
 import type { Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, CreateProductVariantInputDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductStorageService } from './product.storage/product-storage.service';
+import { VariantService } from './variants/variant.service';
 
 @Injectable()
 export class ProductService {
@@ -13,6 +14,7 @@ export class ProductService {
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
     private readonly productStorageService: ProductStorageService,
+    private readonly variantService: VariantService,
   ) {}
 
   // ---------------------------
@@ -153,52 +155,193 @@ export class ProductService {
   // CREATE PRODUCT
   // ---------------------------
   async createProduct(dto: CreateProductDto, files?: Express.Multer.File[]) {
-    // 1. Lấy tên để tạo slug
-    const mainName = dto.name.vi || dto.name.en || Object.values(dto.name)[0];
+    // Mặc định hiện tại coi product là "đơn" (không biến thể) nếu FE không gửi hasVariants
+    const hasVariants = dto.hasVariants ?? false;
+
+    const mainName =
+      dto.name?.vi || dto.name?.en || (dto.name ? Object.values(dto.name)[0] : undefined);
     if (!mainName) {
       throw new BadRequestException('Tên sản phẩm phải có ít nhất một ngôn ngữ');
     }
 
-    // 2. Tạo slug unique
-    const finalSlug = await this.generateUniqueSlug(dto.slug || slugify(mainName));
-
-    // 3. Validate categoryIds
-    if (dto.categoryIds?.length) {
-      await this.validateCategories(dto.categoryIds);
+    // Luật: nếu không có variants thì nên có basePrice để tính giá,
+    // nhưng cho phép tạo bản nháp không giá (isActive === false)
+    if (!hasVariants && !dto.basePrice && dto.isActive !== false) {
+      throw new BadRequestException(
+        'Sản phẩm không biến thể cần gửi basePrice khi đang active. Bạn có thể để isActive = false để tạo nháp.',
+      );
+    }
+    if (hasVariants && (!dto.variants || dto.variants.length === 0)) {
+      throw new BadRequestException('Cần ít nhất 1 variant khi hasVariants = true');
     }
 
-    // 4. Tạo product
-    const product = await this.prisma.product.create({
-      data: {
-        name: dto.name,
-        slug: finalSlug,
-        description: dto.description ?? undefined,
-        hasVariants: dto.hasVariants ?? true,
-        isActive: dto.isActive ?? true,
-        isFeatured: dto.isFeatured ?? false,
+    // Gom sẵn attributeValueIds để validate
+    const allAttributeValueIds =
+      dto.variants?.flatMap((v) => v.attributeValueIds || [])?.filter(Boolean) || [];
 
-        categories: dto.categoryIds?.length
-          ? {
-              // Dùng 'create' để tạo mới ProductCategory records
-              // (không dùng 'connect' vì ProductCategory chưa tồn tại khi tạo Product mới)
-              create: dto.categoryIds.map((categoryId) => ({
-                categoryId,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        categories: { include: { category: true } },
-        media: true,
-      },
+    // Gom mediaUrl order base
+    const mediaUrlPayload = dto.mediaUrls || [];
+
+    const baseSlug = dto.slug ? slugify(dto.slug) : slugify(mainName);
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Slug unique
+      const finalSlug = await this.generateUniqueSlug(baseSlug, tx);
+
+      // 2. Validate categoryIds
+      if (dto.categoryIds?.length) {
+        await this.validateCategories(dto.categoryIds, tx);
+      }
+
+      // 3. Validate attributeValueIds (nếu có)
+      if (allAttributeValueIds.length) {
+        await this.validateAttributeValues(allAttributeValueIds, tx);
+      }
+
+      // 4. Tạo product (parent)
+      const product = await tx.product.create({
+        data: {
+          name: dto.name,
+          slug: finalSlug,
+          description: dto.description ?? undefined,
+          hasVariants,
+          isActive: dto.isActive ?? true,
+          isFeatured: dto.isFeatured ?? false,
+        },
+      });
+
+      // 5. Categories
+      if (dto.categoryIds?.length) {
+        await tx.productCategory.createMany({
+          data: dto.categoryIds.map((categoryId) => ({
+            productId: product.id,
+            categoryId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // 6. Media (URLs trước)
+      const mediaRecords: Array<{ id: string; order: number }> = [];
+      if (mediaUrlPayload.length) {
+        for (const [index, url] of mediaUrlPayload.entries()) {
+          const media = await tx.productMedia.create({
+            data: {
+              productId: product.id,
+              url,
+              type: 'image',
+              isThumbnail: index === 0,
+              order: index,
+            },
+          });
+          mediaRecords.push({ id: media.id, order: media.order });
+        }
+      }
+
+      // 7. Media (files upload) — vẫn ghi DB trong tx; upload file ra storage
+      if (files?.length) {
+        const startOrder = mediaRecords.length;
+        for (const [index, file] of files.entries()) {
+          const media = await this.productStorageService.uploadMedia(
+            product.id,
+            file,
+            {
+              isThumbnail: mediaRecords.length === 0 && index === 0,
+              order: startOrder + index,
+            },
+            tx,
+          );
+          mediaRecords.push({ id: media.id, order: media.order });
+        }
+      }
+
+      // 8. Variants
+      type VariantInput = CreateProductVariantInputDto & {
+        mediaIndexes?: number[];
+        attributeValueIds?: string[];
+      };
+
+      const variantsInput: VariantInput[] = hasVariants
+        ? (dto.variants as VariantInput[]) || []
+        : [
+            {
+              sku: undefined,
+              price: dto.basePrice!,
+              compareAtPrice: dto.baseCompareAtPrice,
+              costPrice: dto.baseCostPrice,
+              weightGram: dto.baseWeightGram,
+              variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
+              isDefault: true,
+              isActive: dto.isActive ?? true,
+              position: 0,
+              attributeValueIds: [],
+              mediaIndexes: [],
+            },
+          ];
+
+      const defaultIndexExplicit = variantsInput.findIndex((v) => v.isDefault);
+      const defaultIndex = defaultIndexExplicit >= 0 ? defaultIndexExplicit : 0;
+
+      // tránh SKU trùng trong payload
+      const skuSet = new Set<string>();
+
+      for (const [index, v] of variantsInput.entries()) {
+        let finalSku = v.sku;
+        if (!finalSku || !finalSku.trim()) {
+          finalSku = this.generateSku(finalSlug, v.variantTitle, index + 1);
+        }
+        if (skuSet.has(finalSku)) {
+          throw new BadRequestException(`SKU bị trùng trong payload: ${finalSku}`);
+        }
+        skuSet.add(finalSku);
+
+        await this.variantService.createVariant(
+          product.id,
+          {
+            productId: product.id,
+            ...v,
+            sku: finalSku,
+            isDefault: index === defaultIndex,
+            position: v.position ?? index,
+          },
+          tx,
+          {
+            mediaRecords,
+            skipRecalc: true,
+          },
+        );
+      }
+
+      // 9. Recalculate min/max price trong tx
+      await this.variantService.recalculateDisplayPrice(product.id, tx);
+
+      // 10. Return full product with relations
+      return tx.product.findUniqueOrThrow({
+        where: { id: product.id },
+        include: {
+          variants: {
+            where: { deletedAt: null },
+            include: {
+              attributes: {
+                include: {
+                  attributeValue: {
+                    include: { attribute: true },
+                  },
+                },
+              },
+              media: true,
+            },
+            orderBy: { position: 'asc' },
+          },
+          media: {
+            orderBy: { order: 'asc' },
+          },
+          categories: {
+            include: { category: true },
+          },
+        },
+      });
     });
-
-    // 5. Upload ảnh nếu có
-    if (files && files.length > 0) {
-      await this.uploadMultipleImages(product.id, files);
-    }
-
-    return product;
   }
 
   /**
@@ -207,37 +350,75 @@ export class ProductService {
    */
   private async uploadMultipleImages(productId: string, files: Express.Multer.File[]) {
     const uploadPromises = files.map(async (file, index) => {
-      return this.productStorageService.uploadMedia(productId, file, {
-        isThumbnail: index === 0, // Ảnh đầu tiên làm thumbnail
-        order: index,
-      });
+      return this.productStorageService.uploadMedia(
+        productId,
+        file,
+        {
+          isThumbnail: index === 0, // Ảnh đầu tiên làm thumbnail
+          order: index,
+        },
+        this.prisma,
+      );
     });
 
     await Promise.all(uploadPromises);
   }
 
-  private async generateUniqueSlug(baseSlug: string): Promise<string> {
-    const slug = baseSlug;
-
-    const exists = await this.prisma.product.findUnique({ where: { slug } });
-    if (!exists) return slug;
+  private async generateUniqueSlug(
+    baseSlug: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<string> {
+    const exists = await client.product.findUnique({ where: { slug: baseSlug } });
+    if (!exists) return baseSlug;
 
     let counter = 1;
-    while (await this.prisma.product.findUnique({ where: { slug: `${baseSlug}-${counter}` } })) {
+    let candidate = `${baseSlug}-${counter}`;
+    while (await client.product.findUnique({ where: { slug: candidate } })) {
       counter++;
+      candidate = `${baseSlug}-${counter}`;
     }
-
-    return `${baseSlug}-${counter}`;
+    return candidate;
   }
 
-  private async validateCategories(categoryIds: string[]) {
-    const categories = await this.prisma.category.findMany({
+  private async validateCategories(
+    categoryIds: string[],
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const categories = await client.category.findMany({
       where: { id: { in: categoryIds }, isActive: true },
     });
 
     if (categories.length !== categoryIds.length) {
       throw new BadRequestException('Một hoặc nhiều danh mục không tồn tại hoặc không active');
     }
+  }
+
+  private async validateAttributeValues(
+    attributeValueIds: string[],
+    client: Prisma.TransactionClient | PrismaService,
+  ) {
+    const uniqueIds = Array.from(new Set(attributeValueIds));
+    const found = await client.attributeValue.count({
+      where: { id: { in: uniqueIds } },
+    });
+    if (found !== uniqueIds.length) {
+      throw new BadRequestException('Một hoặc nhiều attributeValueId không tồn tại');
+    }
+  }
+
+  private generateSku(baseSlug: string, variantTitle: any, seq: number) {
+    const parts = [baseSlug];
+    if (variantTitle && typeof variantTitle === 'object') {
+      const values = Object.values(variantTitle)
+        .map((v) => (typeof v === 'string' ? v : ''))
+        .filter(Boolean)
+        .map((v) => v.replace(/\s+/g, '').toUpperCase());
+      if (values.length) {
+        parts.push(...values);
+      }
+    }
+    parts.push(String(seq).padStart(2, '0'));
+    return parts.join('-').toUpperCase();
   }
 
   // ---------------------------

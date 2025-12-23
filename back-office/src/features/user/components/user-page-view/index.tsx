@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
     Button,
     Card,
@@ -45,6 +45,8 @@ export function UserPageView() {
     const [permissionFilter, setPermissionFilter] = useState<string>();
     const [drawerPermSearch, setDrawerPermSearch] = useState<string>();
     const [drawerPermModule, setDrawerPermModule] = useState<string>();
+    const [selectedRolesInModal, setSelectedRolesInModal] = useState<string[]>([]);
+    const [selectedPermsInModal, setSelectedPermsInModal] = useState<string[]>([]);
 
     const { data, isLoading } = useUsers({
         page,
@@ -65,16 +67,24 @@ export function UserPageView() {
     const assignPermissionToUser = useAssignPermissionToUser();
     const removePermissionFromUser = useRemovePermissionFromUser();
 
-    const { data: userRoleAssignments } = useUserRoles(accessUser?.id);
-    const { data: userPermissionAssignments } = useUserPermissions(accessUser?.id);
+    const {
+        data: userRoleAssignments
+    } = useUserRoles(accessUser?.id, {
+        staleTime: 0,
+        gcTime: 0,
+    });
+    const {
+        data: userPermissionAssignments
+    } = useUserPermissions(accessUser?.id, {
+        staleTime: 0,
+        gcTime: 0,
+    });
 
     const [form] = Form.useForm<FormValues>();
 
     const openCreateModal = () => {
         setEditingUser(null);
-        // Explicitly reset form fields to default
         form.resetFields();
-        // And set specific defaults managed by Form initialValues or here
         form.setFieldsValue({
             isActive: true,
             isEmailVerified: false,
@@ -84,9 +94,6 @@ export function UserPageView() {
 
     const openEditModal = (user: User) => {
         setEditingUser(user);
-        // form.setFieldsValue is handled inside Modal via initialValues or useEffect in UserForm?
-        // Actually, Modal destroyOnClose ensures UserForm remounts.
-        // passing initialValues prop to UserForm is cleaner.
         setIsModalOpen(true);
     };
 
@@ -94,6 +101,19 @@ export function UserPageView() {
         setIsModalOpen(false);
         form.resetFields();
     };
+
+    useEffect(() => {
+        if (editingUser && isModalOpen) {
+            form.setFieldsValue({
+                email: editingUser.email,
+                fullName: editingUser.fullName,
+                phone: editingUser.phone,
+                isActive: editingUser.isActive,
+                isEmailVerified: editingUser.isEmailVerified,
+                password: undefined,
+            });
+        }
+    }, [editingUser, isModalOpen, form]);
 
     const handleSubmit = async () => {
         try {
@@ -163,6 +183,14 @@ export function UserPageView() {
         () => (userPermissionAssignments || []).map((up) => up.permission.action),
         [userPermissionAssignments],
     );
+
+    // Initialize modal state when access modal opens with data
+    useEffect(() => {
+        if (accessUser && userRoleAssignments !== undefined && userPermissionAssignments !== undefined) {
+            setSelectedRolesInModal(currentRoleSlugs);
+            setSelectedPermsInModal(currentPermissionSlugs);
+        }
+    }, [accessUser, userRoleAssignments, userPermissionAssignments, currentRoleSlugs, currentPermissionSlugs]);
 
 
     const drawerModuleOptions = useMemo(
@@ -260,11 +288,14 @@ export function UserPageView() {
                     onDelete={handleDelete}
                     onManageAccess={(user) => {
                         setAccessUser(user);
+                        setSelectedRolesInModal([]);
+                        setSelectedPermsInModal([]);
                     }}
                 />
             </Card>
 
             <Modal
+                key={editingUser?.id || 'create-user-modal'}
                 title={<span className="font-heading text-lg">{editingUser ? "Cập nhật user" : "Tạo mới user"}</span>}
                 open={isModalOpen}
                 centered
@@ -276,6 +307,7 @@ export function UserPageView() {
                 confirmLoading={createMutation.isPending || updateMutation.isPending}
             >
                 <UserForm
+                    key={editingUser ? editingUser.id : 'create'}
                     form={form}
                     isEditing={!!editingUser}
                     initialValues={editingUser ? {
@@ -292,6 +324,7 @@ export function UserPageView() {
             </Modal>
 
             <Modal
+                key={accessUser?.id || 'access-modal'}
                 title={accessUser ? `Phân quyền: ${accessUser.email}` : ''}
                 open={!!accessUser}
                 width={680}
@@ -324,48 +357,40 @@ export function UserPageView() {
                                 onClick={async () => {
                                     if (!accessUser) return;
 
-                                    const roleForm = document.querySelector('[data-role-form]') as HTMLFormElement;
-                                    const permForm = document.querySelector('[data-perm-form]') as HTMLFormElement;
-
-                                    const roleCheckboxes = roleForm?.querySelectorAll('input[type="checkbox"]:checked') || [];
-                                    const permCheckboxes = permForm?.querySelectorAll('input[type="checkbox"]:checked') || [];
-
-                                    const selectedRoles = Array.from(roleCheckboxes).map(
-                                        (cb) => (cb as HTMLInputElement).value
-                                    );
-                                    const selectedPerms = Array.from(permCheckboxes).map(
-                                        (cb) => (cb as HTMLInputElement).value
-                                    );
+                                    // Get current selections from state
+                                    // Note: Empty array is valid (user unchecked all)
+                                    const selectedRoles = selectedRolesInModal;
+                                    const selectedPerms = selectedPermsInModal;
 
                                     const prevRoles = currentRoleSlugs;
                                     const prevPerms = currentPermissionSlugs;
 
-                                    const rolesToAdd = selectedRoles.filter((v) => !prevRoles.includes(v));
-                                    const rolesToRemove = prevRoles.filter((v) => !selectedRoles.includes(v));
-                                    const permsToAdd = selectedPerms.filter((v) => !prevPerms.includes(v));
-                                    const permsToRemove = prevPerms.filter((v) => !selectedPerms.includes(v));
+                                    const rolesToAdd = selectedRoles.filter((v: string) => !prevRoles.includes(v));
+                                    const rolesToRemove = prevRoles.filter((v: string) => !selectedRoles.includes(v));
+                                    const permsToAdd = selectedPerms.filter((v: string) => !prevPerms.includes(v));
+                                    const permsToRemove = prevPerms.filter((v: string) => !selectedPerms.includes(v));
 
                                     try {
                                         await Promise.all([
-                                            ...rolesToAdd.map((slug) =>
+                                            ...rolesToAdd.map((slug: string) =>
                                                 assignRoleToUser.mutateAsync({
                                                     userId: accessUser.id,
                                                     roleSlug: slug,
                                                 }),
                                             ),
-                                            ...rolesToRemove.map((slug) =>
+                                            ...rolesToRemove.map((slug: string) =>
                                                 removeRoleFromUser.mutateAsync({
                                                     userId: accessUser.id,
                                                     roleSlug: slug,
                                                 }),
                                             ),
-                                            ...permsToAdd.map((slug) =>
+                                            ...permsToAdd.map((slug: string) =>
                                                 assignPermissionToUser.mutateAsync({
                                                     userId: accessUser.id,
                                                     permissionSlug: slug,
                                                 }),
                                             ),
-                                            ...permsToRemove.map((slug) =>
+                                            ...permsToRemove.map((slug: string) =>
                                                 removePermissionFromUser.mutateAsync({
                                                     userId: accessUser.id,
                                                     permissionSlug: slug,
@@ -389,20 +414,24 @@ export function UserPageView() {
                 destroyOnClose
             >
                 {accessUser && (
-                    <div className="space-y-6">
+                    <div key={accessUser.id} className="space-y-6">
                         {/* Roles Section */}
                         <div>
                             <h3 className="font-semibold mb-3 text-base">Roles</h3>
-                            <form data-role-form>
+                            {userRoleAssignments !== undefined ? (
                                 <Checkbox.Group
+                                    key={`roles-${accessUser.id}`}
                                     className="flex flex-col gap-2"
                                     options={(roles || []).map((r) => ({
                                         label: `${r.name}${r.isSystem ? ' (system)' : ''}`,
                                         value: r.slug,
                                     }))}
                                     defaultValue={currentRoleSlugs}
+                                    onChange={(values) => setSelectedRolesInModal(values as string[])}
                                 />
-                            </form>
+                            ) : (
+                                <div className="text-sm text-gray-500">Đang tải...</div>
+                            )}
                         </div>
 
                         {/* Divider */}
@@ -433,11 +462,13 @@ export function UserPageView() {
                             </div>
 
                             {/* Permission List */}
-                            <form data-perm-form>
+                            {userPermissionAssignments !== undefined ? (
                                 <div className="border border-slate-200 rounded-md p-3 bg-slate-50/50">
                                     <Checkbox.Group
+                                        key={`permissions-${accessUser.id}`}
                                         className="flex flex-col gap-3 max-h-72 overflow-y-auto pr-2"
                                         defaultValue={currentPermissionSlugs}
+                                        onChange={(values) => setSelectedPermsInModal(values as string[])}
                                     >
                                         {Object.entries(drawerFilteredPermissionsByModule).map(
                                             ([moduleName, perms]) =>
@@ -463,11 +494,13 @@ export function UserPageView() {
                                         )}
                                     </Checkbox.Group>
                                 </div>
-                            </form>
+                            ) : (
+                                <div className="text-sm text-gray-500">Đang tải...</div>
+                            )}
                         </div>
                     </div>
                 )}
-            </Modal>
-        </div>
+            </Modal >
+        </div >
     );
 }
