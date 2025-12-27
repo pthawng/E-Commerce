@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { z } from 'zod';
 import { Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useStore } from '@/store/useStore';
+import { apiPost } from '@/services/apiClient';
+import { API_ENDPOINTS, type AuthResponse, type User } from '@shared';
+import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 import { toast } from 'sonner';
 
 type AuthMode = 'login' | 'register' | 'forgot';
@@ -54,6 +57,39 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Real-time confirm password validation (only for register mode)
+  useEffect(() => {
+    if (mode !== 'register') {
+      // clear confirm error when not in register mode
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.confirmPassword;
+        return next;
+      });
+      return;
+    }
+
+    // if confirm is empty, don't show mismatch error
+    if (!confirmPassword) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.confirmPassword;
+        return next;
+      });
+      return;
+    }
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (password !== confirmPassword) {
+        next.confirmPassword = t.auth.errors.passwordMismatch;
+      } else {
+        delete next.confirmPassword;
+      }
+      return next;
+    });
+  }, [password, confirmPassword, mode, t]);
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -94,14 +130,74 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     if (mode === 'login') {
-      const userName = sanitizeInput(name) || 'Ray Paradis Member';
-      login(userName, sanitizeInput(email));
-      toast.success(t.auth.loginSuccess);
-      onOpenChange(false);
-      resetForm();
+      try {
+        const sanitizedEmail = sanitizeInput(email);
+        const resp = await apiPost<AuthResponse>(API_ENDPOINTS.AUTH.LOGIN, { email: sanitizedEmail, password });
+        const authData = resp.data;
+        if (authData && authData.user && authData.tokens) {
+          // Normalize user shape to shared User type
+          const normalizedUser: User = {
+            id: authData.user.id,
+            email: authData.user.email,
+            fullName: authData.user.fullName,
+            phone: authData.user.phone,
+            isActive: authData.user.isActive,
+            isEmailVerified: authData.user.isEmailVerified,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          useAuthStore.getState().setAuth(normalizedUser, authData.tokens);
+          // Update public store for UI
+          const displayName = normalizedUser.fullName || sanitizedEmail;
+          login(displayName, normalizedUser.email || sanitizedEmail);
+          toast.success(t.auth.loginSuccess);
+          onOpenChange(false);
+          resetForm();
+        } else {
+          throw new Error('Invalid auth response');
+        }
+      } catch (err: unknown) {
+        const message = (err as { message?: string })?.message || 'Login failed';
+        toast.error(message);
+      }
     } else if (mode === 'register') {
-      toast.success(t.auth.registerSuccess);
-      switchMode('login');
+      try {
+        const sanitizedName = sanitizeInput(name);
+        const sanitizedEmail = sanitizeInput(email);
+        const payload = {
+          email: sanitizedEmail,
+          password,
+          fullName: sanitizedName,
+        };
+        const resp = await apiPost<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, payload);
+        const data = resp.data;
+        if (data && data.user && data.tokens) {
+          const normalizedUser: User = {
+            id: data.user.id,
+            email: data.user.email,
+            fullName: data.user.fullName,
+            phone: data.user.phone,
+            isActive: data.user.isActive,
+            isEmailVerified: data.user.isEmailVerified,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          useAuthStore.getState().setAuth(normalizedUser, data.tokens);
+          const displayName = normalizedUser.fullName || normalizedUser.email;
+          login(displayName, normalizedUser.email);
+          toast.success(t.auth.registerSuccess);
+          onOpenChange(false);
+          resetForm();
+        } else {
+          // Backend might just return success message without auth
+          toast.success(t.auth.registerSuccess);
+          switchMode('login');
+        }
+      } catch (err: unknown) {
+        const message = (err as { message?: string })?.message || 'Register failed';
+        toast.error(message);
+      }
     } else {
       toast.success(t.auth.resetEmailSent);
       switchMode('login');
@@ -163,7 +259,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
         </div>
 
         {/* Content */}
-        <div className="px-10 pb-16 min-h-[420px]">
+        <div className="px-10 pb-32 min-h-[420px]">
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
@@ -341,7 +437,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                 <motion.div className="pt-4">
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || (mode === 'register' && !!errors.confirmPassword)}
                     variant="luxury"
                     className="w-full h-12 text-2xs tracking-ultra"
                   >
@@ -363,30 +459,31 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                 </motion.div>
               </form>
 
-              {/* Switch mode */}
-              <div className="mt-12">
-                <div className="hairline mb-6" />
-                
-                <div className="text-center">
-                  <span className="text-2xs text-muted-foreground font-body tracking-wide">
-                    {mode === 'login' ? t.auth.noAccount : mode === 'register' ? t.auth.hasAccount : t.auth.rememberPassword}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
-                    className="ml-2 text-2xs text-foreground hover:text-primary transition-colors duration-500 font-body tracking-wide inline-flex items-center gap-1 group"
-                  >
-                    {mode === 'login' ? t.auth.registerLink : t.auth.loginLink}
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={1.2} />
-                  </button>
-                </div>
-              </div>
+              {/* Switch mode (moved to sticky footer area) */}
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 px-10 py-6">
+        {/* Switch-mode area (normal flow, sits above footer) */}
+        <div className="mt-4 px-10 pb-4">
+          <div className="hairline mb-3" />
+          <div className="text-center">
+            <span className="text-2xs text-muted-foreground font-body tracking-wide">
+              {mode === 'login' ? t.auth.noAccount : mode === 'register' ? t.auth.hasAccount : t.auth.rememberPassword}
+            </span>
+            <button
+              type="button"
+              onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
+              className="ml-2 text-2xs text-foreground hover:text-primary transition-colors duration-500 font-body tracking-wide inline-flex items-center gap-1 group"
+            >
+              {mode === 'login' ? t.auth.registerLink : t.auth.loginLink}
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={1.2} />
+            </button>
+          </div>
+        </div>
+
+        {/* Footer (static) */}
+        <div className="px-10 py-6">
           <div className="hairline mb-6" />
           <p className="text-center text-2xs text-muted-foreground/50 font-body tracking-wide">
             © 2025 Ray Paradis
@@ -396,3 +493,5 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
     </Sheet>
   );
 }
+
+

@@ -9,8 +9,9 @@ import { AbacGuard } from './guard/abac.guard';
 import { OrderPolicy } from './policy/OrderPolicy';
 import { UserPolicy } from './policy/UserPolicy';
 import { PolicyEngineService } from './services/policy-engine.service';
+import { RbacModule } from 'src/modules/rbac/rbac.module';
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, RbacModule],
   providers: [
     PolicyEngineService,
     AbacGuard,

@@ -1,0 +1,245 @@
+/* Ray Paradis — Design Tokens (tokens.css)
+ *
+ * PURPOSE: single source of truth for colors, spacing, radii, shadows, and basic UI tokens.
+ * USAGE: import this file at the app root (e.g. in main.css / index.css) and prefer using
+ * CSS variables for all styling. Do not change business logic or component structure.
+ */
+
+:root {
+    /* Color palette */
+    --rp-color-primary: #002d49;      /* Deep Ocean Blue */
+    --rp-color-surface: #F7F9FB;      /* Off-white surface */
+    --rp-color-accent: #C9A66B;       /* Soft gold accent */
+    --rp-color-text: #25323A;         /* Primary text */
+    --rp-color-muted: #58616A;        /* Secondary text */
+    --rp-color-muted-2: #8B9398;      /* Tertiary text */
+    --rp-color-error: #D34D4D;        /* Error */
+    --rp-color-success: #A3B18A;      /* Success */
+    --rp-color-white: #FFFFFF;
+
+    /* Spacing scale (8px grid) */
+    --rp-gap-1: 4px;
+    --rp-gap-2: 8px;
+    --rp-gap-3: 12px;
+    --rp-gap-4: 16px;
+    --rp-gap-5: 24px;
+    --rp-gap-6: 32px;
+
+    /* Radii */
+    --rp-radius-sm: 8px;
+    --rp-radius-md: 12px;
+    --rp-radius-lg: 16px;
+
+    /* Elevation / shadows */
+    --rp-shadow-soft: 0 6px 18px rgba(2, 20, 30, 0.06);
+    --rp-shadow-card: 0 8px 24px rgba(2, 20, 30, 0.06);
+
+    /* Typography tokens */
+    --rp-font-heading: "Playfair Display", serif;
+    --rp-font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --rp-h1: 28px;
+    --rp-h2: 20px;
+    --rp-body: 14px;
+    --rp-small: 12px;
+
+    /* Interaction */
+    --rp-focus-ring-color: rgba(0,45,73,0.12);
+    --rp-focus-ring-shadow: 0 0 0 4px rgba(0,45,73,0.06);
+}
+
+/* Basic component utilities (visuals only; keep behavior unchanged) */
+.rp-card {
+    background: var(--rp-color-surface);
+    border-radius: var(--rp-radius-md);
+    box-shadow: var(--rp-shadow-card);
+    padding: var(--rp-gap-4);
+    color: var(--rp-color-text);
+}
+.rp-card--section {
+    padding: var(--rp-gap-5);
+}
+
+.rp-page-header {
+    background: transparent;
+    padding: calc(var(--rp-gap-5) / 2) 0;
+    margin-bottom: var(--rp-gap-4);
+}
+.rp-page-header .rp-title {
+    font-family: var(--rp-font-heading);
+    font-size: var(--rp-h1);
+    color: var(--rp-color-primary);
+    margin: 0 0 var(--rp-gap-2) 0;
+}
+.rp-page-header .rp-subtitle {
+    font-family: var(--rp-font-body);
+    color: var(--rp-color-muted);
+    font-size: var(--rp-body);
+    margin: 0;
+}
+
+.rp-sidebar {
+    background: var(--rp-color-primary);
+    color: var(--rp-color-white);
+    width: 240px;
+    padding: var(--rp-gap-4);
+    box-shadow: inset -6px 0 12px rgba(0,0,0,0.03);
+}
+.rp-sidebar--collapsed {
+    width: 72px;
+}
+.rp-sidebar__item {
+    display: flex;
+    align-items: center;
+    gap: var(--rp-gap-3);
+    padding: var(--rp-gap-2);
+    border-radius: var(--rp-radius-sm);
+    color: var(--rp-color-white);
+}
+.rp-sidebar__item--active {
+    background: linear-gradient(90deg, rgba(0,0,0,0.04), transparent);
+    box-shadow: none;
+    position: relative;
+}
+.rp-sidebar__item--active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 6px;
+    border-radius: 4px;
+    background: var(--rp-color-accent);
+}
+
+.rp-topbar {
+    background: var(--rp-color-surface);
+    display: flex;
+    align-items: center;
+    gap: var(--rp-gap-4);
+    padding: var(--rp-gap-3) var(--rp-gap-4);
+    box-shadow: var(--rp-shadow-soft);
+}
+.rp-topbar__brand {
+    font-family: var(--rp-font-heading);
+    color: var(--rp-color-primary);
+    font-size: 16px;
+    margin-right: var(--rp-gap-4);
+}
+.rp-topbar__search {
+    flex: 1;
+}
+.rp-topbar__actions {
+    display: flex;
+    gap: var(--rp-gap-3);
+    align-items: center;
+}
+
+.rp-btn--primary {
+    background: var(--rp-color-primary);
+    color: var(--rp-color-white);
+    border-radius: var(--rp-radius-md);
+    padding: 8px 14px;
+    font-family: var(--rp-font-body);
+    box-shadow: none;
+}
+.rp-btn--ghost {
+    background: transparent;
+    color: var(--rp-color-primary);
+    border-radius: var(--rp-radius-md);
+    padding: 8px 14px;
+    border: 1px solid rgba(37,50,58,0.06);
+}
+
+.rp-input, .rp-select, .rp-textarea {
+    border-radius: var(--rp-radius-sm);
+    padding: 10px 12px;
+    border: 1px solid rgba(37,50,58,0.06);
+    font-family: var(--rp-font-body);
+    font-size: var(--rp-body);
+    color: var(--rp-color-text);
+    background: var(--rp-color-white);
+}
+.rp-input:focus, .rp-select:focus, .rp-textarea:focus {
+    outline: 2px solid var(--rp-focus-ring-color);
+    box-shadow: var(--rp-focus-ring-shadow);
+}
+
+.rp-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: rgba(0,0,0,0.03);
+}
+.rp-thumb--large {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--rp-radius-md);
+}
+.rp-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: var(--rp-gap-3);
+}
+.rp-media-item {
+    border-radius: var(--rp-radius-sm);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(2,20,30,0.03);
+}
+.rp-media-item--selected {
+    outline: 2px solid var(--rp-color-primary);
+}
+
+.rp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--rp-font-body);
+    color: var(--rp-color-text);
+}
+.rp-table__row {
+    height: 56px;
+    border-bottom: 1px solid rgba(2,20,30,0.03);
+}
+.rp-table__cell {
+    padding: 12px 8px;
+    vertical-align: middle;
+}
+.rp-table__row--selected {
+    background: rgba(0,45,73,0.03);
+}
+
+.rp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    background: rgba(2,20,30,0.03);
+    color: var(--rp-color-text);
+}
+.rp-badge--status--paid { background: rgba(163,177,138,0.12); color: var(--rp-color-success); }
+.rp-badge--status--pending { background: rgba(201,166,107,0.10); color: var(--rp-color-accent); }
+.rp-badge--status--canceled { background: rgba(211,77,77,0.10); color: var(--rp-color-error); }
+
+/* Utility helpers */
+.rp-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: var(--rp-gap-5);
+}
+.rp-sticky-actions {
+    position: sticky;
+    top: 12px;
+    background: transparent;
+    z-index: 40;
+}
+
+/* Small responsive helpers */
+@media (max-width: 900px) {
+    .rp-grid-2col { grid-template-columns: 1fr; }
+    .rp-sidebar { display: none; }
+}
+
+

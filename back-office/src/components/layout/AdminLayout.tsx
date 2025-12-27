@@ -14,7 +14,7 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] flex selection:bg-[#6D28D9] selection:text-white">
+    <div className="min-h-screen bg-[#FAF8F5] flex selection:bg-[#6D28D9] selection:text-white rp-layout">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Overlay cho mobile khi mở sidebar */}
@@ -25,10 +25,10 @@ export default function AdminLayout() {
         />
       )}
 
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${layoutPaddingClass}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${layoutPaddingClass} rp-main`}>
         <HeaderBar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} sidebarOpen={sidebarOpen} />
 
-        <main className="px-4 lg:px-8 py-6">
+        <main className="px-4 lg:px-8 py-6 rp-content">
           <div className="mx-auto max-w-6xl space-y-6">
             <Outlet />
           </div>

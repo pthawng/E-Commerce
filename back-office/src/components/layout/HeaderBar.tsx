@@ -58,35 +58,35 @@ export default function HeaderBar({ onToggleSidebar, sidebarOpen }: HeaderBarPro
   };
 
   return (
-    <header className="sticky top-0 z-20 glass-gold h-16 flex items-center shadow-sm">
+    <header className="sticky top-0 z-20 glass-gold h-16 flex items-center shadow-sm rp-topbar">
       <div className="flex items-center gap-4 px-6 lg:px-8 w-full">
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="h-10 w-10 rounded-full bg-white border border-[#D4AF37]/30 flex items-center justify-center text-[#1F2937] hover:bg-[#FAF8F5] hover:text-[#6D28D9] transition-all shadow-sm"
+          className="h-10 w-10 rounded-full bg-white border border-[#D4AF37]/30 flex items-center justify-center text-[#1F2937] hover:bg-[#FAF8F5] hover:text-[#6D28D9] transition-all shadow-sm rp-btn--ghost"
           aria-label={sidebarOpen ? "Đóng sidebar" : "Mở sidebar"}
         >
           <MenuOutlined />
         </button>
 
         <div className="hidden lg:flex items-center gap-2 text-sm">
-          <span className="font-heading font-bold text-[#6D28D9] text-base">Back Office</span>
+          <span className="font-heading font-bold text-[#6D28D9] text-base rp-topbar__brand">Back Office</span>
           <span className="text-[#D4AF37]">/</span>
           <span className="text-slate-600 font-medium">Dashboard</span>
         </div>
 
         <div className="flex-1" />
 
-        <div className="w-72 hidden md:block group">
+        <div className="w-72 hidden md:block group rp-topbar__search">
           <Input
             prefix={<SearchOutlined className="text-[#D4AF37] group-hover:text-[#6D28D9] transition-colors" />}
             placeholder="Tìm kiếm..."
-            className="bg-white/80! border-[#D4AF37]/30! focus:border-[#6D28D9]! rounded-full! shadow-inner! placeholder:text-slate-400"
+            className="bg-white/80! border-[#D4AF37]/30! focus:border-[#6D28D9]! rounded-full! shadow-inner! placeholder:text-slate-400 rp-input"
             allowClear
           />
         </div>
 
-        <Space size="large" className="ml-2">
+        <Space size="large" className="ml-2 rp-topbar__actions">
           <Badge dot offset={[-4, 4]} color="#6D28D9">
             <div className="h-10 w-10 rounded-full bg-white border border-[#D4AF37]/30 flex items-center justify-center text-[#1F2937] cursor-pointer hover:bg-[#FAF8F5] hover:text-[#6D28D9] transition-all shadow-sm">
               <BellOutlined className="text-lg" />
@@ -100,7 +100,7 @@ export default function HeaderBar({ onToggleSidebar, sidebarOpen }: HeaderBarPro
           >
             <Avatar
               size={40}
-              className="cursor-pointer border-2 border-[#D4AF37] shadow-md transition-transform hover:scale-105"
+              className="cursor-pointer border-2 border-[#D4AF37] shadow-md transition-transform hover:scale-105 rp-avatar"
               style={{ backgroundColor: '#FAF8F5', color: '#6D28D9', marginLeft: 8 }}
             >
               <span className="font-heading font-bold">{getInitials()}</span>

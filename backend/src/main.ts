@@ -9,7 +9,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
-  app.enableCors();
+  // Enable CORS for the frontend origin and allow credentials (cookies).
+  // Do NOT use '*' when requests use credentials (withCredentials: true).
+
+  app.enableCors({
+    origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'http://localhost:8080'],
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Authorization, Accept',
+  });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )
   app.useGlobalPipes(

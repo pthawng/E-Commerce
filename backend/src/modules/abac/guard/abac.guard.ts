@@ -19,6 +19,7 @@ import type { BasePolicy } from '../base/base-policy';
 import { CHECK_POLICY_KEY, type PolicyMetadata } from '../decorators/policy.decorator';
 import { PolicyEngineService } from '../services/policy-engine.service';
 import { PolicyAction, type PolicyContext } from '../types/policy.types';
+import { PermissionCacheService } from 'src/modules/rbac/cache/permission-cache.service';
 
 @Injectable()
 export class AbacGuard implements CanActivate {
@@ -28,6 +29,7 @@ export class AbacGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly policyEngine: PolicyEngineService,
     private readonly prisma: PrismaService,
+    private readonly permissionCacheService: PermissionCacheService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -110,10 +112,20 @@ export class AbacGuard implements CanActivate {
       body: request.body,
     };
 
+    // Populate permissions from cache (RBAC) because JWT does not contain permissions.
+    // If cache fails, fall back to any permissions present on JWT (usually none).
+    let permissions: string[] = user.permissions || [];
+    try {
+      const cached = await this.permissionCacheService.getPermissions(user.userId);
+      if (cached && cached.length) permissions = cached;
+    } catch (e) {
+      this.logger.warn(`Failed to load permission cache for user ${user.userId}: ${e?.message || e}`);
+    }
+
     return {
       user: {
         ...user,
-        permissions: user.permissions || [],
+        permissions,
       },
       resource,
       action: metadata.action,

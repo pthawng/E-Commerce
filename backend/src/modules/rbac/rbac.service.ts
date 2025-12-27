@@ -6,11 +6,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PermissionCacheService } from './cache/permission-cache.service';
 import { PERMISSIONS } from './permissions.constants';
 
 @Injectable()
 export class RbacService implements OnModuleInit {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private permissionCacheService: PermissionCacheService,
+  ) {}
 
   async onModuleInit() {
     await this.seedDefaultPermissions();
@@ -71,11 +75,17 @@ export class RbacService implements OnModuleInit {
       throw new NotFoundException('Role not found');
     }
 
-    return this.prisma.userRole.upsert({
+    const result = await this.prisma.userRole.upsert({
       where: { userId_roleId: { userId, roleId: role.id } },
       update: {},
       create: { userId, roleId: role.id, assignedAt: new Date(), assignedBy },
     });
+
+    // Invalidate permission cache for the affected user so changes take effect immediately.
+    // Swallow cache errors to avoid failing the primary operation.
+    this.permissionCacheService.clearCache(userId).catch(() => null);
+
+    return result;
   }
 
   /** Gán permission trực tiếp cho user */
@@ -89,11 +99,16 @@ export class RbacService implements OnModuleInit {
       throw new NotFoundException('Permission not found');
     }
 
-    return this.prisma.userPermission.upsert({
+    const result = await this.prisma.userPermission.upsert({
       where: { userId_permissionId: { userId, permissionId: permission.id } },
       update: {},
       create: { userId, permissionId: permission.id, assignedAt: new Date(), assignedBy },
     });
+
+    // Invalidate cache for this user
+    this.permissionCacheService.clearCache(userId).catch(() => null);
+
+    return result;
   }
 
   /** Gán permission cho role */
@@ -106,11 +121,22 @@ export class RbacService implements OnModuleInit {
       throw new NotFoundException('Role or Permission not found');
     }
 
-    return this.prisma.rolePermission.upsert({
+    const result = await this.prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
       update: {},
       create: { roleId: role.id, permissionId: permission.id, assignedAt: new Date(), assignedBy },
     });
+
+    // Invalidate permission cache for all users that have this role
+    const usersWithRole = await this.prisma.userRole.findMany({
+      where: { roleId: role.id },
+      select: { userId: true },
+    });
+    await Promise.allSettled(
+      usersWithRole.map((u) => this.permissionCacheService.clearCache(u.userId)),
+    );
+
+    return result;
   }
 
   // ==================== ROLE CRUD ====================
@@ -232,9 +258,14 @@ export class RbacService implements OnModuleInit {
       throw new NotFoundException('Role not found');
     }
 
-    return this.prisma.userRole.delete({
+    const result = await this.prisma.userRole.delete({
       where: { userId_roleId: { userId, roleId: role.id } },
     });
+
+    // Invalidate cache for the affected user
+    this.permissionCacheService.clearCache(userId).catch(() => null);
+
+    return result;
   }
 
   /** Lấy danh sách roles của user */
@@ -261,9 +292,14 @@ export class RbacService implements OnModuleInit {
       throw new NotFoundException('Permission not found');
     }
 
-    return this.prisma.userPermission.delete({
+    const result = await this.prisma.userPermission.delete({
       where: { userId_permissionId: { userId, permissionId: permission.id } },
     });
+
+    // Invalidate cache for the affected user
+    this.permissionCacheService.clearCache(userId).catch(() => null);
+
+    return result;
   }
 
   /** Lấy danh sách permissions direct của user (UserPermission + Permission) */
@@ -289,9 +325,21 @@ export class RbacService implements OnModuleInit {
       throw new NotFoundException('Role or Permission not found');
     }
 
-    return this.prisma.rolePermission.delete({
+    // gather users first, then delete the role-permission mapping and invalidate their caches
+    const usersWithRole = await this.prisma.userRole.findMany({
+      where: { roleId: role.id },
+      select: { userId: true },
+    });
+
+    const result = await this.prisma.rolePermission.delete({
       where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
     });
+
+    await Promise.allSettled(
+      usersWithRole.map((u) => this.permissionCacheService.clearCache(u.userId)),
+    );
+
+    return result;
   }
 
   // ==================== PERMISSION CRUD ====================
@@ -434,6 +482,12 @@ export class RbacService implements OnModuleInit {
         module: 'PRODUCT',
       },
       { action: PERMISSIONS.PRODUCT.ATTRIBUTE.DELETE, name: 'Xóa thuộc tính', module: 'PRODUCT' },
+      // PRODUCT - VARIANT
+      // ABAC policies reference these exact permission slugs; ensure they exist (idempotent via upsert).
+      { action: PERMISSIONS.PRODUCT.VARIANT.CREATE, name: 'Tạo variant', module: 'PRODUCT' },
+      { action: PERMISSIONS.PRODUCT.VARIANT.READ, name: 'Xem variant', module: 'PRODUCT' },
+      { action: PERMISSIONS.PRODUCT.VARIANT.UPDATE, name: 'Cập nhật variant', module: 'PRODUCT' },
+      { action: PERMISSIONS.PRODUCT.VARIANT.DELETE, name: 'Xóa variant', module: 'PRODUCT' },
     ];
 
     await Promise.all(
