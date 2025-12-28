@@ -1,148 +1,278 @@
-# E-Commerce Monorepo
+# Ray Paradis E-commerce System
 
-This repository contains the backend API and back-office (admin) frontend for the E-Commerce project.
-It follows a feature-sliced / enterprise-friendly layout and aims to be suitable for production development.
+## Project Overview
 
----
+Ray Paradis is a full-stack e-commerce platform built as a capstone project for jewelry retail. The system provides a comprehensive solution for managing jewelry products with complex variant combinations (size, material, gemstones), multi-warehouse inventory, and administrative operations through a dedicated back-office interface.
 
-## Contents
-- `backend/` — NestJS backend API (Prisma, RBAC/ABAC, media, products, auth)
-- `back-office/` — React (Vite) admin application (Ant Design, React Query, FSD-inspired)
-- `ray-paradis-landingpage/` — Example landing page (separate app)
-- `shared/` (or `packages/shared`) — shared types, DTOs and utilities (if present)
+The platform addresses the challenge of managing jewelry e-commerce where products often have multiple variants with different attributes (metal type, stone quality, sizing) while maintaining accurate inventory across multiple warehouses.
 
----
+**Scope and Limitations:**
+- Focuses on B2B/admin operations rather than customer-facing storefront
+- Supports jewelry-specific product attributes and categorization
+- Multi-warehouse inventory management without real-time synchronization
+- Vietnamese market focus with VND currency and local shipping methods
 
-## High-level Architecture
+**Target Users:** Administrative staff and managers for jewelry retail operations.
 
-- Backend: NestJS + Prisma ORM + PostgreSQL. Uses RBAC and ABAC for authorization. Media stored via product storage service (local or cloud).
-- Back-office: React + TypeScript + Ant Design. Uses React Query for data fetching and cached queries. Organized using Feature-Sliced principles: `features/`, `components/`, `services/`, `hooks/`.
-- Communication: REST API under `/api` with JSON; file uploads use multipart/form-data and FormData.
-- Transactions: Product create/update flows use Prisma transactions to ensure atomic updates (product, variants, media, categories).
+## Key Features
 
----
+- **Product Management**: Hierarchical categories, complex product variants with multiple attributes (size, material, gemstone quality), media gallery management
+- **Inventory Control**: Multi-warehouse support with stock tracking, reservation system, and comprehensive audit logging
+- **Order Processing**: Full order lifecycle management with payment tracking and shipping integration
+- **User Management**: Role-based access control (RBAC) and attribute-based access control (ABAC) for fine-grained permissions
+- **Content Management**: Blog posts and static pages for marketing content
+- **Review System**: Customer product reviews with moderation capabilities
+- **Discount Management**: Flexible discount codes with usage limits and validation rules
+- **Customer Landing Page**: Marketing website with animated product showcases and jewelry collections
+- **Shared Type System**: Type-safe interfaces and utilities shared across backend and frontend applications
 
-## Quickstart (Development)
+## System Architecture
 
-Prerequisites:
-- Node.js 18+ (or LTS), npm/yarn/pnpm
-- PostgreSQL (or Docker for local DB)
-- (Optional) Redis, MinIO / S3 if media/storage configured
+The system follows a modular monorepo architecture with clear separation between backend API, administrative frontend, customer-facing landing page, and shared utilities:
 
-1. Install dependencies (root optional if each package has its own):
+**Backend (NestJS):**
+- **Controller Layer**: REST API endpoints with request validation and response formatting
+- **Service Layer**: Business logic implementation with dependency injection
+- **Repository Layer**: Data access abstraction using Prisma ORM
+- **Module Organization**: Feature-based modules (auth, product, order, etc.) with shared common utilities
 
+**Back-office Frontend (React + TypeScript):**
+- **Feature-Sliced Design**: Organized by business features with dedicated components, hooks, and services
+- **State Management**: Zustand for global state, React Query for server state and caching
+- **UI Framework**: Ant Design components with custom styling via Tailwind CSS
+
+**Customer Landing Page (React + TypeScript):**
+- **Modern Marketing Site**: Showcases jewelry collections with animated sections and product galleries
+- **UI Framework**: shadcn/ui components with Tailwind CSS and Framer Motion animations
+- **Responsive Design**: Mobile-first approach with interactive elements
+
+**Shared Package:**
+- **Type Safety**: Common TypeScript types, enums, and interfaces across all applications
+- **Configuration**: Centralized app and API configuration management
+- **Utilities**: Shared helper functions and constants for consistent behavior
+
+**Communication:**
+- RESTful API with JSON payloads
+- File uploads handled via multipart/form-data
+- JWT-based authentication with refresh token rotation
+- Database transactions ensure data consistency for complex operations (product creation with variants)
+
+## Database Design
+
+The system uses PostgreSQL with Prisma ORM, featuring a normalized schema optimized for e-commerce operations:
+
+**Core Entities:**
+- **Products & Variants**: Flexible product model supporting complex attribute combinations (metal type, stone quality, sizing)
+- **Categories**: Hierarchical category structure with path enumeration for efficient querying
+- **Inventory**: Multi-warehouse stock management with audit logging for all inventory changes
+- **Orders & Payments**: Comprehensive order lifecycle with payment transaction tracking
+- **Users & Permissions**: Flexible RBAC/ABAC system supporting different user types (customers, staff, admins)
+
+**Key Design Decisions:**
+- UUID primary keys for global uniqueness and security
+- JSON fields for multi-language content support (Vietnamese/English)
+- Proper indexing on frequently queried fields (product slugs, variant SKUs, inventory lookups)
+- Foreign key constraints with cascade/delete rules appropriate for e-commerce data integrity
+- Decimal types for monetary values to avoid floating-point precision issues
+
+## Authentication & Security
+
+**Authentication Flow:**
+- JWT-based authentication with access/refresh token pair
+- Password hashing using Argon2 for security
+- Email verification for account activation
+- Password reset via secure tokens
+
+**Authorization:**
+- **RBAC**: Role-based permissions with predefined roles (Customer, Staff, Super Admin)
+- **ABAC**: Attribute-based policies for resource-level access control
+- Permission system with granular actions (create, read, update, delete) per module
+- API guards enforce authorization at both route and method levels
+
+**Security Considerations:**
+- Input validation using class-validator decorators
+- SQL injection prevention through parameterized queries
+- Rate limiting and CORS configuration
+- Audit logging for sensitive operations
+- Secure token storage and rotation
+
+## API Design
+
+**RESTful Principles:**
+- Resource-based URL structure (`/api/products`, `/api/orders/{id}`)
+- HTTP methods following REST conventions (GET, POST, PUT, DELETE)
+- Consistent response format with error handling
+- Pagination support for list endpoints using cursor-based approach
+
+**Request/Response Handling:**
+- Request validation using DTOs with class-validator
+- Response transformation with class-transformer
+- Error handling with custom exception filters
+- API documentation via Swagger/OpenAPI
+
+**Versioning & Compatibility:**
+- URL-based versioning (`/api/v1/`) for future compatibility
+- Backward-compatible changes through optional fields
+- Deprecation notices for planned API changes
+
+## Installation & Running Locally
+
+**Prerequisites:**
+- Node.js 18+ and npm
+- PostgreSQL 15+
+- Redis (optional, for caching and queues)
+- Git
+
+**Setup Steps:**
+
+1. **Clone and Install Dependencies:**
 ```bash
-# from repo root, run for each workspace if using workspaces
-cd backend && npm install
-cd ../back-office && npm install
+git clone <repository-url>
+cd ray-paradis-ecommerce
+
+# Install shared package first (if not using workspaces)
+cd shared
+npm install
+npm run build
+
+# Install backend dependencies
+cd ../backend
+npm install
+
+# Install admin frontend dependencies
+cd ../back-office
+npm install
+
+# Install landing page dependencies
+cd ../ray-paradis-landingpage
+npm install
 ```
 
-2. Database
-
-- Configure `.env` files:
-  - `backend/.env` — set `DATABASE_URL`, `JWT_SECRET`, `PORT`, storage settings
-  - `back-office/.env` — set `VITE_API_BASE_URL` (or similar)
-
-- Run migrations (from `backend/`):
-
+2. **Database Setup:**
 ```bash
+# Configure PostgreSQL connection in backend/.env
+DATABASE_URL="postgresql://username:password@localhost:5432/ray_paradis_db"
+
+# Run database migrations
 cd backend
 npx prisma migrate dev --name init
-# or if you have a seed script:
+
+# Seed initial data (optional)
 npx prisma db seed
 ```
 
-3. Run apps
+3. **Environment Configuration:**
 
-- Backend (dev with hot reload)
-```bash
-cd backend
-npm run start:dev
+Create `backend/.env`:
+```env
+DATABASE_URL="postgresql://..."
+JWT_SECRET="your-secret-key"
+JWT_EXPIRES_IN="1h"
+REFRESH_TOKEN_EXPIRES_IN="7d"
+PORT=4000
+
+# Email service (optional)
+SENDGRID_API_KEY="your-sendgrid-key"
+
+# Redis (optional)
+REDIS_URL="redis://localhost:6379"
 ```
 
-- Back-office (dev)
+Create `back-office/.env`:
+```env
+VITE_API_BASE_URL="http://localhost:4000/api"
+```
+
+4. **Start Development Servers:**
 ```bash
+# Backend (Terminal 1)
+cd backend
+npm run start:dev
+
+# Admin frontend (Terminal 2)
 cd back-office
+npm run dev
+
+# Customer landing page (Terminal 3 - optional)
+cd ray-paradis-landingpage
 npm run dev
 ```
 
-4. API docs
-- If enabled, open Swagger at `http://localhost:4000/api/docs` (or check backend config).
+5. **Access the Applications:**
+- Back-office Admin: http://localhost:5173
+- Customer Landing Page: http://localhost:8080 
+- API Documentation: http://localhost:4000/api/docs
 
----
+## Project Structure
 
-## Useful Scripts
+```
+├── backend/                    # NestJS API server
+│   ├── src/
+│   │   ├── modules/           # Feature modules
+│   │   │   ├── auth/         # Authentication & authorization
+│   │   │   ├── product/      # Product management
+│   │   │   ├── order/        # Order processing
+│   │   │   ├── user/         # User management
+│   │   │   └── ...
+│   │   ├── common/           # Shared utilities, decorators, guards
+│   │   ├── config/           # Configuration management
+│   │   └── main.ts          # Application entry point
+│   ├── prisma/
+│   │   ├── schema.prisma    # Database schema
+│   │   └── migrations/      # Database migrations
+│   └── package.json
+├── back-office/              # React admin interface
+│   ├── src/
+│   │   ├── app/            # Routing and layouts
+│   │   ├── features/       # Feature modules (auth, product, etc.)
+│   │   ├── components/     # Reusable UI components
+│   │   ├── services/       # API client services
+│   │   ├── hooks/          # Custom React hooks
+│   │   └── lib/            # Utilities and configurations
+│   └── package.json
+├── ray-paradis-landingpage/  # Customer-facing marketing site
+│   ├── src/
+│   │   ├── components/      # UI components and sections
+│   │   │   ├── sections/   # Landing page sections (Hero, Collection, etc.)
+│   │   │   ├── ui/        # shadcn/ui components
+│   │   │   └── effects/   # Animation components
+│   │   ├── features/       # Feature modules (auth, etc.)
+│   │   └── pages/          # Page components
+│   └── package.json
+├── shared/                  # Shared TypeScript package
+│   ├── src/
+│   │   ├── types/         # Common TypeScript interfaces
+│   │   ├── enums/         # Shared enumerations
+│   │   ├── constants/     # Application constants
+│   │   ├── config/        # Configuration objects
+│   │   └── utils/         # Utility functions
+│   └── package.json
+├── database/               # Database configuration
+└── README.md
+```
 
-- Backend
-  - `npm run start:dev` — start in development
-  - `npm run build` — build production artifact
-  - `npm run start:prod` — run production build
-  - `npx prisma generate` — regenerate Prisma client
-  - `npx prisma migrate dev` — run migrations
+The structure follows domain-driven design principles with clear boundaries between features and shared concerns, enabling type safety and code reusability across all applications.
 
-- Back-office
-  - `npm run dev` — start dev server
-  - `npm run build` — build production assets
-  - `npm run preview` — preview build
-  - `npm run lint` — run ESLint
-  - `npm run format` — run Prettier
+## What I Learned
 
----
+**Backend Architecture:**
+- Implementing clean architecture with proper separation of concerns in NestJS
+- Database design considerations for complex e-commerce relationships
+- Authentication/authorization patterns with JWT and role-based permissions
+- API design principles and RESTful conventions
+- Transaction management for data consistency in complex operations
 
-## Project Structure Notes (Back-office)
+**System Design:**
+- Understanding e-commerce domain requirements and business logic
+- Designing scalable database schemas with proper indexing and constraints
+- Implementing audit logging and data integrity patterns
+- Working with file uploads and media management in web applications
 
-Top-level folders:
+**Development Practices:**
+- TypeScript benefits for large-scale applications
+- Testing strategies for backend services
+- Code organization and maintainability in monorepos
+- Environment configuration and deployment considerations
 
-- `src/app/` — app-level routing and layouts
-- `src/components/` — shared UI split into `ui/`, `layout/`, `composite/`
-- `src/features/` — feature modules (each feature owns components, hooks, services, types)
-- `src/services/` — shared API clients and service utilities
-- `src/hooks/` — global hooks
-- `src/lib/` — helpers and shared utilities
-- `src/config/` — constants and configuration
-- `src/assets/` — static assets
-
-Best practices used in this repo:
-- Keep feature boundaries thin: feature-local types and services should not be imported broadly.
-- Use `Form` keys or remounting to avoid stale initial values in modals.
-- Use React Query for caching and set appropriate `staleTime`/`cacheTime`.
-
----
-
-## Authorization (RBAC & ABAC)
-
-- RBAC: role-based permission slugs are defined in `backend/src/modules/rbac/permissions.constants.ts`.
-- ABAC: attribute-based policies for resources live under `backend/src/modules/abac/`.
-- When adding new resources (e.g., `product.variant`) add permission slugs and update ABAC model map so guard resolves resource instances correctly.
-
----
-
-## Media & Variants
-
-- Media should be uploaded at the product level (product gallery). Variants reference product media by id and order index — do not allow variants to upload independent duplicate media to avoid duplication.
-- Product creation flow recommended:
-  1. Create product (draft, isActive=false) with basic details and gallery.
-  2. Edit product → Variants tab → create variants referencing gallery images.
-  3. Publish once variants exist.
-
----
-
-## Contributing
-
-- Follow existing code style: TypeScript with strict types, descriptive variable names, and clear separation of concerns.
-- Add unit/integration tests for backend services and critical flows (product create/update with transaction).
-- Keep PRs focused and include migration scripts if schema changes.
-
----
-
-## Troubleshooting & Tips
-
-- Stale form state: prefer providing `key` to force remount or set fields with `form.setFieldsValue` when opening modals; avoid synchronous setState inside effects.
-- Validation issues with FormData: backend DTOs should use `class-transformer` (e.g., `@Type(() => Number)`) and `@Transform` for arrays when receiving form uploads.
-- If product images don't appear: check backend response mapping and `thumbnailUrl` vs `media[]` fallbacks.
-
-
-Contact / Maintainers
-- Repo owner: https://www.facebook.com/phuocthang.le.04/
 
 
