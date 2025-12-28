@@ -274,5 +274,12 @@ The structure follows domain-driven design principles with clear boundaries betw
 - Code organization and maintainability in monorepos
 - Environment configuration and deployment considerations
 
+## Copyright
 
+© 20255 Ray Paradis E-commerce System. All rights reserved.
 
+This project is developed as a capstone project for educational purposes. All code, documentation, and associated materials are the intellectual property of the author.
+
+Permission is granted to view and study this codebase for educational purposes only. Commercial use, reproduction, or distribution without explicit written permission is prohibited.
+
+Contact for more: https://www.facebook.com/phuocthang.le.04/
