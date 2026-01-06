@@ -106,7 +106,6 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
       roles,
       aud: payload.aud,
       userType: user.userType,
-      // permissions sẽ được lazy load trong PermissionGuard khi cần
     };
   }
 }

@@ -14,12 +14,12 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
+import { PermissionCacheService } from 'src/modules/rbac/cache/permission-cache.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import type { BasePolicy } from '../base/base-policy';
 import { CHECK_POLICY_KEY, type PolicyMetadata } from '../decorators/policy.decorator';
 import { PolicyEngineService } from '../services/policy-engine.service';
 import { PolicyAction, type PolicyContext } from '../types/policy.types';
-import { PermissionCacheService } from 'src/modules/rbac/cache/permission-cache.service';
 
 @Injectable()
 export class AbacGuard implements CanActivate {
@@ -119,7 +119,9 @@ export class AbacGuard implements CanActivate {
       const cached = await this.permissionCacheService.getPermissions(user.userId);
       if (cached && cached.length) permissions = cached;
     } catch (e) {
-      this.logger.warn(`Failed to load permission cache for user ${user.userId}: ${e?.message || e}`);
+      this.logger.warn(
+        `Failed to load permission cache for user ${user.userId}: ${e?.message || e}`,
+      );
     }
 
     return {

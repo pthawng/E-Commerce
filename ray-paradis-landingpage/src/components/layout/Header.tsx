@@ -6,6 +6,7 @@ import { useStore } from '@/store/useStore';
 import { AuthSheet } from '@/components/auth';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 import { toast } from 'sonner';
+import UserMenu from '@/features/auth/components/UserMenu';
 import { ShimmerText } from '@/components/effects/ShimmerText';
 import {
   Sheet,
@@ -223,22 +224,7 @@ export const Header = () => {
             <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end">
               {/* Account Icon */}
               {user ? (
-                <button
-                  className="p-2"
-                  onClick={() => {
-                    // logout both client stores
-                    useAuthStore.getState().clearAuth();
-                    // update public UI store
-                    (useStore as unknown as { getState: () => { logout: () => void } }).getState().logout?.();
-                    toast.success('Logged out');
-                  }}
-                >
-                  <div className="w-8 h-8 rounded-full border border-primary-foreground/30 dark:border-primary/30 flex items-center justify-center">
-                    <span className={`font-display text-xs ${usingOpaqueBg ? 'text-primary' : 'text-white'}`}>
-                      {user.initials}
-                    </span>
-                  </div>
-                </button>
+                <UserMenu isOpaque={usingOpaqueBg} />
               ) : (
                 <button
                   onClick={() => setIsAuthOpen(true)}
