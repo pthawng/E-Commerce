@@ -15,7 +15,7 @@ export class ProductService {
     private readonly paginationService: PaginationService,
     private readonly productStorageService: ProductStorageService,
     private readonly variantService: VariantService,
-  ) {}
+  ) { }
 
   // ---------------------------
   // GET ALL PRODUCTS (PAGINATED)
@@ -155,7 +155,7 @@ export class ProductService {
   // CREATE PRODUCT
   // ---------------------------
   async createProduct(dto: CreateProductDto, files?: Express.Multer.File[]) {
-    // Mặc định hiện tại coi product là "đơn" (không biến thể) nếu FE không gửi hasVariants
+    // Default to simple product (no variants) if hasVariants is not provided
     const hasVariants = dto.hasVariants ?? false;
 
     const mainName =
@@ -164,18 +164,18 @@ export class ProductService {
       throw new BadRequestException('Tên sản phẩm phải có ít nhất một ngôn ngữ');
     }
 
-    // Luật: nếu không có variants thì nên có basePrice để tính giá,
-    // nhưng cho phép tạo bản nháp không giá (isActive === false)
+    // Rule: if no variants, basePrice is required for active products.
+    // Allow creating drafts (isActive = false) without price.
     if (!hasVariants && !dto.basePrice && dto.isActive !== false) {
       throw new BadRequestException(
-        'Sản phẩm không biến thể cần gửi basePrice khi đang active. Bạn có thể để isActive = false để tạo nháp.',
+        'Simple products require basePrice when active. Set isActive = false to create a draft.',
       );
     }
     if (hasVariants && (!dto.variants || dto.variants.length === 0)) {
       throw new BadRequestException('Cần ít nhất 1 variant khi hasVariants = true');
     }
 
-    // Gom sẵn attributeValueIds để validate
+    // Collect attributeValueIds for validation
     const allAttributeValueIds =
       dto.variants?.flatMap((v) => v.attributeValueIds || [])?.filter(Boolean) || [];
 
@@ -185,7 +185,7 @@ export class ProductService {
     const baseSlug = dto.slug ? slugify(dto.slug) : slugify(mainName);
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Slug unique
+      // 1. Ensure unique slug
       const finalSlug = await this.generateUniqueSlug(baseSlug, tx);
 
       // 2. Validate categoryIds
@@ -198,7 +198,7 @@ export class ProductService {
         await this.validateAttributeValues(allAttributeValueIds, tx);
       }
 
-      // 4. Tạo product (parent)
+      // 4. Create parent product
       const product = await tx.product.create({
         data: {
           name: dto.name,
@@ -221,7 +221,7 @@ export class ProductService {
         });
       }
 
-      // 6. Media (URLs trước)
+      // 6. Process Media (URLs first)
       const mediaRecords: Array<{ id: string; order: number }> = [];
       if (mediaUrlPayload.length) {
         for (const [index, url] of mediaUrlPayload.entries()) {
@@ -238,7 +238,7 @@ export class ProductService {
         }
       }
 
-      // 7. Media (files upload) — vẫn ghi DB trong tx; upload file ra storage
+      // 7. Process Media (File uploads) - Record in DB within tx; upload to storage
       if (files?.length) {
         const startOrder = mediaRecords.length;
         for (const [index, file] of files.entries()) {
@@ -264,25 +264,25 @@ export class ProductService {
       const variantsInput: VariantInput[] = hasVariants
         ? (dto.variants as VariantInput[]) || []
         : [
-            {
-              sku: undefined,
-              price: dto.basePrice!,
-              compareAtPrice: dto.baseCompareAtPrice,
-              costPrice: dto.baseCostPrice,
-              weightGram: dto.baseWeightGram,
-              variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
-              isDefault: true,
-              isActive: dto.isActive ?? true,
-              position: 0,
-              attributeValueIds: [],
-              mediaIndexes: [],
-            },
-          ];
+          {
+            sku: undefined,
+            price: dto.basePrice!,
+            compareAtPrice: dto.baseCompareAtPrice,
+            costPrice: dto.baseCostPrice,
+            weightGram: dto.baseWeightGram,
+            variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
+            isDefault: true,
+            isActive: dto.isActive ?? true,
+            position: 0,
+            attributeValueIds: [],
+            mediaIndexes: [],
+          },
+        ];
 
       const defaultIndexExplicit = variantsInput.findIndex((v) => v.isDefault);
       const defaultIndex = defaultIndexExplicit >= 0 ? defaultIndexExplicit : 0;
 
-      // tránh SKU trùng trong payload
+      // Prevent duplicate SKUs in payload
       const skuSet = new Set<string>();
 
       for (const [index, v] of variantsInput.entries()) {

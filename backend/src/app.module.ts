@@ -7,6 +7,8 @@ import { ProductModule } from '@modules/product/product.module';
 import { RbacModule } from '@modules/rbac/rbac.module';
 import { StorageModule } from '@modules/storage/storage.module';
 import { UserModule } from '@modules/user/user.module';
+import { CartModule } from '@modules/cart/cart.module';
+import { OrderModule } from '@modules/order/order.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -80,6 +82,8 @@ import { AppService } from './app.service';
     ProductModule,
     CategoryModule,
     AttributeModule,
+    CartModule,
+    OrderModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -102,4 +106,4 @@ import { AppService } from './app.service';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
