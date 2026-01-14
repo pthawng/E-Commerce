@@ -71,7 +71,7 @@ This project is deployable to any static hosting that supports Vite builds (Netl
 ## Contact
 
 Author: **Lê Phước Thắng**
-Email: add your contact here
+Email: lephuocthang207@gmail.com
 
 --- 
 This README is tailored to the current repository; expand sections above as the project matures (tests, CI, deployment specifics).
