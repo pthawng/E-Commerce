@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { buildApiUrl } from '@shared';
-import { useAuthStore } from '@/features/auth';
+import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 
 type FailedRequest = {
   resolve: (value?: unknown) => void;
