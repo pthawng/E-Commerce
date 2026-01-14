@@ -574,6 +574,7 @@ declare const API_ENDPOINTS: {
         readonly LOGOUT: "/api/auth/logout";
         readonly FORGOT_PASSWORD: "/api/auth/forgot-password";
         readonly RESET_PASSWORD: "/api/auth/reset-password";
+        readonly RESET_PASSWORD_VERIFY: "/api/auth/reset-password/verify";
         readonly VERIFY_EMAIL: "/api/auth/verify-email";
         readonly CHANGE_PASSWORD: "/api/auth/change-password";
     };

@@ -1,5 +1,5 @@
 import { VerifyEmailDto } from '@modules/auth/dto/verify-email.dto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -7,47 +7,66 @@ import { MailService } from '../../mail/mail.service';
 
 @Injectable()
 export class VerifyEmailService {
+  private readonly logger = new Logger(VerifyEmailService.name);
+  private readonly TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
+  private readonly TOKEN_BYTE_LENGTH = 32;
+
   constructor(
-    private prisma: PrismaService,
-    private mailService: MailService,
-    private configService: ConfigService,
-  ) {}
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService,
+  ) { }
 
-  async generateVerifyToken(userId: string) {
-    const token = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  /**
+   * Generates a crytographically secure token and persists it.
+   */
+  async createAndSaveToken(userId: string) {
+    const token = randomBytes(this.TOKEN_BYTE_LENGTH).toString('hex');
+    const expiresAt = new Date(Date.now() + this.TOKEN_EXPIRY_MS);
 
-    const verifyToken = await this.prisma.verifyEmailToken.create({
+    await this.prisma.verifyEmailToken.create({
       data: { token, userId, expiresAt },
     });
 
-    return verifyToken.token;
+    return token;
   }
 
   async sendVerifyEmail(user: { id: string; email: string; fullName: string }) {
-    const token = await this.generateVerifyToken(user.id);
+    const token = await this.createAndSaveToken(user.id);
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
 
-    const verificationUrl = `${this.configService.get<string>('FRONTEND_URL')}/verify-email?token=${token}`;
+    // Robust URL construction
+    const verificationUrl = new URL('/verify-email', frontendUrl);
+    verificationUrl.searchParams.set('token', token);
 
-    const isSent = await this.mailService.sendMail({
-      to: user.email,
-      subject: 'Verify your email',
-      template: 'verify-email',
-      context: {
-        name: user.fullName,
-        verificationUrl,
-        expiryMinutes: 60,
-        supportEmail: this.configService.get<string>('MAIL_FROM'),
-        companyName: this.configService.get<string>('COMPANY_NAME'),
-      },
-    });
+    try {
+      const isSent = await this.mailService.sendMail({
+        to: user.email,
+        subject: 'Verify your email',
+        template: 'verify-email',
+        context: {
+          name: user.fullName,
+          verificationUrl: verificationUrl.toString(),
+          expiryMinutes: 60,
+          supportEmail: this.configService.get<string>('MAIL_FROM'),
+          companyName: this.configService.get<string>('COMPANY_NAME'),
+        },
+      });
 
-    if (!isSent) {
-      await this.prisma.verifyEmailToken.delete({ where: { token } });
-      throw new BadRequestException('Không thể gửi email xác minh, vui lòng thử lại.');
+      if (!isSent) {
+        this.logger.warn(`Failed to send verification email to ${user.email}`);
+        await this.revokeToken(token);
+        throw new BadRequestException('Use unable to send verification email. Please try again.');
+      }
+
+      return true;
+    } catch (error) {
+      await this.revokeToken(token);
+      if (error instanceof BadRequestException) throw error;
+
+      this.logger.error(`Error in sendVerifyEmail: ${error.message}`, error.stack);
+      throw new BadRequestException('An error occurred while sending verification email.');
     }
-
-    return true;
   }
 
   async verifyToken(dto: VerifyEmailDto) {
@@ -57,21 +76,29 @@ export class VerifyEmailService {
     });
 
     if (!record) throw new BadRequestException('Token invalid or expired');
+
     if (record.expiresAt < new Date()) {
       await this.prisma.verifyEmailToken.delete({ where: { id: record.id } });
       throw new BadRequestException('Token expired');
     }
 
-    // active user
-    await this.prisma.user.update({
-      where: { id: record.userId },
-      data: { isEmailVerified: true },
-    });
-
-    // delete token after use
-    await this.prisma.verifyEmailToken.delete({ where: { id: record.id } });
+    // Transaction: Activate user and delete token
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { isEmailVerified: true },
+      }),
+      this.prisma.verifyEmailToken.delete({ where: { id: record.id } }),
+    ]);
 
     return true;
+  }
+
+  /**
+   * Cleanup helper to remove token on failure
+   */
+  private async revokeToken(token: string) {
+    await this.prisma.verifyEmailToken.delete({ where: { token } });
   }
 
   // Optional: cleanup expired tokens periodically (cron)

@@ -120,7 +120,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       if (errors.password) setPassword('');
       return;
@@ -199,8 +199,15 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
         toast.error(message);
       }
     } else {
-      toast.success(t.auth.resetEmailSent);
-      switchMode('login');
+      try {
+        const sanitizedEmail = sanitizeInput(email);
+        await apiPost(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, { email: sanitizedEmail });
+        toast.success(t.auth.resetEmailSent);
+        switchMode('login');
+      } catch (err: unknown) {
+        const message = (err as { message?: string })?.message || 'Failed to send reset email';
+        toast.error(message);
+      }
     }
 
     setIsLoading(false);
@@ -222,8 +229,8 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="right" 
+      <SheetContent
+        side="right"
         className="w-full sm:w-[380px] md:w-[400px] p-0 bg-background border-l-0 overflow-y-auto"
       >
         {/* Hairline border */}
@@ -233,14 +240,14 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
 
         {/* Header */}
         <div className="px-10 pt-16 pb-10">
-          <motion.div 
+          <motion.div
             className="w-8 h-px bg-primary/40 mb-8"
             initial={{ width: 0 }}
             animate={{ width: 32 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           />
-          
-          <motion.h2 
+
+          <motion.h2
             className="font-display text-sm tracking-ultra text-primary uppercase font-normal"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -248,7 +255,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
           >
             Ray Paradis
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="font-serif text-xs text-muted-foreground mt-3 tracking-wide italic"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -288,7 +295,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                 {/* Name field */}
                 <AnimatePresence>
                   {mode === 'register' && (
-                    <motion.div 
+                    <motion.div
                       className="space-y-3"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
@@ -307,7 +314,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                         className="input-luxury h-10 text-sm font-body placeholder:text-muted-foreground/40"
                       />
                       {errors.name && (
-                        <motion.p 
+                        <motion.p
                           className="text-2xs text-destructive font-body"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -333,7 +340,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                     className="input-luxury h-10 text-sm font-body placeholder:text-muted-foreground/40"
                   />
                   {errors.email && (
-                    <motion.p 
+                    <motion.p
                       className="text-2xs text-destructive font-body"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -346,7 +353,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                 {/* Password */}
                 <AnimatePresence>
                   {mode !== 'forgot' && (
-                    <motion.div 
+                    <motion.div
                       className="space-y-3"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
@@ -374,7 +381,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                         </button>
                       </div>
                       {errors.password && (
-                        <motion.p 
+                        <motion.p
                           className="text-2xs text-destructive font-body"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -389,7 +396,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                 {/* Confirm Password */}
                 <AnimatePresence>
                   {mode === 'register' && (
-                    <motion.div 
+                    <motion.div
                       className="space-y-3"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
@@ -408,7 +415,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                         className="input-luxury h-10 text-sm font-body placeholder:text-muted-foreground/40"
                       />
                       {errors.confirmPassword && (
-                        <motion.p 
+                        <motion.p
                           className="text-2xs text-destructive font-body"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}

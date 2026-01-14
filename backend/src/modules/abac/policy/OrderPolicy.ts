@@ -1,22 +1,8 @@
-/**
- * Order Policy
- * Enterprise-level policy với comprehensive checks cho Order entity
- */
-
 import { Injectable } from '@nestjs/common';
 import { BasePolicy } from '../base/base-policy';
 import type { PolicyContext, PolicyResult } from '../types/policy.types';
 import { PolicyAction } from '../types/policy.types';
-
-interface Order {
-  id: string;
-  userId: string;
-  status: string;
-  totalAmount?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
-  [key: string]: unknown;
-}
+import { Order } from '../../../generated/prisma/client';
 
 @Injectable()
 export class OrderPolicy extends BasePolicy<Order> {
@@ -67,7 +53,8 @@ export class OrderPolicy extends BasePolicy<Order> {
       return this.allow();
     }
 
-    if (this.isOwner(user, order)) {
+    const orderUserId = order.userId ?? undefined;
+    if (this.isOwner(user, { ...order, userId: orderUserId })) {
       return this.allow();
     }
 
@@ -127,7 +114,8 @@ export class OrderPolicy extends BasePolicy<Order> {
     }
 
     // User can only update own pending orders
-    if (this.isOwner(user, order)) {
+    const orderUserId = order.userId ?? undefined;
+    if (this.isOwner(user, { ...order, userId: orderUserId })) {
       if (order.status === 'pending' || order.status === 'processing') {
         return this.allow();
       }

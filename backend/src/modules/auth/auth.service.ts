@@ -3,6 +3,7 @@ import { ForgotPasswordDto } from '@modules/auth/dto/forgot-password.dto';
 import { LoginDto } from '@modules/auth/dto/login.dto';
 import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
+import { ResetPasswordDto } from '@modules/auth/dto/reset-password.dto';
 import { sanitizeUser } from '@modules/auth/sanitize/user.sanitize';
 import { ForgotPassEmailService } from '@modules/auth/services/forgot-pass-email.auth.service';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
@@ -11,16 +12,37 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { AuthResponse, AuthTokens } from '@shared';
-import argon2 from 'argon2';
+import * as argon2 from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
+
+const ARGON_OPTIONS: argon2.Options = {
+  type: argon2.argon2id,
+  timeCost: 2,
+  memoryCost: 19456,
+  parallelism: 1,
+};
+
+const TOKEN_EXPIRY = {
+  ACCESS: '15m',
+  REFRESH: '7d',
+  REFRESH_DB_MS: 30 * 24 * 60 * 60 * 1000,
+};
+
+const USER_ROLES = {
+  CUSTOMER: 'CUSTOMER',
+  ADMIN: 'admin',
+};
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly userService: UserService,
     private readonly prismaService: PrismaService,
@@ -28,25 +50,17 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly forgotPassEmailService: ForgotPassEmailService,
-  ) {}
+  ) { }
 
   // ---------------------------
-  // REGISTER
+  // PUBLIC API
   // ---------------------------
+
   async register(dto: RegisterDto): Promise<AuthResponse> {
-    // Check unique email
-    const existEmail = await this.prismaService.user.findUnique({
-      where: { email: dto.email },
-    });
-    if (existEmail) throw new BadRequestException('Email already exists');
+    const exists = await this.prismaService.user.count({ where: { email: dto.email } });
+    if (exists > 0) throw new BadRequestException('Email already exists');
 
-    // Hash password
-    const passwordHash = await argon2.hash(dto.password!, {
-      type: argon2.argon2id,
-      timeCost: 2,
-      memoryCost: 19456,
-      parallelism: 1,
-    });
+    const passwordHash = await this.hashPassword(dto.password!);
 
     const user = await this.prismaService.user.create({
       data: {
@@ -55,7 +69,7 @@ export class AuthService {
         passwordHash,
       },
     });
-    // Send verify email (fail => rollback user creation)
+
     try {
       await this.verifyEmailService.sendVerifyEmail({
         id: user.id,
@@ -63,182 +77,12 @@ export class AuthService {
         fullName: user.fullName ?? user.email,
       });
     } catch (error) {
+      this.logger.error(`Failed to send verify email to ${user.email}`, error);
       await this.prismaService.user.delete({ where: { id: user.id } });
-      throw error instanceof BadRequestException
-        ? error
-        : new BadRequestException('Không thể gửi email xác minh, vui lòng thử lại.');
+      throw new BadRequestException('Unable to send verification email. Please try again.');
     }
 
-    // Tạo AccessToken và Refresh Token sau khi gửi mail thành công
-    const { user: userData, tokens } = await this.issueTokenPair(user.id);
-
-    return {
-      user: userData,
-      tokens,
-    };
-  }
-
-  // ---------------------------
-  // LOGIN CUSTOMER (FRONTEND)
-  // ---------------------------
-  async login(dto: LoginDto): Promise<AuthResponse> {
-    const user = await this.prismaService.user.findFirst({
-      where: {
-        // Login bằng email hoặc phone, LoginDto đã đảm bảo ít nhất 1 trong 2 field
-        ...(dto.email ? { email: dto.email } : { phone: dto.phone }),
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Thông tin đăng nhập không đúng');
-    }
-
-    if (!user.passwordHash) {
-      throw new UnauthorizedException('Tài khoản chưa được thiết lập mật khẩu');
-    }
-
-    const isMatch = await argon2.verify(user.passwordHash, dto.password);
-    if (!isMatch) {
-      throw new UnauthorizedException('Mật khẩu không đúng');
-    }
-
-    // Chỉ cho phép CUSTOMER đăng nhập qua flow này (frontend)
-    if ((user as any).userType && (user as any).userType !== 'CUSTOMER') {
-      throw new UnauthorizedException('Không thể đăng nhập bằng luồng khách hàng');
-    }
-
-    return this.issueTokenPair(user.id, 'customer');
-  }
-
-  // ---------------------------
-  // LOGIN ADMIN (BACK-OFFICE)
-  // ---------------------------
-  async loginAdmin(dto: LoginDto): Promise<AuthResponse> {
-    const user = await this.prismaService.user.findFirst({
-      where: {
-        ...(dto.email ? { email: dto.email } : { phone: dto.phone }),
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Thông tin đăng nhập không đúng');
-    }
-
-    if (!user.passwordHash) {
-      throw new UnauthorizedException('Tài khoản chưa được thiết lập mật khẩu');
-    }
-
-    const isMatch = await argon2.verify(user.passwordHash, dto.password);
-    if (!isMatch) {
-      throw new UnauthorizedException('Mật khẩu không đúng');
-    }
-
-    // Chỉ cho phép STAFF/SUPER_ADMIN vào back-office
-    const userType = (user as any).userType || 'CUSTOMER';
-    if (userType === 'CUSTOMER') {
-      throw new UnauthorizedException('Tài khoản không có quyền truy cập back-office');
-    }
-
-    return this.issueTokenPair(user.id, 'admin');
-  }
-
-  // ---------------------------
-  // REFRESH TOKEN
-  // ---------------------------
-  async refreshToken(dto: RefreshTokenDto): Promise<AuthResponse> {
-    const payload = await this.verifyRefreshToken(dto.refreshToken);
-
-    const tokenRecord = await this.prismaService.refreshToken.findFirst({
-      where: { userId: payload.sub },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!tokenRecord) {
-      throw new ForbiddenException('Refresh token không tồn tại');
-    }
-
-    // Verify token hash
-    const isValid = await argon2.verify(tokenRecord.token, dto.refreshToken);
-    if (!isValid) {
-      throw new ForbiddenException('Refresh token không hợp lệ');
-    }
-
-    // Check if token expired
-    if (tokenRecord.expiresAt < new Date()) {
-      throw new ForbiddenException('Refresh token đã hết hạn');
-    }
-
-    // Delete old refresh token
-    await this.prismaService.refreshToken.delete({
-      where: { id: tokenRecord.id },
-    });
-
-    // Giữ nguyên audience (customer/admin) theo refresh token cũ
-    const audience = (payload as any).aud === 'admin' ? 'admin' : 'customer';
-    return this.issueTokenPair(payload.sub, audience);
-  }
-
-  // -------------------------------------------------------------------------
-  // PRIVATE METHODS
-  // -------------------------------------------------------------------------
-  private async issueTokenPair(
-    userId: string,
-    audience: 'customer' | 'admin' = 'customer',
-  ): Promise<AuthResponse> {
-    // Lấy thông tin user trước để đưa vào JWT payload
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      include: {
-        userRoles: {
-          include: {
-            role: true,
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Người dùng không tồn tại');
-    }
-
-    // Extract roles từ user (dùng slug để nhẹ hơn)
-    // Roles sẽ được encode vào JWT để dùng cho RBAC
-    const roles = user.userRoles.map((ur) => ur.role.slug);
-
-    // Tạo Access Token với đầy đủ thông tin cho Hybrid RBAC/ABAC
-    // Payload: { sub, type, roles, iat, exp }
-    const accessToken = await this.jwtService.signAsync(
-      {
-        sub: userId,
-        type: 'access',
-        aud: audience,
-        roles, // Roles cho RBAC - được validate trong JwtAccessStrategy
-      },
-      {
-        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES') || '15m',
-      } as any,
-    );
-
-    // Tạo Refresh Token với type
-    const refreshToken = await this.jwtService.signAsync(
-      {
-        sub: userId,
-        type: 'refresh',
-        aud: audience,
-      },
-      {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES') || '7d',
-      } as any,
-    );
-
-    await this.saveRefreshToken(userId, refreshToken);
-
-    const tokens: AuthTokens = {
-      accessToken,
-      refreshToken,
-    };
+    const { tokens } = await this.issueTokenPair(user.id);
 
     return {
       user: sanitizeUser(user),
@@ -246,26 +90,159 @@ export class AuthService {
     };
   }
 
-  private async saveRefreshToken(_userId: string, _token: string) {
-    const token = await argon2.hash(_token);
+  async login(dto: LoginDto): Promise<AuthResponse> {
+    return this.handleLogin(dto, USER_ROLES.CUSTOMER);
+  }
+
+  async loginAdmin(dto: LoginDto): Promise<AuthResponse> {
+    return this.handleLogin(dto, USER_ROLES.ADMIN);
+  }
+
+  /**
+   * Unified login handler for both Customers and Admins
+   */
+  private async handleLogin(dto: LoginDto, requiredRole: string): Promise<AuthResponse> {
+    const user = await this.prismaService.user.findFirst({
+      where: dto.email ? { email: dto.email } : { phone: dto.phone },
+    });
+
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isMatch = await this.verifyPassword(user.passwordHash, dto.password);
+    if (!isMatch) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Role Validation
+    if (requiredRole === USER_ROLES.CUSTOMER) {
+      const isCustomer = !((user as any).userType) || (user as any).userType === 'CUSTOMER';
+      if (!isCustomer) throw new UnauthorizedException('Invalid account type for this portal');
+    } else if (requiredRole === USER_ROLES.ADMIN) {
+      const isCustomer = !((user as any).userType) || (user as any).userType === 'CUSTOMER';
+      if (isCustomer) throw new UnauthorizedException('Access denied');
+    }
+
+    return this.issueTokenPair(user.id, requiredRole === USER_ROLES.ADMIN ? 'admin' : 'customer');
+  }
+
+  // ---------------------------
+  // REFRESH TOKEN
+  // ---------------------------
+  async refreshToken(dto: RefreshTokenDto): Promise<AuthResponse> {
+    const payload = await this.verifyRefreshToken(dto.refreshToken);
+    const tokenRecord = await this.prismaService.refreshToken.findFirst({
+      where: { userId: payload.sub },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!tokenRecord || !(await this.verifyPassword(tokenRecord.token, dto.refreshToken))) {
+      throw new ForbiddenException('Invalid refresh token');
+    }
+
+    if (tokenRecord.expiresAt < new Date()) {
+      await this.prismaService.refreshToken.delete({ where: { id: tokenRecord.id } });
+      throw new ForbiddenException('Refresh token expired');
+    }
+
+    // Rotate token: User only allowed one active session per device flow?
+    // Current logic deletes logic, implying rotation.
+    await this.prismaService.refreshToken.delete({ where: { id: tokenRecord.id } });
+
+    const audience = (payload as any).aud === 'admin' ? 'admin' : 'customer';
+    return this.issueTokenPair(payload.sub, audience);
+  }
+
+  async logout(dto: import('@modules/auth/dto/logout.dto').LogoutDto) {
+    try {
+      const payload = await this.jwtService.decode(dto.refreshToken) as any;
+      if (!payload?.sub) return { message: 'Logged out successfully' };
+
+      const userId = payload.sub;
+      const tokens = await this.prismaService.refreshToken.findMany({ where: { userId } });
+
+      // Invalidate the specific token if it matches
+      for (const t of tokens) {
+        if (await this.verifyPassword(t.token, dto.refreshToken)) {
+          await this.prismaService.refreshToken.delete({ where: { id: t.id } });
+          break;
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Logout failed mostly due to invalid token format: ${e.message}`);
+    }
+    return { message: 'Logged out successfully' };
+  }
+
+  // ---------------------------
+  // HELPERS
+  // ---------------------------
+
+  private async issueTokenPair(userId: string, audience: 'customer' | 'admin' = 'customer'): Promise<AuthResponse> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: { include: { role: true } },
+      },
+    });
+
+    if (!user) throw new UnauthorizedException('User not found');
+
+    const roles = user.userRoles.map((ur) => ur.role.slug);
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        { sub: userId, type: 'access', aud: audience, roles },
+        {
+          secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+          expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES') || TOKEN_EXPIRY.ACCESS,
+        } as any,
+      ),
+      this.jwtService.signAsync(
+        { sub: userId, type: 'refresh', aud: audience },
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+          expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES') || TOKEN_EXPIRY.REFRESH,
+        } as any,
+      ),
+    ]);
+
+    await this.saveRefreshToken(userId, refreshToken);
+
+    return {
+      user: sanitizeUser(user),
+      tokens: { accessToken, refreshToken },
+    };
+  }
+
+  private async saveRefreshToken(userId: string, rawToken: string) {
+    const tokenHash = await this.hashPassword(rawToken);
     await this.prismaService.refreshToken.create({
       data: {
-        userId: _userId,
-        token,
-        expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+        userId,
+        token: tokenHash,
+        expiresAt: new Date(Date.now() + TOKEN_EXPIRY.REFRESH_DB_MS),
       },
     });
   }
 
   private async verifyRefreshToken(token: string) {
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      return await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
-      return payload as import('@common/types/jwt.types').JwtRefreshPayload;
     } catch {
-      throw new ForbiddenException('Refresh token không hợp lệ');
+      throw new ForbiddenException('Invalid refresh token');
     }
+  }
+
+  private async hashPassword(plain: string): Promise<string> {
+    return argon2.hash(plain, ARGON_OPTIONS);
+  }
+
+  private async verifyPassword(hash: string, plain: string): Promise<boolean> {
+    return argon2.verify(hash, plain);
   }
 
   /**
@@ -303,15 +280,11 @@ export class AuthService {
     }
 
     // Verify token hash
-    const isValid = await argon2.verify(tokenRecord.token, refreshToken);
-    if (!isValid) {
-      return null;
-    }
+    const isValid = await this.verifyPassword(tokenRecord.token, refreshToken);
+    if (!isValid) return null;
 
     // Check if token expired
-    if (tokenRecord.expiresAt < new Date()) {
-      return null;
-    }
+    if (tokenRecord.expiresAt < new Date()) return null;
 
     // Trả về user với roles
     return {
@@ -344,38 +317,82 @@ export class AuthService {
     return { message: 'Nếu tài khoản tồn tại, chúng tôi đã gửi email hướng dẫn đặt lại mật khẩu.' };
   }
 
-  async changePassword(userId: string, dto: ChangePasswordDto) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
+  async verifyResetToken(token: string) {
+    const tokenRecord = await this.prismaService.resetPasswordToken.findFirst({
+      where: { token },
+      include: { user: true },
     });
 
-    if (!user) throw new BadRequestException('Người dùng không tồn tại');
-
-    // Xác thực current password
-    const isCurrentPasswordValid = await argon2.verify(user.passwordHash!, dto.currentPassword);
-
-    if (!isCurrentPasswordValid) {
-      throw new BadRequestException('Mật khẩu hiện tại không đúng');
+    if (!tokenRecord) {
+      throw new BadRequestException('Liên kết không hợp lệ hoặc đã hết hạn (Token not found)');
     }
 
-    // Hash mật khẩu mới
-    const newPasswordHash = await argon2.hash(dto.newPassword, {
-      type: argon2.argon2id,
-      timeCost: 2,
-      memoryCost: 19456,
-      parallelism: 1,
+    if (tokenRecord.expiresAt < new Date()) {
+      throw new BadRequestException('Liên kết đã hết hạn (Token expired)');
+    }
+
+    const { user } = tokenRecord;
+    if (!user) {
+      throw new BadRequestException('Người dùng không tồn tại');
+    }
+
+    return {
+      valid: true,
+      email: user.email,
+      name: user.fullName,
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const tokenRecord = await this.prismaService.resetPasswordToken.findFirst({
+      where: { token: dto.token },
     });
+
+    if (!tokenRecord) throw new BadRequestException('Invalid or expired token');
+
+    if (tokenRecord.expiresAt < new Date()) {
+      await this.prismaService.resetPasswordToken.delete({ where: { id: tokenRecord.id } });
+      throw new BadRequestException('Token expired, please request a new one');
+    }
+
+    const user = await this.prismaService.user.findUnique({ where: { id: tokenRecord.userId } });
+    if (!user) throw new BadRequestException('User not found');
+
+    const newPasswordHash = await this.hashPassword(dto.newPassword);
+
+    await this.prismaService.$transaction([
+      this.prismaService.user.update({
+        where: { id: user.id },
+        data: { passwordHash: newPasswordHash },
+      }),
+      this.prismaService.resetPasswordToken.delete({ where: { id: tokenRecord.id } }),
+      this.prismaService.refreshToken.deleteMany({ where: { userId: user.id } }),
+    ]);
+
+    return { message: 'Password has been reset successfully' };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prismaService.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User not found');
+
+    const isMatch = await this.verifyPassword(user.passwordHash!, dto.currentPassword);
+    if (!isMatch) throw new BadRequestException('Incorrect current password');
+
+    const newPasswordHash = await this.hashPassword(dto.newPassword);
 
     await this.prismaService.user.update({
       where: { id: userId },
       data: { passwordHash: newPasswordHash },
     });
 
-    // Invalidate tất cả refresh token cũ
-    await this.prismaService.refreshToken.deleteMany({
-      where: { userId },
-    });
+    // Invalidate all sessions/refresh tokens
+    await this.prismaService.refreshToken.deleteMany({ where: { userId } });
 
-    return { message: 'Đổi mật khẩu thành công' };
+    return { message: 'Password changed successfully' };
   }
 }

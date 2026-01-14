@@ -155,50 +155,21 @@ export class ProductService {
   // CREATE PRODUCT
   // ---------------------------
   async createProduct(dto: CreateProductDto, files?: Express.Multer.File[]) {
-    // Default to simple product (no variants) if hasVariants is not provided
+    // 1. Initial Validation & Defaults
     const hasVariants = dto.hasVariants ?? false;
+    this.validateProductBasics(dto, hasVariants);
 
-    const mainName =
-      dto.name?.vi || dto.name?.en || (dto.name ? Object.values(dto.name)[0] : undefined);
-    if (!mainName) {
-      throw new BadRequestException('Tên sản phẩm phải có ít nhất một ngôn ngữ');
-    }
-
-    // Rule: if no variants, basePrice is required for active products.
-    // Allow creating drafts (isActive = false) without price.
-    if (!hasVariants && !dto.basePrice && dto.isActive !== false) {
-      throw new BadRequestException(
-        'Simple products require basePrice when active. Set isActive = false to create a draft.',
-      );
-    }
-    if (hasVariants && (!dto.variants || dto.variants.length === 0)) {
-      throw new BadRequestException('Cần ít nhất 1 variant khi hasVariants = true');
-    }
-
-    // Collect attributeValueIds for validation
-    const allAttributeValueIds =
-      dto.variants?.flatMap((v) => v.attributeValueIds || [])?.filter(Boolean) || [];
-
-    // Gom mediaUrl order base
+    // 2. Prepare Data
+    const baseSlug = dto.slug ? slugify(dto.slug) : slugify(this.getMainName(dto) || '');
     const mediaUrlPayload = dto.mediaUrls || [];
 
-    const baseSlug = dto.slug ? slugify(dto.slug) : slugify(mainName);
-
+    // 3. Execution
     return this.prisma.$transaction(async (tx) => {
-      // 1. Ensure unique slug
+      // 3.1 Uniqueness & Existence Checks
       const finalSlug = await this.generateUniqueSlug(baseSlug, tx);
+      await this.validateRelations(dto, tx);
 
-      // 2. Validate categoryIds
-      if (dto.categoryIds?.length) {
-        await this.validateCategories(dto.categoryIds, tx);
-      }
-
-      // 3. Validate attributeValueIds (nếu có)
-      if (allAttributeValueIds.length) {
-        await this.validateAttributeValues(allAttributeValueIds, tx);
-      }
-
-      // 4. Create parent product
+      // 3.2 Create Parent Product
       const product = await tx.product.create({
         data: {
           name: dto.name,
@@ -210,7 +181,7 @@ export class ProductService {
         },
       });
 
-      // 5. Categories
+      // 3.3 Link Categories
       if (dto.categoryIds?.length) {
         await tx.productCategory.createMany({
           data: dto.categoryIds.map((categoryId) => ({
@@ -221,148 +192,180 @@ export class ProductService {
         });
       }
 
-      // 6. Process Media (URLs first)
-      const mediaRecords: Array<{ id: string; order: number }> = [];
-      if (mediaUrlPayload.length) {
-        for (const [index, url] of mediaUrlPayload.entries()) {
-          const media = await tx.productMedia.create({
-            data: {
-              productId: product.id,
-              url,
-              type: 'image',
-              isThumbnail: index === 0,
-              order: index,
-            },
-          });
-          mediaRecords.push({ id: media.id, order: media.order });
-        }
-      }
+      // 3.4 Process Media
+      const mediaRecords = await this.processMediaCreation(product.id, mediaUrlPayload, files, tx);
 
-      // 7. Process Media (File uploads) - Record in DB within tx; upload to storage
-      if (files?.length) {
-        const startOrder = mediaRecords.length;
-        for (const [index, file] of files.entries()) {
-          const media = await this.productStorageService.uploadMedia(
-            product.id,
-            file,
-            {
-              isThumbnail: mediaRecords.length === 0 && index === 0,
-              order: startOrder + index,
-            },
-            tx,
-          );
-          mediaRecords.push({ id: media.id, order: media.order });
-        }
-      }
+      // 3.5 Process Variants
+      await this.processVariantCreation(product.id, dto, hasVariants, finalSlug, mediaRecords, tx);
 
-      // 8. Variants
-      type VariantInput = CreateProductVariantInputDto & {
-        mediaIndexes?: number[];
-        attributeValueIds?: string[];
-      };
-
-      const variantsInput: VariantInput[] = hasVariants
-        ? (dto.variants as VariantInput[]) || []
-        : [
-          {
-            sku: undefined,
-            price: dto.basePrice!,
-            compareAtPrice: dto.baseCompareAtPrice,
-            costPrice: dto.baseCostPrice,
-            weightGram: dto.baseWeightGram,
-            variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
-            isDefault: true,
-            isActive: dto.isActive ?? true,
-            position: 0,
-            attributeValueIds: [],
-            mediaIndexes: [],
-          },
-        ];
-
-      const defaultIndexExplicit = variantsInput.findIndex((v) => v.isDefault);
-      const defaultIndex = defaultIndexExplicit >= 0 ? defaultIndexExplicit : 0;
-
-      // Prevent duplicate SKUs in payload
-      const skuSet = new Set<string>();
-
-      for (const [index, v] of variantsInput.entries()) {
-        let finalSku = v.sku;
-        if (!finalSku || !finalSku.trim()) {
-          finalSku = this.generateSku(finalSlug, v.variantTitle, index + 1);
-        }
-        if (skuSet.has(finalSku)) {
-          throw new BadRequestException(`SKU bị trùng trong payload: ${finalSku}`);
-        }
-        skuSet.add(finalSku);
-
-        await this.variantService.createVariant(
-          product.id,
-          {
-            productId: product.id,
-            ...v,
-            sku: finalSku,
-            isDefault: index === defaultIndex,
-            position: v.position ?? index,
-          },
-          tx,
-          {
-            mediaRecords,
-            skipRecalc: true,
-          },
-        );
-      }
-
-      // 9. Recalculate min/max price trong tx
+      // 3.6 Recalculate Prices
       await this.variantService.recalculateDisplayPrice(product.id, tx);
 
-      // 10. Return full product with relations
+      // 3.7 Return Result
       return tx.product.findUniqueOrThrow({
         where: { id: product.id },
         include: {
           variants: {
             where: { deletedAt: null },
             include: {
-              attributes: {
-                include: {
-                  attributeValue: {
-                    include: { attribute: true },
-                  },
-                },
-              },
+              attributes: { include: { attributeValue: { include: { attribute: true } } } },
               media: true,
             },
             orderBy: { position: 'asc' },
           },
-          media: {
-            orderBy: { order: 'asc' },
-          },
-          categories: {
-            include: { category: true },
-          },
+          media: { orderBy: { order: 'asc' } },
+          categories: { include: { category: true } },
         },
       });
     });
   }
 
-  /**
-   * Upload nhiều ảnh cho product
-   * Ảnh đầu tiên sẽ tự động được set làm thumbnail
-   */
-  private async uploadMultipleImages(productId: string, files: Express.Multer.File[]) {
-    const uploadPromises = files.map(async (file, index) => {
-      return this.productStorageService.uploadMedia(
-        productId,
-        file,
-        {
-          isThumbnail: index === 0, // Ảnh đầu tiên làm thumbnail
-          order: index,
-        },
-        this.prisma,
-      );
-    });
+  // ==================== PRIVATE HELPERS: CREATE ==================== //
 
-    await Promise.all(uploadPromises);
+  private validateProductBasics(dto: CreateProductDto, hasVariants: boolean) {
+    const mainName = this.getMainName(dto);
+    if (!mainName) {
+      throw new BadRequestException('Tên sản phẩm phải có ít nhất một ngôn ngữ');
+    }
+
+    if (!hasVariants && !dto.basePrice && dto.isActive !== false) {
+      throw new BadRequestException(
+        'Simple products require basePrice when active. Set isActive = false to create a draft.',
+      );
+    }
+    if (hasVariants && (!dto.variants || dto.variants.length === 0)) {
+      throw new BadRequestException('Cần ít nhất 1 variant khi hasVariants = true');
+    }
   }
+
+  private getMainName(dto: CreateProductDto | UpdateProductDto) {
+    return dto.name?.vi || dto.name?.en || (dto.name ? Object.values(dto.name)[0] : undefined);
+  }
+
+  private async validateRelations(
+    dto: CreateProductDto,
+    tx: Prisma.TransactionClient,
+  ) {
+    if (dto.categoryIds?.length) {
+      await this.validateCategories(dto.categoryIds, tx);
+    }
+
+    const allAttributeValueIds =
+      dto.variants?.flatMap((v) => v.attributeValueIds || [])?.filter(Boolean) || [];
+
+    if (allAttributeValueIds.length) {
+      await this.validateAttributeValues(allAttributeValueIds, tx);
+    }
+  }
+
+  private async processMediaCreation(
+    productId: string,
+    mediaUrls: string[],
+    files: Express.Multer.File[] | undefined,
+    tx: Prisma.TransactionClient,
+  ) {
+    const mediaRecords: Array<{ id: string; order: number }> = [];
+    let currentOrder = 0;
+
+    // A. URL Media
+    for (const url of mediaUrls) {
+      const media = await tx.productMedia.create({
+        data: {
+          productId,
+          url,
+          type: 'image',
+          isThumbnail: currentOrder === 0,
+          order: currentOrder,
+        },
+      });
+      mediaRecords.push({ id: media.id, order: media.order });
+      currentOrder++;
+    }
+
+    // B. File Media
+    if (files?.length) {
+      for (const file of files) {
+        const media = await this.productStorageService.uploadMedia(
+          productId,
+          file,
+          {
+            isThumbnail: currentOrder === 0,
+            order: currentOrder,
+          },
+          tx,
+        );
+        mediaRecords.push({ id: media.id, order: media.order });
+        currentOrder++;
+      }
+    }
+
+    return mediaRecords;
+  }
+
+  private async processVariantCreation(
+    productId: string,
+    dto: CreateProductDto,
+    hasVariants: boolean,
+    slug: string,
+    mediaRecords: Array<{ id: string; order: number }>,
+    tx: Prisma.TransactionClient,
+  ) {
+    type VariantInput = CreateProductVariantInputDto & {
+      mediaIndexes?: number[];
+      attributeValueIds?: string[];
+    };
+
+    const variantsInput: VariantInput[] = hasVariants
+      ? (dto.variants as VariantInput[]) || []
+      : [
+        {
+          sku: undefined,
+          price: dto.basePrice!,
+          compareAtPrice: dto.baseCompareAtPrice,
+          costPrice: dto.baseCostPrice,
+          weightGram: dto.baseWeightGram,
+          variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
+          isDefault: true,
+          isActive: dto.isActive ?? true,
+          position: 0,
+          attributeValueIds: [],
+          mediaIndexes: [],
+        },
+      ];
+
+    const defaultIndexExplicit = variantsInput.findIndex((v) => v.isDefault);
+    const defaultIndex = defaultIndexExplicit >= 0 ? defaultIndexExplicit : 0;
+    const skuSet = new Set<string>();
+
+    for (const [index, v] of variantsInput.entries()) {
+      let finalSku = v.sku;
+      if (!finalSku || !finalSku.trim()) {
+        finalSku = this.generateSku(slug, v.variantTitle, index + 1);
+      }
+      if (skuSet.has(finalSku)) {
+        throw new BadRequestException(`SKU bị trùng trong payload: ${finalSku}`);
+      }
+      skuSet.add(finalSku);
+
+      await this.variantService.createVariant(
+        productId,
+        {
+          productId,
+          ...v,
+          sku: finalSku,
+          isDefault: index === defaultIndex,
+          position: v.position ?? index,
+        },
+        tx,
+        {
+          mediaRecords,
+          skipRecalc: true,
+        },
+      );
+    }
+  }
+
+  // ==================== PRIVATE HELPERS: UTILS ==================== //
 
   private async generateUniqueSlug(
     baseSlug: string,
@@ -424,83 +427,21 @@ export class ProductService {
   // ---------------------------
   // UPDATE PRODUCT
   // ---------------------------
+  // ---------------------------
+  // UPDATE PRODUCT
+  // ---------------------------
   async updateProduct(id: string, dto: UpdateProductDto, files?: Express.Multer.File[]) {
-    // Bước 1: Kiểm tra product có tồn tại không
-    const existing = await this.prisma.product.findUnique({
-      where: { id },
-    });
+    // 1. Check Existence
+    const existing = await this.getProductOrThrow(id);
 
-    if (!existing) {
-      throw new NotFoundException('Sản phẩm không tồn tại');
-    }
+    // 2. Prepare Data
+    const finalSlug = await this.resolveUpdatedSlug(existing, dto);
+    const categoryConnection = await this.resolveUpdatedCategories(dto);
 
-    // Bước 2: Xử lý slug nếu người dùng thay đổi tên hoặc slug
-    let finalSlug = existing.slug;
-
-    // Nếu user gửi slug → ưu tiên dùng slug đó
-    if (dto.slug) {
-      finalSlug = slugify(dto.slug);
-    }
-    // Nếu user không gửi slug nhưng gửi update tên → tự tạo slug từ tên
-    else if (dto.name) {
-      const mainName = dto.name.vi || dto.name.en || Object.values(dto.name)[0];
-
-      finalSlug = slugify(mainName);
-    }
-
-    // Bước 3: Check slug unique (trừ chính nó)
-    if (finalSlug !== existing.slug) {
-      const slugExists = await this.prisma.product.findUnique({
-        where: { slug: finalSlug },
-      });
-
-      if (slugExists && slugExists.id !== id) {
-        // Nếu slug trùng → thêm số vào cuối
-        let counter = 1;
-        let newSlug = `${finalSlug}-${counter}`;
-
-        while (
-          await this.prisma.product.findUnique({
-            where: { slug: newSlug },
-          })
-        ) {
-          counter++;
-          newSlug = `${finalSlug}-${counter}`;
-        }
-
-        finalSlug = newSlug;
-      }
-    }
-
-    // Bước 4: Validate categoryIds nếu người dùng cập nhật categories
-    let categoryConnection: any = undefined;
-
-    if (dto.categoryIds) {
-      const categories = await this.prisma.category.findMany({
-        where: {
-          id: { in: dto.categoryIds },
-          isActive: true,
-        },
-      });
-
-      if (categories.length !== dto.categoryIds.length) {
-        throw new BadRequestException('Một hoặc nhiều danh mục không tồn tại hoặc không active');
-      }
-
-      // Clear hết categories cũ rồi set categories mới
-      categoryConnection = {
-        set: [], // Xoá tất cả trước
-        create: dto.categoryIds.map((categoryId) => ({
-          categoryId,
-        })),
-      };
-    }
-
-    // Bước 5: Update sản phẩm
+    // 3. Update Product
     const updated = await this.prisma.product.update({
       where: { id },
       data: {
-        // Chỉ set field nếu user cung cấp
         name: dto.name ? (dto.name as Prisma.InputJsonValue) : undefined,
         description: dto.description ? (dto.description as Prisma.InputJsonValue) : undefined,
         slug: finalSlug,
@@ -510,35 +451,81 @@ export class ProductService {
         categories: categoryConnection,
       },
       include: {
-        categories: {
-          include: {
-            category: true,
-          },
-        },
+        categories: { include: { category: true } },
         media: true,
       },
     });
 
-    // Bước 6: Upload ảnh mới nếu có
+    // 4. Handle New Files
     if (files && files.length > 0) {
-      // Lấy order hiện tại để tiếp tục
-      const maxOrder = await this.prisma.productMedia.findFirst({
-        where: { productId: id },
-        orderBy: { order: 'desc' },
-        select: { order: true },
-      });
-      const startOrder = maxOrder ? maxOrder.order + 1 : 0;
-
-      const uploadPromises = files.map(async (file, index) => {
-        return this.productStorageService.uploadMedia(id, file, {
-          isThumbnail: false, // Không tự động set thumbnail khi update
-          order: startOrder + index,
-        });
-      });
-
-      await Promise.all(uploadPromises);
+      await this.handlePostUpdateMedia(id, files);
     }
 
     return updated;
+  }
+
+  // ==================== PRIVATE HELPERS: UPDATE ==================== //
+
+  private async getProductOrThrow(id: string) {
+    const existing = await this.prisma.product.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Sản phẩm không tồn tại');
+    return existing;
+  }
+
+  private async resolveUpdatedSlug(existing: { id: string; slug: string }, dto: UpdateProductDto) {
+    let finalSlug = existing.slug;
+
+    // Determine target slug base
+    if (dto.slug) {
+      finalSlug = slugify(dto.slug);
+    } else if (dto.name) {
+      // Auto-generate from new name if slug not provided but name changed
+      const mainName = dto.name.vi || dto.name.en || Object.values(dto.name)[0];
+      finalSlug = slugify(mainName);
+    }
+
+    // If slug hasn't changed effectively, return early
+    if (finalSlug === existing.slug) return existing.slug;
+
+    // Ensure uniqueness if changed
+    const slugExists = await this.prisma.product.findUnique({ where: { slug: finalSlug } });
+
+    // If conflict found (and it's not the same product), append counter
+    if (slugExists && slugExists.id !== existing.id) {
+      return this.generateUniqueSlug(finalSlug);
+    }
+
+    return finalSlug;
+  }
+
+  private async resolveUpdatedCategories(dto: UpdateProductDto) {
+    if (!dto.categoryIds) return undefined;
+
+    await this.validateCategories(dto.categoryIds);
+
+    return {
+      set: [], // Clear old relations
+      create: dto.categoryIds.map((categoryId) => ({
+        categoryId,
+      })),
+    };
+  }
+
+  private async handlePostUpdateMedia(productId: string, files: Express.Multer.File[]) {
+    const maxOrder = await this.prisma.productMedia.findFirst({
+      where: { productId },
+      orderBy: { order: 'desc' },
+      select: { order: true },
+    });
+    const startOrder = maxOrder ? maxOrder.order + 1 : 0;
+
+    const uploadPromises = files.map((file, index) =>
+      this.productStorageService.uploadMedia(productId, file, {
+        isThumbnail: false,
+        order: startOrder + index,
+      })
+    );
+
+    await Promise.all(uploadPromises);
   }
 }
