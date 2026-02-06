@@ -44,6 +44,7 @@ export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
 
 export const OrderStatusEnum = {
+  pending_payment: 'pending_payment',
   pending: 'pending',
   confirmed: 'confirmed',
   processing: 'processing',
@@ -84,6 +85,25 @@ export const TransactionStatusEnum = {
 } as const
 
 export type TransactionStatusEnum = (typeof TransactionStatusEnum)[keyof typeof TransactionStatusEnum]
+
+
+export const PaymentMethodEnum = {
+  COD: 'COD',
+  VNPAY: 'VNPAY',
+  PAYPAL: 'PAYPAL'
+} as const
+
+export type PaymentMethodEnum = (typeof PaymentMethodEnum)[keyof typeof PaymentMethodEnum]
+
+
+export const ReservationStatus = {
+  active: 'active',
+  confirmed: 'confirmed',
+  released: 'released',
+  expired: 'expired'
+} as const
+
+export type ReservationStatus = (typeof ReservationStatus)[keyof typeof ReservationStatus]
 
 
 export const PermissionModule = {

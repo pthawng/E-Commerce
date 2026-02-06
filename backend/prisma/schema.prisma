@@ -46,6 +46,7 @@ enum ActionType {
 }
 // Trạng thái đơn hàng
 enum OrderStatusEnum {
+  pending_payment  // Waiting for payment
   pending
   confirmed
   processing
@@ -74,6 +75,21 @@ enum TransactionStatusEnum {
   success
   failed
   reversed
+}
+
+// Payment method types
+enum PaymentMethodEnum {
+  COD
+  VNPAY
+  PAYPAL
+}
+
+// Inventory reservation lifecycle
+enum ReservationStatus {
+  active      // Currently reserved, waiting for payment
+  confirmed   // Order confirmed, inventory deducted
+  released    // Manually released (order cancelled before payment)
+  expired     // Auto-expired by cron job (payment timeout)
 }
 
 //////////////////////////////////////
@@ -414,6 +430,20 @@ model InventoryLog {
   @@index([referenceId], map: "idx_inv_logs_ref")
 }
 
+model InventoryReservation {
+  id              String            @id @default(uuid()) @db.Uuid
+  orderId         String            @unique @db.Uuid
+  variantId       String            @db.Uuid
+  quantity        Int
+  expiresAt       DateTime
+  status          ReservationStatus @default(active)
+  createdAt       DateTime          @default(now())
+  
+  @@index([expiresAt, status], map: "idx_reservation_cleanup")
+  @@index([orderId], map: "idx_reservation_order")
+  @@map("inventory_reservations")
+}
+
 //////////////////////////////////////
 // CART
 //////////////////////////////////////
@@ -459,8 +489,12 @@ model Order {
   id                    String            @id @default(uuid()) @db.Uuid
   code                  String            @unique
   userId                String?           @db.Uuid
+  sessionId             String?           @db.VarChar(100)
   status                OrderStatusEnum   @default(pending)
   paymentStatus         PaymentStatusEnum @default(unpaid)
+  paymentMethod         PaymentMethodEnum?
+  paymentDeadline       DateTime?
+  reservationId         String?
   shippingAddress       Json
   billingAddress        Json?
   shippingMethodId      String?           @db.Uuid
@@ -489,6 +523,11 @@ model Order {
   timelines             OrderTimeline[]
   reviews               Review[]
   discountUsages        DiscountUsage[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status, paymentDeadline])
+  @@index([code])
 }
 
 model OrderItem {

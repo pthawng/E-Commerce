@@ -16,10 +16,10 @@
  */
 
 import * as runtime from "@prisma/client/runtime/client"
-import type * as Prisma from "../models.js"
-import { type PrismaClient } from "./class.js"
+import type * as Prisma from "../models"
+import { type PrismaClient } from "./class"
 
-export type * from '../models.js'
+export type * from '../models'
 
 export type DMMF = typeof runtime.DMMF
 
@@ -404,6 +404,7 @@ export const ModelName = {
   Warehouse: 'Warehouse',
   InventoryItem: 'InventoryItem',
   InventoryLog: 'InventoryLog',
+  InventoryReservation: 'InventoryReservation',
   Cart: 'Cart',
   CartItem: 'CartItem',
   ShippingMethod: 'ShippingMethod',
@@ -432,7 +433,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "permission" | "role" | "rolePermission" | "userRole" | "userPermission" | "user" | "refreshToken" | "verifyEmailToken" | "resetPasswordToken" | "category" | "attribute" | "attributeValue" | "product" | "productCategory" | "productVariant" | "variantAttributeValue" | "productMedia" | "warehouse" | "inventoryItem" | "inventoryLog" | "cart" | "cartItem" | "shippingMethod" | "order" | "orderItem" | "paymentTransaction" | "orderTimeline" | "review" | "reviewMedia" | "discount" | "discountUsage" | "post" | "auditLog"
+    modelProps: "permission" | "role" | "rolePermission" | "userRole" | "userPermission" | "user" | "refreshToken" | "verifyEmailToken" | "resetPasswordToken" | "category" | "attribute" | "attributeValue" | "product" | "productCategory" | "productVariant" | "variantAttributeValue" | "productMedia" | "warehouse" | "inventoryItem" | "inventoryLog" | "inventoryReservation" | "cart" | "cartItem" | "shippingMethod" | "order" | "orderItem" | "paymentTransaction" | "orderTimeline" | "review" | "reviewMedia" | "discount" | "discountUsage" | "post" | "auditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1916,6 +1917,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    InventoryReservation: {
+      payload: Prisma.$InventoryReservationPayload<ExtArgs>
+      fields: Prisma.InventoryReservationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.InventoryReservationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.InventoryReservationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>
+        }
+        findFirst: {
+          args: Prisma.InventoryReservationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.InventoryReservationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>
+        }
+        findMany: {
+          args: Prisma.InventoryReservationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>[]
+        }
+        create: {
+          args: Prisma.InventoryReservationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>
+        }
+        createMany: {
+          args: Prisma.InventoryReservationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.InventoryReservationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>[]
+        }
+        delete: {
+          args: Prisma.InventoryReservationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>
+        }
+        update: {
+          args: Prisma.InventoryReservationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>
+        }
+        deleteMany: {
+          args: Prisma.InventoryReservationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.InventoryReservationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.InventoryReservationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>[]
+        }
+        upsert: {
+          args: Prisma.InventoryReservationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryReservationPayload>
+        }
+        aggregate: {
+          args: Prisma.InventoryReservationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateInventoryReservation>
+        }
+        groupBy: {
+          args: Prisma.InventoryReservationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InventoryReservationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.InventoryReservationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InventoryReservationCountAggregateOutputType> | number
+        }
+      }
+    }
     Cart: {
       payload: Prisma.$CartPayload<ExtArgs>
       fields: Prisma.CartFieldRefs
@@ -3175,6 +3250,19 @@ export const InventoryLogScalarFieldEnum = {
 export type InventoryLogScalarFieldEnum = (typeof InventoryLogScalarFieldEnum)[keyof typeof InventoryLogScalarFieldEnum]
 
 
+export const InventoryReservationScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  variantId: 'variantId',
+  quantity: 'quantity',
+  expiresAt: 'expiresAt',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type InventoryReservationScalarFieldEnum = (typeof InventoryReservationScalarFieldEnum)[keyof typeof InventoryReservationScalarFieldEnum]
+
+
 export const CartScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -3216,8 +3304,12 @@ export const OrderScalarFieldEnum = {
   id: 'id',
   code: 'code',
   userId: 'userId',
+  sessionId: 'sessionId',
   status: 'status',
   paymentStatus: 'paymentStatus',
+  paymentMethod: 'paymentMethod',
+  paymentDeadline: 'paymentDeadline',
+  reservationId: 'reservationId',
   shippingAddress: 'shippingAddress',
   billingAddress: 'billingAddress',
   shippingMethodId: 'shippingMethodId',
@@ -3595,6 +3687,20 @@ export type ListEnumActionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
+ * Reference to a field of type 'ReservationStatus'
+ */
+export type EnumReservationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReservationStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ReservationStatus[]'
+ */
+export type ListEnumReservationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReservationStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'OrderStatusEnum'
  */
 export type EnumOrderStatusEnumFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'OrderStatusEnum'>
@@ -3619,6 +3725,20 @@ export type EnumPaymentStatusEnumFieldRefInput<$PrismaModel> = FieldRefInputType
  * Reference to a field of type 'PaymentStatusEnum[]'
  */
 export type ListEnumPaymentStatusEnumFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentStatusEnum[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PaymentMethodEnum'
+ */
+export type EnumPaymentMethodEnumFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentMethodEnum'>
+    
+
+
+/**
+ * Reference to a field of type 'PaymentMethodEnum[]'
+ */
+export type ListEnumPaymentMethodEnumFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentMethodEnum[]'>
     
 
 
@@ -3762,6 +3882,7 @@ export type GlobalOmitConfig = {
   warehouse?: Prisma.WarehouseOmit
   inventoryItem?: Prisma.InventoryItemOmit
   inventoryLog?: Prisma.InventoryLogOmit
+  inventoryReservation?: Prisma.InventoryReservationOmit
   cart?: Prisma.CartOmit
   cartItem?: Prisma.CartItemOmit
   shippingMethod?: Prisma.ShippingMethodOmit

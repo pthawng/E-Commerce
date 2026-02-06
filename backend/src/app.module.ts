@@ -9,10 +9,12 @@ import { StorageModule } from '@modules/storage/storage.module';
 import { UserModule } from '@modules/user/user.module';
 import { CartModule } from '@modules/cart/cart.module';
 import { OrderModule } from '@modules/order/order.module';
+import { PaymentModule } from '@modules/payment/payment.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { redisStore } from 'cache-manager-redis-yet';
 import * as Joi from 'joi';
 import { PrismaModule } from 'src/prisma/prisma.module';
@@ -71,8 +73,21 @@ import { AppService } from './app.service';
         SUPABASE_ANON_KEY: Joi.string().required(),
         SUPABASE_SERVICE_ROLE_KEY: Joi.string().required(),
         SUPABASE_BUCKET: Joi.string().required(),
+        // Payment configuration
+        VNPAY_TMN_CODE: Joi.string().optional(),
+        VNPAY_HASH_SECRET: Joi.string().optional(),
+        VNPAY_URL: Joi.string().optional(),
+        VNPAY_RETURN_URL: Joi.string().optional(),
+        VNPAY_API_URL: Joi.string().optional(),
+        PAYPAL_CLIENT_ID: Joi.string().optional(),
+        PAYPAL_CLIENT_SECRET: Joi.string().optional(),
+        PAYPAL_MODE: Joi.string().valid('sandbox', 'production').default('sandbox'),
+        PAYPAL_WEBHOOK_ID: Joi.string().optional(),
+        FRONTEND_URL: Joi.string().default('http://localhost:5173'),
+        PAYMENT_TIMEOUT_MINUTES: Joi.number().default(15),
       }),
     }),
+    ScheduleModule.forRoot(), // NEW: Enable cron jobs
     PrismaModule,
     UserModule,
     AuthModule,
@@ -84,6 +99,7 @@ import { AppService } from './app.service';
     AttributeModule,
     CartModule,
     OrderModule,
+    PaymentModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

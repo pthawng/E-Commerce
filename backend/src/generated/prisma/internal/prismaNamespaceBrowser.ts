@@ -17,8 +17,8 @@
 
 import * as runtime from "@prisma/client/runtime/index-browser"
 
-export type * from '../models.js'
-export type * from './prismaNamespace.js'
+export type * from '../models'
+export type * from './prismaNamespace'
 
 export const Decimal = runtime.Decimal
 
@@ -71,6 +71,7 @@ export const ModelName = {
   Warehouse: 'Warehouse',
   InventoryItem: 'InventoryItem',
   InventoryLog: 'InventoryLog',
+  InventoryReservation: 'InventoryReservation',
   Cart: 'Cart',
   CartItem: 'CartItem',
   ShippingMethod: 'ShippingMethod',
@@ -360,6 +361,19 @@ export const InventoryLogScalarFieldEnum = {
 export type InventoryLogScalarFieldEnum = (typeof InventoryLogScalarFieldEnum)[keyof typeof InventoryLogScalarFieldEnum]
 
 
+export const InventoryReservationScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  variantId: 'variantId',
+  quantity: 'quantity',
+  expiresAt: 'expiresAt',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type InventoryReservationScalarFieldEnum = (typeof InventoryReservationScalarFieldEnum)[keyof typeof InventoryReservationScalarFieldEnum]
+
+
 export const CartScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -401,8 +415,12 @@ export const OrderScalarFieldEnum = {
   id: 'id',
   code: 'code',
   userId: 'userId',
+  sessionId: 'sessionId',
   status: 'status',
   paymentStatus: 'paymentStatus',
+  paymentMethod: 'paymentMethod',
+  paymentDeadline: 'paymentDeadline',
+  reservationId: 'reservationId',
   shippingAddress: 'shippingAddress',
   billingAddress: 'billingAddress',
   shippingMethodId: 'shippingMethodId',

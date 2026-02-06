@@ -9,8 +9,8 @@
  * 🟢 You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/client"
-import type * as $Enums from "../enums.js"
-import type * as Prisma from "../internal/prismaNamespace.js"
+import type * as $Enums from "../enums"
+import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model User
@@ -1681,9 +1681,6 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
-    /**
-     * Loại tài khoản: CUSTOMER cho storefront, STAFF/SUPER_ADMIN cho back-office
-     */
     userType: $Enums.UserType
   }, ExtArgs["result"]["user"]>
   composites: {}
