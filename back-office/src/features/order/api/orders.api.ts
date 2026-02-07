@@ -15,6 +15,7 @@ export interface Order {
     totalAmount: number;
     shippingAddress: any;
     note: string | null;
+    reservationId: string | null;
     createdAt: string;
     updatedAt: string;
     user?: {

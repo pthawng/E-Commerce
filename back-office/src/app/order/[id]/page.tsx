@@ -220,6 +220,35 @@ export default function OrderDetailPage() {
                     />
                 </Card>
 
+                {/* Inventory Reservation (Observability) */}
+                {order.reservationId && (
+                    <Card title="Inventory Reservation">
+                        <Alert
+                            message="Automatic Inventory Management"
+                            description="Inventory reservations are handled automatically by backend jobs. Reservations are auto-released when orders are cancelled or payment expires (15 minutes). No manual intervention needed."
+                            type="info"
+                            showIcon
+                            style={{ marginBottom: 16 }}
+                        />
+                        <Descriptions bordered>
+                            <Descriptions.Item label="Reservation ID" span={2}>
+                                <code>{order.reservationId}</code>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Status">
+                                <Tag color={order.status === 'pending_payment' ? 'orange' : order.status === 'confirmed' || order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered' ? 'green' : 'red'}>
+                                    {order.status === 'pending_payment' ? 'ACTIVE' : order.status === 'confirmed' || order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered' ? 'CONFIRMED' : 'RELEASED'}
+                                </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Expires At">
+                                {order.paymentDeadline ? formatDate(order.paymentDeadline) : 'N/A'}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Items Reserved" span={2}>
+                                {order.orderItems.length} variant(s), {order.orderItems.reduce((sum, item) => sum + item.quantity, 0)} unit(s) total
+                            </Descriptions.Item>
+                        </Descriptions>
+                    </Card>
+                )}
+
                 {/* Actions */}
                 {status?.canCancel && (
                     <Card>
