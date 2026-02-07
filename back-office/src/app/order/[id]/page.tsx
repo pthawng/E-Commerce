@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Tag, Table, Space, Button, Alert, Modal, Form, Input, Spin } from 'antd';
 import { ArrowLeftOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import { useOrder, useOrderStatus, useCancelOrder } from '../hooks/useOrders';
+import { useOrder, useOrderStatus, useCancelOrder } from '@/features/order/hooks/useOrders';
 import { useState } from 'react';
 
 // Status color mapping
@@ -34,7 +34,7 @@ const formatTime = (seconds: number) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const OrderDetailPage = () => {
+export default function OrderDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [form] = Form.useForm();
@@ -259,4 +259,4 @@ export const OrderDetailPage = () => {
             </Modal>
         </div>
     );
-};
+}

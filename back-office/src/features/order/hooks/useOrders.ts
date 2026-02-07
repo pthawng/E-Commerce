@@ -23,7 +23,7 @@ export const useOrder = (id: string, options?: Omit<UseQueryOptions<Order>, 'que
         queryKey: ['orders', id],
         queryFn: async () => {
             const response = await ordersApi.getById(id);
-            return response.data;
+            return response.data!;
         },
         enabled: !!id,
         ...options,
@@ -41,7 +41,7 @@ export const useOrderStatus = (
         queryKey: ['orders', id, 'status'],
         queryFn: async () => {
             const response = await ordersApi.getStatus(id);
-            return response.data;
+            return response.data!;
         },
         enabled: !!id,
         ...options,

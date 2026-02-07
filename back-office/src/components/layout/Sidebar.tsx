@@ -8,6 +8,7 @@ import {
   TagsOutlined,
   DeploymentUnitOutlined,
   ShoppingOutlined,
+  DollarOutlined,
   UserOutlined,
   LineChartOutlined,
   SettingOutlined,
@@ -42,6 +43,7 @@ const navGroups = [
     label: "Khác",
     items: [
       { to: "/orders", label: "Đơn hàng", icon: <ShoppingOutlined /> },
+      { to: "/payments", label: "Thanh toán", icon: <DollarOutlined /> },
       { to: "/customers", label: "Khách hàng", icon: <UserOutlined /> },
       { to: "/reports", label: "Báo cáo", icon: <LineChartOutlined /> },
       { to: "/settings", label: "Cài đặt", icon: <SettingOutlined /> },

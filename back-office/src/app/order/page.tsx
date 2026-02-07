@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Tag, Space, Button, Input, Select, Card, Modal, Form } from 'antd';
 import { SearchOutlined, EyeOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { useOrders, useCancelOrder } from '../hooks/useOrders';
-import type { Order } from '../api/orders.api';
+import { useOrders, useCancelOrder } from '@/features/order/hooks/useOrders';
+import type { Order } from '@/features/order/api/orders.api';
 
 const { Search } = Input;
 
@@ -30,7 +30,7 @@ const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('vi-VN');
 };
 
-export const OrderListPage = () => {
+export default function OrderListPage() {
     const navigate = useNavigate();
     const [filters, setFilters] = useState({
         page: 1,
@@ -208,4 +208,4 @@ export const OrderListPage = () => {
             </Modal>
         </div>
     );
-};
+}

@@ -7,6 +7,9 @@ import AttributesPage from "./app/attribute/page";
 import RbacPage from "./app/rbac/page";
 import UsersPage from "./app/user/page";
 import LoginPage from "./app/auth/login";
+import OrderListPage from "./app/order/page";
+import OrderDetailPage from "./app/order/[id]/page";
+import PaymentListPage from "./app/payment/page";
 import { ProtectedRoute } from "@/components/layouts/protected-route";
 import { ErrorBoundary } from "@/shared/ui";
 
@@ -58,8 +61,15 @@ export default function App() {
               <RbacPage />
             </ProtectedRoute>
           } />
+
+          {/* Order Management Routes */}
+          <Route path="orders" element={<OrderListPage />} />
+          <Route path="orders/:id" element={<OrderDetailPage />} />
+
+          {/* Payment Management Route */}
+          <Route path="payments" element={<PaymentListPage />} />
+
           {/* Thêm các routes khác ở đây */}
-          {/* <Route path="orders" element={<OrdersPage />} /> */}
           {/* <Route path="customers" element={<CustomersPage />} /> */}
         </Route>
 
