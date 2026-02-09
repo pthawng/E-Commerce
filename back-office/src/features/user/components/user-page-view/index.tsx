@@ -1,11 +1,9 @@
 import { useMemo, useState, useEffect } from 'react';
 import {
     Button,
-    Card,
     Form,
     Modal,
     message,
-    Space,
     Select,
     Input,
     Checkbox,
@@ -24,6 +22,9 @@ import {
     useRemovePermissionFromUser,
 } from '@/features/rbac/services/mutations';
 import { useUserRoles, useUserPermissions } from '@/features/rbac/services/queries';
+import { PageHeader, FilterBar } from '@/shared/ui';
+import { contentContainerStyle, cardStyle } from '@/ui/styles';
+import * as tokens from '@/ui/design-tokens';
 
 type FormValues = {
     email: string;
@@ -192,12 +193,8 @@ export function UserPageView() {
         [userPermissionAssignments],
     );
 
-    // Initialize modal state when access modal opens with data
-    // Initialize selected roles/permissions when assignments load.
-    // Use a microtask (setTimeout 0) to defer setState so it's not a synchronous setState inside the effect.
     useEffect(() => {
         if (accessUser && userRoleAssignments !== undefined && userPermissionAssignments !== undefined) {
-            // Avoid unconditional setState inside effect to prevent cascading renders.
             const arraysEqual = (a?: string[], b?: string[]) => {
                 if (a === b) return true;
                 if (!a || !b) return false;
@@ -218,7 +215,6 @@ export function UserPageView() {
 
             return () => clearTimeout(timeout);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         accessUser,
         userRoleAssignments,
@@ -261,80 +257,87 @@ export function UserPageView() {
     }, [permissions, drawerPermSearch, drawerPermModule]);
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-xl font-semibold text-slate-800 font-heading">Quản lý User</h1>
+        <div>
+            {/* Page Header */}
+            <PageHeader
+                title="Users"
+                subtitle="Manage system users and access rights"
+                actions={
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+                        Add User
+                    </Button>
+                }
+            />
+
+            {/* Filters */}
+            <FilterBar>
+                <Input.Search
+                    allowClear
+                    placeholder="Search by email, name..."
+                    onSearch={(val) => {
+                        setSearch(val || undefined);
+                        setPage(1);
+                    }}
+                    style={{ width: 280 }}
+                />
+                <Select
+                    allowClear
+                    placeholder="Filter by Role"
+                    options={roleOptions}
+                    onChange={(val) => {
+                        setRoleFilter(val || undefined);
+                        setPage(1);
+                    }}
+                    style={{ minWidth: 200 }}
+                />
+                <Select
+                    allowClear
+                    showSearch
+                    placeholder="Filter by Permission"
+                    options={permissionOptions}
+                    optionFilterProp="label"
+                    onChange={(val) => {
+                        setPermissionFilter(val || undefined);
+                        setPage(1);
+                    }}
+                    style={{ minWidth: 260 }}
+                />
+            </FilterBar>
+
+            {/* Content */}
+            <div style={contentContainerStyle}>
+                <div style={cardStyle}>
+                    <UserTable
+                        users={paginated?.items || []}
+                        isLoading={isLoading}
+                        page={paginated?.meta?.page ?? page}
+                        limit={paginated?.meta?.limit ?? limit}
+                        total={paginated?.meta?.total ?? 0}
+                        onPageChange={(p, l) => {
+                            setPage(p);
+                            setLimit(l);
+                        }}
+                        onEdit={openEditModal}
+                        onDelete={handleDelete}
+                        onManageAccess={(user) => {
+                            setAccessUser(user);
+                            setSelectedRolesInModal([]);
+                            setSelectedPermsInModal([]);
+                        }}
+                    />
                 </div>
-                <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal} className="bg-linear-to-r from-amber-500 to-amber-600 border-none">
-                    Thêm user
-                </Button>
             </div>
 
-            <Card className="shadow-sm rounded-xl border-slate-100">
-                <Space align="center" wrap className="mb-4 w-full">
-                    <Input.Search
-                        allowClear
-                        placeholder="Tìm kiếm email, tên..."
-                        onSearch={(val) => {
-                            setSearch(val || undefined);
-                            setPage(1);
-                        }}
-                        style={{ width: 240 }}
-                    />
-                    <Select
-                        allowClear
-                        placeholder="Lọc theo role"
-                        options={roleOptions}
-                        onChange={(val) => {
-                            setRoleFilter(val || undefined);
-                            setPage(1);
-                        }}
-                        style={{ minWidth: 200 }}
-                    />
-                    <Select
-                        allowClear
-                        showSearch
-                        placeholder="Lọc theo permission"
-                        options={permissionOptions}
-                        optionFilterProp="label"
-                        onChange={(val) => {
-                            setPermissionFilter(val || undefined);
-                            setPage(1);
-                        }}
-                        style={{ minWidth: 260 }}
-                    />
-                </Space>
-
-                <UserTable
-                    users={paginated?.items || []}
-                    isLoading={isLoading}
-                    page={paginated?.meta?.page ?? page}
-                    limit={paginated?.meta?.limit ?? limit}
-                    total={paginated?.meta?.total ?? 0}
-                    onPageChange={(p, l) => {
-                        setPage(p);
-                        setLimit(l);
-                    }}
-                    onEdit={openEditModal}
-                    onDelete={handleDelete}
-                    onManageAccess={(user) => {
-                        setAccessUser(user);
-                        setSelectedRolesInModal([]);
-                        setSelectedPermsInModal([]);
-                    }}
-                />
-            </Card>
-
+            {/* User Modal */}
             <Modal
                 key={editingUser?.id || 'create-user-modal'}
-                title={<span className="font-heading text-lg">{editingUser ? "Cập nhật user" : "Tạo mới user"}</span>}
+                title={editingUser ? "Edit User" : "Create New User"}
                 open={isModalOpen}
                 centered
                 onOk={handleSubmit}
                 onCancel={handleCloseModal}
-                okText={editingUser ? "Lưu" : "Tạo"}
-                cancelText="Hủy"
+                okText={editingUser ? "Save" : "Create"}
+                cancelText="Cancel"
                 destroyOnClose
                 confirmLoading={createMutation.isPending || updateMutation.isPending}
             >
@@ -355,11 +358,12 @@ export function UserPageView() {
                 />
             </Modal>
 
+            {/* Access Control Modal */}
             <Modal
                 key={accessUser?.id || 'access-modal'}
-                title={accessUser ? `Phân quyền: ${accessUser.email}` : ''}
+                title={accessUser ? `Manage Access: ${accessUser.email}` : ''}
                 open={!!accessUser}
-                width={680}
+                width={800}
                 centered
                 onCancel={() => {
                     setAccessUser(null);
@@ -368,7 +372,7 @@ export function UserPageView() {
                 }}
                 footer={
                     accessUser && (
-                        <Space className="w-full justify-end">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: tokens.spacing.sm }}>
                             <Button
                                 onClick={() => {
                                     setAccessUser(null);
@@ -376,7 +380,7 @@ export function UserPageView() {
                                     setDrawerPermModule(undefined);
                                 }}
                             >
-                                Hủy
+                                Cancel
                             </Button>
                             <Button
                                 type="primary"
@@ -388,9 +392,6 @@ export function UserPageView() {
                                 }
                                 onClick={async () => {
                                     if (!accessUser) return;
-
-                                    // Get current selections from state
-                                    // Note: Empty array is valid (user unchecked all)
                                     const selectedRoles = selectedRolesInModal;
                                     const selectedPerms = selectedPermsInModal;
 
@@ -405,55 +406,47 @@ export function UserPageView() {
                                     try {
                                         await Promise.all([
                                             ...rolesToAdd.map((slug: string) =>
-                                                assignRoleToUser.mutateAsync({
-                                                    userId: accessUser.id,
-                                                    roleSlug: slug,
-                                                }),
+                                                assignRoleToUser.mutateAsync({ userId: accessUser.id, roleSlug: slug }),
                                             ),
                                             ...rolesToRemove.map((slug: string) =>
-                                                removeRoleFromUser.mutateAsync({
-                                                    userId: accessUser.id,
-                                                    roleSlug: slug,
-                                                }),
+                                                removeRoleFromUser.mutateAsync({ userId: accessUser.id, roleSlug: slug }),
                                             ),
                                             ...permsToAdd.map((slug: string) =>
-                                                assignPermissionToUser.mutateAsync({
-                                                    userId: accessUser.id,
-                                                    permissionSlug: slug,
-                                                }),
+                                                assignPermissionToUser.mutateAsync({ userId: accessUser.id, permissionSlug: slug }),
                                             ),
                                             ...permsToRemove.map((slug: string) =>
-                                                removePermissionFromUser.mutateAsync({
-                                                    userId: accessUser.id,
-                                                    permissionSlug: slug,
-                                                }),
+                                                removePermissionFromUser.mutateAsync({ userId: accessUser.id, permissionSlug: slug }),
                                             ),
                                         ]);
-                                        message.success('Cập nhật phân quyền thành công');
+                                        message.success('Access rights updated successfully');
                                         setAccessUser(null);
                                         setDrawerPermSearch(undefined);
                                         setDrawerPermModule(undefined);
                                     } catch {
-                                        message.error('Không thể cập nhật phân quyền');
+                                        message.error('Failed to update access rights');
                                     }
                                 }}
                             >
-                                Lưu
+                                Save Changes
                             </Button>
-                        </Space>
+                        </div>
                     )
                 }
                 destroyOnClose
             >
                 {accessUser && (
-                    <div key={accessUser.id} className="space-y-6">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.xl }}>
                         {/* Roles Section */}
                         <div>
-                            <h3 className="font-semibold mb-3 text-base">Roles</h3>
+                            <h3 style={{
+                                fontSize: tokens.typography.fontSize.md,
+                                fontWeight: tokens.typography.fontWeight.semibold,
+                                marginBottom: tokens.spacing.md,
+                            }}>Roles</h3>
                             {userRoleAssignments !== undefined ? (
                                 <Checkbox.Group
                                     key={`roles-${accessUser.id}`}
-                                    className="flex flex-col gap-2"
+                                    style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}
                                     options={(roles || []).map((r) => ({
                                         label: `${r.name}${r.isSystem ? ' (system)' : ''}`,
                                         value: r.slug,
@@ -462,59 +455,79 @@ export function UserPageView() {
                                     onChange={(values) => setSelectedRolesInModal(values as string[])}
                                 />
                             ) : (
-                                <div className="text-sm text-gray-500">Đang tải...</div>
+                                <div style={{ color: tokens.neutral.textSecondary }}>Loading...</div>
                             )}
                         </div>
 
-                        {/* Divider */}
-                        <div className="border-t border-slate-200" />
+                        <div style={{ height: 1, backgroundColor: tokens.neutral.borderLight }} />
 
                         {/* Permissions Section */}
                         <div>
-                            <h3 className="font-semibold mb-3 text-base">Permissions trực tiếp</h3>
+                            <h3 style={{
+                                fontSize: tokens.typography.fontSize.md,
+                                fontWeight: tokens.typography.fontWeight.semibold,
+                                marginBottom: tokens.spacing.md,
+                            }}>Direct Permissions</h3>
 
                             {/* Search & Filter */}
-                            <div className="mb-3">
-                                <Space align="center" wrap className="w-full">
-                                    <Input.Search
-                                        allowClear
-                                        placeholder="Tìm quyền..."
-                                        onSearch={(val) => setDrawerPermSearch(val || undefined)}
-                                        style={{ flex: 1, minWidth: 200 }}
-                                    />
-                                    <Select
-                                        allowClear
-                                        placeholder="Lọc theo module"
-                                        options={drawerModuleOptions}
-                                        style={{ width: 180 }}
-                                        value={drawerPermModule}
-                                        onChange={(val) => setDrawerPermModule(val)}
-                                    />
-                                </Space>
+                            <div style={{ marginBottom: tokens.spacing.md, display: 'flex', gap: tokens.spacing.md }}>
+                                <Input.Search
+                                    allowClear
+                                    placeholder="Search permissions..."
+                                    onSearch={(val) => setDrawerPermSearch(val || undefined)}
+                                    style={{ flex: 1 }}
+                                />
+                                <Select
+                                    allowClear
+                                    placeholder="Filter by Module"
+                                    options={drawerModuleOptions}
+                                    style={{ width: 180 }}
+                                    value={drawerPermModule}
+                                    onChange={(val) => setDrawerPermModule(val)}
+                                />
                             </div>
 
                             {/* Permission List */}
                             {userPermissionAssignments !== undefined ? (
-                                <div className="border border-slate-200 rounded-md p-3 bg-slate-50/50">
+                                <div style={{
+                                    border: `1px solid ${tokens.neutral.borderLight}`,
+                                    borderRadius: tokens.component.borderRadius.base,
+                                    padding: tokens.spacing.md,
+                                    backgroundColor: tokens.neutral.background,
+                                    maxHeight: 400,
+                                    overflowY: 'auto',
+                                }}>
                                     <Checkbox.Group
                                         key={`permissions-${accessUser.id}`}
-                                        className="flex flex-col gap-3 max-h-72 overflow-y-auto pr-2"
+                                        style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}
                                         defaultValue={currentPermissionSlugs}
                                         onChange={(values) => setSelectedPermsInModal(values as string[])}
                                     >
                                         {Object.entries(drawerFilteredPermissionsByModule).map(
                                             ([moduleName, perms]) =>
                                                 perms && perms.length ? (
-                                                    <div key={moduleName} className="space-y-2">
-                                                        <div className="text-xs font-bold text-slate-600 uppercase tracking-wide sticky top-0 bg-slate-50 py-1 z-10">
+                                                    <div key={moduleName}>
+                                                        <div style={{
+                                                            fontSize: tokens.typography.fontSize.xs,
+                                                            fontWeight: tokens.typography.fontWeight.semibold,
+                                                            color: tokens.neutral.textSecondary,
+                                                            textTransform: 'uppercase',
+                                                            letterSpacing: '0.05em',
+                                                            marginBottom: tokens.spacing.sm,
+                                                            position: 'sticky',
+                                                            top: -12,
+                                                            backgroundColor: tokens.neutral.background,
+                                                            padding: '4px 0',
+                                                            zIndex: 1,
+                                                        }}>
                                                             {moduleName}
                                                         </div>
-                                                        <div className="flex flex-col gap-1.5 pl-3">
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm, paddingLeft: tokens.spacing.md }}>
                                                             {perms.map((p) => (
                                                                 <Checkbox key={p.id} value={p.action}>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-sm">{p.name}</span>
-                                                                        <span className="text-[11px] text-slate-400 font-mono">
+                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                        <span style={{ fontSize: tokens.typography.fontSize.sm }}>{p.name}</span>
+                                                                        <span style={{ fontSize: 11, color: tokens.neutral.textTertiary, fontFamily: tokens.typography.fontFamily.mono }}>
                                                                             {p.action}
                                                                         </span>
                                                                     </div>
@@ -527,12 +540,12 @@ export function UserPageView() {
                                     </Checkbox.Group>
                                 </div>
                             ) : (
-                                <div className="text-sm text-gray-500">Đang tải...</div>
+                                <div style={{ color: tokens.neutral.textSecondary }}>Loading...</div>
                             )}
                         </div>
                     </div>
                 )}
-            </Modal >
-        </div >
+            </Modal>
+        </div>
     );
 }

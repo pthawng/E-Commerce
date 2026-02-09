@@ -214,6 +214,17 @@ export default function PaymentListPage() {
                     loading={isLoading}
                     rowKey="id"
                     scroll={{ x: 1200 }}
+                    locale={{
+                        emptyText: (
+                            <div style={{ padding: '40px 0' }}>
+                                <DollarOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
+                                <div style={{ fontSize: 16, color: '#595959' }}>No payments found</div>
+                                <div style={{ fontSize: 14, color: '#8c8c8c', marginTop: 8 }}>
+                                    {filters.paymentMethod || filters.status ? 'Try adjusting your filters' : 'Payments will appear here once orders are placed'}
+                                </div>
+                            </div>
+                        ),
+                    }}
                     pagination={{
                         current: filters.page,
                         pageSize: filters.limit,

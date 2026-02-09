@@ -1,12 +1,6 @@
 import { useState } from 'react';
-import { Button, Modal, Space, Typography, message, Descriptions, Tag, Image, Tabs } from 'antd';
-import {
-    AppstoreOutlined,
-    ReloadOutlined,
-    PlusOutlined,
-    SearchOutlined,
-    DeleteOutlined,
-} from '@ant-design/icons';
+import { Button, Modal, Input, message, Descriptions, Tag, Image, Tabs } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import { ProductTable } from '../product-table';
 import { ProductForm } from '../product-form';
 import { VariantTable } from '../variant-table';
@@ -14,8 +8,10 @@ import type { Product } from '@shared';
 import { useProductStore } from '../../hooks/store';
 import { useProducts, useCreateProduct, useUpdateProduct, useProduct, useDeleteProductMedia, useSetProductThumbnail } from '../../hooks/hooks';
 import type { CreateProductDTO } from '../../services/create-product';
+import { PageHeader, FilterBar } from '@/shared/ui';
+import { contentContainerStyle, cardStyle, headingStyles } from '@/ui/styles';
 
-const { Title, Text } = Typography;
+const { Search } = Input;
 
 export function ProductPageView() {
     const { filters, setSearch } = useProductStore();
@@ -28,7 +24,7 @@ export function ProductPageView() {
     const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
     // Queries/Mutations
-    const { refetch, isFetching } = useProducts(filters);
+    const { data, refetch, isFetching } = useProducts(filters);
     const createProduct = useCreateProduct();
     const updateProduct = useUpdateProduct();
     const deleteMedia = useDeleteProductMedia();
@@ -38,17 +34,17 @@ export function ProductPageView() {
     const { data: selectedProduct, isLoading: isLoadingProduct } = useProduct(selectedProductId || '');
 
     // Handlers
-    const handleSearch = () => {
-        setSearch(searchValue.trim());
+    const handleSearch = (value: string) => {
+        setSearch(value.trim());
     };
 
     const handleCreate = async (values: { data: CreateProductDTO; images: File[] }) => {
         try {
             await createProduct.mutateAsync(values);
-            message.success('Tạo sản phẩm thành công');
+            message.success('Product created successfully');
             setIsCreateOpen(false);
         } catch (err) {
-            message.error(err instanceof Error ? err.message : 'Tạo sản phẩm thất bại');
+            message.error(err instanceof Error ? err.message : 'Failed to create product');
         }
     };
 
@@ -59,11 +55,11 @@ export function ProductPageView() {
                 id: selectedProductId,
                 ...values,
             });
-            message.success('Cập nhật sản phẩm thành công');
+            message.success('Product updated successfully');
             setIsEditOpen(false);
             setSelectedProductId(null);
         } catch (err) {
-            message.error(err instanceof Error ? err.message : 'Cập nhật sản phẩm thất bại');
+            message.error(err instanceof Error ? err.message : 'Failed to update product');
         }
     };
 
@@ -80,87 +76,68 @@ export function ProductPageView() {
     const handleDeleteMedia = async (productId: string, mediaId: string) => {
         try {
             await deleteMedia.mutateAsync({ productId, mediaId });
-            message.success('Đã xóa ảnh');
+            message.success('Image deleted');
         } catch {
-            message.error('Xóa ảnh thất bại');
+            message.error('Failed to delete image');
         }
     };
 
     const handleSetThumbnail = async (productId: string, mediaId: string) => {
         try {
             await setThumbnail.mutateAsync({ productId, mediaId });
-            message.success('Đã đặt làm ảnh đại diện');
+            message.success('Thumbnail set');
         } catch {
-            message.error('Đặt ảnh đại diện thất bại');
+            message.error('Failed to set thumbnail');
         }
     };
 
     return (
-        <div className="space-y-8 pb-10">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/60 p-8 rounded-3xl border border-[#D4AF37]/20 backdrop-blur-xl shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-linear-to-br from-[#6D28D9]/5 to-[#D4AF37]/5 rounded-bl-full -z-10"></div>
-                <div>
-                    <Title level={2} className="mb-1 text-[#1F2937] font-heading font-bold tracking-tight">
-                        <Space>
-                            <AppstoreOutlined className="text-[#D4AF37]" />
-                            Sản phẩm
-                        </Space>
-                    </Title>
-                    <Text className="text-slate-500 text-base">Quản lý kho hàng và danh sách sản phẩm cao cấp</Text>
-                </div>
-                <Space size="middle">
-                    <Button
-                        icon={<ReloadOutlined />}
-                        onClick={() => refetch()}
-                        disabled={isFetching}
-                        className="bg-white border-[#D4AF37]/30 text-slate-600 hover:bg-[#FAF8F5] hover:text-[#6D28D9] h-11 px-5 rounded-xl shadow-sm"
-                    >
-                        Làm mới
-                    </Button>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => setIsCreateOpen(true)}
-                        className="bg-linear-to-r from-[#6D28D9] to-[#4C1D95] border-none text-white hover:shadow-lg hover:shadow-violet-200 font-medium h-11 px-7 rounded-xl transition-all hover:scale-105"
-                    >
-                        Tạo sản phẩm
-                    </Button>
-                </Space>
-            </div>
+        <div>
+            {/* Page Header */}
+            <PageHeader
+                title="Products"
+                subtitle={`${data?.meta?.total || 0} products`}
+                actions={
+                    <>
+                        <Button size="small" onClick={() => refetch()} disabled={isFetching}>
+                            Refresh
+                        </Button>
+                        <Button type="primary" size="small" onClick={() => setIsCreateOpen(true)}>
+                            Create Product
+                        </Button>
+                    </>
+                }
+            />
 
-            {/* Control Bar */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1 group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <SearchOutlined className="text-[#D4AF37] group-focus-within:text-[#6D28D9] transition-colors text-lg" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm theo tên hoặc mã slug..."
-                        className="block w-full pl-12 pr-4 py-3.5 border border-[#D4AF37]/20 rounded-2xl bg-white text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9] outline-none transition-all shadow-sm group-hover:shadow-md"
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    />
-                    <div className="absolute inset-y-0 right-2 flex items-center">
-                        <Button type="text" onClick={handleSearch} className="text-[#6D28D9]! hover:bg-[#6D28D9]/5! font-medium">Tìm kiếm</Button>
-                    </div>
-                </div>
-            </div>
+            {/* Filters */}
+            <FilterBar>
+                <Search
+                    placeholder="Search products..."
+                    allowClear
+                    onSearch={handleSearch}
+                    style={{ width: 280 }}
+                    size="middle"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                />
+            </FilterBar>
 
             {/* Content */}
-            <ProductTable onEdit={openEditModal} onView={openViewModal} />
+            <div style={contentContainerStyle}>
+                <div style={cardStyle}>
+                    <ProductTable onEdit={openEditModal} onView={openViewModal} />
+                </div>
+            </div>
 
-            {/* Modals - Kept here for simplicity in FSD container */}
+            {/* Create Modal */}
             <Modal
-                title={<span className="text-xl font-heading font-bold text-[#1F2937]">Tạo mới sản phẩm</span>}
+                title="Create Product"
                 open={isCreateOpen}
                 centered
                 onCancel={() => setIsCreateOpen(false)}
                 footer={null}
                 width={900}
-                destroyOnHidden
+                destroyOnClose
             >
                 <ProductForm
                     onSubmit={handleCreate}
@@ -169,8 +146,9 @@ export function ProductPageView() {
                 />
             </Modal>
 
+            {/* Edit Modal */}
             <Modal
-                title={<span className="text-xl font-heading font-bold text-[#1F2937]">Chỉnh sửa sản phẩm</span>}
+                title="Edit Product"
                 open={isEditOpen}
                 centered
                 onCancel={() => {
@@ -179,7 +157,7 @@ export function ProductPageView() {
                 }}
                 footer={null}
                 width={900}
-                destroyOnHidden
+                destroyOnClose
             >
                 {selectedProduct && (
                     <ProductForm
@@ -194,8 +172,9 @@ export function ProductPageView() {
                 )}
             </Modal>
 
+            {/* View Modal */}
             <Modal
-                title={<span className="text-xl font-heading font-bold text-[#1F2937]">Chi tiết sản phẩm</span>}
+                title="Product Details"
                 open={isViewOpen}
                 centered
                 onCancel={() => {
@@ -204,55 +183,57 @@ export function ProductPageView() {
                 }}
                 footer={null}
                 width={960}
-                destroyOnHidden
+                destroyOnClose
             >
                 {isLoadingProduct ? (
-                    <div className="p-12 text-center text-slate-400">Đang tải...</div>
+                    <div style={{ padding: '60px 0', textAlign: 'center', color: '#999' }}>Loading...</div>
                 ) : selectedProduct ? (
                     <Tabs
                         defaultActiveKey="general"
                         items={[
                             {
                                 key: 'general',
-                                label: 'Thông tin chung',
+                                label: 'General Info',
                                 children: (
-                                    <div className="space-y-8">
+                                    <div>
                                         <Descriptions
                                             bordered
                                             column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
-                                            className="bg-white"
+                                            labelStyle={{
+                                                fontSize: 13,
+                                                fontWeight: 500,
+                                                color: '#666',
+                                            }}
+                                            contentStyle={{
+                                                fontSize: 14,
+                                                color: '#1A1A1A',
+                                            }}
                                         >
-                                            <Descriptions.Item label="Tên (VI)">
-                                                <span className="text-[#1F2937] font-medium font-serif text-lg">
-                                                    {(selectedProduct.name as Record<string, string>)?.vi ||
-                                                        'N/A'}
-                                                </span>
+                                            <Descriptions.Item label="Name (VI)">
+                                                {(selectedProduct.name as Record<string, string>)?.vi || 'N/A'}
                                             </Descriptions.Item>
-                                            <Descriptions.Item label="Tên (EN)">
-                                                <span className="text-slate-600 font-medium font-serif text-lg">
-                                                    {(selectedProduct.name as Record<string, string>)?.en ||
-                                                        'N/A'}
-                                                </span>
+                                            <Descriptions.Item label="Name (EN)">
+                                                {(selectedProduct.name as Record<string, string>)?.en || 'N/A'}
                                             </Descriptions.Item>
                                             <Descriptions.Item label="Slug">
-                                                <code className="text-[#6D28D9] bg-violet-50 px-2 py-1 rounded">
+                                                <code style={{
+                                                    fontSize: 13,
+                                                    color: '#666',
+                                                    backgroundColor: '#F8F8F8',
+                                                    padding: '2px 6px',
+                                                    borderRadius: 3,
+                                                }}>
                                                     {selectedProduct.slug}
                                                 </code>
                                             </Descriptions.Item>
-                                            <Descriptions.Item label="Trạng thái">
-                                                <Tag
-                                                    color={selectedProduct.isActive ? 'success' : 'error'}
-                                                    className="px-3 py-1 rounded-full font-bold"
-                                                >
-                                                    {selectedProduct.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                            <Descriptions.Item label="Status">
+                                                <Tag color={selectedProduct.isActive ? 'success' : 'default'}>
+                                                    {selectedProduct.isActive ? 'Active' : 'Inactive'}
                                                 </Tag>
                                             </Descriptions.Item>
-                                            <Descriptions.Item label="Nổi bật">
-                                                <Tag
-                                                    color={selectedProduct.isFeatured ? 'gold' : 'default'}
-                                                    className="px-3 py-1 rounded-full font-bold"
-                                                >
-                                                    {selectedProduct.isFeatured ? 'FEATURED' : 'NORMAL'}
+                                            <Descriptions.Item label="Featured">
+                                                <Tag color={selectedProduct.isFeatured ? 'warning' : 'default'}>
+                                                    {selectedProduct.isFeatured ? 'Featured' : 'Normal'}
                                                 </Tag>
                                             </Descriptions.Item>
                                         </Descriptions>
@@ -261,82 +242,103 @@ export function ProductPageView() {
                             },
                             {
                                 key: 'variants',
-                                label: 'Biến thể',
+                                label: 'Variants',
                                 children: <VariantTable product={selectedProduct as Product} />,
                             },
                             {
                                 key: 'media',
-                                label: 'Hình ảnh',
+                                label: 'Images',
                                 children:
                                     selectedProduct.media && selectedProduct.media.length > 0 ? (
-                                        <div className="bg-[#FAF8F5] p-6 rounded-2xl border border-[#D4AF37]/10">
-                                            <Title
-                                                level={5}
-                                                className="text-[#1F2937] font-heading mb-4 border-b border-[#D4AF37]/10 pb-2 inline-block"
-                                            >
-                                                Thư viện ảnh
-                                            </Title>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                        <div style={{
+                                            padding: 16,
+                                            backgroundColor: '#FAFAFA',
+                                            borderRadius: 4,
+                                        }}>
+                                            <h4 style={{
+                                                ...headingStyles.cardTitle,
+                                                marginBottom: 16,
+                                            }}>
+                                                Image Gallery
+                                            </h4>
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                                                gap: 16,
+                                            }}>
                                                 {selectedProduct.media.map((media) => (
                                                     <div
                                                         key={media.id}
-                                                        className="group relative rounded-xl overflow-hidden border border-white shadow-sm hover:shadow-lg transition-all duration-300"
+                                                        style={{
+                                                            position: 'relative',
+                                                            borderRadius: 4,
+                                                            overflow: 'hidden',
+                                                            border: '1px solid #F0F0F0',
+                                                            backgroundColor: '#FFFFFF',
+                                                        }}
                                                     >
-                                                        <div className="aspect-square bg-white flex items-center justify-center p-2">
+                                                        <div style={{
+                                                            aspectRatio: '1',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            padding: 8,
+                                                        }}>
                                                             <Image
                                                                 src={media.url}
                                                                 alt="Product"
-                                                                className="w-full! h-full! object-contain!"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    objectFit: 'contain',
+                                                                }}
                                                             />
                                                         </div>
-
-                                                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center gap-3">
+                                                        <div style={{
+                                                            padding: 8,
+                                                            borderTop: '1px solid #F0F0F0',
+                                                            display: 'flex',
+                                                            gap: 8,
+                                                            justifyContent: 'space-between',
+                                                        }}>
                                                             {media.isThumbnail ? (
-                                                                <Tag className="m-0 px-3 py-1 text-xs font-bold shadow-lg ring-2 ring-white/20">
-                                                                    THUMBNAIL
+                                                                <Tag style={{ margin: 0, fontSize: 11 }}>
+                                                                    Thumbnail
                                                                 </Tag>
                                                             ) : (
                                                                 <Button
                                                                     size="small"
-                                                                    className="bg-[#D4AF37] text-white border-none font-bold shadow-lg"
-                                                                    onClick={() =>
-                                                                        handleSetThumbnail(
-                                                                            selectedProduct.id,
-                                                                            media.id,
-                                                                        )
-                                                                    }
+                                                                    onClick={() => handleSetThumbnail(selectedProduct.id, media.id)}
                                                                     loading={setThumbnail.isPending}
+                                                                    style={{ fontSize: 12 }}
                                                                 >
-                                                                    Set Thumbnail
+                                                                    Set
                                                                 </Button>
                                                             )}
                                                             <Button
                                                                 size="small"
-                                                                className="bg-white text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200"
+                                                                danger
                                                                 icon={<DeleteOutlined />}
-                                                                onClick={() =>
-                                                                    handleDeleteMedia(
-                                                                        selectedProduct.id,
-                                                                        media.id,
-                                                                    )
-                                                                }
+                                                                onClick={() => handleDeleteMedia(selectedProduct.id, media.id)}
                                                                 loading={deleteMedia.isPending}
-                                                            >
-                                                                Xóa
-                                                            </Button>
+                                                            />
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="p-6 text-slate-400">Chưa có hình ảnh</div>
+                                        <div style={{ padding: '60px 0', textAlign: 'center', color: '#999' }}>
+                                            No images
+                                        </div>
                                     ),
                             },
                         ]}
                     />
                 ) : (
-                    <div>Không tìm thấy sản phẩm</div>
+                    <div style={{ padding: '60px 0', textAlign: 'center', color: '#999' }}>
+                        Product not found
+                    </div>
                 )}
             </Modal>
         </div>

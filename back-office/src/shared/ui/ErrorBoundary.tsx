@@ -1,79 +1,107 @@
-import { Component } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 import { Alert, Button } from 'antd';
+import * as tokens from '@/ui/design-tokens';
 
-interface Props {
+interface ErrorBoundaryProps {
     children: ReactNode;
+    fallback?: ReactNode;
 }
 
-interface State {
+interface ErrorBoundaryState {
     hasError: boolean;
-    error: Error | null;
-    errorInfo: ErrorInfo | null;
+    error?: Error;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-    public state: State = {
-        hasError: false,
-        error: null,
-        errorInfo: null,
-    };
-
-    public static getDerivedStateFromError(error: Error): State {
-        return { hasError: true, error, errorInfo: null };
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+    constructor(props: ErrorBoundaryProps) {
+        super(props);
+        this.state = { hasError: false };
     }
 
-    public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error: Error, errorInfo: any) {
         console.error('ErrorBoundary caught an error:', error, errorInfo);
-        this.setState({
-            error,
-            errorInfo,
-        });
     }
 
-    private handleReset = () => {
-        this.setState({
-            hasError: false,
-            error: null,
-            errorInfo: null,
-        });
-    };
-
-    public render() {
+    render() {
         if (this.state.hasError) {
+            if (this.props.fallback) {
+                return this.props.fallback;
+            }
+
             return (
-                <div className="min-h-screen flex items-center justify-center p-4">
-                    <div className="max-w-2xl w-full">
-                        <Alert
-                            message="Something went wrong"
-                            description={
-                                <div className="space-y-4">
-                                    <p className="text-slate-600">
-                                        {this.state.error?.toString()}
-                                    </p>
-                                    {this.state.errorInfo && (
-                                        <details className="text-xs">
-                                            <summary className="cursor-pointer text-slate-500 hover:text-slate-700">
-                                                Stack trace
-                                            </summary>
-                                            <pre className="mt-2 p-4 bg-slate-50 rounded overflow-auto">
-                                                {this.state.errorInfo.componentStack}
-                                            </pre>
-                                        </details>
-                                    )}
-                                    <Button type="primary" onClick={this.handleReset}>
-                                        Try again
-                                    </Button>
-                                </div>
-                            }
-                            type="error"
-                            showIcon
-                        />
-                    </div>
+                <div style={{
+                    padding: tokens.spacing.xxl,
+                    maxWidth: 600,
+                    margin: '0 auto',
+                }}>
+                    <Alert
+                        message="Something went wrong"
+                        description={
+                            <div>
+                                <p style={{ marginBottom: tokens.spacing.md }}>
+                                    {this.state.error?.message || 'An unexpected error occurred'}
+                                </p>
+                                <Button
+                                    size="small"
+                                    onClick={() => window.location.reload()}
+                                >
+                                    Reload Page
+                                </Button>
+                            </div>
+                        }
+                        type="error"
+                        showIcon
+                        style={{
+                            borderRadius: 4,
+                            border: '1px solid #F5EDED',
+                            backgroundColor: '#FEF5F5',
+                        }}
+                    />
                 </div>
             );
         }
 
         return this.props.children;
     }
+}
+
+interface ErrorMessageProps {
+    title?: string;
+    message: string;
+    onRetry?: () => void;
+}
+
+export function ErrorMessage({ title = 'Error', message, onRetry }: ErrorMessageProps) {
+    return (
+        <div style={{
+            padding: tokens.spacing.xxl,
+        }}>
+            <Alert
+                message={title}
+                description={
+                    <div>
+                        <p style={{ marginBottom: onRetry ? tokens.spacing.md : 0 }}>
+                            {message}
+                        </p>
+                        {onRetry && (
+                            <Button size="small" onClick={onRetry}>
+                                Try Again
+                            </Button>
+                        )}
+                    </div>
+                }
+                type="error"
+                showIcon
+                style={{
+                    borderRadius: 4,
+                    border: '1px solid #F5EDED',
+                    backgroundColor: '#FEF5F5',
+                }}
+            />
+        </div>
+    );
 }

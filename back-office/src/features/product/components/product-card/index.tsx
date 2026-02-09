@@ -37,89 +37,150 @@ export function ProductCard({
         product.media?.[0]?.url;
 
     return (
-        <div className="group relative bg-white rounded-xl border border-[#D4AF37]/30 transition-all duration-300 overflow-hidden hover:shadow-[0_10px_40px_-5px_rgba(109,40,217,0.15)] h-full flex flex-col hover:-translate-y-1">
+        <div style={{
+            position: 'relative',
+            backgroundColor: '#FFFFFF',
+            borderRadius: 4,
+            border: '1px solid #E5E5E5',
+            transition: 'all 0.15s ease',
+            overflow: 'hidden',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+        }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                e.currentTarget.style.borderColor = '#D0D0D0';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.borderColor = '#E5E5E5';
+            }}
+        >
             {/* Thumbnail Area */}
-            <div className="relative aspect-4/3 w-full bg-[#FAF8F5] overflow-hidden p-4 flex items-center justify-center">
+            <div style={{
+                position: 'relative',
+                aspectRatio: '4/3',
+                width: '100%',
+                backgroundColor: '#FAFAFA',
+                overflow: 'hidden',
+                padding: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}>
                 {thumbnailUrl ? (
                     <img
                         src={thumbnailUrl}
                         alt={displayName}
-                        className="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-105"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                        }}
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[#D4AF37]/40">
-                        <span className="text-5xl font-serif font-bold italic">{displayName[0]}</span>
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#CCC',
+                    }}>
+                        <span style={{ fontSize: 48, fontWeight: 600 }}>{displayName[0]}</span>
                     </div>
                 )}
 
-                {/* Status Badges - Floating */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    {product.isFeatured && (
-                        <span className="bg-linear-to-r from-[#D4AF37] to-[#B76E79] text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg tracking-wider">
-                            FEATURED
-                        </span>
-                    )}
-                    <span
-                        className={`text-[10px] font-bold px-3 py-1 rounded-full shadow-md backdrop-blur-md border ${product.isActive
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                            : 'bg-rose-50 border-rose-200 text-rose-700'
-                            }`}
-                    >
-                        {product.isActive ? 'ACTIVE' : 'INACTIVE'}
+                {/* Status Badge */}
+                <div style={{
+                    position: 'absolute',
+                    top: 8,
+                    left: 8,
+                }}>
+                    <span style={{
+                        fontSize: 11,
+                        fontWeight: 500,
+                        padding: '3px 10px',
+                        borderRadius: 3,
+                        backgroundColor: product.isActive ? '#EDF5ED' : '#F5EDED',
+                        color: product.isActive ? '#5A7A5A' : '#8C5A5A',
+                        border: `1px solid ${product.isActive ? '#D5E5D5' : '#E6D5D5'}`,
+                    }}>
+                        {product.isActive ? 'Active' : 'Inactive'}
                     </span>
                 </div>
 
-                {/* Hover Overlay with Actions */}
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                    <button
-                        onClick={() => onView(product.id)}
-                        className="h-10 w-10 rounded-full bg-white text-[#6D28D9] border border-[#6D28D9]/20 hover:bg-[#6D28D9] hover:text-white transition-all shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75 flex items-center justify-center"
-                        title="Xem chi tiết"
-                    >
-                        <EyeOutlined />
-                    </button>
-
-                    <button
-                        onClick={() => onEdit(product.id)}
-                        className="h-10 w-10 rounded-full bg-white text-[#D4AF37] border border-[#D4AF37]/20 hover:bg-[#D4AF37] hover:text-white transition-all shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-100 flex items-center justify-center"
-                        title="Chỉnh sửa"
-                    >
-                        <EditOutlined />
-                    </button>
-
-                    <button
-                        onClick={() => onToggleActive(product.id, product.isActive)}
-                        className={`h-10 w-10 rounded-full bg-white border transition-all shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-150 flex items-center justify-center ${product.isActive
-                            ? 'text-rose-500 border-rose-200 hover:bg-rose-500 hover:text-white'
-                            : 'text-emerald-500 border-emerald-200 hover:bg-emerald-500 hover:text-white'
-                            }`}
-                        title={product.isActive ? 'Tắt kích hoạt' : 'Kích hoạt'}
-                    >
-                        {product.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
-                    </button>
-
-                    <button
-                        onClick={() => onDelete(product.id)}
-                        className="h-10 w-10 rounded-full bg-white text-slate-400 border border-slate-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-200 flex items-center justify-center"
-                        title="Xóa"
-                    >
-                        <DeleteOutlined />
-                    </button>
-                </div>
+                {product.isFeatured && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                    }}>
+                        <span style={{
+                            fontSize: 11,
+                            fontWeight: 500,
+                            padding: '3px 10px',
+                            borderRadius: 3,
+                            backgroundColor: '#F5F0E8',
+                            color: '#8B7355',
+                            border: '1px solid #E8DCC8',
+                        }}>
+                            Featured
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Content Area */}
-            <div className="p-5 flex-1 flex flex-col group-hover:bg-[#FAF8F5]/30 transition-colors">
-                <div className="mb-2">
-                    <p className="text-[#D4AF37] text-[10px] font-bold tracking-widest uppercase mb-1">Luxury Item</p>
-                    <h3 className="text-[#1F2937] font-serif font-bold text-lg leading-tight line-clamp-2" title={displayName}>
+            <div style={{
+                padding: 16,
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                borderTop: '1px solid #F0F0F0',
+            }}>
+                <div style={{ marginBottom: 12 }}>
+                    <h3 style={{
+                        color: '#1A1A1A',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        margin: 0,
+                        lineHeight: 1.4,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                    }} title={displayName}>
                         {displayName}
                     </h3>
                 </div>
 
-                <div className="mt-auto pt-3 border-t border-[#D4AF37]/10 flex items-center justify-between">
-                    <p className="text-slate-400 text-xs font-mono truncate max-w-[100px] opacity-70">#{product.slug}</p>
-                    <div className="text-[#6D28D9] font-bold font-serif text-lg">
+                <div style={{
+                    marginTop: 'auto',
+                    paddingTop: 12,
+                    borderTop: '1px solid #F5F5F5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                }}>
+                    <p style={{
+                        color: '#999',
+                        fontSize: 12,
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: 100,
+                    }}>
+                        {product.slug}
+                    </p>
+                    <div style={{
+                        color: '#1A1A1A',
+                        fontWeight: 600,
+                        fontSize: 14,
+                    }}>
                         {minPrice ? (
                             maxPrice && minPrice !== maxPrice ? (
                                 <span>{formatCurrency(minPrice)} - {formatCurrency(maxPrice)}</span>
@@ -127,9 +188,122 @@ export function ProductCard({
                                 <span>{formatCurrency(minPrice)}</span>
                             )
                         ) : (
-                            <span className="text-slate-400 italic text-sm font-sans font-normal">Liên hệ</span>
+                            <span style={{ color: '#999', fontStyle: 'italic', fontSize: 13, fontWeight: 400 }}>Contact</span>
                         )}
                     </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{
+                    marginTop: 12,
+                    display: 'flex',
+                    gap: 8,
+                }}>
+                    <button
+                        onClick={() => onView(product.id)}
+                        style={{
+                            flex: 1,
+                            height: 28,
+                            fontSize: 12,
+                            border: '1px solid #E5E5E5',
+                            borderRadius: 3,
+                            backgroundColor: '#FFFFFF',
+                            color: '#666',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FAFAFA';
+                            e.currentTarget.style.borderColor = '#D0D0D0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                            e.currentTarget.style.borderColor = '#E5E5E5';
+                        }}
+                        title="View"
+                    >
+                        <EyeOutlined />
+                    </button>
+
+                    <button
+                        onClick={() => onEdit(product.id)}
+                        style={{
+                            flex: 1,
+                            height: 28,
+                            fontSize: 12,
+                            border: '1px solid #E5E5E5',
+                            borderRadius: 3,
+                            backgroundColor: '#FFFFFF',
+                            color: '#666',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FAFAFA';
+                            e.currentTarget.style.borderColor = '#D0D0D0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                            e.currentTarget.style.borderColor = '#E5E5E5';
+                        }}
+                        title="Edit"
+                    >
+                        <EditOutlined />
+                    </button>
+
+                    <button
+                        onClick={() => onToggleActive(product.id, product.isActive)}
+                        style={{
+                            flex: 1,
+                            height: 28,
+                            fontSize: 12,
+                            border: '1px solid #E5E5E5',
+                            borderRadius: 3,
+                            backgroundColor: '#FFFFFF',
+                            color: '#666',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FAFAFA';
+                            e.currentTarget.style.borderColor = '#D0D0D0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                            e.currentTarget.style.borderColor = '#E5E5E5';
+                        }}
+                        title={product.isActive ? 'Deactivate' : 'Activate'}
+                    >
+                        {product.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
+                    </button>
+
+                    <button
+                        onClick={() => onDelete(product.id)}
+                        style={{
+                            height: 28,
+                            width: 28,
+                            fontSize: 12,
+                            border: '1px solid #E5E5E5',
+                            borderRadius: 3,
+                            backgroundColor: '#FFFFFF',
+                            color: '#999',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FEF5F5';
+                            e.currentTarget.style.borderColor = '#F5EDED';
+                            e.currentTarget.style.color = '#A85C5C';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                            e.currentTarget.style.borderColor = '#E5E5E5';
+                            e.currentTarget.style.color = '#999';
+                        }}
+                        title="Delete"
+                    >
+                        <DeleteOutlined />
+                    </button>
                 </div>
             </div>
         </div>

@@ -2,12 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import {
     Alert,
     Button,
-    Card,
     Form,
     Modal,
-    Space,
     Switch,
-    Typography,
     message,
 } from 'antd';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -17,8 +14,9 @@ import { CategoryDetail } from '../category-detail';
 import { useCategories, useCategory } from '../../services/queries';
 import { useCreateCategory, useUpdateCategory, useDeleteCategory } from '../../services/mutations';
 import type { Category } from '@shared';
-
-const { Title, Text } = Typography;
+import { PageHeader } from '@/shared/ui';
+import * as tokens from '@/ui/design-tokens';
+import { cardStyle, contentContainerStyle } from '@/ui/styles';
 
 export function CategoryPageView() {
     const [includeInactive, setIncludeInactive] = useState(false);
@@ -55,13 +53,13 @@ export function CategoryPageView() {
         async (id: string) => {
             try {
                 await deleteCategory.mutateAsync(id);
-                message.success('Đã xóa danh mục');
+                message.success('Category deleted');
             } catch (err: unknown) {
                 const errorMessage =
                     (err as { response?: { data?: { message?: string }; message?: string }; message?: string })
                         ?.response?.data?.message ||
                     (err as { message?: string })?.message ||
-                    'Xóa danh mục thất bại';
+                    'Failed to delete category';
                 message.error(errorMessage);
             }
         },
@@ -91,7 +89,7 @@ export function CategoryPageView() {
                 order: values.order ?? 0,
                 isActive: values.isActive ?? true,
             });
-            message.success('Tạo danh mục thành công');
+            message.success('Category created successfully');
             setIsCreateOpen(false);
             form.resetFields();
         } catch (err: unknown) {
@@ -99,7 +97,7 @@ export function CategoryPageView() {
                 (err as { response?: { data?: { message?: string }; message?: string }; message?: string })
                     ?.response?.data?.message ||
                 (err as { message?: string })?.message ||
-                'Tạo danh mục thất bại';
+                'Failed to create category';
             message.error(errorMessage);
         }
     };
@@ -121,7 +119,7 @@ export function CategoryPageView() {
                     isActive: values.isActive ?? true,
                 },
             });
-            message.success('Cập nhật danh mục thành công');
+            message.success('Category updated successfully');
             setIsEditOpen(false);
             setSelectedCategoryId(null);
             form.resetFields();
@@ -130,62 +128,66 @@ export function CategoryPageView() {
                 (err as { response?: { data?: { message?: string }; message?: string }; message?: string })
                     ?.response?.data?.message ||
                 (err as { message?: string })?.message ||
-                'Cập nhật danh mục thất bại';
+                'Failed to update category';
             message.error(errorMessage);
         }
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                    <Title level={3} className="mb-1! font-heading text-slate-800">
-                        Danh mục
-                    </Title>
-                    <Text type="secondary">Quản lý phân cấp danh mục sản phẩm</Text>
-                </div>
-                <Space>
-                    <Switch
-                        checked={includeInactive}
-                        onChange={setIncludeInactive}
-                        checkedChildren="Hiện inactive"
-                        unCheckedChildren="Ẩn inactive"
-                    />
-                    <Button icon={<ReloadOutlined />} onClick={() => refetch()} disabled={isLoading}>
-                        Làm mới
-                    </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)} className="bg-linear-to-r from-amber-500 to-amber-600 border-none">
-                        Tạo danh mục
-                    </Button>
-                </Space>
-            </div>
+        <div>
+            <PageHeader
+                title="Category Management"
+                subtitle="Manage product categories and hierarchy"
+                actions={
+                    <>
+                        <Switch
+                            checked={includeInactive}
+                            onChange={setIncludeInactive}
+                            checkedChildren="Show Inactive"
+                            unCheckedChildren="Hide Inactive"
+                        />
+                        <Button icon={<ReloadOutlined />} onClick={() => refetch()} disabled={isLoading}>
+                            Refresh
+                        </Button>
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)}>
+                            Add Category
+                        </Button>
+                    </>
+                }
+            />
 
             {error && (
-                <Alert
-                    type="error"
-                    message="Không thể tải danh mục"
-                    description={error instanceof Error ? error.message : 'Unknown error'}
-                    className="rounded-xl border-red-200 bg-red-50 text-red-800"
-                />
+                <div style={{ padding: `0 ${tokens.spacing.xxl}px`, marginBottom: tokens.spacing.lg }}>
+                    <Alert
+                        type="error"
+                        message="Error Loading Categories"
+                        description={error instanceof Error ? error.message : 'Unknown error'}
+                        showIcon
+                    />
+                </div>
             )}
 
-            <Card className="shadow-sm rounded-xl border-slate-100">
-                {isLoading ? (
-                    <div className="p-8 text-center text-slate-400">Đang tải dữ liệu...</div>
-                ) : (
-                    <CategoryTree
-                        categories={categories || []}
-                        onView={openViewModal}
-                        onEdit={openEditModal}
-                        onDelete={handleDelete}
-                        isDeleting={deleteCategory.isPending}
-                    />
-                )}
-            </Card>
+            <div style={contentContainerStyle}>
+                <div style={cardStyle}>
+                    {isLoading ? (
+                        <div style={{ padding: tokens.spacing.xl, textAlign: 'center', color: tokens.neutral.textTertiary }}>
+                            Loading categories...
+                        </div>
+                    ) : (
+                        <CategoryTree
+                            categories={categories || []}
+                            onView={openViewModal}
+                            onEdit={openEditModal}
+                            onDelete={handleDelete}
+                            isDeleting={deleteCategory.isPending}
+                        />
+                    )}
+                </div>
+            </div>
 
             {/* Create Modal */}
             <Modal
-                title={<span className="font-heading text-lg">Tạo danh mục mới</span>}
+                title="Create Category"
                 open={isCreateOpen}
                 centered
                 onCancel={() => {
@@ -193,7 +195,7 @@ export function CategoryPageView() {
                     form.resetFields();
                 }}
                 onOk={handleCreate}
-                okText="Tạo"
+                okText="Create"
                 confirmLoading={createCategory.isPending}
                 destroyOnClose
                 width={600}
@@ -203,7 +205,7 @@ export function CategoryPageView() {
 
             {/* Edit Modal */}
             <Modal
-                title={<span className="font-heading text-lg">Chỉnh sửa danh mục</span>}
+                title="Edit Category"
                 open={isEditOpen}
                 centered
                 onCancel={() => {
@@ -212,7 +214,7 @@ export function CategoryPageView() {
                     form.resetFields();
                 }}
                 onOk={handleEdit}
-                okText="Cập nhật"
+                okText="Update"
                 confirmLoading={updateCategory.isPending}
                 destroyOnClose
                 width={600}
@@ -237,7 +239,7 @@ export function CategoryPageView() {
 
             {/* View Modal */}
             <Modal
-                title={<span className="font-heading text-lg">Chi tiết danh mục</span>}
+                title="Category Details"
                 open={isViewOpen}
                 centered
                 onCancel={() => {
@@ -248,14 +250,15 @@ export function CategoryPageView() {
                 destroyOnClose
             >
                 {isLoadingCategory ? (
-                    <div className="p-4 text-center">Đang tải...</div>
+                    <div style={{ padding: tokens.spacing.md, textAlign: 'center' }}>Loading...</div>
                 ) : selectedCategory ? (
                     <CategoryDetail category={selectedCategory} allCategories={flatCategories} />
                 ) : (
-                    <div className="p-4 text-center text-red-500">Không tìm thấy danh mục</div>
+                    <div style={{ padding: tokens.spacing.md, textAlign: 'center', color: tokens.action.error }}>
+                        Category not found
+                    </div>
                 )}
             </Modal>
-            {/* For simplicity in this step, I will simplify and assume form instance management in parent is handled via effect or key-reset */}
         </div>
     );
 }

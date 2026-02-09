@@ -31,17 +31,17 @@ export function ProductTable({ onEdit, onView }: ProductTableProps) {
 
     const handleDelete = async (id: string) => {
         Modal.confirm({
-            title: 'Xóa sản phẩm?',
-            content: 'Hành động này không thể hoàn tác.',
-            okText: 'Xóa',
+            title: 'Delete Product?',
+            content: 'This action cannot be undone.',
+            okText: 'Delete',
             okType: 'danger',
-            cancelText: 'Hủy',
+            cancelText: 'Cancel',
             onOk: async () => {
                 try {
                     await deleteProduct.mutateAsync(id);
-                    message.success('Đã xóa sản phẩm');
+                    message.success('Product deleted');
                 } catch {
-                    message.error('Xóa sản phẩm thất bại');
+                    message.error('Failed to delete product');
                 }
             },
         });
@@ -53,10 +53,9 @@ export function ProductTable({ onEdit, onView }: ProductTableProps) {
                 id: id,
                 data: { isActive: !currentStatus },
             });
-            message.success(`Đã ${!currentStatus ? 'kích hoạt' : 'vô hiệu hóa'} sản phẩm`);
+            message.success(`Product ${!currentStatus ? 'activated' : 'deactivated'}`);
         } catch (err) {
-            // Safe error handling
-            const msg = err instanceof Error ? err.message : 'Cập nhật thất bại';
+            const msg = err instanceof Error ? err.message : 'Update failed';
             message.error(msg);
         }
     };
@@ -65,24 +64,44 @@ export function ProductTable({ onEdit, onView }: ProductTableProps) {
         return (
             <Alert
                 type="error"
-                message="Không thể tải sản phẩm"
+                message="Failed to load products"
                 description={error instanceof Error ? error.message : 'Unknown error'}
-                className="rounded-xl border-red-200 bg-red-50 text-red-800"
+                style={{
+                    borderRadius: 4,
+                    border: '1px solid #F5EDED',
+                    backgroundColor: '#FEF5F5',
+                }}
             />
         );
     }
 
     return (
-        <div className="space-y-8">
-            <div className="min-h-[400px]">
+        <div>
+            <div style={{ minHeight: 400 }}>
                 {isLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                        gap: 16,
+                    }}>
                         {[...Array(8)].map((_, i) => (
-                            <div key={i} className="bg-white rounded-xl h-[380px] animate-pulse border border-slate-100 shadow-sm"></div>
+                            <div
+                                key={i}
+                                style={{
+                                    backgroundColor: '#FAFAFA',
+                                    borderRadius: 4,
+                                    height: 320,
+                                    border: '1px solid #F0F0F0',
+                                }}
+                            />
                         ))}
                     </div>
                 ) : data?.items && data.items.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                        gap: 16,
+                    }}>
                         {data.items.map((product) => (
                             <ProductCard
                                 key={product.id}
@@ -95,9 +114,18 @@ export function ProductTable({ onEdit, onView }: ProductTableProps) {
                         ))}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-3xl border border-dashed border-[#D4AF37]/30">
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '80px 0',
+                        backgroundColor: '#FAFAFA',
+                        borderRadius: 4,
+                        border: '1px dashed #E5E5E5',
+                    }}>
                         <Empty
-                            description={<span className="text-slate-400 font-serif italic">Không tìm thấy sản phẩm nào</span>}
+                            description={<span style={{ color: '#999', fontSize: 14 }}>No products found</span>}
                             image={Empty.PRESENTED_IMAGE_SIMPLE}
                         />
                     </div>
@@ -105,15 +133,22 @@ export function ProductTable({ onEdit, onView }: ProductTableProps) {
             </div>
 
             {!isLoading && data?.items && data.items.length > 0 && (
-                <div className="flex justify-center pt-8 pb-12">
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    paddingTop: 24,
+                }}>
                     <Pagination
                         current={pagination.current}
                         pageSize={pagination.pageSize}
                         total={pagination.total}
                         onChange={handlePageChange}
                         showSizeChanger
-                        showTotal={(total) => <span className="text-slate-500 font-medium">Tổng <span className="text-[#6D28D9] font-bold">{total}</span> sản phẩm</span>}
-                        className="custom-pagination font-medium"
+                        showTotal={(total) => (
+                            <span style={{ fontSize: 13, color: '#666' }}>
+                                {total} total
+                            </span>
+                        )}
                     />
                 </div>
             )}

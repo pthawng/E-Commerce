@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   Button,
-  Card,
   Form,
   Input,
   Modal,
@@ -12,10 +11,12 @@ import {
   message,
   Collapse,
   AutoComplete,
+  Tooltip,
+  Typography
 } from 'antd';
 import { ATTRIBUTE_INPUT_TYPES } from '@shared';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useAttributes, useAllAttributeValues } from '../../services/queries';
 import {
   useCreateAttribute,
@@ -26,19 +27,16 @@ import {
   useDeleteAttributeValue,
 } from '../../services/mutations';
 import type { Attribute, AttributeValue, AttributeValueWithAttribute } from '../../services/queries';
+import { PageHeader } from '@/shared/ui';
+import * as tokens from '@/ui/design-tokens';
+import { cardStyle, contentContainerStyle } from '@/ui/styles';
+
+const { Text } = Typography;
 
 type AttributeFormValues = {
   code: string;
   name: string;
   filterType?: string;
-  /**
-   * Danh sách value dùng cho upsert trên BE:
-   * - Có id  -> update value hiện có
-   * - Không id -> create value mới
-   *
-   * Xóa value cũ: vẫn dùng nút "Xóa" ở bảng phía dưới (API delete riêng),
-   * để tránh việc vô tình xóa nhầm khi submit form.
-   */
   values?: {
     id?: string;
     value: string;
@@ -47,7 +45,6 @@ type AttributeFormValues = {
   }[];
 };
 
-// Payload gửi lên BE khi tạo / cập nhật attribute (support upsert values)
 type AttributeUpsertPayload = {
   code: string;
   name: Record<string, string>;
@@ -68,11 +65,11 @@ type ValueFormValues = {
 
 function stringifyName(name?: Record<string, string>) {
   if (!name) return '';
-  return name.vi || name.en || Object.values(name)[0] || '';
+  return name.en || name.vi || Object.values(name)[0] || '';
 }
 
 export function AttributePageView() {
-  const { data, isLoading } = useAttributes();
+  const { data, isLoading, refetch } = useAttributes();
   const createAttr = useCreateAttribute();
   const updateAttr = useUpdateAttribute();
   const deleteAttr = useDeleteAttribute();
@@ -99,68 +96,92 @@ export function AttributePageView() {
       {
         title: 'Code',
         dataIndex: 'code',
+        key: 'code',
+        render: (code: string) => (
+          <span style={{ fontFamily: tokens.typography.fontFamily.mono, color: tokens.neutral.textPrimary }}>
+            {code}
+          </span>
+        ),
       },
       {
-        title: 'Tên',
+        title: 'Attribute Name',
         dataIndex: 'name',
-        render: (name: Record<string, string>) => stringifyName(name),
+        key: 'name',
+        render: (name: Record<string, string>) => (
+          <span style={{ fontWeight: 500, color: tokens.neutral.textPrimary }}>
+            {stringifyName(name)}
+          </span>
+        ),
       },
       {
         title: 'Filter Type',
         dataIndex: 'filterType',
-        render: (ft?: string) => ft || <Tag>None</Tag>,
+        key: 'filterType',
+        render: (ft?: string) => ft ? <Tag>{ft}</Tag> : <span style={{ color: tokens.neutral.textTertiary }}>-</span>,
       },
       {
-        title: 'Giá trị',
+        title: 'Values Count',
         key: 'values',
-        render: (_, record) => record.values?.length ?? 0,
+        render: (_, record) => (
+          <span style={{ color: tokens.neutral.textSecondary }}>
+            {record.values?.length ?? 0}
+          </span>
+        ),
       },
       {
-        title: 'Hành động',
+        title: 'Actions',
         key: 'actions',
+        width: 120,
         render: (_, record) => (
-          <Space>
-            <Button
-              type="link"
-              onClick={() => {
-                setEditingAttr(record);
-                attrForm.setFieldsValue({
-                  code: record.code,
-                  name: stringifyName(record.name),
-                  filterType: record.filterType ?? undefined,
-                  // Map values hiện có vào form để có thể sửa trực tiếp trong modal
-                  values: (record.values || []).map((v) => ({
-                    id: v.id,
-                    value: stringifyName(v.value),
-                    metaValue: v.metaValue ?? undefined,
-                    order: v.order ?? undefined,
-                  })),
-                });
-                setAttrModalOpen(true);
-              }}
-            >
-              Sửa
-            </Button>
-            <Button
-              type="link"
-              danger
-              onClick={async () => {
-                Modal.confirm({
-                  title: `Xóa attribute ${record.code}?`,
-                  okType: 'danger',
-                  onOk: async () => {
-                    try {
-                      await deleteAttr.mutateAsync(record.id);
-                      message.success('Đã xóa attribute');
-                    } catch (err) {
-                      message.error(err instanceof Error ? err.message : 'Lỗi khi xóa');
-                    }
-                  },
-                });
-              }}
-            >
-              Xóa
-            </Button>
+          <Space size={8}>
+            <Tooltip title="Edit Attribute">
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => {
+                  setEditingAttr(record);
+                  attrForm.setFieldsValue({
+                    code: record.code,
+                    name: stringifyName(record.name),
+                    filterType: record.filterType ?? undefined,
+                    values: (record.values || []).map((v) => ({
+                      id: v.id,
+                      value: stringifyName(v.value),
+                      metaValue: v.metaValue ?? undefined,
+                      order: v.order ?? undefined,
+                    })),
+                  });
+                  setAttrModalOpen(true);
+                }}
+                style={{ color: tokens.action.secondary }}
+              />
+            </Tooltip>
+            <Tooltip title="Delete Attribute">
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={async () => {
+                  Modal.confirm({
+                    title: `Delete attribute ${record.code}?`,
+                    content: 'This will also delete all associated values.',
+                    okText: 'Delete',
+                    cancelText: 'Cancel',
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                      try {
+                        await deleteAttr.mutateAsync(record.id);
+                        message.success('Attribute deleted');
+                      } catch (err) {
+                        message.error(err instanceof Error ? err.message : 'Delete failed');
+                      }
+                    },
+                  });
+                }}
+              />
+            </Tooltip>
           </Space>
         ),
       },
@@ -172,10 +193,9 @@ export function AttributePageView() {
     try {
       const formValues = await attrForm.validateFields();
 
-      // Map form -> payload cho BE (attribute + optional values[] cho upsert)
       const basePayload: AttributeUpsertPayload = {
         code: formValues.code,
-        name: { vi: formValues.name },
+        name: { vi: formValues.name, en: formValues.name }, // Using same name for simplicity, ideal: separate fields
         filterType: formValues.filterType || undefined,
       };
 
@@ -186,8 +206,8 @@ export function AttributePageView() {
       const cleanedValues = formValueList.filter((v) => v && v.value);
       if (cleanedValues.length) {
         basePayload.values = cleanedValues.map((v) => ({
-          id: v.id, // nếu có id -> update, không có -> create (đúng với AttributeValueUpsertDto)
-          value: { vi: v.value },
+          id: v.id,
+          value: { vi: v.value, en: v.value },
           metaValue: v.metaValue,
           order: v.order,
         }));
@@ -198,17 +218,17 @@ export function AttributePageView() {
           id: editingAttr.id,
           data: basePayload as unknown as Partial<Attribute>,
         });
-        message.success('Cập nhật attribute thành công');
+        message.success('Attribute updated');
       } else {
         await createAttr.mutateAsync(basePayload as unknown as Partial<Attribute>);
-        message.success('Tạo attribute thành công');
+        message.success('Attribute created');
       }
 
       setAttrModalOpen(false);
       setEditingAttr(null);
       attrForm.resetFields();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Lỗi khi lưu attribute');
+      message.error(err instanceof Error ? err.message : 'Error saving attribute');
     }
   };
 
@@ -218,7 +238,7 @@ export function AttributePageView() {
     try {
       const values = await valueForm.validateFields();
       const payload = {
-        value: { vi: values.value },
+        value: { vi: values.value, en: values.value },
         metaValue: values.metaValue,
         order: values.order,
       };
@@ -228,83 +248,104 @@ export function AttributePageView() {
           valueId: value.id,
           data: payload,
         });
-        message.success('Cập nhật value thành công');
+        message.success('Value updated');
       } else {
         await createValue.mutateAsync({ attributeId, data: payload });
-        message.success('Thêm value thành công');
+        message.success('Value added');
       }
       setValueModalOpen(false);
       setEditingValue(null);
       valueForm.resetFields();
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Lỗi khi lưu value');
+      message.error(err instanceof Error ? err.message : 'Error saving value');
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800 font-heading">Thuộc tính</h1>
-          <p className="text-sm text-slate-500">
-            Quản lý attribute và value (chỉ thêm/sửa; xóa attribute sẽ xóa toàn bộ value).
-          </p>
-        </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          className="bg-linear-to-r from-amber-500 to-amber-600 border-none"
-          onClick={() => {
-            setEditingAttr(null);
-            attrForm.resetFields();
-            setAttrModalOpen(true);
-          }}
-        >
-          Thêm attribute
-        </Button>
-      </div>
+    <div>
+      <PageHeader
+        title="Product Attributes"
+        subtitle="Manage product attributes and their values"
+        actions={
+          <div style={{ display: 'flex', gap: tokens.spacing.sm }}>
+            <Button icon={<ReloadOutlined />} onClick={() => refetch()} disabled={isLoading}>
+              Refresh
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingAttr(null);
+                attrForm.resetFields();
+                setAttrModalOpen(true);
+              }}
+            >
+              Add Attribute
+            </Button>
+          </div>
+        }
+      />
 
-      <Card className="shadow-sm rounded-xl border-slate-100">
-        <Table<Attribute>
-          rowKey="id"
-          loading={isLoading}
-          columns={attrColumns}
-          dataSource={attributes}
-          expandable={{
-            expandedRowRender: (record) => (
-              <Collapse bordered={false} defaultActiveKey={['values']}>
-                <Collapse.Panel header="Danh sách value" key="values">
-                  <Space direction="vertical" className="w-full">
+      <div style={contentContainerStyle}>
+        <div style={cardStyle}>
+          <Table<Attribute>
+            rowKey="id"
+            loading={isLoading}
+            columns={attrColumns.map(col => ({
+              ...col,
+              title: <span style={{ fontSize: 13, fontWeight: 500, color: tokens.neutral.textSecondary }}>{col.title}</span>
+            }))}
+            dataSource={attributes}
+            size="middle"
+            expandable={{
+              expandedRowRender: (record) => (
+                <div style={{ padding: tokens.spacing.md, backgroundColor: tokens.neutral.background }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: tokens.spacing.sm
+                  }}>
+                    <Text strong style={{ fontSize: tokens.typography.fontSize.sm }}>Attribute Values: {stringifyName(record.name)}</Text>
                     <Button
                       size="small"
                       type="dashed"
+                      icon={<PlusOutlined />}
                       onClick={() => {
                         setEditingValue({ attributeId: record.id, value: null });
                         valueForm.resetFields();
                         setValueModalOpen(true);
                       }}
                     >
-                      Thêm value
+                      Add Value
                     </Button>
-                    <Table<AttributeValue>
-                      size="small"
-                      rowKey="id"
-                      dataSource={record.values || []}
-                      pagination={false}
-                      columns={[
-                        {
-                          title: 'Value',
-                          dataIndex: 'value',
-                          render: (v: Record<string, string>) => stringifyName(v),
-                        },
-                        { title: 'Meta', dataIndex: 'metaValue', render: (v?: string) => v || '-' },
-                        { title: 'Order', dataIndex: 'order', render: (v?: number | null) => v ?? '-' },
-                        {
-                          title: 'Hành động',
-                          render: (_, v) => (
-                            <Space>
+                  </div>
+                  <Table<AttributeValue>
+                    size="small"
+                    rowKey="id"
+                    dataSource={record.values || []}
+                    pagination={false}
+                    bordered
+                    columns={[
+                      {
+                        title: 'Value',
+                        dataIndex: 'value',
+                        render: (v: Record<string, string>) => (
+                          <span style={{ fontWeight: 500, color: tokens.neutral.textPrimary }}>{stringifyName(v)}</span>
+                        ),
+                      },
+                      { title: 'Meta', dataIndex: 'metaValue', render: (v?: string) => v || <span style={{ color: tokens.neutral.textTertiary }}>-</span> },
+                      { title: 'Order', dataIndex: 'order', render: (v?: number | null) => v ?? <span style={{ color: tokens.neutral.textTertiary }}>-</span> },
+                      {
+                        title: 'Actions',
+                        width: 100,
+                        render: (_, v) => (
+                          <Space size={4}>
+                            <Tooltip title="Edit Value">
                               <Button
-                                type="link"
+                                type="text"
+                                size="small"
+                                icon={<EditOutlined />}
                                 onClick={() => {
                                   setEditingValue({ attributeId: record.id, value: v });
                                   valueForm.setFieldsValue({
@@ -314,47 +355,50 @@ export function AttributePageView() {
                                   });
                                   setValueModalOpen(true);
                                 }}
-                              >
-                                Sửa
-                              </Button>
+                                style={{ color: tokens.action.secondary }}
+                              />
+                            </Tooltip>
+                            <Tooltip title="Delete Value">
                               <Button
-                                type="link"
+                                type="text"
+                                size="small"
                                 danger
+                                icon={<DeleteOutlined />}
                                 onClick={() =>
                                   Modal.confirm({
-                                    title: 'Xóa value?',
-                                    okType: 'danger',
+                                    title: 'Delete value?',
+                                    okText: 'Delete',
+                                    cancelText: 'Cancel',
+                                    okButtonProps: { danger: true },
                                     onOk: async () => {
                                       try {
                                         await deleteValue.mutateAsync({
                                           attributeId: record.id,
                                           valueId: v.id,
                                         });
-                                        message.success('Đã xóa value');
+                                        message.success('Value deleted');
                                       } catch (err) {
-                                        message.error(err instanceof Error ? err.message : 'Lỗi khi xóa');
+                                        message.error(err instanceof Error ? err.message : 'Delete failed');
                                       }
                                     },
                                   })
                                 }
-                              >
-                                Xóa
-                              </Button>
-                            </Space>
-                          ),
-                        },
-                      ]}
-                    />
-                  </Space>
-                </Collapse.Panel>
-              </Collapse>
-            ),
-          }}
-        />
-      </Card>
+                              />
+                            </Tooltip>
+                          </Space>
+                        ),
+                      },
+                    ]}
+                  />
+                </div>
+              ),
+            }}
+          />
+        </div>
+      </div>
 
       <Modal
-        title={editingAttr ? 'Sửa attribute' : 'Thêm attribute'}
+        title={editingAttr ? 'Edit Attribute' : 'Create Attribute'}
         open={attrModalOpen}
         centered
         onCancel={() => {
@@ -365,140 +409,39 @@ export function AttributePageView() {
         onOk={handleSubmitAttribute}
         confirmLoading={createAttr.isPending || updateAttr.isPending}
         destroyOnClose
+        width={600}
       >
-        <Form form={attrForm} layout="vertical">
+        <Form form={attrForm} layout="vertical" requiredMark="optional">
           <Form.Item
             name="code"
-            label="Code"
-            rules={[{ required: true, message: 'Nhập code' }]}
+            label="Attribute Code"
+            rules={[{ required: true, message: 'Please enter code' }]}
+            extra="Unique identifier, e.g. color, size"
           >
-            <Input placeholder="e.g. material" disabled={!!editingAttr} />
+            <Input placeholder="e.g. material" disabled={!!editingAttr} style={{ fontFamily: tokens.typography.fontFamily.mono }} />
           </Form.Item>
           <Form.Item
             name="name"
-            label="Tên (vi)"
-            rules={[{ required: true, message: 'Nhập tên' }]}
+            label="Attribute Name"
+            rules={[{ required: true, message: 'Please enter name' }]}
           >
-            <Input placeholder="Tên hiển thị" />
+            <Input placeholder="Displayed Name" />
           </Form.Item>
           <Form.Item name="filterType" label="Filter Type">
             <Select
               allowClear
-              placeholder="Chọn kiểu filter (optional)"
+              placeholder="Select filter type (optional)"
               options={ATTRIBUTE_INPUT_TYPES.map((t: string) => ({
                 label: t,
                 value: t,
               }))}
             />
           </Form.Item>
-
-          {/*
-            Form.List cho phép sửa value cũ + thêm value mới trong CÙNG modal:
-            - Value có id: BE sẽ update (upsert)
-            - Value không id: BE sẽ create mới
-            - Xóa value cũ: vẫn dùng nút Xóa ở bảng phía dưới (API delete riêng)
-          */}
-          <Form.List name="values">
-            {(fields, { add, remove }) => {
-              // Handler để chọn value sẵn có và thêm vào form
-              const handleSelectExistingValue = (value: AttributeValueWithAttribute) => {
-                const valueStr = stringifyName(value.value);
-                // Thêm vào form với giá trị từ value sẵn có (không có id để tạo mới)
-                add({
-                  value: valueStr,
-                  metaValue: value.metaValue || undefined,
-                  order: value.order || undefined,
-                });
-                setValueSearch(''); // Reset search
-              };
-
-              return (
-                <div className="mt-4 border-t pt-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-slate-700 text-sm">
-                      Giá trị thuộc tính
-                    </span>
-                    <Space>
-                      <AutoComplete
-                        style={{ width: 200 }}
-                        placeholder="Tìm value sẵn có..."
-                        value={valueSearch}
-                        onChange={setValueSearch}
-                        options={allValues.map((v) => ({
-                          label: `${stringifyName(v.value)} (${v.attribute.code})`,
-                          value: v.id,
-                          data: v,
-                        }))}
-                        onSelect={(_value, option) => {
-                          if (option && typeof option === 'object' && 'data' in option) {
-                            const selectedValue = option.data as AttributeValueWithAttribute;
-                            handleSelectExistingValue(selectedValue);
-                          }
-                        }}
-                        filterOption={(inputValue, option) => {
-                          const label = option?.label?.toString().toLowerCase() || '';
-                          return label.includes(inputValue.toLowerCase());
-                        }}
-                        allowClear
-                      />
-                      <Button size="small" type="dashed" onClick={() => add()}>
-                        Thêm value mới
-                      </Button>
-                    </Space>
-                  </div>
-
-                {fields.map((field) => (
-                  <div
-                    key={field.key}
-                    className="mb-3 p-3 rounded-lg border border-dashed border-slate-200"
-                  >
-                    <Space align="start" className="w-full">
-                      {/* hidden id để BE biết value nào cần update */}
-                      <Form.Item name={[field.name, 'id']} hidden>
-                        <Input type="hidden" />
-                      </Form.Item>
-                      <Form.Item
-                        name={[field.name, 'value']}
-                        label="Giá trị (vi)"
-                        rules={[{ required: true, message: 'Nhập giá trị' }]}
-                        className="flex-1"
-                      >
-                        <Input placeholder="Ví dụ: Vàng, Bạc" />
-                      </Form.Item>
-                      <Form.Item
-                        name={[field.name, 'metaValue']}
-                        label="Meta"
-                        className="flex-1"
-                      >
-                        <Input placeholder="Optional" />
-                      </Form.Item>
-                      <Form.Item
-                        name={[field.name, 'order']}
-                        label="Thứ tự"
-                        className="w-24"
-                      >
-                        <Input type="number" placeholder="0" />
-                      </Form.Item>
-                      <Button
-                        type="link"
-                        danger
-                        className="mt-7"
-                        onClick={() => remove(field.name)}
-                      >
-                        Xóa
-                      </Button>
-                    </Space>
-                  </div>
-                ))}
-                </div>
-              );
-            }}
-          </Form.List>
         </Form>
       </Modal>
 
       <Modal
-        title={editingValue?.value ? 'Sửa value' : 'Thêm value'}
+        title={editingValue?.value ? 'Edit Value' : 'Add Value'}
         open={valueModalOpen}
         centered
         onCancel={() => {
@@ -510,18 +453,18 @@ export function AttributePageView() {
         confirmLoading={createValue.isPending || updateValue.isPending}
         destroyOnClose
       >
-        <Form form={valueForm} layout="vertical">
+        <Form form={valueForm} layout="vertical" requiredMark="optional">
           <Form.Item
             name="value"
-            label="Giá trị (vi)"
-            rules={[{ required: true, message: 'Nhập giá trị' }]}
+            label="Value"
+            rules={[{ required: true, message: 'Please enter value' }]}
           >
-            <Input placeholder="Ví dụ: Vàng, Bạc" />
+            <Input placeholder="e.g. Gold, Silver" />
           </Form.Item>
-          <Form.Item name="metaValue" label="Meta value">
-            <Input placeholder="Optional" />
+          <Form.Item name="metaValue" label="Meta Value" extra="Optional metadata (e.g. hex color code)">
+            <Input placeholder="e.g. #FFD700" style={{ fontFamily: tokens.typography.fontFamily.mono }} />
           </Form.Item>
-          <Form.Item name="order" label="Thứ tự">
+          <Form.Item name="order" label="Sort Order">
             <Input type="number" placeholder="Optional" />
           </Form.Item>
         </Form>
@@ -529,5 +472,3 @@ export function AttributePageView() {
     </div>
   );
 }
-
-

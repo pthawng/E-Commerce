@@ -1,0 +1,8 @@
+/* Order Detail Page - Subtle table row styling */
+.order-item-row {
+  border-bottom: 1px solid #F5F5F5;
+}
+
+.order-item-row:last-child {
+  border-bottom: none;
+}

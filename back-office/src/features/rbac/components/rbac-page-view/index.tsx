@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
     Alert,
     Button,
-    Card,
     Form,
     Modal,
     Space,
@@ -29,6 +28,9 @@ import { RoleList } from '../role-list';
 import { RoleForm } from '../role-form';
 import { PermissionList } from '../permission-list';
 import { PermissionForm } from '../permission-form';
+import { PageHeader } from '@/shared/ui';
+import * as tokens from '@/ui/design-tokens';
+import { cardStyle, contentContainerStyle } from '@/ui/styles';
 
 export function RbacPageView() {
     const [roleForm] = Form.useForm();
@@ -125,7 +127,7 @@ export function RbacPageView() {
                         description: values.description,
                     },
                 });
-                message.success('Cập nhật role thành công');
+                message.success('Role updated successfully');
             } else {
                 await createRole.mutateAsync({
                     slug: values.slug,
@@ -133,22 +135,22 @@ export function RbacPageView() {
                     description: values.description,
                     isSystem: values.isSystem,
                 });
-                message.success('Tạo role thành công');
+                message.success('Role created successfully');
             }
             setIsRoleModalOpen(false);
             setEditingRole(null);
             roleForm.resetFields();
         } catch (err) {
-            message.error(err instanceof Error ? err.message : 'Lỗi khi lưu role');
+            message.error(err instanceof Error ? err.message : 'Error saving role');
         }
     };
 
     const handleDeleteRole = async (slug: string) => {
         try {
             await deleteRole.mutateAsync(slug);
-            message.success('Đã xóa role');
+            message.success('Role deleted');
         } catch {
-            message.error('Xóa role thất bại');
+            message.error('Failed to delete role');
         }
     };
 
@@ -177,7 +179,7 @@ export function RbacPageView() {
                         action: values.action,
                     },
                 });
-                message.success('Cập nhật permission thành công');
+                message.success('Permission updated successfully');
             } else {
                 await createPermission.mutateAsync({
                     slug: values.slug,
@@ -186,114 +188,121 @@ export function RbacPageView() {
                     module: values.module,
                     action: values.action,
                 });
-                message.success('Tạo permission thành công');
+                message.success('Permission created successfully');
             }
             setIsPermissionModalOpen(false);
             setEditingPermission(null);
             permissionForm.resetFields();
         } catch (err) {
-            message.error(err instanceof Error ? err.message : 'Lỗi khi lưu permission');
+            message.error(err instanceof Error ? err.message : 'Error saving permission');
         }
     };
 
     const handleDeletePermission = async (slugOrAction: string) => {
         try {
             await deletePermission.mutateAsync(slugOrAction);
-            message.success('Đã xóa permission');
+            message.success('Permission deleted');
         } catch {
-            message.error('Xóa permission thất bại');
+            message.error('Failed to delete permission');
         }
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                    <h1 className="text-2xl font-semibold text-slate-800 font-heading">RBAC Admin</h1>
-                    <p className="text-slate-500">Quản lý roles và permissions, đồng bộ backend.</p>
-                </div>
-                <Space>
+        <div>
+            <PageHeader
+                title="RBAC Administration"
+                subtitle="Manage roles and system permissions"
+                actions={
                     <Button icon={<ReloadOutlined />} onClick={() => { refetchRoles(); refetchPerms(); }}>
-                        Làm mới
+                        Refresh
                     </Button>
-                </Space>
-            </div>
-
-            {rolesError || permsError ? (
-                <Alert
-                    type="error"
-                    message="Không thể tải dữ liệu RBAC"
-                    description={
-                        rolesError
-                            ? String(rolesError)
-                            : permsError
-                                ? String(permsError)
-                                : 'Unknown error'
-                    }
-                    className="rounded-xl border-red-200 bg-red-50 text-red-800"
-                />
-            ) : null}
-
-            <Tabs
-                items={[
-                    {
-                        key: 'roles',
-                        label: 'Roles',
-                        children: (
-                            <Card
-                                className="shadow-sm rounded-xl border-slate-100"
-                                title={<span className="font-heading">Roles</span>}
-                                extra={
-                                    <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateRole} className="bg-linear-to-r from-amber-500 to-amber-600 border-none">
-                                        Thêm role
-                                    </Button>
-                                }
-                            >
-                                <RoleList
-                                    roles={roles || []}
-                                    isLoading={rolesLoading}
-                                    onEdit={handleOpenEditRole}
-                                    onDelete={handleDeleteRole}
-                                    isDeleting={deleteRole.isPending}
-                                    onManagePermissions={setPermissionRole}
-                                />
-                            </Card>
-                        ),
-                    },
-                    {
-                        key: 'permissions',
-                        label: 'Permissions',
-                        children: (
-                            <Card
-                                className="shadow-sm rounded-xl border-slate-100"
-                                title={<span className="font-heading">Permissions</span>}
-                                extra={
-                                    <Button
-                                        type="primary"
-                                        icon={<PlusOutlined />}
-                                        onClick={handleOpenCreatePermission}
-                                        className="bg-linear-to-r from-amber-500 to-amber-600 border-none"
-                                    >
-                                        Thêm permission
-                                    </Button>
-                                }
-                            >
-                                <PermissionList
-                                    permissions={permissions || []}
-                                    isLoading={permsLoading}
-                                    onEdit={handleOpenEditPermission}
-                                    onDelete={handleDeletePermission}
-                                    isDeleting={deletePermission.isPending}
-                                />
-                            </Card>
-                        ),
-                    },
-                ]}
+                }
             />
+
+            {(rolesError || permsError) && (
+                <div style={{ padding: `0 ${tokens.spacing.xxl}px`, marginBottom: tokens.spacing.lg }}>
+                    <Alert
+                        type="error"
+                        message="Error Loading Data"
+                        description={
+                            rolesError
+                                ? String(rolesError)
+                                : permsError
+                                    ? String(permsError)
+                                    : 'Unknown error'
+                        }
+                        showIcon
+                    />
+                </div>
+            )}
+
+            <div style={contentContainerStyle}>
+                <Tabs
+                    items={[
+                        {
+                            key: 'roles',
+                            label: 'Roles',
+                            children: (
+                                <div style={cardStyle}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: tokens.spacing.lg,
+                                        paddingBottom: tokens.spacing.md,
+                                        borderBottom: `1px solid ${tokens.neutral.borderLight}`
+                                    }}>
+                                        <h3 style={{ margin: 0, fontSize: tokens.typography.fontSize.lg }}>System Roles</h3>
+                                        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateRole}>
+                                            Add Role
+                                        </Button>
+                                    </div>
+                                    <RoleList
+                                        roles={roles || []}
+                                        isLoading={rolesLoading}
+                                        onEdit={handleOpenEditRole}
+                                        onDelete={handleDeleteRole}
+                                        isDeleting={deleteRole.isPending}
+                                        onManagePermissions={setPermissionRole}
+                                    />
+                                </div>
+                            ),
+                        },
+                        {
+                            key: 'permissions',
+                            label: 'Permissions',
+                            children: (
+                                <div style={cardStyle}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: tokens.spacing.lg,
+                                        paddingBottom: tokens.spacing.md,
+                                        borderBottom: `1px solid ${tokens.neutral.borderLight}`
+                                    }}>
+                                        <h3 style={{ margin: 0, fontSize: tokens.typography.fontSize.lg }}>System Permissions</h3>
+                                        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreatePermission}>
+                                            Add Permission
+                                        </Button>
+                                    </div>
+                                    <PermissionList
+                                        permissions={permissions || []}
+                                        isLoading={permsLoading}
+                                        onEdit={handleOpenEditPermission}
+                                        onDelete={handleDeletePermission}
+                                        isDeleting={deletePermission.isPending}
+                                    />
+                                </div>
+                            ),
+                        },
+                    ]}
+                />
+            </div>
 
             {/* Role Modal */}
             <Modal
-                title={editingRole ? 'Chỉnh sửa role' : 'Tạo role'}
+                title={editingRole ? 'Edit Role' : 'Create Role'}
                 open={isRoleModalOpen}
                 centered
                 onCancel={() => {
@@ -303,7 +312,7 @@ export function RbacPageView() {
                 }}
                 onOk={handleSubmitRole}
                 confirmLoading={createRole.isPending || updateRole.isPending}
-                destroyOnHidden
+                destroyOnClose
             >
                 <RoleForm
                     form={roleForm}
@@ -321,7 +330,7 @@ export function RbacPageView() {
 
             {/* Permission Modal */}
             <Modal
-                title={editingPermission ? 'Chỉnh sửa permission' : 'Tạo permission'}
+                title={editingPermission ? 'Edit Permission' : 'Create Permission'}
                 open={isPermissionModalOpen}
                 centered
                 onCancel={() => {
@@ -331,7 +340,7 @@ export function RbacPageView() {
                 }}
                 onOk={handleSubmitPermission}
                 confirmLoading={createPermission.isPending || updatePermission.isPending}
-                destroyOnHidden
+                destroyOnClose
             >
                 <PermissionForm
                     form={permissionForm}
@@ -351,9 +360,9 @@ export function RbacPageView() {
 
             {/* Role Permissions Modal */}
             <Modal
-                title={permissionRole ? `Quyền mặc định cho role: ${permissionRole.name}` : ''}
+                title={permissionRole ? `Manage Permissions: ${permissionRole.name}` : ''}
                 open={!!permissionRole}
-                width={680}
+                width={800}
                 centered
                 onCancel={() => {
                     setPermissionRole(null);
@@ -362,7 +371,7 @@ export function RbacPageView() {
                 }}
                 footer={
                     permissionRole && (
-                        <Space className="w-full justify-end">
+                        <Space style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
                             <Button
                                 onClick={() => {
                                     setPermissionRole(null);
@@ -370,7 +379,7 @@ export function RbacPageView() {
                                     setRolePermModule(undefined);
                                 }}
                             >
-                                Hủy
+                                Cancel
                             </Button>
                             <Button
                                 type="primary"
@@ -406,16 +415,16 @@ export function RbacPageView() {
                                                 }),
                                             ),
                                         ]);
-                                        message.success('Cập nhật quyền cho role thành công');
+                                        message.success('Role permissions updated');
                                         setPermissionRole(null);
                                         setRolePermSearch(undefined);
                                         setRolePermModule(undefined);
                                     } catch {
-                                        message.error('Không thể cập nhật quyền cho role');
+                                        message.error('Failed to update role permissions');
                                     }
                                 }}
                             >
-                                Lưu
+                                Save Changes
                             </Button>
                         </Space>
                     )
@@ -423,44 +432,63 @@ export function RbacPageView() {
                 destroyOnClose
             >
                 {permissionRole && (
-                    <div className="space-y-4">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}>
                         {/* Search & Filter */}
-                        <Space align="center" wrap className="w-full">
+                        <div style={{ display: 'flex', gap: tokens.spacing.md }}>
                             <Input.Search
                                 allowClear
-                                placeholder="Tìm theo tên hoặc slug quyền..."
+                                placeholder="Search permissions..."
                                 onSearch={(val) => setRolePermSearch(val || undefined)}
-                                style={{ flex: 1, minWidth: 200 }}
+                                style={{ flex: 1 }}
                             />
                             <Select
                                 allowClear
-                                placeholder="Lọc theo module"
+                                placeholder="Filter by Module"
                                 options={moduleOptions}
                                 style={{ width: 180 }}
                                 value={rolePermModule}
                                 onChange={(val) => setRolePermModule(val)}
                             />
-                        </Space>
+                        </div>
 
                         {/* Permission List */}
                         <form data-permission-form>
-                            <div className="border border-slate-200 rounded-md p-3 bg-slate-50/50">
+                            <div style={{
+                                border: `1px solid ${tokens.neutral.borderLight}`,
+                                borderRadius: tokens.component.borderRadius.base,
+                                padding: tokens.spacing.md,
+                                backgroundColor: tokens.neutral.background,
+                                maxHeight: 400,
+                                overflowY: 'auto',
+                            }}>
                                 <Checkbox.Group
-                                    className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-2"
+                                    style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}
                                     defaultValue={currentRolePermissionSlugs}
                                 >
                                     {Object.entries(filteredPermissionsByModule).map(
                                         ([moduleName, perms]) => (
-                                            <div key={moduleName} className="space-y-2">
-                                                <div className="text-xs font-bold text-slate-600 uppercase tracking-wide sticky top-0 bg-slate-50 py-1 z-10">
+                                            <div key={moduleName} style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.xs }}>
+                                                <div style={{
+                                                    fontSize: tokens.typography.fontSize.xs,
+                                                    fontWeight: tokens.typography.fontWeight.semibold,
+                                                    color: tokens.neutral.textSecondary,
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    marginBottom: tokens.spacing.sm,
+                                                    position: 'sticky',
+                                                    top: -12,
+                                                    backgroundColor: tokens.neutral.background,
+                                                    padding: '4px 0',
+                                                    zIndex: 1,
+                                                }}>
                                                     {moduleName}
                                                 </div>
-                                                <div className="flex flex-col gap-1.5 pl-3">
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm, paddingLeft: tokens.spacing.md }}>
                                                     {perms.map((p) => (
                                                         <Checkbox key={p.id} value={p.action}>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm">{p.name}</span>
-                                                                <span className="text-[11px] text-slate-400 font-mono">
+                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                <span style={{ fontSize: tokens.typography.fontSize.sm }}>{p.name}</span>
+                                                                <span style={{ fontSize: 11, color: tokens.neutral.textTertiary, fontFamily: tokens.typography.fontFamily.mono }}>
                                                                     {p.action}
                                                                 </span>
                                                             </div>

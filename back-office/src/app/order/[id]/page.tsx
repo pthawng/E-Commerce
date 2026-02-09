@@ -1,18 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Tag, Table, Space, Button, Alert, Modal, Form, Input, Spin } from 'antd';
-import { ArrowLeftOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Descriptions, Table, Button, Alert, Modal, Form, Input, Spin } from 'antd';
+import { ArrowLeftOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useOrder, useOrderStatus, useCancelOrder } from '@/features/order/hooks/useOrders';
 import { useState } from 'react';
-
-// Status color mapping
-const statusColors: Record<string, string> = {
-    pending_payment: 'orange',
-    confirmed: 'blue',
-    processing: 'cyan',
-    shipped: 'purple',
-    delivered: 'green',
-    cancelled: 'red',
-};
+import { StatusBadge, OrderTimeline } from '@/shared/ui';
+import { createStatusStyle } from '@/ui/styles';
 
 // Format currency
 const formatCurrency = (amount: number) => {
@@ -109,41 +101,82 @@ export default function OrderDetailPage() {
     ];
 
     return (
-        <div style={{ padding: 24 }}>
-            <Space direction="vertical" style={{ width: '100%' }} size="large">
-                {/* Header */}
-                <div>
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/orders')}>
-                        Back to Orders
+        <div style={{ padding: 24, maxWidth: 1400, margin: '0 auto' }}>
+            {/* Page Header */}
+            <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Button
+                    type="text"
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => navigate('/orders')}
+                    style={{ color: '#666', fontSize: 13 }}
+                >
+                    Orders
+                </Button>
+
+                {status?.canCancel && (
+                    <Button
+                        size="small"
+                        onClick={() => setCancelModal(true)}
+                        style={{
+                            color: '#A85C5C',
+                            borderColor: '#E5D5D5'
+                        }}
+                    >
+                        Cancel order
                     </Button>
-                </div>
-
-                {/* Payment Deadline Alert */}
-                {status && status.remainingSeconds !== null && status.remainingSeconds > 0 && (
-                    <Alert
-                        message={
-                            <Space>
-                                <ClockCircleOutlined />
-                                <span>
-                                    Payment deadline: <strong>{formatTime(status.remainingSeconds)}</strong> remaining
-                                </span>
-                            </Space>
-                        }
-                        type="warning"
-                        showIcon
-                    />
                 )}
+            </div>
 
+            {/* Payment Deadline (Calm) */}
+            {status && status.remainingSeconds !== null && status.remainingSeconds > 0 && (
+                <div style={{
+                    padding: 12,
+                    backgroundColor: '#FBF9F5',
+                    border: '1px solid #F0EBE3',
+                    borderRadius: 4,
+                    marginBottom: 20
+                }}>
+                    <div style={{
+                        fontSize: 13,
+                        color: '#8B7355',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
+                        <ClockCircleOutlined style={{ fontSize: 14 }} />
+                        <span>Payment deadline: <strong>{formatTime(status.remainingSeconds)}</strong> remaining</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Content Card */}
+            <div style={{ backgroundColor: '#FFFFFF', padding: 24, borderRadius: 4, border: '1px solid #F0F0F0' }}>
                 {/* Order Information */}
-                <Card title="Order Information">
-                    <Descriptions bordered column={2}>
+                <div style={{ marginBottom: 32 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 500, color: '#1A1A1A', marginBottom: 16 }}>Order Information</h3>
+                    <Descriptions
+                        column={2}
+                        colon={false}
+                        bordered={false}
+                        labelStyle={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: '#666',
+                            paddingRight: 24,
+                            paddingBottom: 12,
+                            width: '140px'
+                        }}
+                        contentStyle={{
+                            fontSize: 14,
+                            color: '#1A1A1A',
+                            paddingBottom: 12
+                        }}
+                    >
                         <Descriptions.Item label="Order Code" span={2}>
-                            <strong>{order.code}</strong>
+                            <code style={{ fontSize: 14, color: '#1A1A1A', backgroundColor: '#F8F8F8', padding: '2px 6px', borderRadius: 3 }}>{order.code}</code>
                         </Descriptions.Item>
                         <Descriptions.Item label="Status">
-                            <Tag color={statusColors[order.status]}>
-                                {order.status.replace('_', ' ').toUpperCase()}
-                            </Tag>
+                            <StatusBadge status={order.status as any} />
                         </Descriptions.Item>
                         <Descriptions.Item label="Payment Method">
                             {order.paymentMethod}
@@ -155,7 +188,7 @@ export default function OrderDetailPage() {
                             {formatCurrency(order.shippingFee)}
                         </Descriptions.Item>
                         <Descriptions.Item label="Total Amount" span={2}>
-                            <strong style={{ fontSize: 18, color: '#1890ff' }}>
+                            <strong style={{ fontSize: 16, color: '#1A1A1A' }}>
                                 {formatCurrency(order.totalAmount)}
                             </strong>
                         </Descriptions.Item>
@@ -176,11 +209,36 @@ export default function OrderDetailPage() {
                             </Descriptions.Item>
                         )}
                     </Descriptions>
-                </Card>
+                </div>
+
+                {/* Order Timeline */}
+                <div style={{ marginBottom: 32 }}>
+                    <OrderTimeline currentStatus={order.status} />
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: 1, backgroundColor: '#F5F5F5', margin: '24px 0' }} />
 
                 {/* Customer Information */}
-                <Card title="Customer Information">
-                    <Descriptions bordered>
+                <div style={{ marginBottom: 32 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 500, color: '#1A1A1A', marginBottom: 16 }}>Customer Information</h3>
+                    <Descriptions
+                        colon={false}
+                        bordered={false}
+                        labelStyle={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: '#666',
+                            paddingRight: 24,
+                            paddingBottom: 12,
+                            width: '140px'
+                        }}
+                        contentStyle={{
+                            fontSize: 14,
+                            color: '#1A1A1A',
+                            paddingBottom: 12
+                        }}
+                    >
                         <Descriptions.Item label="Email">
                             {order.user?.email || 'Guest'}
                         </Descriptions.Item>
@@ -188,11 +246,31 @@ export default function OrderDetailPage() {
                             {order.user?.fullName || 'N/A'}
                         </Descriptions.Item>
                     </Descriptions>
-                </Card>
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: 1, backgroundColor: '#F5F5F5', margin: '24px 0' }} />
 
                 {/* Shipping Address */}
-                <Card title="Shipping Address">
-                    <Descriptions bordered>
+                <div style={{ marginBottom: 32 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 500, color: '#1A1A1A', marginBottom: 16 }}>Shipping Address</h3>
+                    <Descriptions
+                        colon={false}
+                        bordered={false}
+                        labelStyle={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: '#666',
+                            paddingRight: 24,
+                            paddingBottom: 12,
+                            width: '140px'
+                        }}
+                        contentStyle={{
+                            fontSize: 14,
+                            color: '#1A1A1A',
+                            paddingBottom: 12
+                        }}
+                    >
                         {order.shippingAddress && typeof order.shippingAddress === 'object' && (
                             <>
                                 <Descriptions.Item label="Recipient">
@@ -208,62 +286,98 @@ export default function OrderDetailPage() {
                             </>
                         )}
                     </Descriptions>
-                </Card>
+                </div>
+
+                {/* Divider */}
+                <div style={{ height: 1, backgroundColor: '#F5F5F5', margin: '24px 0' }} />
 
                 {/* Order Items */}
-                <Card title="Order Items">
+                <div style={{ marginBottom: 32 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 500, color: '#1A1A1A', marginBottom: 16 }}>Order Items</h3>
                     <Table
-                        columns={orderItemColumns}
+                        columns={orderItemColumns.map(col => ({
+                            ...col,
+                            title: <span style={{ fontSize: 13, fontWeight: 500, color: '#666' }}>{col.title}</span>
+                        }))}
                         dataSource={order.orderItems}
                         rowKey="id"
                         pagination={false}
+                        size="small"
+                        bordered={false}
+                        rowClassName="order-item-row"
                     />
-                </Card>
+                </div>
 
                 {/* Inventory Reservation (Observability) */}
                 {order.reservationId && (
-                    <Card title="Inventory Reservation">
-                        <Alert
-                            message="Automatic Inventory Management"
-                            description="Inventory reservations are handled automatically by backend jobs. Reservations are auto-released when orders are cancelled or payment expires (15 minutes). No manual intervention needed."
-                            type="info"
-                            showIcon
-                            style={{ marginBottom: 16 }}
-                        />
-                        <Descriptions bordered>
-                            <Descriptions.Item label="Reservation ID" span={2}>
-                                <code>{order.reservationId}</code>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Status">
-                                <Tag color={order.status === 'pending_payment' ? 'orange' : order.status === 'confirmed' || order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered' ? 'green' : 'red'}>
-                                    {order.status === 'pending_payment' ? 'ACTIVE' : order.status === 'confirmed' || order.status === 'processing' || order.status === 'shipped' || order.status === 'delivered' ? 'CONFIRMED' : 'RELEASED'}
-                                </Tag>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Expires At">
-                                {order.paymentDeadline ? formatDate(order.paymentDeadline) : 'N/A'}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Items Reserved" span={2}>
-                                {order.orderItems.length} variant(s), {order.orderItems.reduce((sum, item) => sum + item.quantity, 0)} unit(s) total
-                            </Descriptions.Item>
-                        </Descriptions>
-                    </Card>
+                    <>
+                        {/* Divider */}
+                        <div style={{ height: 1, backgroundColor: '#F5F5F5', margin: '24px 0' }} />
+
+                        <div>
+                            <h3 style={{ fontSize: 16, fontWeight: 500, color: '#1A1A1A', marginBottom: 16 }}>Inventory Reservation</h3>
+
+                            {/* Calm informational block */}
+                            <div style={{
+                                padding: 12,
+                                backgroundColor: '#F8F9FA',
+                                borderRadius: 4,
+                                marginBottom: 16
+                            }}>
+                                <div style={{
+                                    fontSize: 12,
+                                    color: '#666',
+                                    lineHeight: 1.6
+                                }}>
+                                    Inventory reservations are managed automatically. Reservations auto-release after 15 minutes or when order is cancelled.
+                                </div>
+                            </div>
+
+                            <Descriptions
+                                colon={false}
+                                bordered={false}
+                                labelStyle={{
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    color: '#666',
+                                    paddingRight: 24,
+                                    paddingBottom: 12,
+                                    width: '140px'
+                                }}
+                                contentStyle={{
+                                    fontSize: 14,
+                                    color: '#1A1A1A',
+                                    paddingBottom: 12
+                                }}
+                            >
+                                <Descriptions.Item label="Reservation ID" span={2}>
+                                    <code style={{ fontSize: 13, color: '#666', backgroundColor: '#F8F8F8', padding: '2px 6px', borderRadius: 3 }}>{order.reservationId}</code>
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Status">
+                                    {(() => {
+                                        const isActive = order.status === 'pending_payment';
+                                        const isConfirmed = ['confirmed', 'processing', 'shipped', 'delivered'].includes(order.status);
+                                        const statusKey = isActive ? 'pending' : isConfirmed ? 'delivered' : 'cancelled';
+                                        const label = isActive ? 'Active' : isConfirmed ? 'Confirmed' : 'Released';
+                                        return (
+                                            <span style={createStatusStyle(statusKey)}>
+                                                {label}
+                                            </span>
+                                        );
+                                    })()}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Expires At">
+                                    {order.paymentDeadline ? formatDate(order.paymentDeadline) : 'N/A'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Items Reserved" span={2}>
+                                    {order.orderItems.length} variant(s), {order.orderItems.reduce((sum, item) => sum + item.quantity, 0)} unit(s) total
+                                </Descriptions.Item>
+                            </Descriptions>
+                        </div>
+                    </>
                 )}
 
-                {/* Actions */}
-                {status?.canCancel && (
-                    <Card>
-                        <Space>
-                            <Button
-                                danger
-                                icon={<CloseCircleOutlined />}
-                                onClick={() => setCancelModal(true)}
-                            >
-                                Cancel Order
-                            </Button>
-                        </Space>
-                    </Card>
-                )}
-            </Space>
+            </div>
 
             {/* Cancel Order Modal */}
             <Modal

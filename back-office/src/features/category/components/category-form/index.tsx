@@ -1,4 +1,4 @@
-import { Form, Input, Switch, Select } from 'antd';
+import { Form, Input, Switch, Select, InputNumber } from 'antd';
 import type { FormInstance } from 'antd';
 import type { Category } from '@shared';
 import { useMemo } from 'react';
@@ -12,11 +12,11 @@ interface CategoryFormProps {
 
 function getDisplayName(name: Record<string, string> | null | undefined) {
     if (!name) return 'N/A';
-    return name.vi || name.en || Object.values(name)[0] || 'N/A';
+    return name.en || name.vi || Object.values(name)[0] || 'N/A';
 }
 
 /**
- * Helper: Lấy tất cả ID của các con (recursive) của một category
+ * Helper: Get all descendant IDs (recursive) of a category to prevent circular parent selection
  */
 function getAllDescendantIds(categoryId: string, categories: Category[]): Set<string> {
     const result = new Set<string>();
@@ -33,7 +33,7 @@ function getAllDescendantIds(categoryId: string, categories: Category[]): Set<st
 }
 
 export function CategoryForm({ form, categories, currentCategoryId, initialValues }: CategoryFormProps) {
-    // Filter out current category và tất cả các con của nó (tránh loop)
+    // Filter out current category and all its descendants to avoid loops
     const availableParents = useMemo(() => {
         if (!currentCategoryId) return categories;
 
@@ -44,36 +44,41 @@ export function CategoryForm({ form, categories, currentCategoryId, initialValue
     }, [categories, currentCategoryId]);
 
     return (
-        <Form form={form} layout="vertical" initialValues={initialValues}>
+        <Form
+            form={form}
+            layout="vertical"
+            initialValues={initialValues}
+            requiredMark="optional"
+        >
             <Form.Item
                 name="nameVi"
-                label="Tên danh mục (Tiếng Việt)"
-                rules={[{ required: true, message: 'Vui lòng nhập tên danh mục' }]}
+                label="Category Name (Vietnamese)"
+                rules={[{ required: true, message: 'Please enter category name' }]}
             >
-                <Input placeholder="Ví dụ: Điện thoại" />
+                <Input placeholder="e.g. Điện thoại" />
             </Form.Item>
 
-            <Form.Item name="nameEn" label="Tên danh mục (English)">
-                <Input placeholder="Optional: Phones" />
+            <Form.Item name="nameEn" label="Category Name (English)">
+                <Input placeholder="e.g. Mobile Phones" />
             </Form.Item>
 
             <Form.Item
                 name="slug"
                 label="Slug"
-                extra="Nếu để trống sẽ tự động tạo từ tên"
+                extra="Leave empty to auto-generate from name"
                 rules={[
                     {
                         pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                        message: 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang',
+                        message: 'Slug can only contain lowercase letters, numbers, and hyphens',
                     },
                 ]}
             >
                 <Input placeholder="dien-thoai" />
             </Form.Item>
 
-            <Form.Item name="parentId" label="Danh mục cha">
+            <Form.Item name="parentId" label="Parent Category">
                 <Select
-                    placeholder="Chọn danh mục cha (để trống nếu là danh mục gốc)"
+                    placeholder="Select parent category (leave empty for root)"
                     allowClear
                     showSearch
                     filterOption={(input, option) =>
@@ -86,11 +91,11 @@ export function CategoryForm({ form, categories, currentCategoryId, initialValue
                 />
             </Form.Item>
 
-            <Form.Item name="order" label="Thứ tự hiển thị" initialValue={0}>
-                <Input type="number" min={0} />
+            <Form.Item name="order" label="Display Order">
+                <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
 
-            <Form.Item name="isActive" label="Đang hoạt động" initialValue={true} valuePropName="checked">
+            <Form.Item name="isActive" label="Active Status" valuePropName="checked">
                 <Switch />
             </Form.Item>
         </Form>
