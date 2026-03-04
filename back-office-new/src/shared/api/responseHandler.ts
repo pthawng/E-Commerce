@@ -1,5 +1,6 @@
 import { message } from 'antd';
-import { AxiosError } from 'axios';
+import type { AxiosError } from 'axios';
+import type { ApiError } from '@ecommerce/shared';
 
 // --- Global Toast Spam Protection ---
 let errorShown = false;
@@ -14,7 +15,7 @@ export const showErrorOnce = (msg: string) => {
 };
 
 // --- Standardized API Error Handler ---
-export const handleApiError = (error: AxiosError) => {
+export const handleApiError = (error: AxiosError<ApiError>) => {
     const status = error.response?.status;
 
     // 401 is handled by the refresh token logic in the interceptor, so we skip it here
@@ -36,7 +37,9 @@ export const handleApiError = (error: AxiosError) => {
     }
 
     // Default error message
-    // @ts-ignore - responding to arbitrary backend error structure if needed
     const backendMessage = error.response?.data?.message;
-    showErrorOnce(backendMessage || error.message || 'Something went wrong');
+    const finalMessage = Array.isArray(backendMessage) ? backendMessage[0] : backendMessage;
+
+    showErrorOnce(finalMessage || error.message || 'Something went wrong');
 };
+

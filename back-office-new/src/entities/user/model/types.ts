@@ -3,7 +3,11 @@ export interface User {
     email: string;
     fullName: string;
     role: 'admin' | 'staff' | 'manager';
+    isActive: boolean;
+    isEmailVerified: boolean;
+    phone?: string;
     avatarUrl?: string;
+    createdAt?: string;
 }
 
 export interface BackendLoginResponse {
@@ -40,3 +44,23 @@ export interface AuthState {
     logout: () => void;
     updateUser: (user: Partial<User>) => void;
 }
+
+export interface CreateUserDto {
+    email: string;
+    fullName: string;
+    password?: string;
+    role?: 'admin' | 'staff' | 'manager';
+    isActive?: boolean;
+    phone?: string;
+}
+
+export interface UpdateUserDto extends Partial<CreateUserDto> { }
+
+export interface UserQueryDto {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    isActive?: boolean;
+}
+

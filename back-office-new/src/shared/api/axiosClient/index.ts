@@ -1,18 +1,19 @@
 import axios from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import type { ApiError } from '@ecommerce/shared';
 import { handleApiError, showErrorOnce } from '@/shared/api/responseHandler';
 
 // Interface for Queue Items
 interface FailedRequest {
     resolve: (token: string) => void;
-    reject: (error: any) => void;
+    reject: (error: AxiosError) => void;
 }
 
 // State for Refresh Token Mechanism
 let isRefreshing = false;
 let failedQueue: FailedRequest[] = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: AxiosError | null, token: string | null = null) => {
     failedQueue.forEach((prom) => {
         if (error) {
             prom.reject(error);
@@ -22,6 +23,7 @@ const processQueue = (error: any, token: string | null = null) => {
     });
     failedQueue = [];
 };
+
 
 // Create generic axios instance
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -58,7 +60,7 @@ axiosClient.interceptors.response.use(
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
         // Handle Global Errors
-        handleApiError(error);
+        handleApiError(error as AxiosError<ApiError>);
 
         // Skip 401 interception for Login endpoint
         if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/admin/auth/login')) {
@@ -78,7 +80,7 @@ axiosClient.interceptors.response.use(
                 // ... (existing refresh attempt)
                 throw new Error("Refresh token implementation pending backend");
             } catch (refreshError) {
-                processQueue(refreshError, null);
+                processQueue(refreshError as AxiosError, null);
                 // Logout user on refresh failure
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');

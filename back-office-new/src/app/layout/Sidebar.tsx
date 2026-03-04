@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Layout, Menu } from 'antd';
 import {
-    DesktopOutlined,
-    FileOutlined,
-    PieChartOutlined,
+    ContainerOutlined,
+    DashboardOutlined,
+    PicLeftOutlined,
+    ShoppingOutlined,
     TeamOutlined,
-    UserOutlined,
+    TagsOutlined,
+    SafetyCertificateOutlined,
+    IdcardOutlined,
+    KeyOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { usePermission } from '@/entities/user/hooks';
 
 const { Sider } = Layout;
 
@@ -27,23 +33,71 @@ function getItem(
     } as MenuItem;
 }
 
-const items: MenuItem[] = [
-    getItem('Dashboard', '1', <PieChartOutlined />),
-    getItem('Orders', '2', <DesktopOutlined />),
-    getItem('User', 'sub1', <UserOutlined />, [
-        getItem('Tom', '3'),
-        getItem('Bill', '4'),
-        getItem('Alex', '5'),
-    ]),
-    getItem('Team', 'sub2', <TeamOutlined />, [getItem('Team 1', '6'), getItem('Team 2', '8')]),
-    getItem('Files', '9', <FileOutlined />),
-];
-
 interface SidebarProps {
     collapsed: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { can } = usePermission();
+
+    const menuItems = useMemo(() => {
+        const items: MenuItem[] = [];
+
+        // Dashboard (always visible if authenticated by default)
+        items.push(getItem('Dashboard', '/dashboard', <DashboardOutlined />));
+
+        // Catalog Management Group
+        const catalogItems: MenuItem[] = [];
+        if (can('product.item.read') || can('product.read')) {
+            catalogItems.push(getItem('Products', '/products', <ShoppingOutlined />));
+        }
+        if (can('product.category.read')) {
+            catalogItems.push(getItem('Categories', '/categories', <PicLeftOutlined />));
+        }
+        if (can('product.attribute.read')) {
+            catalogItems.push(getItem('Attributes', '/attributes', <TagsOutlined />));
+        }
+
+        if (catalogItems.length > 0) {
+            items.push(getItem('Catalog', 'catalog', <ContainerOutlined />, catalogItems));
+        }
+
+        // Orders
+        if (can('order.read')) {
+            items.push(getItem('Orders', '/orders', <ContainerOutlined />));
+        }
+
+        // Identity & Access
+        const identityItems: MenuItem[] = [];
+        if (can('auth.user.read') || can('user.read')) {
+            identityItems.push(getItem('Users', '/users', <TeamOutlined />));
+        }
+        if (can('auth.role.read')) {
+            identityItems.push(getItem('Roles', '/roles', <SafetyCertificateOutlined />));
+            identityItems.push(getItem('Permissions', '/permissions', <KeyOutlined />));
+        }
+
+        if (identityItems.length > 0) {
+            items.push(getItem('Identity & Access', 'identity', <IdcardOutlined />, identityItems));
+        }
+
+        return items;
+    }, [can]);
+
+    // Handle initial selection based on URL
+    const openKeys = useMemo(() => {
+        const keys = [];
+        if (location.pathname.startsWith('/products') || location.pathname.startsWith('/categories') || location.pathname.startsWith('/attributes')) {
+            keys.push('catalog');
+        }
+        if (location.pathname.startsWith('/users') || location.pathname.startsWith('/roles') || location.pathname.startsWith('/permissions')) {
+            keys.push('identity');
+        }
+        return keys;
+    }, [location.pathname]);
+
     return (
         <Sider
             trigger={null}
@@ -79,18 +133,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
                         letterSpacing: '0.02em',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
+                        cursor: 'pointer'
                     }}
+                    onClick={() => navigate('/dashboard')}
                 >
                     Ray Paradis
                 </div>
             </div>
             <Menu
                 theme="dark"
-                defaultSelectedKeys={['1']}
+                selectedKeys={[location.pathname]}
+                defaultOpenKeys={openKeys}
                 mode="inline"
-                items={items}
+                items={menuItems}
+                onClick={({ key }) => {
+                    navigate(key);
+                }}
                 style={{ background: 'transparent', borderRight: 0, marginTop: 8 }}
             />
         </Sider>
     );
 };
+
