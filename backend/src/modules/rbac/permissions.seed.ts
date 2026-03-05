@@ -39,4 +39,11 @@ export const PERMISSION_SEEDS: PermissionSeed[] = [
     { action: PERMISSIONS.PRODUCT.VARIANT.UPDATE, name: 'Cập nhật variant', module: 'PRODUCT' },
     { action: PERMISSIONS.PRODUCT.VARIANT.DELETE, name: 'Xóa variant', module: 'PRODUCT' },
     { action: PERMISSIONS.PRODUCT.VARIANT.MANAGE, name: 'Quản lý variant', module: 'PRODUCT' },
+
+    // COMMERCE - ORDER
+    { action: PERMISSIONS.ORDER.READ, name: 'Xem đơn hàng', module: 'ORDER' },
+    { action: PERMISSIONS.ORDER.UPDATE, name: 'Cập nhật đơn hàng', module: 'ORDER' },
+    { action: PERMISSIONS.ORDER.DELETE, name: 'Xóa đơn hàng', module: 'ORDER' },
+    { action: PERMISSIONS.ORDER.MANAGE_PAYMENT, name: 'Quản lý thanh toán', module: 'ORDER' },
+    { action: PERMISSIONS.ORDER.SHIPMENT_MANAGE, name: 'Quản lý vận chuyển', module: 'ORDER' },
 ];

@@ -450,7 +450,7 @@ export class RbacService implements OnModuleInit {
   private async seedDefaultPermissions() {
     const { PERMISSION_SEEDS } = await import('./permissions.seed');
 
-    await Promise.all(
+    const permissions = await Promise.all(
       PERMISSION_SEEDS.map((p) =>
         this.prisma.permission.upsert({
           where: { action: p.action },
@@ -467,5 +467,25 @@ export class RbacService implements OnModuleInit {
         }),
       ),
     );
+
+    // Auto-assign all permissions to the 'admin' role if it exists
+    const adminRole = await this.prisma.role.findUnique({ where: { slug: 'admin' } });
+    if (adminRole) {
+      for (const p of permissions) {
+        await this.prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+              roleId: adminRole.id,
+              permissionId: p.id,
+            },
+          },
+          update: {},
+          create: {
+            roleId: adminRole.id,
+            permissionId: p.id,
+          },
+        });
+      }
+    }
   }
 }

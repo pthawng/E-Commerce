@@ -96,7 +96,7 @@ export class OrderService {
     async getOrder(id: string, userId?: string) {
         const order = await this.prisma.order.findUnique({
             where: { id },
-            include: { items: true, transactions: true, shippingMethod: true },
+            include: { items: true, transactions: true, shippingMethod: true, timelines: { orderBy: { createdAt: 'desc' } } },
         });
 
         if (!order) throw new NotFoundException('Order not found');
@@ -106,6 +106,130 @@ export class OrderService {
             throw new NotFoundException('Order not found');
         }
         return order;
+    }
+
+    // ============================================
+    // ADMIN API
+    // ============================================
+
+    async findAllPaginated(dto: { page?: number; limit?: number; search?: string; status?: string; sort?: string }) {
+        try {
+            const page = Number(dto.page || 1);
+            const limit = Number(dto.limit || 20);
+            const { search, status, sort } = dto;
+            const skip = (page - 1) * limit;
+
+            const where: Prisma.OrderWhereInput = {};
+
+            if (status) {
+                where.status = status as any;
+            }
+
+            if (search) {
+                where.OR = [
+                    { code: { contains: search, mode: 'insensitive' } },
+                    { shippingAddress: { path: ['fullName'], string_contains: search } },
+                ];
+            }
+
+            // Sorting
+            let orderBy: any = { createdAt: 'desc' };
+            if (sort) {
+                const [field, direction] = sort.split(':');
+                orderBy = { [field]: direction };
+            }
+
+            const [items, total] = await Promise.all([
+                this.prisma.order.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy,
+                    include: {
+                        user: { select: { id: true, email: true, fullName: true } },
+                        _count: { select: { items: true } }
+                    }
+                }),
+                this.prisma.order.count({ where })
+            ]);
+
+            return {
+                items,
+                meta: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                    hasNext: page * limit < total,
+                    hasPrev: page > 1
+                }
+            };
+        } catch (error) {
+            this.logger.error('Error fetching paginated orders:', error);
+            throw error;
+        }
+    }
+
+    async updateStatus(id: string, status: string, actorId?: string, note?: string) {
+        const order = await this.prisma.order.findUnique({
+            where: { id },
+            include: { items: true }
+        });
+
+        if (!order) throw new NotFoundException('Order not found');
+
+        return this.prisma.$transaction(async (tx) => {
+            const updatedOrder = await tx.order.update({
+                where: { id },
+                data: {
+                    status: status as any,
+                    // Auto-set timestamps based on status
+                    ...(status === 'confirmed' ? { confirmedAt: new Date() } : {}),
+                    ...(status === 'shipping' ? { shippedAt: new Date() } : {}),
+                    ...(status === 'delivered' ? { deliveredAt: new Date() } : {}),
+                    ...(status === 'completed' ? { completedAt: new Date() } : {}),
+                    ...(status === 'cancelled' ? { cancelledAt: new Date() } : {}),
+                }
+            });
+
+            await tx.orderTimeline.create({
+                data: {
+                    orderId: id,
+                    action: `STATUS_UPDATE_${status.toUpperCase()}`,
+                    fromStatus: order.status,
+                    toStatus: status as any,
+                    description: note || `Order status updated to ${status}`,
+                    actorId,
+                    actorType: actorId ? 'admin' : 'system'
+                }
+            });
+
+            return updatedOrder;
+        });
+    }
+
+    async updateTracking(id: string, trackingCode: string, estimatedDeliveryAt?: Date, actorId?: string) {
+        return this.prisma.$transaction(async (tx) => {
+            const order = await tx.order.update({
+                where: { id },
+                data: {
+                    trackingCode,
+                    estimatedDeliveryAt: estimatedDeliveryAt || undefined,
+                }
+            });
+
+            await tx.orderTimeline.create({
+                data: {
+                    orderId: id,
+                    action: 'TRACKING_UPDATE',
+                    description: `Updated tracking code: ${trackingCode}`,
+                    actorId,
+                    actorType: 'admin'
+                }
+            });
+
+            return order;
+        });
     }
 
     // ============================================

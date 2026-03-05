@@ -5,6 +5,8 @@ import { ProtectedRoute } from '@/features/auth/auth-guard';
 import { UserPage } from '@/pages/user';
 import { DashboardPage } from '@/pages/dashboard';
 import { RolesListPage, RoleCreatePage, RoleEditPage, PermissionsListPage, PermissionCreatePage, PermissionEditPage } from '@/pages/rbac';
+import { ProductsPage, ProductCreatePage, ProductEditPage, CategoriesPage, AttributesPage } from '@/pages/product';
+import { OrdersPage } from '@/pages/order';
 
 export const router = createBrowserRouter([
     {
@@ -27,7 +29,7 @@ export const router = createBrowserRouter([
                 path: 'orders',
                 element: (
                     <ProtectedRoute permission="order.read">
-                        <div>Orders Content</div>
+                        <OrdersPage />
                     </ProtectedRoute>
                 ),
             },
@@ -84,6 +86,47 @@ export const router = createBrowserRouter([
                 element: (
                     <ProtectedRoute permission="auth.role.update">
                         <PermissionEditPage />
+                    </ProtectedRoute>
+                ),
+            },
+            // ── Product Catalog ────────────────────────────────────────────────
+            {
+                path: 'products',
+                element: (
+                    <ProtectedRoute permission="product.item.read">
+                        <ProductsPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'products/create',
+                element: (
+                    <ProtectedRoute permission="product.item.create">
+                        <ProductCreatePage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'products/:id/edit',
+                element: (
+                    <ProtectedRoute permission="product.item.update">
+                        <ProductEditPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'categories',
+                element: (
+                    <ProtectedRoute permission="product.category.read">
+                        <CategoriesPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'attributes',
+                element: (
+                    <ProtectedRoute permission="product.attribute.read">
+                        <AttributesPage />
                     </ProtectedRoute>
                 ),
             },

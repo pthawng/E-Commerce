@@ -192,6 +192,7 @@ model User {
   auditLogs       AuditLog[]
   verifyEmailTokens VerifyEmailToken[]
   resetPasswordTokens ResetPasswordToken[]
+  orders          Order[]
 
   @@unique([email], map: "idx_users_email_unique")
   @@unique([phone], map: "idx_users_phone_unique")
@@ -517,6 +518,7 @@ model Order {
   completedAt           DateTime?
   cancelledAt           DateTime?
 
+  user                  User?             @relation(fields: [userId], references: [id])
   shippingMethod        ShippingMethod?   @relation(fields: [shippingMethodId], references: [id])
   items                 OrderItem[]
   transactions          PaymentTransaction[]

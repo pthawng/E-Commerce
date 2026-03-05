@@ -152,7 +152,7 @@ export const Topbar: React.FC<TopbarProps> = ({ collapsed, setCollapsed }) => {
                                 }
                             }}
                         >
-                            <Avatar size="default" icon={<UserOutlined />} src={user.avatarUrl} />
+                            <Avatar size="default" icon={<UserOutlined />} src={user.avatarUrl || undefined} />
                             <span style={{ fontWeight: 500 }}>{user.fullName}</span>
                         </Space>
                     </Dropdown>

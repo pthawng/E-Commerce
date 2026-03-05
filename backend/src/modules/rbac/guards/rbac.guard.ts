@@ -18,7 +18,7 @@ export class PermissionGuard implements CanActivate {
     private reflector: Reflector,
     // [CHANGE] Thay RbacService bằng PermissionCacheService để dùng Redis
     private permissionCacheService: PermissionCacheService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // 1. Lấy Metadata từ Decorator (Giữ nguyên logic của bạn - rất tốt)

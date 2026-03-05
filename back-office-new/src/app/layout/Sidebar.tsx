@@ -10,6 +10,7 @@ import {
     SafetyCertificateOutlined,
     IdcardOutlined,
     KeyOutlined,
+    ShoppingCartOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -40,7 +41,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { can } = usePermission();
+    const { can, user } = usePermission();
 
     const menuItems = useMemo(() => {
         const items: MenuItem[] = [];
@@ -48,15 +49,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
         // Dashboard (always visible if authenticated by default)
         items.push(getItem('Dashboard', '/dashboard', <DashboardOutlined />));
 
+        const isAdmin = ['admin', 'manager'].includes(user?.role?.toString().toLowerCase() || '');
+
+        // Commerce Group
+        const commerceItems: MenuItem[] = [];
+        if (isAdmin || can('order.read')) {
+            commerceItems.push(getItem('Orders', '/orders', <ShoppingCartOutlined />));
+        }
+        // Future: commerceItems.push(getItem('Shipping', '/shipping', <CarOutlined />));
+
+        if (commerceItems.length > 0) {
+            items.push(getItem('Commerce', 'commerce', <ShoppingCartOutlined />, commerceItems));
+        }
+
         // Catalog Management Group
         const catalogItems: MenuItem[] = [];
-        if (can('product.item.read') || can('product.read')) {
+        if (isAdmin || can('product.item.read') || can('product.read')) {
             catalogItems.push(getItem('Products', '/products', <ShoppingOutlined />));
         }
-        if (can('product.category.read')) {
+        if (isAdmin || can('product.category.read')) {
             catalogItems.push(getItem('Categories', '/categories', <PicLeftOutlined />));
         }
-        if (can('product.attribute.read')) {
+        if (isAdmin || can('product.attribute.read')) {
             catalogItems.push(getItem('Attributes', '/attributes', <TagsOutlined />));
         }
 
@@ -64,17 +78,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
             items.push(getItem('Catalog', 'catalog', <ContainerOutlined />, catalogItems));
         }
 
-        // Orders
-        if (can('order.read')) {
-            items.push(getItem('Orders', '/orders', <ContainerOutlined />));
-        }
-
         // Identity & Access
         const identityItems: MenuItem[] = [];
-        if (can('auth.user.read') || can('user.read')) {
+        if (isAdmin || can('auth.user.read') || can('user.read')) {
             identityItems.push(getItem('Users', '/users', <TeamOutlined />));
         }
-        if (can('auth.role.read')) {
+        if (isAdmin || can('auth.role.read')) {
             identityItems.push(getItem('Roles', '/roles', <SafetyCertificateOutlined />));
             identityItems.push(getItem('Permissions', '/permissions', <KeyOutlined />));
         }
@@ -84,13 +93,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
         }
 
         return items;
-    }, [can]);
+    }, [can, user]);
 
     // Handle initial selection based on URL
     const openKeys = useMemo(() => {
         const keys = [];
         if (location.pathname.startsWith('/products') || location.pathname.startsWith('/categories') || location.pathname.startsWith('/attributes')) {
             keys.push('catalog');
+        }
+        if (location.pathname.startsWith('/orders')) {
+            keys.push('commerce');
         }
         if (location.pathname.startsWith('/users') || location.pathname.startsWith('/roles') || location.pathname.startsWith('/permissions')) {
             keys.push('identity');
