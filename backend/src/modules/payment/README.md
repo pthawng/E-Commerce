@@ -1,4 +1,4 @@
-# Payment Module
+1# Payment Module
 
 Comprehensive payment module for Ray Paradis E-Commerce platform with support for multiple payment gateways.
 

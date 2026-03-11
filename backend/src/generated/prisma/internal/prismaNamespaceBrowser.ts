@@ -72,6 +72,7 @@ export const ModelName = {
   InventoryItem: 'InventoryItem',
   InventoryLog: 'InventoryLog',
   InventoryReservation: 'InventoryReservation',
+  InventoryTransfer: 'InventoryTransfer',
   Cart: 'Cart',
   CartItem: 'CartItem',
   ShippingMethod: 'ShippingMethod',
@@ -350,9 +351,10 @@ export const InventoryLogScalarFieldEnum = {
   warehouseId: 'warehouseId',
   actionType: 'actionType',
   quantityChange: 'quantityChange',
-  stockAfter: 'stockAfter',
+  beforeQuantity: 'beforeQuantity',
+  afterQuantity: 'afterQuantity',
+  referenceType: 'referenceType',
   referenceId: 'referenceId',
-  referenceCode: 'referenceCode',
   actorId: 'actorId',
   note: 'note',
   createdAt: 'createdAt'
@@ -365,6 +367,7 @@ export const InventoryReservationScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
   variantId: 'variantId',
+  warehouseId: 'warehouseId',
   quantity: 'quantity',
   expiresAt: 'expiresAt',
   status: 'status',
@@ -372,6 +375,21 @@ export const InventoryReservationScalarFieldEnum = {
 } as const
 
 export type InventoryReservationScalarFieldEnum = (typeof InventoryReservationScalarFieldEnum)[keyof typeof InventoryReservationScalarFieldEnum]
+
+
+export const InventoryTransferScalarFieldEnum = {
+  id: 'id',
+  variantId: 'variantId',
+  fromWarehouseId: 'fromWarehouseId',
+  toWarehouseId: 'toWarehouseId',
+  quantity: 'quantity',
+  status: 'status',
+  note: 'note',
+  actorId: 'actorId',
+  createdAt: 'createdAt'
+} as const
+
+export type InventoryTransferScalarFieldEnum = (typeof InventoryTransferScalarFieldEnum)[keyof typeof InventoryTransferScalarFieldEnum]
 
 
 export const CartScalarFieldEnum = {

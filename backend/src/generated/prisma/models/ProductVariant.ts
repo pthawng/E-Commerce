@@ -313,6 +313,7 @@ export type ProductVariantWhereInput = {
   attributes?: Prisma.VariantAttributeValueListRelationFilter
   inventoryItems?: Prisma.InventoryItemListRelationFilter
   inventoryLogs?: Prisma.InventoryLogListRelationFilter
+  transfers?: Prisma.InventoryTransferListRelationFilter
 }
 
 export type ProductVariantOrderByWithRelationInput = {
@@ -336,6 +337,7 @@ export type ProductVariantOrderByWithRelationInput = {
   attributes?: Prisma.VariantAttributeValueOrderByRelationAggregateInput
   inventoryItems?: Prisma.InventoryItemOrderByRelationAggregateInput
   inventoryLogs?: Prisma.InventoryLogOrderByRelationAggregateInput
+  transfers?: Prisma.InventoryTransferOrderByRelationAggregateInput
 }
 
 export type ProductVariantWhereUniqueInput = Prisma.AtLeast<{
@@ -362,6 +364,7 @@ export type ProductVariantWhereUniqueInput = Prisma.AtLeast<{
   attributes?: Prisma.VariantAttributeValueListRelationFilter
   inventoryItems?: Prisma.InventoryItemListRelationFilter
   inventoryLogs?: Prisma.InventoryLogListRelationFilter
+  transfers?: Prisma.InventoryTransferListRelationFilter
 }, "id" | "sku">
 
 export type ProductVariantOrderByWithAggregationInput = {
@@ -428,6 +431,7 @@ export type ProductVariantCreateInput = {
   attributes?: Prisma.VariantAttributeValueCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantUncheckedCreateInput = {
@@ -450,6 +454,7 @@ export type ProductVariantUncheckedCreateInput = {
   attributes?: Prisma.VariantAttributeValueUncheckedCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantUpdateInput = {
@@ -472,6 +477,7 @@ export type ProductVariantUpdateInput = {
   attributes?: Prisma.VariantAttributeValueUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateInput = {
@@ -494,6 +500,7 @@ export type ProductVariantUncheckedUpdateInput = {
   attributes?: Prisma.VariantAttributeValueUncheckedUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUncheckedUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUncheckedUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantCreateManyInput = {
@@ -769,6 +776,20 @@ export type ProductVariantUpdateOneWithoutInventoryLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ProductVariantUpdateToOneWithWhereWithoutInventoryLogsInput, Prisma.ProductVariantUpdateWithoutInventoryLogsInput>, Prisma.ProductVariantUncheckedUpdateWithoutInventoryLogsInput>
 }
 
+export type ProductVariantCreateNestedOneWithoutTransfersInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutTransfersInput, Prisma.ProductVariantUncheckedCreateWithoutTransfersInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutTransfersInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+}
+
+export type ProductVariantUpdateOneRequiredWithoutTransfersNestedInput = {
+  create?: Prisma.XOR<Prisma.ProductVariantCreateWithoutTransfersInput, Prisma.ProductVariantUncheckedCreateWithoutTransfersInput>
+  connectOrCreate?: Prisma.ProductVariantCreateOrConnectWithoutTransfersInput
+  upsert?: Prisma.ProductVariantUpsertWithoutTransfersInput
+  connect?: Prisma.ProductVariantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProductVariantUpdateToOneWithWhereWithoutTransfersInput, Prisma.ProductVariantUpdateWithoutTransfersInput>, Prisma.ProductVariantUncheckedUpdateWithoutTransfersInput>
+}
+
 export type ProductVariantCreateWithoutProductInput = {
   id?: string
   sku: string
@@ -788,6 +809,7 @@ export type ProductVariantCreateWithoutProductInput = {
   attributes?: Prisma.VariantAttributeValueCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantUncheckedCreateWithoutProductInput = {
@@ -809,6 +831,7 @@ export type ProductVariantUncheckedCreateWithoutProductInput = {
   attributes?: Prisma.VariantAttributeValueUncheckedCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantCreateOrConnectWithoutProductInput = {
@@ -877,6 +900,7 @@ export type ProductVariantCreateWithoutAttributesInput = {
   media?: Prisma.ProductMediaCreateNestedManyWithoutVariantsInput
   inventoryItems?: Prisma.InventoryItemCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantUncheckedCreateWithoutAttributesInput = {
@@ -898,6 +922,7 @@ export type ProductVariantUncheckedCreateWithoutAttributesInput = {
   media?: Prisma.ProductMediaUncheckedCreateNestedManyWithoutVariantsInput
   inventoryItems?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantCreateOrConnectWithoutAttributesInput = {
@@ -935,6 +960,7 @@ export type ProductVariantUpdateWithoutAttributesInput = {
   media?: Prisma.ProductMediaUpdateManyWithoutVariantsNestedInput
   inventoryItems?: Prisma.InventoryItemUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateWithoutAttributesInput = {
@@ -956,6 +982,7 @@ export type ProductVariantUncheckedUpdateWithoutAttributesInput = {
   media?: Prisma.ProductMediaUncheckedUpdateManyWithoutVariantsNestedInput
   inventoryItems?: Prisma.InventoryItemUncheckedUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUncheckedUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantCreateWithoutMediaInput = {
@@ -977,6 +1004,7 @@ export type ProductVariantCreateWithoutMediaInput = {
   attributes?: Prisma.VariantAttributeValueCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantUncheckedCreateWithoutMediaInput = {
@@ -998,6 +1026,7 @@ export type ProductVariantUncheckedCreateWithoutMediaInput = {
   attributes?: Prisma.VariantAttributeValueUncheckedCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutProductVariantInput
   inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantCreateOrConnectWithoutMediaInput = {
@@ -1040,6 +1069,7 @@ export type ProductVariantCreateWithoutInventoryItemsInput = {
   media?: Prisma.ProductMediaCreateNestedManyWithoutVariantsInput
   attributes?: Prisma.VariantAttributeValueCreateNestedManyWithoutVariantInput
   inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantUncheckedCreateWithoutInventoryItemsInput = {
@@ -1061,6 +1091,7 @@ export type ProductVariantUncheckedCreateWithoutInventoryItemsInput = {
   media?: Prisma.ProductMediaUncheckedCreateNestedManyWithoutVariantsInput
   attributes?: Prisma.VariantAttributeValueUncheckedCreateNestedManyWithoutVariantInput
   inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantCreateOrConnectWithoutInventoryItemsInput = {
@@ -1098,6 +1129,7 @@ export type ProductVariantUpdateWithoutInventoryItemsInput = {
   media?: Prisma.ProductMediaUpdateManyWithoutVariantsNestedInput
   attributes?: Prisma.VariantAttributeValueUpdateManyWithoutVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateWithoutInventoryItemsInput = {
@@ -1119,6 +1151,7 @@ export type ProductVariantUncheckedUpdateWithoutInventoryItemsInput = {
   media?: Prisma.ProductMediaUncheckedUpdateManyWithoutVariantsNestedInput
   attributes?: Prisma.VariantAttributeValueUncheckedUpdateManyWithoutVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUncheckedUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantCreateWithoutInventoryLogsInput = {
@@ -1140,6 +1173,7 @@ export type ProductVariantCreateWithoutInventoryLogsInput = {
   media?: Prisma.ProductMediaCreateNestedManyWithoutVariantsInput
   attributes?: Prisma.VariantAttributeValueCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantUncheckedCreateWithoutInventoryLogsInput = {
@@ -1161,6 +1195,7 @@ export type ProductVariantUncheckedCreateWithoutInventoryLogsInput = {
   media?: Prisma.ProductMediaUncheckedCreateNestedManyWithoutVariantsInput
   attributes?: Prisma.VariantAttributeValueUncheckedCreateNestedManyWithoutVariantInput
   inventoryItems?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutProductVariantInput
+  transfers?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutProductVariantInput
 }
 
 export type ProductVariantCreateOrConnectWithoutInventoryLogsInput = {
@@ -1198,6 +1233,7 @@ export type ProductVariantUpdateWithoutInventoryLogsInput = {
   media?: Prisma.ProductMediaUpdateManyWithoutVariantsNestedInput
   attributes?: Prisma.VariantAttributeValueUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateWithoutInventoryLogsInput = {
@@ -1219,6 +1255,111 @@ export type ProductVariantUncheckedUpdateWithoutInventoryLogsInput = {
   media?: Prisma.ProductMediaUncheckedUpdateManyWithoutVariantsNestedInput
   attributes?: Prisma.VariantAttributeValueUncheckedUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUncheckedUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUncheckedUpdateManyWithoutProductVariantNestedInput
+}
+
+export type ProductVariantCreateWithoutTransfersInput = {
+  id?: string
+  sku: string
+  variantTitle?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  compareAtPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  costPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  weightGram?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isDefault?: boolean
+  isActive?: boolean
+  position?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  thumbnailUrl?: string | null
+  product: Prisma.ProductCreateNestedOneWithoutVariantsInput
+  media?: Prisma.ProductMediaCreateNestedManyWithoutVariantsInput
+  attributes?: Prisma.VariantAttributeValueCreateNestedManyWithoutVariantInput
+  inventoryItems?: Prisma.InventoryItemCreateNestedManyWithoutProductVariantInput
+  inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutProductVariantInput
+}
+
+export type ProductVariantUncheckedCreateWithoutTransfersInput = {
+  id?: string
+  productId: string
+  sku: string
+  variantTitle?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  compareAtPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  costPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  weightGram?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isDefault?: boolean
+  isActive?: boolean
+  position?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  thumbnailUrl?: string | null
+  media?: Prisma.ProductMediaUncheckedCreateNestedManyWithoutVariantsInput
+  attributes?: Prisma.VariantAttributeValueUncheckedCreateNestedManyWithoutVariantInput
+  inventoryItems?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutProductVariantInput
+  inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutProductVariantInput
+}
+
+export type ProductVariantCreateOrConnectWithoutTransfersInput = {
+  where: Prisma.ProductVariantWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutTransfersInput, Prisma.ProductVariantUncheckedCreateWithoutTransfersInput>
+}
+
+export type ProductVariantUpsertWithoutTransfersInput = {
+  update: Prisma.XOR<Prisma.ProductVariantUpdateWithoutTransfersInput, Prisma.ProductVariantUncheckedUpdateWithoutTransfersInput>
+  create: Prisma.XOR<Prisma.ProductVariantCreateWithoutTransfersInput, Prisma.ProductVariantUncheckedCreateWithoutTransfersInput>
+  where?: Prisma.ProductVariantWhereInput
+}
+
+export type ProductVariantUpdateToOneWithWhereWithoutTransfersInput = {
+  where?: Prisma.ProductVariantWhereInput
+  data: Prisma.XOR<Prisma.ProductVariantUpdateWithoutTransfersInput, Prisma.ProductVariantUncheckedUpdateWithoutTransfersInput>
+}
+
+export type ProductVariantUpdateWithoutTransfersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  variantTitle?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  compareAtPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  costPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  weightGram?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  position?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  product?: Prisma.ProductUpdateOneRequiredWithoutVariantsNestedInput
+  media?: Prisma.ProductMediaUpdateManyWithoutVariantsNestedInput
+  attributes?: Prisma.VariantAttributeValueUpdateManyWithoutVariantNestedInput
+  inventoryItems?: Prisma.InventoryItemUpdateManyWithoutProductVariantNestedInput
+  inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutProductVariantNestedInput
+}
+
+export type ProductVariantUncheckedUpdateWithoutTransfersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  productId?: Prisma.StringFieldUpdateOperationsInput | string
+  sku?: Prisma.StringFieldUpdateOperationsInput | string
+  variantTitle?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  compareAtPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  costPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  weightGram?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  position?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  thumbnailUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  media?: Prisma.ProductMediaUncheckedUpdateManyWithoutVariantsNestedInput
+  attributes?: Prisma.VariantAttributeValueUncheckedUpdateManyWithoutVariantNestedInput
+  inventoryItems?: Prisma.InventoryItemUncheckedUpdateManyWithoutProductVariantNestedInput
+  inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantCreateManyProductInput = {
@@ -1257,6 +1398,7 @@ export type ProductVariantUpdateWithoutProductInput = {
   attributes?: Prisma.VariantAttributeValueUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateWithoutProductInput = {
@@ -1278,6 +1420,7 @@ export type ProductVariantUncheckedUpdateWithoutProductInput = {
   attributes?: Prisma.VariantAttributeValueUncheckedUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUncheckedUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUncheckedUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateManyWithoutProductInput = {
@@ -1316,6 +1459,7 @@ export type ProductVariantUpdateWithoutMediaInput = {
   attributes?: Prisma.VariantAttributeValueUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateWithoutMediaInput = {
@@ -1337,6 +1481,7 @@ export type ProductVariantUncheckedUpdateWithoutMediaInput = {
   attributes?: Prisma.VariantAttributeValueUncheckedUpdateManyWithoutVariantNestedInput
   inventoryItems?: Prisma.InventoryItemUncheckedUpdateManyWithoutProductVariantNestedInput
   inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutProductVariantNestedInput
+  transfers?: Prisma.InventoryTransferUncheckedUpdateManyWithoutProductVariantNestedInput
 }
 
 export type ProductVariantUncheckedUpdateManyWithoutMediaInput = {
@@ -1367,6 +1512,7 @@ export type ProductVariantCountOutputType = {
   attributes: number
   inventoryItems: number
   inventoryLogs: number
+  transfers: number
 }
 
 export type ProductVariantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1374,6 +1520,7 @@ export type ProductVariantCountOutputTypeSelect<ExtArgs extends runtime.Types.Ex
   attributes?: boolean | ProductVariantCountOutputTypeCountAttributesArgs
   inventoryItems?: boolean | ProductVariantCountOutputTypeCountInventoryItemsArgs
   inventoryLogs?: boolean | ProductVariantCountOutputTypeCountInventoryLogsArgs
+  transfers?: boolean | ProductVariantCountOutputTypeCountTransfersArgs
 }
 
 /**
@@ -1414,6 +1561,13 @@ export type ProductVariantCountOutputTypeCountInventoryLogsArgs<ExtArgs extends 
   where?: Prisma.InventoryLogWhereInput
 }
 
+/**
+ * ProductVariantCountOutputType without action
+ */
+export type ProductVariantCountOutputTypeCountTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InventoryTransferWhereInput
+}
+
 
 export type ProductVariantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1436,6 +1590,7 @@ export type ProductVariantSelect<ExtArgs extends runtime.Types.Extensions.Intern
   attributes?: boolean | Prisma.ProductVariant$attributesArgs<ExtArgs>
   inventoryItems?: boolean | Prisma.ProductVariant$inventoryItemsArgs<ExtArgs>
   inventoryLogs?: boolean | Prisma.ProductVariant$inventoryLogsArgs<ExtArgs>
+  transfers?: boolean | Prisma.ProductVariant$transfersArgs<ExtArgs>
   _count?: boolean | Prisma.ProductVariantCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["productVariant"]>
 
@@ -1502,6 +1657,7 @@ export type ProductVariantInclude<ExtArgs extends runtime.Types.Extensions.Inter
   attributes?: boolean | Prisma.ProductVariant$attributesArgs<ExtArgs>
   inventoryItems?: boolean | Prisma.ProductVariant$inventoryItemsArgs<ExtArgs>
   inventoryLogs?: boolean | Prisma.ProductVariant$inventoryLogsArgs<ExtArgs>
+  transfers?: boolean | Prisma.ProductVariant$transfersArgs<ExtArgs>
   _count?: boolean | Prisma.ProductVariantCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ProductVariantIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1519,6 +1675,7 @@ export type $ProductVariantPayload<ExtArgs extends runtime.Types.Extensions.Inte
     attributes: Prisma.$VariantAttributeValuePayload<ExtArgs>[]
     inventoryItems: Prisma.$InventoryItemPayload<ExtArgs>[]
     inventoryLogs: Prisma.$InventoryLogPayload<ExtArgs>[]
+    transfers: Prisma.$InventoryTransferPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1935,6 +2092,7 @@ export interface Prisma__ProductVariantClient<T, Null = never, ExtArgs extends r
   attributes<T extends Prisma.ProductVariant$attributesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$attributesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$VariantAttributeValuePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   inventoryItems<T extends Prisma.ProductVariant$inventoryItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$inventoryItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   inventoryLogs<T extends Prisma.ProductVariant$inventoryLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$inventoryLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  transfers<T extends Prisma.ProductVariant$transfersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProductVariant$transfersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2468,6 +2626,30 @@ export type ProductVariant$inventoryLogsArgs<ExtArgs extends runtime.Types.Exten
   take?: number
   skip?: number
   distinct?: Prisma.InventoryLogScalarFieldEnum | Prisma.InventoryLogScalarFieldEnum[]
+}
+
+/**
+ * ProductVariant.transfers
+ */
+export type ProductVariant$transfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the InventoryTransfer
+   */
+  select?: Prisma.InventoryTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the InventoryTransfer
+   */
+  omit?: Prisma.InventoryTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InventoryTransferInclude<ExtArgs> | null
+  where?: Prisma.InventoryTransferWhereInput
+  orderBy?: Prisma.InventoryTransferOrderByWithRelationInput | Prisma.InventoryTransferOrderByWithRelationInput[]
+  cursor?: Prisma.InventoryTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InventoryTransferScalarFieldEnum | Prisma.InventoryTransferScalarFieldEnum[]
 }
 
 /**

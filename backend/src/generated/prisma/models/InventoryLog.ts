@@ -28,12 +28,14 @@ export type AggregateInventoryLog = {
 
 export type InventoryLogAvgAggregateOutputType = {
   quantityChange: number | null
-  stockAfter: number | null
+  beforeQuantity: number | null
+  afterQuantity: number | null
 }
 
 export type InventoryLogSumAggregateOutputType = {
   quantityChange: number | null
-  stockAfter: number | null
+  beforeQuantity: number | null
+  afterQuantity: number | null
 }
 
 export type InventoryLogMinAggregateOutputType = {
@@ -43,9 +45,10 @@ export type InventoryLogMinAggregateOutputType = {
   warehouseId: string | null
   actionType: $Enums.ActionType | null
   quantityChange: number | null
-  stockAfter: number | null
+  beforeQuantity: number | null
+  afterQuantity: number | null
+  referenceType: string | null
   referenceId: string | null
-  referenceCode: string | null
   actorId: string | null
   note: string | null
   createdAt: Date | null
@@ -58,9 +61,10 @@ export type InventoryLogMaxAggregateOutputType = {
   warehouseId: string | null
   actionType: $Enums.ActionType | null
   quantityChange: number | null
-  stockAfter: number | null
+  beforeQuantity: number | null
+  afterQuantity: number | null
+  referenceType: string | null
   referenceId: string | null
-  referenceCode: string | null
   actorId: string | null
   note: string | null
   createdAt: Date | null
@@ -73,9 +77,10 @@ export type InventoryLogCountAggregateOutputType = {
   warehouseId: number
   actionType: number
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType: number
   referenceId: number
-  referenceCode: number
   actorId: number
   note: number
   createdAt: number
@@ -85,12 +90,14 @@ export type InventoryLogCountAggregateOutputType = {
 
 export type InventoryLogAvgAggregateInputType = {
   quantityChange?: true
-  stockAfter?: true
+  beforeQuantity?: true
+  afterQuantity?: true
 }
 
 export type InventoryLogSumAggregateInputType = {
   quantityChange?: true
-  stockAfter?: true
+  beforeQuantity?: true
+  afterQuantity?: true
 }
 
 export type InventoryLogMinAggregateInputType = {
@@ -100,9 +107,10 @@ export type InventoryLogMinAggregateInputType = {
   warehouseId?: true
   actionType?: true
   quantityChange?: true
-  stockAfter?: true
+  beforeQuantity?: true
+  afterQuantity?: true
+  referenceType?: true
   referenceId?: true
-  referenceCode?: true
   actorId?: true
   note?: true
   createdAt?: true
@@ -115,9 +123,10 @@ export type InventoryLogMaxAggregateInputType = {
   warehouseId?: true
   actionType?: true
   quantityChange?: true
-  stockAfter?: true
+  beforeQuantity?: true
+  afterQuantity?: true
+  referenceType?: true
   referenceId?: true
-  referenceCode?: true
   actorId?: true
   note?: true
   createdAt?: true
@@ -130,9 +139,10 @@ export type InventoryLogCountAggregateInputType = {
   warehouseId?: true
   actionType?: true
   quantityChange?: true
-  stockAfter?: true
+  beforeQuantity?: true
+  afterQuantity?: true
+  referenceType?: true
   referenceId?: true
-  referenceCode?: true
   actorId?: true
   note?: true
   createdAt?: true
@@ -232,9 +242,10 @@ export type InventoryLogGroupByOutputType = {
   warehouseId: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType: string | null
   referenceId: string | null
-  referenceCode: string | null
   actorId: string | null
   note: string | null
   createdAt: Date
@@ -270,9 +281,10 @@ export type InventoryLogWhereInput = {
   warehouseId?: Prisma.UuidNullableFilter<"InventoryLog"> | string | null
   actionType?: Prisma.EnumActionTypeFilter<"InventoryLog"> | $Enums.ActionType
   quantityChange?: Prisma.IntFilter<"InventoryLog"> | number
-  stockAfter?: Prisma.IntFilter<"InventoryLog"> | number
+  beforeQuantity?: Prisma.IntFilter<"InventoryLog"> | number
+  afterQuantity?: Prisma.IntFilter<"InventoryLog"> | number
+  referenceType?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   referenceId?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
-  referenceCode?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   actorId?: Prisma.UuidNullableFilter<"InventoryLog"> | string | null
   note?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   createdAt?: Prisma.DateTimeFilter<"InventoryLog"> | Date | string
@@ -288,9 +300,10 @@ export type InventoryLogOrderByWithRelationInput = {
   warehouseId?: Prisma.SortOrderInput | Prisma.SortOrder
   actionType?: Prisma.SortOrder
   quantityChange?: Prisma.SortOrder
-  stockAfter?: Prisma.SortOrder
+  beforeQuantity?: Prisma.SortOrder
+  afterQuantity?: Prisma.SortOrder
+  referenceType?: Prisma.SortOrderInput | Prisma.SortOrder
   referenceId?: Prisma.SortOrderInput | Prisma.SortOrder
-  referenceCode?: Prisma.SortOrderInput | Prisma.SortOrder
   actorId?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -309,9 +322,10 @@ export type InventoryLogWhereUniqueInput = Prisma.AtLeast<{
   warehouseId?: Prisma.UuidNullableFilter<"InventoryLog"> | string | null
   actionType?: Prisma.EnumActionTypeFilter<"InventoryLog"> | $Enums.ActionType
   quantityChange?: Prisma.IntFilter<"InventoryLog"> | number
-  stockAfter?: Prisma.IntFilter<"InventoryLog"> | number
+  beforeQuantity?: Prisma.IntFilter<"InventoryLog"> | number
+  afterQuantity?: Prisma.IntFilter<"InventoryLog"> | number
+  referenceType?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   referenceId?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
-  referenceCode?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   actorId?: Prisma.UuidNullableFilter<"InventoryLog"> | string | null
   note?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   createdAt?: Prisma.DateTimeFilter<"InventoryLog"> | Date | string
@@ -327,9 +341,10 @@ export type InventoryLogOrderByWithAggregationInput = {
   warehouseId?: Prisma.SortOrderInput | Prisma.SortOrder
   actionType?: Prisma.SortOrder
   quantityChange?: Prisma.SortOrder
-  stockAfter?: Prisma.SortOrder
+  beforeQuantity?: Prisma.SortOrder
+  afterQuantity?: Prisma.SortOrder
+  referenceType?: Prisma.SortOrderInput | Prisma.SortOrder
   referenceId?: Prisma.SortOrderInput | Prisma.SortOrder
-  referenceCode?: Prisma.SortOrderInput | Prisma.SortOrder
   actorId?: Prisma.SortOrderInput | Prisma.SortOrder
   note?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -350,9 +365,10 @@ export type InventoryLogScalarWhereWithAggregatesInput = {
   warehouseId?: Prisma.UuidNullableWithAggregatesFilter<"InventoryLog"> | string | null
   actionType?: Prisma.EnumActionTypeWithAggregatesFilter<"InventoryLog"> | $Enums.ActionType
   quantityChange?: Prisma.IntWithAggregatesFilter<"InventoryLog"> | number
-  stockAfter?: Prisma.IntWithAggregatesFilter<"InventoryLog"> | number
+  beforeQuantity?: Prisma.IntWithAggregatesFilter<"InventoryLog"> | number
+  afterQuantity?: Prisma.IntWithAggregatesFilter<"InventoryLog"> | number
+  referenceType?: Prisma.StringNullableWithAggregatesFilter<"InventoryLog"> | string | null
   referenceId?: Prisma.StringNullableWithAggregatesFilter<"InventoryLog"> | string | null
-  referenceCode?: Prisma.StringNullableWithAggregatesFilter<"InventoryLog"> | string | null
   actorId?: Prisma.UuidNullableWithAggregatesFilter<"InventoryLog"> | string | null
   note?: Prisma.StringNullableWithAggregatesFilter<"InventoryLog"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"InventoryLog"> | Date | string
@@ -362,9 +378,10 @@ export type InventoryLogCreateInput = {
   id?: string
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -380,9 +397,10 @@ export type InventoryLogUncheckedCreateInput = {
   warehouseId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -392,9 +410,10 @@ export type InventoryLogUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -410,9 +429,10 @@ export type InventoryLogUncheckedUpdateInput = {
   warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -425,9 +445,10 @@ export type InventoryLogCreateManyInput = {
   warehouseId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -437,9 +458,10 @@ export type InventoryLogUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -452,9 +474,10 @@ export type InventoryLogUncheckedUpdateManyInput = {
   warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -477,9 +500,10 @@ export type InventoryLogCountOrderByAggregateInput = {
   warehouseId?: Prisma.SortOrder
   actionType?: Prisma.SortOrder
   quantityChange?: Prisma.SortOrder
-  stockAfter?: Prisma.SortOrder
+  beforeQuantity?: Prisma.SortOrder
+  afterQuantity?: Prisma.SortOrder
+  referenceType?: Prisma.SortOrder
   referenceId?: Prisma.SortOrder
-  referenceCode?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   note?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -487,7 +511,8 @@ export type InventoryLogCountOrderByAggregateInput = {
 
 export type InventoryLogAvgOrderByAggregateInput = {
   quantityChange?: Prisma.SortOrder
-  stockAfter?: Prisma.SortOrder
+  beforeQuantity?: Prisma.SortOrder
+  afterQuantity?: Prisma.SortOrder
 }
 
 export type InventoryLogMaxOrderByAggregateInput = {
@@ -497,9 +522,10 @@ export type InventoryLogMaxOrderByAggregateInput = {
   warehouseId?: Prisma.SortOrder
   actionType?: Prisma.SortOrder
   quantityChange?: Prisma.SortOrder
-  stockAfter?: Prisma.SortOrder
+  beforeQuantity?: Prisma.SortOrder
+  afterQuantity?: Prisma.SortOrder
+  referenceType?: Prisma.SortOrder
   referenceId?: Prisma.SortOrder
-  referenceCode?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   note?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -512,9 +538,10 @@ export type InventoryLogMinOrderByAggregateInput = {
   warehouseId?: Prisma.SortOrder
   actionType?: Prisma.SortOrder
   quantityChange?: Prisma.SortOrder
-  stockAfter?: Prisma.SortOrder
+  beforeQuantity?: Prisma.SortOrder
+  afterQuantity?: Prisma.SortOrder
+  referenceType?: Prisma.SortOrder
   referenceId?: Prisma.SortOrder
-  referenceCode?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
   note?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -522,7 +549,8 @@ export type InventoryLogMinOrderByAggregateInput = {
 
 export type InventoryLogSumOrderByAggregateInput = {
   quantityChange?: Prisma.SortOrder
-  stockAfter?: Prisma.SortOrder
+  beforeQuantity?: Prisma.SortOrder
+  afterQuantity?: Prisma.SortOrder
 }
 
 export type InventoryLogCreateNestedManyWithoutProductVariantInput = {
@@ -659,9 +687,10 @@ export type InventoryLogCreateWithoutProductVariantInput = {
   id?: string
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -675,9 +704,10 @@ export type InventoryLogUncheckedCreateWithoutProductVariantInput = {
   warehouseId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -719,9 +749,10 @@ export type InventoryLogScalarWhereInput = {
   warehouseId?: Prisma.UuidNullableFilter<"InventoryLog"> | string | null
   actionType?: Prisma.EnumActionTypeFilter<"InventoryLog"> | $Enums.ActionType
   quantityChange?: Prisma.IntFilter<"InventoryLog"> | number
-  stockAfter?: Prisma.IntFilter<"InventoryLog"> | number
+  beforeQuantity?: Prisma.IntFilter<"InventoryLog"> | number
+  afterQuantity?: Prisma.IntFilter<"InventoryLog"> | number
+  referenceType?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   referenceId?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
-  referenceCode?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   actorId?: Prisma.UuidNullableFilter<"InventoryLog"> | string | null
   note?: Prisma.StringNullableFilter<"InventoryLog"> | string | null
   createdAt?: Prisma.DateTimeFilter<"InventoryLog"> | Date | string
@@ -731,9 +762,10 @@ export type InventoryLogCreateWithoutWarehouseInput = {
   id?: string
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -747,9 +779,10 @@ export type InventoryLogUncheckedCreateWithoutWarehouseInput = {
   productVariantId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -785,9 +818,10 @@ export type InventoryLogCreateWithoutInventoryItemInput = {
   id?: string
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -801,9 +835,10 @@ export type InventoryLogUncheckedCreateWithoutInventoryItemInput = {
   warehouseId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -841,9 +876,10 @@ export type InventoryLogCreateManyProductVariantInput = {
   warehouseId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -853,9 +889,10 @@ export type InventoryLogUpdateWithoutProductVariantInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -869,9 +906,10 @@ export type InventoryLogUncheckedUpdateWithoutProductVariantInput = {
   warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -883,9 +921,10 @@ export type InventoryLogUncheckedUpdateManyWithoutProductVariantInput = {
   warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -897,9 +936,10 @@ export type InventoryLogCreateManyWarehouseInput = {
   productVariantId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -909,9 +949,10 @@ export type InventoryLogUpdateWithoutWarehouseInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -925,9 +966,10 @@ export type InventoryLogUncheckedUpdateWithoutWarehouseInput = {
   productVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -939,9 +981,10 @@ export type InventoryLogUncheckedUpdateManyWithoutWarehouseInput = {
   productVariantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -953,9 +996,10 @@ export type InventoryLogCreateManyInventoryItemInput = {
   warehouseId?: string | null
   actionType: $Enums.ActionType
   quantityChange: number
-  stockAfter: number
+  beforeQuantity: number
+  afterQuantity: number
+  referenceType?: string | null
   referenceId?: string | null
-  referenceCode?: string | null
   actorId?: string | null
   note?: string | null
   createdAt?: Date | string
@@ -965,9 +1009,10 @@ export type InventoryLogUpdateWithoutInventoryItemInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -981,9 +1026,10 @@ export type InventoryLogUncheckedUpdateWithoutInventoryItemInput = {
   warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -995,9 +1041,10 @@ export type InventoryLogUncheckedUpdateManyWithoutInventoryItemInput = {
   warehouseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actionType?: Prisma.EnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType
   quantityChange?: Prisma.IntFieldUpdateOperationsInput | number
-  stockAfter?: Prisma.IntFieldUpdateOperationsInput | number
+  beforeQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  afterQuantity?: Prisma.IntFieldUpdateOperationsInput | number
+  referenceType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   referenceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  referenceCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1012,9 +1059,10 @@ export type InventoryLogSelect<ExtArgs extends runtime.Types.Extensions.Internal
   warehouseId?: boolean
   actionType?: boolean
   quantityChange?: boolean
-  stockAfter?: boolean
+  beforeQuantity?: boolean
+  afterQuantity?: boolean
+  referenceType?: boolean
   referenceId?: boolean
-  referenceCode?: boolean
   actorId?: boolean
   note?: boolean
   createdAt?: boolean
@@ -1030,9 +1078,10 @@ export type InventoryLogSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   warehouseId?: boolean
   actionType?: boolean
   quantityChange?: boolean
-  stockAfter?: boolean
+  beforeQuantity?: boolean
+  afterQuantity?: boolean
+  referenceType?: boolean
   referenceId?: boolean
-  referenceCode?: boolean
   actorId?: boolean
   note?: boolean
   createdAt?: boolean
@@ -1048,9 +1097,10 @@ export type InventoryLogSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   warehouseId?: boolean
   actionType?: boolean
   quantityChange?: boolean
-  stockAfter?: boolean
+  beforeQuantity?: boolean
+  afterQuantity?: boolean
+  referenceType?: boolean
   referenceId?: boolean
-  referenceCode?: boolean
   actorId?: boolean
   note?: boolean
   createdAt?: boolean
@@ -1066,15 +1116,16 @@ export type InventoryLogSelectScalar = {
   warehouseId?: boolean
   actionType?: boolean
   quantityChange?: boolean
-  stockAfter?: boolean
+  beforeQuantity?: boolean
+  afterQuantity?: boolean
+  referenceType?: boolean
   referenceId?: boolean
-  referenceCode?: boolean
   actorId?: boolean
   note?: boolean
   createdAt?: boolean
 }
 
-export type InventoryLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "inventoryItemId" | "productVariantId" | "warehouseId" | "actionType" | "quantityChange" | "stockAfter" | "referenceId" | "referenceCode" | "actorId" | "note" | "createdAt", ExtArgs["result"]["inventoryLog"]>
+export type InventoryLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "inventoryItemId" | "productVariantId" | "warehouseId" | "actionType" | "quantityChange" | "beforeQuantity" | "afterQuantity" | "referenceType" | "referenceId" | "actorId" | "note" | "createdAt", ExtArgs["result"]["inventoryLog"]>
 export type InventoryLogInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   inventoryItem?: boolean | Prisma.InventoryItemDefaultArgs<ExtArgs>
   productVariant?: boolean | Prisma.InventoryLog$productVariantArgs<ExtArgs>
@@ -1105,9 +1156,10 @@ export type $InventoryLogPayload<ExtArgs extends runtime.Types.Extensions.Intern
     warehouseId: string | null
     actionType: $Enums.ActionType
     quantityChange: number
-    stockAfter: number
+    beforeQuantity: number
+    afterQuantity: number
+    referenceType: string | null
     referenceId: string | null
-    referenceCode: string | null
     actorId: string | null
     note: string | null
     createdAt: Date
@@ -1543,9 +1595,10 @@ export interface InventoryLogFieldRefs {
   readonly warehouseId: Prisma.FieldRef<"InventoryLog", 'String'>
   readonly actionType: Prisma.FieldRef<"InventoryLog", 'ActionType'>
   readonly quantityChange: Prisma.FieldRef<"InventoryLog", 'Int'>
-  readonly stockAfter: Prisma.FieldRef<"InventoryLog", 'Int'>
+  readonly beforeQuantity: Prisma.FieldRef<"InventoryLog", 'Int'>
+  readonly afterQuantity: Prisma.FieldRef<"InventoryLog", 'Int'>
+  readonly referenceType: Prisma.FieldRef<"InventoryLog", 'String'>
   readonly referenceId: Prisma.FieldRef<"InventoryLog", 'String'>
-  readonly referenceCode: Prisma.FieldRef<"InventoryLog", 'String'>
   readonly actorId: Prisma.FieldRef<"InventoryLog", 'String'>
   readonly note: Prisma.FieldRef<"InventoryLog", 'String'>
   readonly createdAt: Prisma.FieldRef<"InventoryLog", 'DateTime'>

@@ -17,5 +17,11 @@ export const queryKeys = {
     dashboard: {
         kpi: ['dashboard', 'kpi'] as const,
         revenue: (range: string) => ['dashboard', 'revenue', range] as const,
+    },
+    inventory: {
+        all: ['inventory'] as const,
+        warehouses: ['inventory', 'warehouses'] as const,
+        stock: (params: any) => ['inventory', 'stock', params] as const,
+        history: (params: any) => ['inventory', 'history', params] as const,
     }
 };

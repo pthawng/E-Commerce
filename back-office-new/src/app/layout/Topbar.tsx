@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Button, theme, Flex, Dropdown, Space, Avatar, Typography } from 'antd';
+import { Layout, Button, theme, Flex, Dropdown, Space, Avatar, Typography, Badge } from 'antd';
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
@@ -9,7 +9,8 @@ import {
     SafetyCertificateOutlined,
     BgColorsOutlined,
     TranslationOutlined,
-    QuestionCircleOutlined
+    QuestionCircleOutlined,
+    BellOutlined
 } from '@ant-design/icons';
 import { useAuth } from '@/entities/user/hooks';
 import { useNavigate } from 'react-router-dom';
@@ -132,30 +133,45 @@ export const Topbar: React.FC<TopbarProps> = ({ collapsed, setCollapsed }) => {
                 </Flex>
 
                 {user && (
-                    <Dropdown
-                        menu={{ items }}
-                        trigger={['click']} // Ensures no hover behavior per requirements
-                        placement="bottomRight"
-                    // Ant Design's Dropdown natively supports ESC to close, Click outside to close, and TAB navigation
-                    >
-                        <Space
-                            style={{ cursor: 'pointer', padding: '0 8px' }}
-                            tabIndex={0}
-                            role="button"
-                            aria-haspopup="true"
-                            aria-label="User menu"
-                            onKeyDown={(e) => {
-                                // Allow Enter or Space to open the dropdown if focused via keyboard TAB
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    e.currentTarget.click();
-                                }
-                            }}
+                    <Flex align="center" gap={16}>
+                        <Badge count={5} size="small" offset={[-2, 4]}>
+                            <Button
+                                type="text"
+                                icon={<BellOutlined style={{ fontSize: '18px' }} />}
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            />
+                        </Badge>
+                        <Dropdown
+                            menu={{ items }}
+                            trigger={['click']} // Ensures no hover behavior per requirements
+                            placement="bottomRight"
+                        // Ant Design's Dropdown natively supports ESC to close, Click outside to close, and TAB navigation
                         >
-                            <Avatar size="default" icon={<UserOutlined />} src={user.avatarUrl || undefined} />
-                            <span style={{ fontWeight: 500 }}>{user.fullName}</span>
-                        </Space>
-                    </Dropdown>
+                            <Space
+                                style={{ cursor: 'pointer', padding: '0 8px' }}
+                                tabIndex={0}
+                                role="button"
+                                aria-haspopup="true"
+                                aria-label="User menu"
+                                onKeyDown={(e) => {
+                                    // Allow Enter or Space to open the dropdown if focused via keyboard TAB
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        e.currentTarget.click();
+                                    }
+                                }}
+                            >
+                                <Avatar size="default" icon={<UserOutlined />} src={user.avatarUrl || undefined} />
+                                <span style={{ fontWeight: 500 }}>{user.fullName}</span>
+                            </Space>
+                        </Dropdown>
+                    </Flex>
                 )}
             </Flex>
         </Header>

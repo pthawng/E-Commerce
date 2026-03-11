@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { InventoryService } from '../../inventory/inventory.service';
 
 /**
  * Cleanup Expired Reservations Job
@@ -16,8 +17,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class CleanupExpiredReservationsJob {
     private readonly logger = new Logger(CleanupExpiredReservationsJob.name);
-
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly inventoryService: InventoryService,
+    ) { }
 
     /**
      * Cron job: Runs every minute
@@ -80,40 +83,7 @@ export class CleanupExpiredReservationsJob {
     private async cancelExpiredOrder(order: any): Promise<void> {
         await this.prisma.$transaction(async (tx) => {
             // 1. Release inventory reservations
-            if (order.reservationId) {
-                const variantIds = order.items.map((item: any) => item.productVariantId);
-                const variants = await tx.productVariant.findMany({
-                    where: { id: { in: variantIds } },
-                    include: { inventoryItems: true },
-                });
-
-                for (const item of order.items) {
-                    const variant = variants.find((v) => v.id === item.productVariantId);
-                    const inventoryItem = variant?.inventoryItems[0];
-
-                    if (inventoryItem) {
-                        // Decrement reservedQuantity
-                        await tx.inventoryItem.update({
-                            where: { id: inventoryItem.id },
-                            data: {
-                                reservedQuantity: {
-                                    decrement: item.quantity,
-                                },
-                            },
-                        });
-
-                        this.logger.log(
-                            `Released ${item.quantity} units of ${variant.sku} for order ${order.code}`,
-                        );
-                    }
-                }
-
-                // Mark reservation as expired
-                await tx.inventoryReservation.updateMany({
-                    where: { orderId: order.id },
-                    data: { status: 'expired' },
-                });
-            }
+            await this.inventoryService.release(order.id, tx);
 
             // 2. Update order status
             await tx.order.update({

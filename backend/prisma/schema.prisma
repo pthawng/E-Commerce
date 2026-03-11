@@ -16,17 +16,17 @@ datasource db {
 
 enum AttributeInputType {
   // 1. Nhập liệu cơ bản
-  text            // Ô nhập text ngắn (VD: Khắc tên lên nhẫn)
-  textarea        // Ô nhập text dài (Hiếm dùng cho attribute, nhưng cứ define)
+  text            
+  textarea        
   
   // 2. Chọn lựa (Selection)
-  select          // Dropdown menu (Chọn 1) - VD: Size nhẫn (6, 7, 8)
-  multiselect     // Dropdown chọn nhiều - VD: Phong cách (Boho, Minimalist)
-  boolean         // Toggle/Switch (Yes/No) - VD: Có hộp quà không?
+  select          
+  multiselect     
+  boolean        
   
   // 3. Hiển thị trực quan (Visual - Quan trọng cho Jewelry)
-  swatch_color    // Hiển thị ô tròn màu - VD: Màu kim loại (Vàng, Bạc)
-  swatch_image    // Hiển thị ô ảnh pattern - VD: Loại đá (Kim cương, Ruby - cần nhìn vân đá)
+  swatch_color    
+  swatch_image    
 }
 
 // Media types cho ProductMedia
@@ -43,10 +43,11 @@ enum ActionType {
   TRANSFER_OUT
   TRANSFER_IN
   ADJUSTMENT
+  DAMAGE
 }
 // Trạng thái đơn hàng
 enum OrderStatusEnum {
-  pending_payment  // Waiting for payment
+  pending_payment 
   pending
   confirmed
   processing
@@ -102,6 +103,7 @@ enum PermissionModule {
   DISCOUNT
   CMS
   SYSTEM
+  INVENTORY
 }
 
 model Permission {
@@ -350,6 +352,7 @@ model ProductVariant {
   attributes     VariantAttributeValue[]
   inventoryItems InventoryItem[]
   inventoryLogs  InventoryLog[]
+  transfers      InventoryTransfer[]
 
   @@index([productId], map: "idx_variants_product_id")
   @@index([sku], map: "idx_variants_sku")
@@ -392,6 +395,8 @@ model Warehouse {
   isActive  Boolean          @default(true)
   inventory InventoryItem[]
   inventoryLogs InventoryLog[]
+  transfersFrom InventoryTransfer[] @relation("TransferFrom")
+  transfersTo   InventoryTransfer[] @relation("TransferTo")
 }
 
 model InventoryItem {
@@ -420,9 +425,10 @@ model InventoryLog {
   warehouseId      String?          @db.Uuid
   actionType       ActionType
   quantityChange   Int
-  stockAfter       Int
+  beforeQuantity   Int
+  afterQuantity    Int
+  referenceType    String?          // ORDER | TRANSFER | ADJUSTMENT | DAMAGE
   referenceId      String?
-  referenceCode    String?
   actorId          String?          @db.Uuid
   note             String?
   createdAt        DateTime         @default(now())
@@ -433,8 +439,9 @@ model InventoryLog {
 
 model InventoryReservation {
   id              String            @id @default(uuid()) @db.Uuid
-  orderId         String            @unique @db.Uuid
+  orderId         String            @db.Uuid
   variantId       String            @db.Uuid
+  warehouseId     String            @db.Uuid
   quantity        Int
   expiresAt       DateTime
   status          ReservationStatus @default(active)
@@ -443,6 +450,22 @@ model InventoryReservation {
   @@index([expiresAt, status], map: "idx_reservation_cleanup")
   @@index([orderId], map: "idx_reservation_order")
   @@map("inventory_reservations")
+}
+
+model InventoryTransfer {
+  id              String           @id @default(uuid()) @db.Uuid
+  variantId       String           @db.Uuid
+  fromWarehouseId String           @db.Uuid
+  toWarehouseId   String           @db.Uuid
+  quantity        Int
+  status          String           @default("completed") // completed, pending, cancelled
+  note            String?
+  actorId         String?          @db.Uuid
+  createdAt       DateTime         @default(now())
+
+  productVariant  ProductVariant   @relation(fields: [variantId], references: [id])
+  fromWarehouse   Warehouse        @relation("TransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouse     Warehouse        @relation("TransferTo", fields: [toWarehouseId], references: [id])
 }
 
 //////////////////////////////////////

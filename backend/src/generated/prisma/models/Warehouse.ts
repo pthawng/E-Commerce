@@ -181,6 +181,8 @@ export type WarehouseWhereInput = {
   isActive?: Prisma.BoolFilter<"Warehouse"> | boolean
   inventory?: Prisma.InventoryItemListRelationFilter
   inventoryLogs?: Prisma.InventoryLogListRelationFilter
+  transfersFrom?: Prisma.InventoryTransferListRelationFilter
+  transfersTo?: Prisma.InventoryTransferListRelationFilter
 }
 
 export type WarehouseOrderByWithRelationInput = {
@@ -191,6 +193,8 @@ export type WarehouseOrderByWithRelationInput = {
   isActive?: Prisma.SortOrder
   inventory?: Prisma.InventoryItemOrderByRelationAggregateInput
   inventoryLogs?: Prisma.InventoryLogOrderByRelationAggregateInput
+  transfersFrom?: Prisma.InventoryTransferOrderByRelationAggregateInput
+  transfersTo?: Prisma.InventoryTransferOrderByRelationAggregateInput
 }
 
 export type WarehouseWhereUniqueInput = Prisma.AtLeast<{
@@ -204,6 +208,8 @@ export type WarehouseWhereUniqueInput = Prisma.AtLeast<{
   isActive?: Prisma.BoolFilter<"Warehouse"> | boolean
   inventory?: Prisma.InventoryItemListRelationFilter
   inventoryLogs?: Prisma.InventoryLogListRelationFilter
+  transfersFrom?: Prisma.InventoryTransferListRelationFilter
+  transfersTo?: Prisma.InventoryTransferListRelationFilter
 }, "id" | "code">
 
 export type WarehouseOrderByWithAggregationInput = {
@@ -236,6 +242,8 @@ export type WarehouseCreateInput = {
   isActive?: boolean
   inventory?: Prisma.InventoryItemCreateNestedManyWithoutWarehouseInput
   inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferCreateNestedManyWithoutFromWarehouseInput
+  transfersTo?: Prisma.InventoryTransferCreateNestedManyWithoutToWarehouseInput
 }
 
 export type WarehouseUncheckedCreateInput = {
@@ -246,6 +254,8 @@ export type WarehouseUncheckedCreateInput = {
   isActive?: boolean
   inventory?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutWarehouseInput
   inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutFromWarehouseInput
+  transfersTo?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutToWarehouseInput
 }
 
 export type WarehouseUpdateInput = {
@@ -256,6 +266,8 @@ export type WarehouseUpdateInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   inventory?: Prisma.InventoryItemUpdateManyWithoutWarehouseNestedInput
   inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUpdateManyWithoutFromWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUpdateManyWithoutToWarehouseNestedInput
 }
 
 export type WarehouseUncheckedUpdateInput = {
@@ -266,6 +278,8 @@ export type WarehouseUncheckedUpdateInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   inventory?: Prisma.InventoryItemUncheckedUpdateManyWithoutWarehouseNestedInput
   inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedUpdateManyWithoutFromWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUncheckedUpdateManyWithoutToWarehouseNestedInput
 }
 
 export type WarehouseCreateManyInput = {
@@ -354,6 +368,34 @@ export type WarehouseUpdateOneWithoutInventoryLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.WarehouseUpdateToOneWithWhereWithoutInventoryLogsInput, Prisma.WarehouseUpdateWithoutInventoryLogsInput>, Prisma.WarehouseUncheckedUpdateWithoutInventoryLogsInput>
 }
 
+export type WarehouseCreateNestedOneWithoutTransfersFromInput = {
+  create?: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersFromInput, Prisma.WarehouseUncheckedCreateWithoutTransfersFromInput>
+  connectOrCreate?: Prisma.WarehouseCreateOrConnectWithoutTransfersFromInput
+  connect?: Prisma.WarehouseWhereUniqueInput
+}
+
+export type WarehouseCreateNestedOneWithoutTransfersToInput = {
+  create?: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersToInput, Prisma.WarehouseUncheckedCreateWithoutTransfersToInput>
+  connectOrCreate?: Prisma.WarehouseCreateOrConnectWithoutTransfersToInput
+  connect?: Prisma.WarehouseWhereUniqueInput
+}
+
+export type WarehouseUpdateOneRequiredWithoutTransfersFromNestedInput = {
+  create?: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersFromInput, Prisma.WarehouseUncheckedCreateWithoutTransfersFromInput>
+  connectOrCreate?: Prisma.WarehouseCreateOrConnectWithoutTransfersFromInput
+  upsert?: Prisma.WarehouseUpsertWithoutTransfersFromInput
+  connect?: Prisma.WarehouseWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WarehouseUpdateToOneWithWhereWithoutTransfersFromInput, Prisma.WarehouseUpdateWithoutTransfersFromInput>, Prisma.WarehouseUncheckedUpdateWithoutTransfersFromInput>
+}
+
+export type WarehouseUpdateOneRequiredWithoutTransfersToNestedInput = {
+  create?: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersToInput, Prisma.WarehouseUncheckedCreateWithoutTransfersToInput>
+  connectOrCreate?: Prisma.WarehouseCreateOrConnectWithoutTransfersToInput
+  upsert?: Prisma.WarehouseUpsertWithoutTransfersToInput
+  connect?: Prisma.WarehouseWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WarehouseUpdateToOneWithWhereWithoutTransfersToInput, Prisma.WarehouseUpdateWithoutTransfersToInput>, Prisma.WarehouseUncheckedUpdateWithoutTransfersToInput>
+}
+
 export type WarehouseCreateWithoutInventoryInput = {
   id?: string
   name: string
@@ -361,6 +403,8 @@ export type WarehouseCreateWithoutInventoryInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
   inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferCreateNestedManyWithoutFromWarehouseInput
+  transfersTo?: Prisma.InventoryTransferCreateNestedManyWithoutToWarehouseInput
 }
 
 export type WarehouseUncheckedCreateWithoutInventoryInput = {
@@ -370,6 +414,8 @@ export type WarehouseUncheckedCreateWithoutInventoryInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
   inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutFromWarehouseInput
+  transfersTo?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutToWarehouseInput
 }
 
 export type WarehouseCreateOrConnectWithoutInventoryInput = {
@@ -395,6 +441,8 @@ export type WarehouseUpdateWithoutInventoryInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUpdateManyWithoutFromWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUpdateManyWithoutToWarehouseNestedInput
 }
 
 export type WarehouseUncheckedUpdateWithoutInventoryInput = {
@@ -404,6 +452,8 @@ export type WarehouseUncheckedUpdateWithoutInventoryInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedUpdateManyWithoutFromWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUncheckedUpdateManyWithoutToWarehouseNestedInput
 }
 
 export type WarehouseCreateWithoutInventoryLogsInput = {
@@ -413,6 +463,8 @@ export type WarehouseCreateWithoutInventoryLogsInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
   inventory?: Prisma.InventoryItemCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferCreateNestedManyWithoutFromWarehouseInput
+  transfersTo?: Prisma.InventoryTransferCreateNestedManyWithoutToWarehouseInput
 }
 
 export type WarehouseUncheckedCreateWithoutInventoryLogsInput = {
@@ -422,6 +474,8 @@ export type WarehouseUncheckedCreateWithoutInventoryLogsInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: boolean
   inventory?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutFromWarehouseInput
+  transfersTo?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutToWarehouseInput
 }
 
 export type WarehouseCreateOrConnectWithoutInventoryLogsInput = {
@@ -447,6 +501,8 @@ export type WarehouseUpdateWithoutInventoryLogsInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   inventory?: Prisma.InventoryItemUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUpdateManyWithoutFromWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUpdateManyWithoutToWarehouseNestedInput
 }
 
 export type WarehouseUncheckedUpdateWithoutInventoryLogsInput = {
@@ -456,6 +512,128 @@ export type WarehouseUncheckedUpdateWithoutInventoryLogsInput = {
   address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   inventory?: Prisma.InventoryItemUncheckedUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedUpdateManyWithoutFromWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUncheckedUpdateManyWithoutToWarehouseNestedInput
+}
+
+export type WarehouseCreateWithoutTransfersFromInput = {
+  id?: string
+  name: string
+  code: string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: boolean
+  inventory?: Prisma.InventoryItemCreateNestedManyWithoutWarehouseInput
+  inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutWarehouseInput
+  transfersTo?: Prisma.InventoryTransferCreateNestedManyWithoutToWarehouseInput
+}
+
+export type WarehouseUncheckedCreateWithoutTransfersFromInput = {
+  id?: string
+  name: string
+  code: string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: boolean
+  inventory?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutWarehouseInput
+  inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutWarehouseInput
+  transfersTo?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutToWarehouseInput
+}
+
+export type WarehouseCreateOrConnectWithoutTransfersFromInput = {
+  where: Prisma.WarehouseWhereUniqueInput
+  create: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersFromInput, Prisma.WarehouseUncheckedCreateWithoutTransfersFromInput>
+}
+
+export type WarehouseCreateWithoutTransfersToInput = {
+  id?: string
+  name: string
+  code: string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: boolean
+  inventory?: Prisma.InventoryItemCreateNestedManyWithoutWarehouseInput
+  inventoryLogs?: Prisma.InventoryLogCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferCreateNestedManyWithoutFromWarehouseInput
+}
+
+export type WarehouseUncheckedCreateWithoutTransfersToInput = {
+  id?: string
+  name: string
+  code: string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: boolean
+  inventory?: Prisma.InventoryItemUncheckedCreateNestedManyWithoutWarehouseInput
+  inventoryLogs?: Prisma.InventoryLogUncheckedCreateNestedManyWithoutWarehouseInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedCreateNestedManyWithoutFromWarehouseInput
+}
+
+export type WarehouseCreateOrConnectWithoutTransfersToInput = {
+  where: Prisma.WarehouseWhereUniqueInput
+  create: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersToInput, Prisma.WarehouseUncheckedCreateWithoutTransfersToInput>
+}
+
+export type WarehouseUpsertWithoutTransfersFromInput = {
+  update: Prisma.XOR<Prisma.WarehouseUpdateWithoutTransfersFromInput, Prisma.WarehouseUncheckedUpdateWithoutTransfersFromInput>
+  create: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersFromInput, Prisma.WarehouseUncheckedCreateWithoutTransfersFromInput>
+  where?: Prisma.WarehouseWhereInput
+}
+
+export type WarehouseUpdateToOneWithWhereWithoutTransfersFromInput = {
+  where?: Prisma.WarehouseWhereInput
+  data: Prisma.XOR<Prisma.WarehouseUpdateWithoutTransfersFromInput, Prisma.WarehouseUncheckedUpdateWithoutTransfersFromInput>
+}
+
+export type WarehouseUpdateWithoutTransfersFromInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventory?: Prisma.InventoryItemUpdateManyWithoutWarehouseNestedInput
+  inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUpdateManyWithoutToWarehouseNestedInput
+}
+
+export type WarehouseUncheckedUpdateWithoutTransfersFromInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventory?: Prisma.InventoryItemUncheckedUpdateManyWithoutWarehouseNestedInput
+  inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutWarehouseNestedInput
+  transfersTo?: Prisma.InventoryTransferUncheckedUpdateManyWithoutToWarehouseNestedInput
+}
+
+export type WarehouseUpsertWithoutTransfersToInput = {
+  update: Prisma.XOR<Prisma.WarehouseUpdateWithoutTransfersToInput, Prisma.WarehouseUncheckedUpdateWithoutTransfersToInput>
+  create: Prisma.XOR<Prisma.WarehouseCreateWithoutTransfersToInput, Prisma.WarehouseUncheckedCreateWithoutTransfersToInput>
+  where?: Prisma.WarehouseWhereInput
+}
+
+export type WarehouseUpdateToOneWithWhereWithoutTransfersToInput = {
+  where?: Prisma.WarehouseWhereInput
+  data: Prisma.XOR<Prisma.WarehouseUpdateWithoutTransfersToInput, Prisma.WarehouseUncheckedUpdateWithoutTransfersToInput>
+}
+
+export type WarehouseUpdateWithoutTransfersToInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventory?: Prisma.InventoryItemUpdateManyWithoutWarehouseNestedInput
+  inventoryLogs?: Prisma.InventoryLogUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUpdateManyWithoutFromWarehouseNestedInput
+}
+
+export type WarehouseUncheckedUpdateWithoutTransfersToInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  inventory?: Prisma.InventoryItemUncheckedUpdateManyWithoutWarehouseNestedInput
+  inventoryLogs?: Prisma.InventoryLogUncheckedUpdateManyWithoutWarehouseNestedInput
+  transfersFrom?: Prisma.InventoryTransferUncheckedUpdateManyWithoutFromWarehouseNestedInput
 }
 
 
@@ -466,11 +644,15 @@ export type WarehouseUncheckedUpdateWithoutInventoryLogsInput = {
 export type WarehouseCountOutputType = {
   inventory: number
   inventoryLogs: number
+  transfersFrom: number
+  transfersTo: number
 }
 
 export type WarehouseCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   inventory?: boolean | WarehouseCountOutputTypeCountInventoryArgs
   inventoryLogs?: boolean | WarehouseCountOutputTypeCountInventoryLogsArgs
+  transfersFrom?: boolean | WarehouseCountOutputTypeCountTransfersFromArgs
+  transfersTo?: boolean | WarehouseCountOutputTypeCountTransfersToArgs
 }
 
 /**
@@ -497,6 +679,20 @@ export type WarehouseCountOutputTypeCountInventoryLogsArgs<ExtArgs extends runti
   where?: Prisma.InventoryLogWhereInput
 }
 
+/**
+ * WarehouseCountOutputType without action
+ */
+export type WarehouseCountOutputTypeCountTransfersFromArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InventoryTransferWhereInput
+}
+
+/**
+ * WarehouseCountOutputType without action
+ */
+export type WarehouseCountOutputTypeCountTransfersToArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InventoryTransferWhereInput
+}
+
 
 export type WarehouseSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -506,6 +702,8 @@ export type WarehouseSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   isActive?: boolean
   inventory?: boolean | Prisma.Warehouse$inventoryArgs<ExtArgs>
   inventoryLogs?: boolean | Prisma.Warehouse$inventoryLogsArgs<ExtArgs>
+  transfersFrom?: boolean | Prisma.Warehouse$transfersFromArgs<ExtArgs>
+  transfersTo?: boolean | Prisma.Warehouse$transfersToArgs<ExtArgs>
   _count?: boolean | Prisma.WarehouseCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["warehouse"]>
 
@@ -537,6 +735,8 @@ export type WarehouseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs 
 export type WarehouseInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   inventory?: boolean | Prisma.Warehouse$inventoryArgs<ExtArgs>
   inventoryLogs?: boolean | Prisma.Warehouse$inventoryLogsArgs<ExtArgs>
+  transfersFrom?: boolean | Prisma.Warehouse$transfersFromArgs<ExtArgs>
+  transfersTo?: boolean | Prisma.Warehouse$transfersToArgs<ExtArgs>
   _count?: boolean | Prisma.WarehouseCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WarehouseIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -547,6 +747,8 @@ export type $WarehousePayload<ExtArgs extends runtime.Types.Extensions.InternalA
   objects: {
     inventory: Prisma.$InventoryItemPayload<ExtArgs>[]
     inventoryLogs: Prisma.$InventoryLogPayload<ExtArgs>[]
+    transfersFrom: Prisma.$InventoryTransferPayload<ExtArgs>[]
+    transfersTo: Prisma.$InventoryTransferPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -950,6 +1152,8 @@ export interface Prisma__WarehouseClient<T, Null = never, ExtArgs extends runtim
   readonly [Symbol.toStringTag]: "PrismaPromise"
   inventory<T extends Prisma.Warehouse$inventoryArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Warehouse$inventoryArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   inventoryLogs<T extends Prisma.Warehouse$inventoryLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Warehouse$inventoryLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  transfersFrom<T extends Prisma.Warehouse$transfersFromArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Warehouse$transfersFromArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  transfersTo<T extends Prisma.Warehouse$transfersToArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Warehouse$transfersToArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InventoryTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1417,6 +1621,54 @@ export type Warehouse$inventoryLogsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.InventoryLogScalarFieldEnum | Prisma.InventoryLogScalarFieldEnum[]
+}
+
+/**
+ * Warehouse.transfersFrom
+ */
+export type Warehouse$transfersFromArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the InventoryTransfer
+   */
+  select?: Prisma.InventoryTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the InventoryTransfer
+   */
+  omit?: Prisma.InventoryTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InventoryTransferInclude<ExtArgs> | null
+  where?: Prisma.InventoryTransferWhereInput
+  orderBy?: Prisma.InventoryTransferOrderByWithRelationInput | Prisma.InventoryTransferOrderByWithRelationInput[]
+  cursor?: Prisma.InventoryTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InventoryTransferScalarFieldEnum | Prisma.InventoryTransferScalarFieldEnum[]
+}
+
+/**
+ * Warehouse.transfersTo
+ */
+export type Warehouse$transfersToArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the InventoryTransfer
+   */
+  select?: Prisma.InventoryTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the InventoryTransfer
+   */
+  omit?: Prisma.InventoryTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InventoryTransferInclude<ExtArgs> | null
+  where?: Prisma.InventoryTransferWhereInput
+  orderBy?: Prisma.InventoryTransferOrderByWithRelationInput | Prisma.InventoryTransferOrderByWithRelationInput[]
+  cursor?: Prisma.InventoryTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InventoryTransferScalarFieldEnum | Prisma.InventoryTransferScalarFieldEnum[]
 }
 
 /**

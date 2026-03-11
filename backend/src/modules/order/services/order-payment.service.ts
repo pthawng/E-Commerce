@@ -15,6 +15,8 @@ import {
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { PaymentService } from '@modules/payment/payment.service';
 import { Prisma } from 'src/generated/prisma/client';
+import { InventoryService } from '../../inventory/inventory.service';
+import { InventoryAllocatorService } from '../../inventory/inventory-allocator.service';
 
 /**
  * OrderPaymentService
@@ -38,6 +40,8 @@ export class OrderPaymentService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly paymentService: PaymentService,
+        private readonly inventoryService: InventoryService,
+        private readonly inventoryAllocator: InventoryAllocatorService,
     ) { }
 
     /**
@@ -79,8 +83,13 @@ export class OrderPaymentService {
             throw new BadRequestException('Cart is empty');
         }
 
-        // Step 2: Validate stock availability
-        this.validateStockAvailability(cart.items, variants);
+        // Step 2: Allocate inventory
+        const allocations = await this.inventoryAllocator.allocate(
+            cart.items.map((item) => ({
+                variantId: item.productVariantId,
+                quantity: item.quantity,
+            }))
+        );
 
         // Step 3: Calculate totals
         const { orderItemsData, subTotal, totalAmount } = this.calculateOrderTotals(
@@ -98,18 +107,7 @@ export class OrderPaymentService {
 
         try {
             const result = await this.prisma.$transaction(async (tx) => {
-                // 4a. Reserve inventory (for online payment only)
-                let reservationId: string | null = null;
-                if (!isCOD) {
-                    reservationId = await this.reserveInventory(
-                        tx,
-                        cart.items,
-                        variants,
-                        paymentDeadline!,
-                    );
-                }
-
-                // 4b. Create order
+                // 4a. Create order
                 const order = await this.createOrder(tx, {
                     userId,
                     sessionId: userId ? null : sessionId as any,
@@ -119,8 +117,23 @@ export class OrderPaymentService {
                     totalAmount,
                     status: orderStatus as any,
                     paymentDeadline,
-                    reservationId,
                 });
+
+                // 4b. Reserve inventory OR deduct immediately
+                if (!isCOD) {
+                    await this.inventoryService.reserve(
+                        order.id,
+                        allocations,
+                        paymentDeadline!,
+                        tx,
+                    );
+                } else {
+                    await this.inventoryService.directDeduct(
+                        order.id,
+                        allocations,
+                        tx,
+                    );
+                }
 
                 // 4c. Create payment transaction
                 const payment = await this.createPaymentTransaction(tx, {
@@ -130,17 +143,12 @@ export class OrderPaymentService {
                     status: isCOD ? 'success' : 'pending',
                 });
 
-                // 4d. For COD: deduct inventory immediately
-                if (isCOD) {
-                    await this.deductInventory(tx, cart.items, variants, order.id);
-                }
-
-                // 4e. Clear cart
+                // 4d. Clear cart
                 await tx.cartItem.deleteMany({
                     where: { cartId: cart.id },
                 });
 
-                return { order, payment, reservationId };
+                return { order, payment };
             });
 
             // Step 5: Generate payment URL (outside transaction)
@@ -219,15 +227,7 @@ export class OrderPaymentService {
             });
 
             // Deduct inventory
-            await this.deductInventoryFromOrder(tx, order.items, variants, orderId);
-
-            // Update reservation status
-            if (order.reservationId) {
-                await tx.inventoryReservation.updateMany({
-                    where: { orderId },
-                    data: { status: 'confirmed' },
-                });
-            }
+            await this.inventoryService.deduct(orderId, tx);
 
             // Update order status
             await tx.order.update({
@@ -337,32 +337,6 @@ export class OrderPaymentService {
     }
 
     /**
-     * Validate stock availability
-     * @throws ConflictException if insufficient stock
-     */
-    private validateStockAvailability(cartItems: any[], variants: any[]): void {
-        for (const item of cartItems) {
-            const variant = variants.find((v) => v.id === item.productVariantId);
-            if (!variant) {
-                throw new NotFoundException(
-                    `Product variant ${item.productVariantId} not found`,
-                );
-            }
-
-            const totalStock = variant.inventoryItems.reduce(
-                (sum: number, inv: any) => sum + inv.quantity - inv.reservedQuantity,
-                0,
-            );
-
-            if (totalStock < item.quantity) {
-                throw new ConflictException(
-                    `Insufficient stock for product: ${variant.product.name}`,
-                );
-            }
-        }
-    }
-
-    /**
      * Calculate order totals
      */
     private calculateOrderTotals(
@@ -397,56 +371,6 @@ export class OrderPaymentService {
     }
 
     /**
-     * Reserve inventory (soft lock)
-     * Creates InventoryReservation record and increments reservedQuantity
-     */
-    private async reserveInventory(
-        tx: Prisma.TransactionClient,
-        cartItems: any[],
-        variants: any[],
-        expiresAt: Date,
-    ): Promise<string> {
-        // For simplicity, we'll create one reservation per order
-        // In production, you might want one reservation per variant
-        const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        const firstVariantId = cartItems[0].productVariantId;
-
-        // Increment reservedQuantity on inventory items
-        for (const item of cartItems) {
-            const variant = variants.find((v) => v.id === item.productVariantId);
-            const inventoryItem = variant.inventoryItems[0]; // Assuming single warehouse
-
-            if (!inventoryItem) {
-                throw new ConflictException(
-                    `No inventory found for variant ${variant.sku}`,
-                );
-            }
-
-            await tx.inventoryItem.update({
-                where: { id: inventoryItem.id },
-                data: {
-                    reservedQuantity: {
-                        increment: item.quantity,
-                    },
-                },
-            });
-        }
-
-        // Create reservation record (placeholder - will link to order after creation)
-        const reservation = await tx.inventoryReservation.create({
-            data: {
-                orderId: 'temp', // Will be updated after order creation
-                variantId: firstVariantId,
-                quantity: totalQuantity,
-                expiresAt,
-                status: 'active',
-            },
-        });
-
-        return reservation.id;
-    }
-
-    /**
      * Create order record
      */
     private async createOrder(
@@ -460,7 +384,6 @@ export class OrderPaymentService {
             totalAmount: number;
             status: string;
             paymentDeadline: Date | null;
-            reservationId: string | null;
         },
     ) {
         const orderCode = this.generateOrderCode();
@@ -474,7 +397,6 @@ export class OrderPaymentService {
                 paymentStatus: 'unpaid',
                 paymentMethod: params.dto.paymentMethod as any,
                 paymentDeadline: params.paymentDeadline,
-                reservationId: params.reservationId || undefined,
                 shippingAddress: params.dto.shippingAddress as any,
                 billingAddress: (params.dto.billingAddress || params.dto.shippingAddress) as any,
                 shippingMethodId: params.dto.shippingMethodId,
@@ -489,14 +411,6 @@ export class OrderPaymentService {
             },
             include: { items: true },
         });
-
-        // Update reservation with actual orderId
-        if (params.reservationId) {
-            await tx.inventoryReservation.update({
-                where: { id: params.reservationId },
-                data: { orderId: order.id },
-            });
-        }
 
         // Create timeline entry
         await tx.orderTimeline.create({
@@ -540,86 +454,6 @@ export class OrderPaymentService {
     }
 
     /**
-     * Deduct inventory (for COD orders)
-     */
-    private async deductInventory(
-        tx: Prisma.TransactionClient,
-        cartItems: any[],
-        variants: any[],
-        orderId: string,
-    ): Promise<void> {
-        for (const item of cartItems) {
-            const variant = variants.find((v) => v.id === item.productVariantId);
-            const inventoryItem = variant.inventoryItems[0];
-
-            await tx.inventoryItem.update({
-                where: { id: inventoryItem.id },
-                data: {
-                    quantity: {
-                        decrement: item.quantity,
-                    },
-                },
-            });
-
-            // Log inventory change
-            await tx.inventoryLog.create({
-                data: {
-                    inventoryItemId: inventoryItem.id,
-                    productVariantId: variant.id,
-                    warehouseId: inventoryItem.warehouseId,
-                    actionType: 'SALE',
-                    quantityChange: -item.quantity,
-                    stockAfter: inventoryItem.quantity - item.quantity,
-                    referenceId: orderId,
-                    note: `Order ${orderId} confirmed (COD)`,
-                },
-            });
-        }
-    }
-
-    /**
-     * Deduct inventory from confirmed order (for online payment)
-     */
-    private async deductInventoryFromOrder(
-        tx: Prisma.TransactionClient,
-        orderItems: any[],
-        variants: any[],
-        orderId: string,
-    ): Promise<void> {
-        for (const item of orderItems) {
-            const variant = variants.find((v) => v.id === item.productVariantId);
-            const inventoryItem = variant.inventoryItems[0];
-
-            // Deduct from both quantity and reservedQuantity
-            await tx.inventoryItem.update({
-                where: { id: inventoryItem.id },
-                data: {
-                    quantity: {
-                        decrement: item.quantity,
-                    },
-                    reservedQuantity: {
-                        decrement: item.quantity,
-                    },
-                },
-            });
-
-            // Log inventory change
-            await tx.inventoryLog.create({
-                data: {
-                    inventoryItemId: inventoryItem.id,
-                    productVariantId: variant.id,
-                    warehouseId: inventoryItem.warehouseId,
-                    actionType: 'SALE',
-                    quantityChange: -item.quantity,
-                    stockAfter: inventoryItem.quantity - item.quantity,
-                    referenceId: orderId,
-                    note: `Order confirmed after payment`,
-                },
-            });
-        }
-    }
-
-    /**
      * Cancel order and release inventory
      * Idempotent operation
      */
@@ -643,36 +477,8 @@ export class OrderPaymentService {
                 return;
             }
 
-            // Release inventory reservations
-            if (order.reservationId) {
-                const variantIds = order.items.map((item) => item.productVariantId).filter((id): id is string => id !== null);
-                const variants = await tx.productVariant.findMany({
-                    where: { id: { in: variantIds } },
-                    include: { inventoryItems: true },
-                });
-
-                for (const item of order.items) {
-                    const variant = variants.find((v) => v.id === item.productVariantId);
-                    const inventoryItem = variant?.inventoryItems[0];
-
-                    if (inventoryItem) {
-                        await tx.inventoryItem.update({
-                            where: { id: inventoryItem.id },
-                            data: {
-                                reservedQuantity: {
-                                    decrement: item.quantity,
-                                },
-                            },
-                        });
-                    }
-                }
-
-                // Update reservation status
-                await tx.inventoryReservation.updateMany({
-                    where: { orderId },
-                    data: { status: 'released' },
-                });
-            }
+            // Release inventory
+            await this.inventoryService.release(orderId, tx);
 
             // Update order status
             await tx.order.update({

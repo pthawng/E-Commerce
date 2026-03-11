@@ -75,12 +75,12 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
     };
 
     return (
-        <div className="flex flex-col gap-6 p-1 h-full overflow-y-auto">
-            {/* Header & Quick Actions */}
-            <div className="flex justify-between items-start sticky top-0 bg-gray-50 z-10 py-2">
+        <div className="flex flex-col gap-6 p-1 h-full overflow-y-auto bg-gray-50/30">
+            {/* Header / Sticky Bar */}
+            <div className="flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-10 py-4 px-6 border-b border-gray-100 -mx-1">
                 <Space direction="vertical" size={2}>
                     <Space align="center">
-                        <Title level={4} style={{ margin: 0 }}>#{order.code}</Title>
+                        <Title level={4} style={{ margin: 0 }}>Đơn hàng #{order.code}</Title>
                         <Tag color="blue" bordered={false} className="rounded-full">{order.status.toUpperCase()}</Tag>
                     </Space>
                     <Text type="secondary">{dayjs(order.createdAt).format('DD/MM/YYYY HH:mm')}</Text>
@@ -88,7 +88,7 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
 
                 <Space wrap>
                     {order.status === OrderStatus.PENDING && (
-                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatus.CONFIRMED)}>Xác nhận</Button>
+                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatus.CONFIRMED)}>Xác nhận đơn</Button>
                     )}
                     {order.status === OrderStatus.CONFIRMED && (
                         <Button type="primary" onClick={() => handleUpdateStatus(OrderStatus.PROCESSING)}>Bắt đầu xử lý</Button>
@@ -112,153 +112,223 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
                 </Space>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Left Column: Products & Totals */}
-                <div className="xl:col-span-2 flex flex-col gap-6">
-                    <Card
-                        title={<Title level={5} style={{ margin: 0 }}>Sản phẩm ({order.items?.length || 0})</Title>}
-                        bordered={false}
-                        className="shadow-sm border border-gray-100 rounded-xl overflow-hidden"
-                    >
-                        <Table
-                            dataSource={order.items}
-                            rowKey="id"
-                            pagination={false}
-                            size="small"
-                            columns={[
-                                {
-                                    title: 'Sản phẩm',
-                                    key: 'product',
-                                    render: (_, item) => (
-                                        <Space size="middle">
-                                            <Avatar shape="square" size={48} src={item.thumbnailUrl} icon={<UserOutlined />} className="bg-gray-100" />
-                                            <Space direction="vertical" size={0}>
-                                                <Text strong className="line-clamp-1">{item.productName}</Text>
-                                                <Text type="secondary" style={{ fontSize: '11px' }}>SKU: {item.sku}</Text>
-                                                {item.variantTitle && (
-                                                    <div className="flex gap-1 mt-1">
-                                                        {Object.entries(item.variantTitle).map(([key, val]) => (
-                                                            <Tag key={key} style={{ fontSize: '10px', margin: 0 }}>{val as string}</Tag>
-                                                        ))}
-                                                    </div>
-                                                )}
+            <div className="px-5 pb-8 flex flex-col gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {/* Left Column: Items & Totals */}
+                    <div className="xl:col-span-2 flex flex-col gap-6">
+                        {/* Section: Sản phẩm */}
+                        <Card
+                            title={<Title level={5} style={{ margin: 0 }}>Sản phẩm ({order.items?.length || 0})</Title>}
+                            bordered={false}
+                            className="shadow-sm border border-gray-100 rounded-xl overflow-hidden"
+                        >
+                            <Table
+                                dataSource={order.items}
+                                rowKey="id"
+                                pagination={false}
+                                size="small"
+                                columns={[
+                                    {
+                                        title: 'Sản phẩm',
+                                        key: 'product',
+                                        render: (_, item) => (
+                                            <Space size="middle">
+                                                <Avatar shape="square" size={64} src={item.thumbnailUrl} icon={<UserOutlined />} className="bg-gray-100 border border-gray-50" />
+                                                <Space direction="vertical" size={0}>
+                                                    <Text strong className="line-clamp-1">{item.productName}</Text>
+                                                    <Text type="secondary" style={{ fontSize: '11px' }}>SKU: {item.sku}</Text>
+                                                    {item.variantTitle && (
+                                                        <div className="flex gap-1 mt-1">
+                                                            {Object.entries(item.variantTitle).map(([key, val]) => (
+                                                                <Tag key={key} style={{ fontSize: '10px', margin: 0 }} className="bg-gray-50 border-gray-100">{val as string}</Tag>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </Space>
+                                            </Space>
+                                        ),
+                                    },
+                                    {
+                                        title: 'Giá',
+                                        dataIndex: 'price',
+                                        key: 'price',
+                                        align: 'right',
+                                        render: (v) => `${v.toLocaleString()}đ`,
+                                    },
+                                    {
+                                        title: 'SL',
+                                        dataIndex: 'quantity',
+                                        key: 'quantity',
+                                        align: 'center',
+                                    },
+                                    {
+                                        title: 'Tổng',
+                                        dataIndex: 'totalLine',
+                                        key: 'totalLine',
+                                        align: 'right',
+                                        render: (v) => <Text strong>{v.toLocaleString()}đ</Text>,
+                                    },
+                                ]}
+                            />
+
+                            <Divider className="my-4" />
+
+                            <div className="flex justify-end pr-4">
+                                <Space direction="vertical" align="end" className="w-[300px]" size={4}>
+                                    <div className="flex justify-between w-full">
+                                        <Text type="secondary">Tạm tính:</Text>
+                                        <Text>{order.subTotal.toLocaleString()}đ</Text>
+                                    </div>
+                                    <div className="flex justify-between w-full">
+                                        <Text type="secondary">Phí vận chuyển:</Text>
+                                        <Text>{order.shippingFee.toLocaleString()}đ</Text>
+                                    </div>
+                                    <div className="flex justify-between w-full">
+                                        <Text type="secondary">Giảm giá:</Text>
+                                        <Text className="text-red-500">-{order.discountAmount.toLocaleString()}đ</Text>
+                                    </div>
+                                    <Divider className="my-2" />
+                                    <div className="flex justify-between w-full items-baseline">
+                                        <Text strong>Tổng thanh toán:</Text>
+                                        <Title level={4} style={{ margin: 0, color: '#1677ff' }}>{order.totalAmount.toLocaleString()}đ</Title>
+                                    </div>
+                                </Space>
+                            </div>
+                        </Card>
+
+                        {/* Section: Thanh toán (Professional Audit View) */}
+                        <Card title={<Title level={5} style={{ margin: 0 }}>Giao dịch thanh toán</Title>} bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
+                            <div className="flex flex-col gap-4">
+                                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <Space size="large">
+                                        <Space direction="vertical" size={0}>
+                                            <Text type="secondary" style={{ fontSize: '11px' }}>PHƯƠNG THỨC</Text>
+                                            <Space>
+                                                <WalletOutlined />
+                                                <Text strong>{order.paymentMethod}</Text>
                                             </Space>
                                         </Space>
-                                    ),
-                                },
-                                {
-                                    title: 'Đơn giá',
-                                    dataIndex: 'price',
-                                    key: 'price',
-                                    align: 'right',
-                                    render: (v) => `${v.toLocaleString()}đ`,
-                                },
-                                {
-                                    title: 'SL',
-                                    dataIndex: 'quantity',
-                                    key: 'quantity',
-                                    align: 'center',
-                                },
-                                {
-                                    title: 'Tổng',
-                                    dataIndex: 'totalLine',
-                                    key: 'totalLine',
-                                    align: 'right',
-                                    render: (v) => <Text strong>{v.toLocaleString()}đ</Text>,
-                                },
-                            ]}
-                        />
+                                        <Divider type="vertical" style={{ height: 32 }} />
+                                        <Space direction="vertical" size={0}>
+                                            <Text type="secondary" style={{ fontSize: '11px' }}>TRẠNG THÁI</Text>
+                                            <Tag color={order.paymentStatus === 'paid' ? 'green' : 'orange'} bordered={false} className="font-bold">
+                                                {order.paymentStatus.toUpperCase()}
+                                            </Tag>
+                                        </Space>
+                                    </Space>
 
-                        <Divider className="my-4" />
+                                    {order.paymentStatus === 'unpaid' && order.paymentMethod === 'COD' && (
+                                        <Button size="small" type="primary">Xác nhận thanh toán (COD)</Button>
+                                    )}
+                                </div>
 
-                        <div className="flex justify-end pr-4">
-                            <Space direction="vertical" align="end" className="w-[300px]">
-                                <div className="flex justify-between w-full">
-                                    <Text type="secondary">Tạm tính:</Text>
-                                    <Text>{order.subTotal.toLocaleString()}đ</Text>
-                                </div>
-                                <div className="flex justify-between w-full">
-                                    <Text type="secondary">Phí vận chuyển:</Text>
-                                    <Text>{order.shippingFee.toLocaleString()}đ</Text>
-                                </div>
-                                <div className="flex justify-between w-full">
-                                    <Text type="secondary">Giảm giá:</Text>
-                                    <Text className="text-red-500">-{order.discountAmount.toLocaleString()}đ</Text>
-                                </div>
-                                <Divider className="my-2" />
-                                <div className="flex justify-between w-full">
-                                    <Text strong style={{ fontSize: '18px' }}>Tổng cộng:</Text>
-                                    <Title level={4} style={{ margin: 0, color: '#1677ff' }}>{order.totalAmount.toLocaleString()}đ</Title>
-                                </div>
+                                {order.transactions && order.transactions.length > 0 ? (
+                                    <div className="mt-2">
+                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Lịch sử giao dịch:</Text>
+                                        <Table
+                                            dataSource={order.transactions}
+                                            rowKey="id"
+                                            pagination={false}
+                                            size="small"
+                                            columns={[
+                                                {
+                                                    title: 'Mã GD',
+                                                    dataIndex: 'transactionCode',
+                                                    key: 'transactionCode',
+                                                    render: (v) => <Text style={{ fontSize: '12px' }}>{v || 'N/A'}</Text>
+                                                },
+                                                {
+                                                    title: 'Loại',
+                                                    dataIndex: 'type',
+                                                    key: 'type',
+                                                    render: (v) => <Tag style={{ fontSize: '10px' }} color={v === 'payment' ? 'blue' : 'orange'}>{v.toUpperCase()}</Tag>
+                                                },
+                                                {
+                                                    title: 'Số tiền',
+                                                    dataIndex: 'amount',
+                                                    key: 'amount',
+                                                    align: 'right',
+                                                    render: (v) => <Text style={{ fontSize: '12px' }}>{v.toLocaleString()}đ</Text>
+                                                },
+                                                {
+                                                    title: 'Trạng thái',
+                                                    dataIndex: 'status',
+                                                    key: 'status',
+                                                    render: (v) => <Tag bordered={false} color={v === 'success' ? 'green' : 'red'} style={{ fontSize: '10px' }}>{v.toUpperCase()}</Tag>
+                                                },
+                                                {
+                                                    title: 'Thời gian',
+                                                    dataIndex: 'createdAt',
+                                                    key: 'createdAt',
+                                                    render: (v) => <Text type="secondary" style={{ fontSize: '11px' }}>{dayjs(v).format('DD/MM HH:mm')}</Text>
+                                                }
+                                            ]}
+                                        />
+                                    </div>
+                                ) : (
+                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có lịch sử giao dịch" />
+                                )}
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Right Column: Customer & Timeline */}
+                    <div className="flex flex-col gap-6 h-full">
+                        {/* Section: Khách hàng */}
+                        <Card title={<Title level={5} style={{ margin: 0 }}>Khách hàng</Title>} bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
+                            <Space align="center" style={{ marginBottom: 16 }}>
+                                <Avatar size={48} icon={<UserOutlined />} className="bg-blue-50 text-blue-500" />
+                                <Space direction="vertical" size={0}>
+                                    <Text strong>{order.shippingAddress.fullName}</Text>
+                                    <Text type="secondary" style={{ fontSize: '12px' }}>{order.user?.email || 'Khách vãng lai'}</Text>
+                                </Space>
                             </Space>
-                        </div>
-                    </Card>
-
-                    {/* Payment & Shipping Blocks */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card title="Thông tin khách hàng" bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
-                            <Descriptions column={1} size="small">
-                                <Descriptions.Item label="Họ tên"><Text strong>{order.shippingAddress.fullName}</Text></Descriptions.Item>
-                                <Descriptions.Item label="SĐT">{order.shippingAddress.phone}</Descriptions.Item>
-                                <Descriptions.Item label="Email">{order.user?.email || 'N/A'}</Descriptions.Item>
+                            <Divider style={{ margin: '12px 0' }} />
+                            <Descriptions column={1} size="small" labelStyle={{ color: '#8c8c8c' }}>
+                                <Descriptions.Item label="Điện thoại">{order.shippingAddress.phone}</Descriptions.Item>
                                 <Descriptions.Item label="Địa chỉ">
-                                    <Paragraph className="mb-0 text-gray-500">
+                                    <Paragraph className="mb-0 text-gray-600">
                                         {order.shippingAddress.address}, {order.shippingAddress.ward}, {order.shippingAddress.district}, {order.shippingAddress.city}
                                     </Paragraph>
                                 </Descriptions.Item>
+                                <Descriptions.Item label="Ghi chú">
+                                    <Text italic className="text-orange-400">{order.note || 'Không có ghi chú'}</Text>
+                                </Descriptions.Item>
                             </Descriptions>
                         </Card>
 
-                        <Card title="Vận chuyển & Thanh toán" bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
-                            <Descriptions column={1} size="small">
-                                <Descriptions.Item label="Thanh toán">
-                                    <Space>
-                                        <WalletOutlined />
-                                        {order.paymentMethod}
-                                        <Tag color={order.paymentStatus === 'paid' ? 'green' : 'orange'} bordered={false}>
-                                            {order.paymentStatus.toUpperCase()}
-                                        </Tag>
-                                    </Space>
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Mã vận đơn">
-                                    <Text copyable={!!order.trackingCode}>{order.trackingCode || 'Chưa có'}</Text>
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Ghi chú khách">
-                                    <Text italic className="text-gray-400">{order.note || 'Không có ghi chú'}</Text>
-                                </Descriptions.Item>
-                            </Descriptions>
+                        {/* Section: Vận chuyển */}
+                        <Card title={<Title level={5} style={{ margin: 0 }}>Vận chuyển</Title>} bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
+                            <div className="bg-gray-50 p-3 rounded-lg flex items-center justify-between mb-4">
+                                <Space>
+                                    <CarOutlined className="text-gray-400" />
+                                    <Text type="secondary">Mã vận đơn:</Text>
+                                    <Text strong>{order.trackingCode || 'Chưa cập nhật'}</Text>
+                                </Space>
+                                {order.trackingCode && <Text copyable={{ text: order.trackingCode }} />}
+                            </div>
+                            <Timeline
+                                reverse={true}
+                                items={order.timelines?.map((t) => ({
+                                    dot: getTimelineIcon(t),
+                                    children: (
+                                        <div className="flex flex-col gap-0.5 mb-2">
+                                            <div className="flex justify-between items-start">
+                                                <Text strong style={{ fontSize: '13px' }}>{t.action.replace('STATUS_UPDATE_', '').replace('_', ' ')}</Text>
+                                                <Text type="secondary" style={{ fontSize: '10px' }}>{dayjs(t.createdAt).format('HH:mm')}</Text>
+                                            </div>
+                                            <Text type="secondary" style={{ fontSize: '11px' }}>{t.description}</Text>
+                                            <Text type="secondary" style={{ fontSize: '10px' }}>{dayjs(t.createdAt).format('DD/MM/YYYY')}</Text>
+                                        </div>
+                                    ),
+                                })) || []}
+                            />
                         </Card>
                     </div>
                 </div>
-
-                {/* Right Column: Timeline */}
-                <div className="flex flex-col gap-6 h-full">
-                    <Card
-                        title={<Title level={5} style={{ margin: 0 }}>Lịch sử đơn hàng</Title>}
-                        bordered={false}
-                        className="shadow-sm border border-gray-100 rounded-xl flex-1 bg-white flex flex-col"
-                        bodyStyle={{ flex: 1, overflow: 'auto' }}
-                    >
-                        <Timeline
-                            items={order.timelines?.map((t) => ({
-                                dot: getTimelineIcon(t),
-                                children: (
-                                    <div className="flex flex-col gap-1 mb-4">
-                                        <div className="flex justify-between items-start">
-                                            <Text strong>{t.action.replace('STATUS_UPDATE_', '')}</Text>
-                                            <Text type="secondary" style={{ fontSize: '11px' }}>{dayjs(t.createdAt).fromNow()}</Text>
-                                        </div>
-                                        <Text type="secondary" style={{ fontSize: '12px' }}>{t.description}</Text>
-                                        {t.actorType === 'admin' && <Tag bordered={false} style={{ width: 'fit-content', fontSize: '10px' }}>ADMIN</Tag>}
-                                    </div>
-                                ),
-                            })) || []}
-                        />
-                    </Card>
-                </div>
             </div>
 
-            {/* Cancel Modal */}
+            {/* Modals from before remain same */}
             <Modal
                 title="Lý do hủy đơn"
                 open={cancelModalVisible}
@@ -297,3 +367,4 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
         </div>
     );
 };
+

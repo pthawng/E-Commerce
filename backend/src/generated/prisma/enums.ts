@@ -37,7 +37,8 @@ export const ActionType = {
   RETURN: 'RETURN',
   TRANSFER_OUT: 'TRANSFER_OUT',
   TRANSFER_IN: 'TRANSFER_IN',
-  ADJUSTMENT: 'ADJUSTMENT'
+  ADJUSTMENT: 'ADJUSTMENT',
+  DAMAGE: 'DAMAGE'
 } as const
 
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]
@@ -112,7 +113,8 @@ export const PermissionModule = {
   ORDER: 'ORDER',
   DISCOUNT: 'DISCOUNT',
   CMS: 'CMS',
-  SYSTEM: 'SYSTEM'
+  SYSTEM: 'SYSTEM',
+  INVENTORY: 'INVENTORY'
 } as const
 
 export type PermissionModule = (typeof PermissionModule)[keyof typeof PermissionModule]

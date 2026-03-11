@@ -405,6 +405,7 @@ export const ModelName = {
   InventoryItem: 'InventoryItem',
   InventoryLog: 'InventoryLog',
   InventoryReservation: 'InventoryReservation',
+  InventoryTransfer: 'InventoryTransfer',
   Cart: 'Cart',
   CartItem: 'CartItem',
   ShippingMethod: 'ShippingMethod',
@@ -433,7 +434,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "permission" | "role" | "rolePermission" | "userRole" | "userPermission" | "user" | "refreshToken" | "verifyEmailToken" | "resetPasswordToken" | "category" | "attribute" | "attributeValue" | "product" | "productCategory" | "productVariant" | "variantAttributeValue" | "productMedia" | "warehouse" | "inventoryItem" | "inventoryLog" | "inventoryReservation" | "cart" | "cartItem" | "shippingMethod" | "order" | "orderItem" | "paymentTransaction" | "orderTimeline" | "review" | "reviewMedia" | "discount" | "discountUsage" | "post" | "auditLog"
+    modelProps: "permission" | "role" | "rolePermission" | "userRole" | "userPermission" | "user" | "refreshToken" | "verifyEmailToken" | "resetPasswordToken" | "category" | "attribute" | "attributeValue" | "product" | "productCategory" | "productVariant" | "variantAttributeValue" | "productMedia" | "warehouse" | "inventoryItem" | "inventoryLog" | "inventoryReservation" | "inventoryTransfer" | "cart" | "cartItem" | "shippingMethod" | "order" | "orderItem" | "paymentTransaction" | "orderTimeline" | "review" | "reviewMedia" | "discount" | "discountUsage" | "post" | "auditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1991,6 +1992,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    InventoryTransfer: {
+      payload: Prisma.$InventoryTransferPayload<ExtArgs>
+      fields: Prisma.InventoryTransferFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.InventoryTransferFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.InventoryTransferFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>
+        }
+        findFirst: {
+          args: Prisma.InventoryTransferFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.InventoryTransferFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>
+        }
+        findMany: {
+          args: Prisma.InventoryTransferFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>[]
+        }
+        create: {
+          args: Prisma.InventoryTransferCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>
+        }
+        createMany: {
+          args: Prisma.InventoryTransferCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.InventoryTransferCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>[]
+        }
+        delete: {
+          args: Prisma.InventoryTransferDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>
+        }
+        update: {
+          args: Prisma.InventoryTransferUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>
+        }
+        deleteMany: {
+          args: Prisma.InventoryTransferDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.InventoryTransferUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.InventoryTransferUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>[]
+        }
+        upsert: {
+          args: Prisma.InventoryTransferUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$InventoryTransferPayload>
+        }
+        aggregate: {
+          args: Prisma.InventoryTransferAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateInventoryTransfer>
+        }
+        groupBy: {
+          args: Prisma.InventoryTransferGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InventoryTransferGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.InventoryTransferCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.InventoryTransferCountAggregateOutputType> | number
+        }
+      }
+    }
     Cart: {
       payload: Prisma.$CartPayload<ExtArgs>
       fields: Prisma.CartFieldRefs
@@ -3239,9 +3314,10 @@ export const InventoryLogScalarFieldEnum = {
   warehouseId: 'warehouseId',
   actionType: 'actionType',
   quantityChange: 'quantityChange',
-  stockAfter: 'stockAfter',
+  beforeQuantity: 'beforeQuantity',
+  afterQuantity: 'afterQuantity',
+  referenceType: 'referenceType',
   referenceId: 'referenceId',
-  referenceCode: 'referenceCode',
   actorId: 'actorId',
   note: 'note',
   createdAt: 'createdAt'
@@ -3254,6 +3330,7 @@ export const InventoryReservationScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
   variantId: 'variantId',
+  warehouseId: 'warehouseId',
   quantity: 'quantity',
   expiresAt: 'expiresAt',
   status: 'status',
@@ -3261,6 +3338,21 @@ export const InventoryReservationScalarFieldEnum = {
 } as const
 
 export type InventoryReservationScalarFieldEnum = (typeof InventoryReservationScalarFieldEnum)[keyof typeof InventoryReservationScalarFieldEnum]
+
+
+export const InventoryTransferScalarFieldEnum = {
+  id: 'id',
+  variantId: 'variantId',
+  fromWarehouseId: 'fromWarehouseId',
+  toWarehouseId: 'toWarehouseId',
+  quantity: 'quantity',
+  status: 'status',
+  note: 'note',
+  actorId: 'actorId',
+  createdAt: 'createdAt'
+} as const
+
+export type InventoryTransferScalarFieldEnum = (typeof InventoryTransferScalarFieldEnum)[keyof typeof InventoryTransferScalarFieldEnum]
 
 
 export const CartScalarFieldEnum = {
@@ -3883,6 +3975,7 @@ export type GlobalOmitConfig = {
   inventoryItem?: Prisma.InventoryItemOmit
   inventoryLog?: Prisma.InventoryLogOmit
   inventoryReservation?: Prisma.InventoryReservationOmit
+  inventoryTransfer?: Prisma.InventoryTransferOmit
   cart?: Prisma.CartOmit
   cartItem?: Prisma.CartItemOmit
   shippingMethod?: Prisma.ShippingMethodOmit

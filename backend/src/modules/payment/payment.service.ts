@@ -549,9 +549,10 @@ export class PaymentService {
                     warehouseId: inventoryItem.warehouseId,
                     actionType: 'RETURN',
                     quantityChange: item.quantity,
-                    stockAfter: inventoryItem.quantity + item.quantity,
+                    beforeQuantity: inventoryItem.quantity,
+                    afterQuantity: inventoryItem.quantity + item.quantity,
+                    referenceType: 'ORDER',
                     referenceId: order.id,
-                    referenceCode: order.code,
                     note: 'Inventory restored due to refund',
                 },
             });
@@ -638,5 +639,66 @@ export class PaymentService {
      */
     getPayPalProvider(): PayPalProvider {
         return this.paypalProvider;
+    }
+
+    /**
+     * Find all transactions for admin (paginated)
+     */
+    async findTransactions(filters: {
+        page?: number;
+        limit?: number;
+        status?: string;
+        provider?: string;
+        orderCode?: string;
+    }) {
+        const {
+            page = 1,
+            limit = 10,
+            status,
+            provider,
+            orderCode,
+        } = filters;
+        const skip = (Number(page) - 1) * Number(limit);
+        const take = Number(limit);
+
+        const where: any = {};
+        if (status) where.status = status;
+        if (provider) where.provider = provider;
+        if (orderCode) {
+            where.order = {
+                code: {
+                    contains: orderCode,
+                    mode: 'insensitive',
+                },
+            };
+        }
+
+        const [items, total] = await Promise.all([
+            this.prisma.paymentTransaction.findMany({
+                where,
+                skip,
+                take,
+                include: {
+                    order: {
+                        select: {
+                            id: true,
+                            code: true,
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.paymentTransaction.count({ where }),
+        ]);
+
+        return {
+            items,
+            meta: {
+                total,
+                page: Number(page),
+                limit: Number(limit),
+                totalPages: Math.ceil(total / Number(limit)),
+            },
+        };
     }
 }

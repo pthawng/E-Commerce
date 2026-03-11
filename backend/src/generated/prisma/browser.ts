@@ -126,6 +126,11 @@ export type InventoryLog = Prisma.InventoryLogModel
  */
 export type InventoryReservation = Prisma.InventoryReservationModel
 /**
+ * Model InventoryTransfer
+ * 
+ */
+export type InventoryTransfer = Prisma.InventoryTransferModel
+/**
  * Model Cart
  * ///////////////////////////////////
  * ///////////////////////////////////

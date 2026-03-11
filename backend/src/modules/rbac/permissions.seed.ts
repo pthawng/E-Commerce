@@ -46,4 +46,9 @@ export const PERMISSION_SEEDS: PermissionSeed[] = [
     { action: PERMISSIONS.ORDER.DELETE, name: 'Xóa đơn hàng', module: 'ORDER' },
     { action: PERMISSIONS.ORDER.MANAGE_PAYMENT, name: 'Quản lý thanh toán', module: 'ORDER' },
     { action: PERMISSIONS.ORDER.SHIPMENT_MANAGE, name: 'Quản lý vận chuyển', module: 'ORDER' },
+    // INVENTORY
+    { action: PERMISSIONS.INVENTORY.READ, name: 'Xem kho hàng', module: 'INVENTORY' },
+    { action: PERMISSIONS.INVENTORY.MANAGE, name: 'Quản lý kho hàng', module: 'INVENTORY' },
+    { action: PERMISSIONS.INVENTORY.TRANSFER, name: 'Điều chuyển kho', module: 'INVENTORY' },
+    { action: PERMISSIONS.INVENTORY.ADJUST, name: 'Điều chỉnh kho', module: 'INVENTORY' },
 ];

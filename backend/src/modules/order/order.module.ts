@@ -3,6 +3,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { CartModule } from '../cart/cart.module';
 import { PaymentModule } from '../payment/payment.module';
+import { InventoryModule } from '../inventory/inventory.module';
 import { OrderController } from './order.controller';
 import { AdminOrderController } from './admin-order.controller';
 import { OrderService } from './order.service';
@@ -14,7 +15,8 @@ import { CleanupExpiredReservationsJob } from './jobs/cleanup-expired-reservatio
         PrismaModule,
         RbacModule,
         CartModule,
-        forwardRef(() => PaymentModule), // Circular dependency resolution
+        InventoryModule,
+        forwardRef(() => PaymentModule),
     ],
     controllers: [OrderController, AdminOrderController],
     providers: [

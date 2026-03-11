@@ -282,4 +282,23 @@ export class PaymentController {
     async getPaymentStatus(@Param('orderId') orderId: string) {
         return await this.paymentService.getPaymentStatus(orderId);
     }
+
+    /**
+     * Get all transactions for admin (paginated)
+     */
+    @Get('admin/all')
+    @ApiOperation({ summary: 'Get all transactions for admin (paginated)' })
+    @ApiResponse({
+        status: 200,
+        description: 'Transactions retrieved successfully',
+    })
+    async findAllTransactions(@Query() query: {
+        page?: number;
+        limit?: number;
+        status?: string;
+        provider?: string;
+        orderCode?: string;
+    }) {
+        return await this.paymentService.findTransactions(query);
+    }
 }

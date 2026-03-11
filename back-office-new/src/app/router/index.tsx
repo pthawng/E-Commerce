@@ -7,6 +7,8 @@ import { DashboardPage } from '@/pages/dashboard';
 import { RolesListPage, RoleCreatePage, RoleEditPage, PermissionsListPage, PermissionCreatePage, PermissionEditPage } from '@/pages/rbac';
 import { ProductsPage, ProductCreatePage, ProductEditPage, CategoriesPage, AttributesPage } from '@/pages/product';
 import { OrdersPage } from '@/pages/order';
+import { TransactionsPage } from '@/pages/sales';
+import { InventoryPage } from '@/pages/inventory';
 
 export const router = createBrowserRouter([
     {
@@ -30,6 +32,14 @@ export const router = createBrowserRouter([
                 element: (
                     <ProtectedRoute permission="order.read">
                         <OrdersPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'transactions',
+                element: (
+                    <ProtectedRoute permission="auth.payment.read">
+                        <TransactionsPage />
                     </ProtectedRoute>
                 ),
             },
@@ -127,6 +137,14 @@ export const router = createBrowserRouter([
                 element: (
                     <ProtectedRoute permission="product.attribute.read">
                         <AttributesPage />
+                    </ProtectedRoute>
+                ),
+            },
+            {
+                path: 'inventory',
+                element: (
+                    <ProtectedRoute permission="inventory.read">
+                        <InventoryPage />
                     </ProtectedRoute>
                 ),
             },

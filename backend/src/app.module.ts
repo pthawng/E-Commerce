@@ -10,6 +10,7 @@ import { UserModule } from '@modules/user/user.module';
 import { CartModule } from '@modules/cart/cart.module';
 import { OrderModule } from '@modules/order/order.module';
 import { PaymentModule } from '@modules/payment/payment.module';
+import { InventoryModule } from '@modules/inventory/inventory.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -100,6 +101,7 @@ import { AppService } from './app.service';
     CartModule,
     OrderModule,
     PaymentModule,
+    InventoryModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

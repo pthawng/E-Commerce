@@ -11,6 +11,10 @@ import {
     IdcardOutlined,
     KeyOutlined,
     ShoppingCartOutlined,
+    DollarOutlined,
+    AppstoreAddOutlined,
+    AppstoreOutlined,
+    CarOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -51,15 +55,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
 
         const isAdmin = ['admin', 'manager'].includes(user?.role?.toString().toLowerCase() || '');
 
-        // Commerce Group
-        const commerceItems: MenuItem[] = [];
+        // Sales & Commerce Group
+        const salesItems: MenuItem[] = [];
         if (isAdmin || can('order.read')) {
-            commerceItems.push(getItem('Orders', '/orders', <ShoppingCartOutlined />));
+            salesItems.push(getItem('Orders', '/orders', <ShoppingCartOutlined />));
         }
-        // Future: commerceItems.push(getItem('Shipping', '/shipping', <CarOutlined />));
+        if (isAdmin || can('auth.payment.read')) {
+            salesItems.push(getItem('Transactions', '/transactions', <DollarOutlined />));
+        }
 
-        if (commerceItems.length > 0) {
-            items.push(getItem('Commerce', 'commerce', <ShoppingCartOutlined />, commerceItems));
+        if (salesItems.length > 0) {
+            items.push(getItem('Sales', 'sales', <ShoppingCartOutlined />, salesItems));
+        }
+
+        // Operations Group
+        const operationsItems: MenuItem[] = [];
+        operationsItems.push(getItem('Inventory', '/inventory', <AppstoreAddOutlined />));
+        operationsItems.push(getItem(<span style={{ opacity: 0.5 }}>Shipments (Soon)</span>, 'shipments', <CarOutlined />));
+
+        if (operationsItems.length > 0) {
+            items.push(getItem('Operations', 'operations', <AppstoreOutlined />, operationsItems));
         }
 
         // Catalog Management Group
@@ -101,8 +116,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
         if (location.pathname.startsWith('/products') || location.pathname.startsWith('/categories') || location.pathname.startsWith('/attributes')) {
             keys.push('catalog');
         }
-        if (location.pathname.startsWith('/orders')) {
-            keys.push('commerce');
+        if (location.pathname.startsWith('/orders') || location.pathname.startsWith('/transactions')) {
+            keys.push('sales');
+        }
+        if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/shipments')) {
+            keys.push('operations');
         }
         if (location.pathname.startsWith('/users') || location.pathname.startsWith('/roles') || location.pathname.startsWith('/permissions')) {
             keys.push('identity');

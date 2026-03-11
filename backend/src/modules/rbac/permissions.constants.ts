@@ -63,6 +63,12 @@ export const PERMISSIONS = {
     MANAGE_PAYMENT: 'order.payment.manage',
     SHIPMENT_MANAGE: 'order.shipment.manage',
   },
+  INVENTORY: {
+    READ: 'inventory.read',
+    MANAGE: 'inventory.manage',
+    TRANSFER: 'inventory.transfer',
+    ADJUST: 'inventory.adjust',
+  },
 } as const;
 
 // Đệ quy lấy tất cả value string bên trong PERMISSIONS

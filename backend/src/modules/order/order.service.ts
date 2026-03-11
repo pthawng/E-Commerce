@@ -343,11 +343,14 @@ export class OrderService {
                     await tx.inventoryLog.create({
                         data: {
                             inventoryItemId: inv.id,
+                            productVariantId: variant.id,
+                            warehouseId: inv.warehouseId,
                             actionType: 'SALE',
                             quantityChange: -deduct,
-                            stockAfter: inv.quantity - deduct,
+                            beforeQuantity: inv.quantity,
+                            afterQuantity: inv.quantity - deduct,
+                            referenceType: 'ORDER',
                             referenceId: orderId,
-                            referenceCode: orderCode,
                             note: 'Order Checkout',
                         },
                     });
