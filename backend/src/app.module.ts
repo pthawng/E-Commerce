@@ -16,6 +16,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { redisStore } from 'cache-manager-redis-yet';
 import * as Joi from 'joi';
 import { PrismaModule } from 'src/prisma/prisma.module';
@@ -86,9 +87,21 @@ import { AppService } from './app.service';
         PAYPAL_WEBHOOK_ID: Joi.string().optional(),
         FRONTEND_URL: Joi.string().default('http://localhost:5173'),
         PAYMENT_TIMEOUT_MINUTES: Joi.number().default(15),
+        THROTTLE_TTL: Joi.number().default(60000),
+        THROTTLE_LIMIT: Joi.number().default(10),
       }),
     }),
     ScheduleModule.forRoot(), // NEW: Enable cron jobs
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get<number>('THROTTLE_TTL') || 60000,
+          limit: config.get<number>('THROTTLE_LIMIT') || 10,
+        },
+      ],
+    }),
     PrismaModule,
     UserModule,
     AuthModule,

@@ -13,6 +13,7 @@ import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { PermissionCacheService } from '@modules/rbac/cache/permission-cache.service';
 import { LogoutDto } from '@modules/auth/dto/logout.dto';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards, Query, BadRequestException } from '@nestjs/common';
 import {
@@ -34,6 +35,7 @@ export class AuthController {
   ) { }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Đăng ký tài khoản mới' })
@@ -44,6 +46,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng nhập' })
@@ -55,6 +58,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Yêu cầu đặt lại mật khẩu' })
@@ -78,6 +82,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đặt lại mật khẩu mới' })
@@ -108,6 +113,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Xác minh email' })
