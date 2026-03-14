@@ -17,6 +17,7 @@ import { PaymentService } from '@modules/payment/payment.service';
 import { Prisma } from 'src/generated/prisma/client';
 import { InventoryService } from '../../inventory/inventory.service';
 import { InventoryAllocatorService } from '../../inventory/inventory-allocator.service';
+import { randomBytes } from 'node:crypto';
 
 /**
  * OrderPaymentService
@@ -562,10 +563,8 @@ export class OrderPaymentService {
     private generateOrderCode(): string {
         const date = new Date();
         const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-        const random = Math.floor(Math.random() * 10000)
-            .toString()
-            .padStart(4, '0');
-        return `${this.ORDER_CODE_PREFIX}-${dateStr}-${random}`;
+        const suffix = randomBytes(3).toString('hex').toUpperCase();
+        return `${this.ORDER_CODE_PREFIX}-${dateStr}-${suffix}`;
     }
 
     /**
@@ -574,9 +573,7 @@ export class OrderPaymentService {
     private generateTransactionCode(): string {
         const date = new Date();
         const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-        const random = Math.floor(Math.random() * 10000)
-            .toString()
-            .padStart(4, '0');
-        return `TXN-${dateStr}-${random}`;
+        const suffix = randomBytes(3).toString('hex').toUpperCase();
+        return `TXN-${dateStr}-${suffix}`;
     }
 }

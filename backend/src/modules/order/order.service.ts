@@ -8,6 +8,7 @@ import {
 import { Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { randomBytes } from 'node:crypto';
 
 @Injectable()
 export class OrderService {
@@ -367,7 +368,7 @@ export class OrderService {
 
     private generateOrderCode() {
         const date = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-        return `${this.ORDER_CODE_PREFIX}-${date}-${random}`;
+        const suffix = randomBytes(3).toString('hex').toUpperCase();
+        return `${this.ORDER_CODE_PREFIX}-${date}-${suffix}`;
     }
 }

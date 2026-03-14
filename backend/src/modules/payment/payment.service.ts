@@ -520,45 +520,60 @@ export class PaymentService {
      * Restore inventory after refund
      */
     private async restoreInventory(tx: any, order: any): Promise<void> {
-        for (const item of order.items) {
-            if (!item.productVariantId) continue;
+        // Find all original deduction logs for this order to know exactly where to return stock
+        const deductionLogs = await tx.inventoryLog.findMany({
+            where: {
+                referenceId: order.id,
+                referenceType: 'ORDER',
+                actionType: 'SALE',
+                quantityChange: { lt: 0 },
+            },
+        });
 
-            // Find inventory items for this variant
-            const inventoryItems = await tx.inventoryItem.findMany({
-                where: { productVariantId: item.productVariantId },
-                orderBy: { updatedAt: 'desc' },
+        if (deductionLogs.length === 0) {
+            this.logger.warn(`No inventory deduction logs found for order ${order.id}. Skipping restoration.`);
+            return;
+        }
+
+        for (const log of deductionLogs) {
+            const quantityToRestore = Math.abs(log.quantityChange);
+
+            // Fetch current inventory item to get accurate beforeQuantity for logging
+            const inventoryItem = await tx.inventoryItem.findUnique({
+                where: { id: log.inventoryItemId },
             });
 
-            if (inventoryItems.length === 0) continue;
+            if (!inventoryItem) {
+                this.logger.error(`Inventory item ${log.inventoryItemId} not found during restoration for order ${order.id}`);
+                continue;
+            }
 
-            // Restore to first warehouse
-            const inventoryItem = inventoryItems[0];
-
+            // Restore stock
             await tx.inventoryItem.update({
                 where: { id: inventoryItem.id },
                 data: {
-                    quantity: { increment: item.quantity },
+                    quantity: { increment: quantityToRestore },
                 },
             });
 
-            // Create inventory log
+            // Create return log
             await tx.inventoryLog.create({
                 data: {
                     inventoryItemId: inventoryItem.id,
-                    productVariantId: item.productVariantId,
-                    warehouseId: inventoryItem.warehouseId,
+                    productVariantId: log.productVariantId,
+                    warehouseId: log.warehouseId,
                     actionType: 'RETURN',
-                    quantityChange: item.quantity,
+                    quantityChange: quantityToRestore,
                     beforeQuantity: inventoryItem.quantity,
-                    afterQuantity: inventoryItem.quantity + item.quantity,
+                    afterQuantity: inventoryItem.quantity + quantityToRestore,
                     referenceType: 'ORDER',
                     referenceId: order.id,
-                    note: 'Inventory restored due to refund',
+                    note: 'Inventory restored to original warehouse due to refund',
                 },
             });
         }
 
-        this.logger.log(`Inventory restored for order ${order.id}`);
+        this.logger.log(`Inventory restored for order ${order.id} across ${deductionLogs.length} warehouse locations`);
     }
 
     /**

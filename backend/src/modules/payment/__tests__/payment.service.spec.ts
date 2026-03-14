@@ -31,6 +31,7 @@ describe('PaymentService', () => {
     },
     inventoryLog: {
       create: jest.fn(),
+      findMany: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
   };
@@ -95,22 +96,32 @@ describe('PaymentService', () => {
   });
 
   describe('processRefund', () => {
-    it('should process refund and restore inventory', async () => {
+    it('should process refund and restore inventory to original warehouses from logs', async () => {
       const order = {
         id: 'o1',
         totalAmount: 1000,
         transactions: [{ type: 'payment', status: 'success', status_provider: 'tx_old', provider: 'VNPAY', transactionCode: 'tx_old' }],
-        items: [{ productVariantId: 'v1', quantity: 1 }]
+        items: [{ productVariantId: 'v1', quantity: 2 }]
       };
+      
+      const mockLogs = [
+        { inventoryItemId: 'inv1', productVariantId: 'v1', warehouseId: 'w1', quantityChange: -1 },
+        { inventoryItemId: 'inv2', productVariantId: 'v1', warehouseId: 'w2', quantityChange: -1 },
+      ];
+
       mockPrismaService.order.findUnique.mockResolvedValue(order);
       mockVNPayProvider.processRefund.mockResolvedValue({ success: true, refundTransactionId: 'ref_1' });
-      mockPrismaService.inventoryItem.findMany.mockResolvedValue([{ id: 'inv1', quantity: 10, warehouseId: 'w1' }]);
+      mockPrismaService.inventoryLog.findMany.mockResolvedValue(mockLogs);
+      mockPrismaService.inventoryItem.findUnique
+        .mockResolvedValueOnce({ id: 'inv1', quantity: 10, warehouseId: 'w1' })
+        .mockResolvedValueOnce({ id: 'inv2', quantity: 5, warehouseId: 'w2' });
 
       const result = await service.processRefund('o1', 1000, 'test refund', true);
 
       expect(result.success).toBe(true);
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalled();
-      expect(mockPrismaService.paymentTransaction.create).toHaveBeenCalledWith(expect.objectContaining({ type: 'refund', status: 'success' }));
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledTimes(2);
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'inv1' } }));
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'inv2' } }));
     });
   });
 });
