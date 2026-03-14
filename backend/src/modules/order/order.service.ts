@@ -5,10 +5,11 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from 'src/generated/prisma/client';
+import { OrderStatusEnum, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { randomBytes } from 'node:crypto';
+import { OrderStatusValidator } from './utils/order-status.validator';
 
 @Injectable()
 export class OrderService {
@@ -179,11 +180,15 @@ export class OrderService {
 
         if (!order) throw new NotFoundException('Order not found');
 
+        // Validate state transition
+        const nextStatus = status as OrderStatusEnum;
+        OrderStatusValidator.validate(id, order.status, nextStatus);
+
         return this.prisma.$transaction(async (tx) => {
             const updatedOrder = await tx.order.update({
                 where: { id },
                 data: {
-                    status: status as any,
+                    status: nextStatus,
                     // Auto-set timestamps based on status
                     ...(status === 'confirmed' ? { confirmedAt: new Date() } : {}),
                     ...(status === 'shipping' ? { shippedAt: new Date() } : {}),

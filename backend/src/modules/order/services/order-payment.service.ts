@@ -18,6 +18,8 @@ import { Prisma } from 'src/generated/prisma/client';
 import { InventoryService } from '../../inventory/inventory.service';
 import { InventoryAllocatorService } from '../../inventory/inventory-allocator.service';
 import { randomBytes } from 'node:crypto';
+import { OrderStatusEnum } from 'src/generated/prisma/client';
+import { OrderStatusValidator } from '../utils/order-status.validator';
 
 /**
  * OrderPaymentService
@@ -214,7 +216,10 @@ export class OrderPaymentService {
                 return;
             }
 
-            if (order.status !== 'pending_payment') {
+            // Validate transition
+            OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.confirmed);
+
+            if (order.status !== 'pending_payment' && order.status !== 'pending') {
                 throw new BadRequestException(
                     `Cannot confirm order in status: ${order.status}`,
                 );
