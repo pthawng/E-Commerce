@@ -133,4 +133,47 @@ describe('InventoryService', () => {
       });
     });
   });
+
+  describe('directDeduct', () => {
+    it('should deduct stock directly without prior reservation (COD)', async () => {
+      const allocations = [{ variantId: 'v1', warehouseId: 'w1', quantity: 3 }];
+      mockPrismaService.$queryRawUnsafe.mockResolvedValue([{ id: 'inv1', quantity: 10, reservedQuantity: 0 }]);
+
+      await service.directDeduct('order_cod', allocations);
+
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: { quantity: 7 }
+      }));
+    });
+  });
+
+  describe('receiveStock', () => {
+    it('should increment stock and log IMPORT action', async () => {
+      mockPrismaService.inventoryItem.findUnique.mockResolvedValue({ id: 'inv1', quantity: 10 });
+
+      await service.receiveStock('v1', 'w1', 5);
+
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: { quantity: 15 }
+      }));
+      expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ actionType: 'IMPORT', quantityChange: 5 })
+      }));
+    });
+  });
+
+  describe('adjustStock', () => {
+    it('should set stock to exact quantity and log ADJUSTMENT', async () => {
+      mockPrismaService.inventoryItem.findUnique.mockResolvedValue({ id: 'inv1', quantity: 10 });
+
+      await service.adjustStock('v1', 'w1', 25, 'Physical count');
+
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: { quantity: 25 }
+      }));
+      expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ actionType: 'ADJUSTMENT', quantityChange: 15 })
+      }));
+    });
+  });
 });
