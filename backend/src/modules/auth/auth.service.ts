@@ -20,6 +20,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { AuthResponse, AuthTokens } from '@shared';
 import * as argon2 from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { randomUUID } from 'node:crypto';
 
 const ARGON_OPTIONS: argon2.Options = {
   type: argon2.argon2id,
@@ -132,9 +133,14 @@ export class AuthService {
   // ---------------------------
   async refreshToken(dto: RefreshTokenDto): Promise<AuthResponse> {
     const payload = await this.verifyRefreshToken(dto.refreshToken);
-    const tokenRecord = await this.prismaService.refreshToken.findFirst({
-      where: { userId: payload.sub },
-      orderBy: { createdAt: 'desc' },
+    const jti = (payload as any).jti;
+
+    if (!jti) {
+      throw new ForbiddenException('Invalid refresh token: missing jti');
+    }
+
+    const tokenRecord = await this.prismaService.refreshToken.findUnique({
+      where: { id: jti },
     });
 
     if (!tokenRecord || !(await this.verifyPassword(tokenRecord.token, dto.refreshToken))) {
@@ -157,18 +163,12 @@ export class AuthService {
   async logout(dto: import('@modules/auth/dto/logout.dto').LogoutDto) {
     try {
       const payload = await this.jwtService.decode(dto.refreshToken) as any;
-      if (!payload?.sub) return { message: 'Logged out successfully' };
+      const jti = payload?.jti;
+      if (!jti) return { message: 'Logged out successfully' };
 
-      const userId = payload.sub;
-      const tokens = await this.prismaService.refreshToken.findMany({ where: { userId } });
-
-      // Invalidate the specific token if it matches
-      for (const t of tokens) {
-        if (await this.verifyPassword(t.token, dto.refreshToken)) {
-          await this.prismaService.refreshToken.delete({ where: { id: t.id } });
-          break;
-        }
-      }
+      await this.prismaService.refreshToken.delete({ where: { id: jti } }).catch(() => {
+        // Ignore if already deleted
+      });
     } catch (e) {
       this.logger.warn(`Logout failed mostly due to invalid token format: ${e.message}`);
     }
@@ -191,6 +191,8 @@ export class AuthService {
 
     const roles = user.userRoles.map((ur) => ur.role.slug);
 
+    const jti = randomUUID();
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         { sub: userId, type: 'access', aud: audience, roles },
@@ -200,7 +202,7 @@ export class AuthService {
         } as any,
       ),
       this.jwtService.signAsync(
-        { sub: userId, type: 'refresh', aud: audience },
+        { sub: userId, type: 'refresh', aud: audience, jti },
         {
           secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
           expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES') || TOKEN_EXPIRY.REFRESH,
@@ -208,7 +210,7 @@ export class AuthService {
       ),
     ]);
 
-    await this.saveRefreshToken(userId, refreshToken);
+    await this.saveRefreshToken(userId, jti, refreshToken);
 
     return {
       user: sanitizeUser(user),
@@ -216,10 +218,11 @@ export class AuthService {
     };
   }
 
-  private async saveRefreshToken(userId: string, rawToken: string) {
+  private async saveRefreshToken(userId: string, jti: string, rawToken: string) {
     const tokenHash = await this.hashPassword(rawToken);
     await this.prismaService.refreshToken.create({
       data: {
+        id: jti,
         userId,
         token: tokenHash,
         expiresAt: new Date(Date.now() + TOKEN_EXPIRY.REFRESH_DB_MS),

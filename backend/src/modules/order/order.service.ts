@@ -5,7 +5,7 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
-import { OrderStatusEnum, Prisma } from 'src/generated/prisma/client';
+import { ActionType, OrderStatusEnum, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { randomBytes } from 'node:crypto';

@@ -28,6 +28,7 @@ describe('AuthService', () => {
     refreshToken: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       findMany: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
@@ -135,9 +136,9 @@ describe('AuthService', () => {
 
   describe('refreshToken', () => {
     it('should rotate tokens successfully', async () => {
-      const payload = { sub: 'u1', aud: 'customer' };
+      const payload = { sub: 'u1', aud: 'customer', jti: 'rt1' };
       mockJwtService.verifyAsync.mockResolvedValue(payload);
-      mockPrismaService.refreshToken.findFirst.mockResolvedValue({
+      mockPrismaService.refreshToken.findUnique.mockResolvedValue({
         id: 'rt1',
         token: 'hashed_rt',
         expiresAt: new Date(Date.now() + 10000),
@@ -154,8 +155,8 @@ describe('AuthService', () => {
     });
 
     it('should throw ForbiddenException if token expired', async () => {
-      mockJwtService.verifyAsync.mockResolvedValue({ sub: 'u1' });
-      mockPrismaService.refreshToken.findFirst.mockResolvedValue({
+      mockJwtService.verifyAsync.mockResolvedValue({ sub: 'u1', jti: 'rt1' });
+      mockPrismaService.refreshToken.findUnique.mockResolvedValue({
         id: 'rt1',
         token: 'hash',
         expiresAt: new Date(Date.now() - 10000),
