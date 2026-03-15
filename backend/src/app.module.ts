@@ -37,6 +37,7 @@ import { AppService } from './app.service';
         REDIS_HOST: Joi.string().default('localhost'),
         REDIS_PORT: Joi.number().default(6379),
         REDIS_PASSWORD: Joi.string().default('redis_secure_pass_123'),
+        REDIS_URL: Joi.string().optional(),
         REDIS_TTL: Joi.number().default(60000),
         MAIL_PROVIDER: Joi.string().valid('gmail', 'sendgrid').default('gmail'),
         SENDGRID_API_KEY: Joi.string().when('MAIL_PROVIDER', {
@@ -117,11 +118,18 @@ import { AppService } from './app.service';
     InventoryModule,
     CacheModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        store: await redisStore({
-          url: configService.get('REDIS_URL'),
-        }),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const url = configService.get('REDIS_URL');
+        const host = configService.get('REDIS_HOST');
+        const port = configService.get('REDIS_PORT');
+        const password = configService.get('REDIS_PASSWORD');
+
+        return {
+          store: await redisStore({
+            url: url || `redis://:${password}@${host}:${port}`,
+          }),
+        };
+      },
       inject: [ConfigService],
     }),
   ],
