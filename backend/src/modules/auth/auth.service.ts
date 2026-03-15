@@ -32,7 +32,7 @@ const ARGON_OPTIONS: argon2.Options = {
 const TOKEN_EXPIRY = {
   ACCESS: '15m',
   REFRESH: '7d',
-  REFRESH_DB_MS: 30 * 24 * 60 * 60 * 1000,
+  REFRESH_DB_MS: 7 * 24 * 60 * 60 * 1000,
 };
 
 const USER_ROLES = {

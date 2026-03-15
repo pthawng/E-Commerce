@@ -10,6 +10,9 @@ import { ForgotPassEmailService } from '../services/forgot-pass-email.auth.servi
 import { VerifyEmailService } from '../services/verify-email.auth.service';
 
 jest.mock('argon2');
+jest.mock('node:crypto', () => ({
+  randomUUID: jest.fn(() => 'test-jti'),
+}));
 
 describe('AuthService', () => {
   let service: AuthService;
