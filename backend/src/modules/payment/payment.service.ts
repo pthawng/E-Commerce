@@ -5,6 +5,7 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
+import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CODProvider } from './providers/cod/cod.provider';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
@@ -13,7 +14,7 @@ import { IdempotencyService } from './services/idempotency.service';
 import {
     CallbackData,
     IPaymentProvider,
-    PaymentMethodEnum,
+    PaymentMethodEnum as PaymentProviderMethodEnum,
     PaymentResult,
     RefundResult,
     TransactionStatus,
@@ -88,7 +89,7 @@ export class PaymentService {
 
             // Check if order already has a successful payment
             const hasSuccessfulPayment = order.transactions.some(
-                (tx) => tx.status === 'success' && tx.type === 'payment',
+                (tx) => tx.status === TransactionStatusEnum.success && tx.type === TransactionTypeEnum.payment,
             );
 
             if (hasSuccessfulPayment) {
@@ -110,8 +111,8 @@ export class PaymentService {
                 data: {
                     orderId,
                     amount: order.totalAmount,
-                    type: 'payment',
-                    status: 'pending',
+                    type: TransactionTypeEnum.payment,
+                    status: TransactionStatusEnum.pending,
                     provider: paymentMethod,
                     method: paymentMethod,
                     transactionCode: result.transactionId,
@@ -199,7 +200,7 @@ export class PaymentService {
                 }
 
                 // Check if transaction already processed (double-check)
-                if (transaction.status === 'success') {
+                if (transaction.status === TransactionStatusEnum.success) {
                     this.logger.warn(
                         `Transaction ${verifiedData.transactionId} already successful, skipping update`,
                     );
@@ -220,8 +221,8 @@ export class PaymentService {
                     await tx.order.update({
                         where: { id: verifiedData.orderId },
                         data: {
-                            paymentStatus: 'paid',
-                            status: 'confirmed',
+                            paymentStatus: PaymentStatusEnum.paid,
+                            status: OrderStatusEnum.confirmed,
                             confirmedAt: new Date(),
                         },
                     });
@@ -244,7 +245,7 @@ export class PaymentService {
                     await tx.order.update({
                         where: { id: verifiedData.orderId },
                         data: {
-                            paymentStatus: 'unpaid',
+                            paymentStatus: PaymentStatusEnum.unpaid,
                         },
                     });
 
@@ -327,7 +328,7 @@ export class PaymentService {
 
                 // Check if already refunded
                 const existingRefund = order.transactions.find(
-                    (t) => t.type === 'refund' && t.status === 'success',
+                    (t) => t.type === TransactionTypeEnum.refund && t.status === TransactionStatusEnum.success,
                 );
 
                 if (existingRefund) {
@@ -336,7 +337,7 @@ export class PaymentService {
 
                 // Find successful payment transaction
                 const paymentTransaction = order.transactions.find(
-                    (t) => t.status === 'success' && t.type === 'payment',
+                    (t) => t.status === TransactionStatusEnum.success && t.type === TransactionTypeEnum.payment,
                 );
 
                 if (!paymentTransaction) {
@@ -367,8 +368,8 @@ export class PaymentService {
                     data: {
                         orderId,
                         amount,
-                        type: 'refund',
-                        status: refundResult.success ? 'success' : 'failed',
+                        type: TransactionTypeEnum.refund,
+                        status: refundResult.success ? TransactionStatusEnum.success : TransactionStatusEnum.failed,
                         provider: paymentTransaction.provider,
                         method: paymentTransaction.method,
                         transactionCode: refundResult.refundTransactionId,
@@ -381,8 +382,8 @@ export class PaymentService {
                 await tx.order.update({
                     where: { id: orderId },
                     data: {
-                        paymentStatus: 'refunded',
-                        status: 'refunded',
+                        paymentStatus: PaymentStatusEnum.refunded,
+                        status: OrderStatusEnum.refunded,
                     },
                 });
 
@@ -396,7 +397,7 @@ export class PaymentService {
                     data: {
                         orderId,
                         action: 'REFUND_PROCESSED',
-                        toStatus: 'refunded',
+                        toStatus: OrderStatusEnum.refunded,
                         description: `Refund processed: ${amount} VND. Reason: ${reason || 'N/A'}`,
                         actorType: 'system',
                         metadata: {
@@ -443,7 +444,7 @@ export class PaymentService {
 
             // Find pending COD transaction
             const codTransaction = order.transactions.find(
-                (t) => t.provider === 'COD' && t.status === 'pending',
+                (t) => t.provider === PaymentMethodEnum.COD && t.status === TransactionStatusEnum.pending,
             );
 
             if (!codTransaction) {
@@ -454,7 +455,7 @@ export class PaymentService {
             await tx.paymentTransaction.update({
                 where: { id: codTransaction.id },
                 data: {
-                    status: 'success',
+                    status: TransactionStatusEnum.success,
                     gatewayResponse: {
                         confirmedBy,
                         confirmedAt: new Date().toISOString(),
@@ -467,8 +468,8 @@ export class PaymentService {
             await tx.order.update({
                 where: { id: orderId },
                 data: {
-                    paymentStatus: 'paid',
-                    status: 'confirmed',
+                    paymentStatus: PaymentStatusEnum.paid,
+                    status: OrderStatusEnum.confirmed,
                     confirmedAt: new Date(),
                 },
             });
@@ -519,13 +520,16 @@ export class PaymentService {
     /**
      * Restore inventory after refund
      */
-    private async restoreInventory(tx: any, order: any): Promise<void> {
+    private async restoreInventory(
+        tx: Prisma.TransactionClient,
+        order: Prisma.OrderGetPayload<{ include: { items: true } }>,
+    ): Promise<void> {
         // Find all original deduction logs for this order to know exactly where to return stock
         const deductionLogs = await tx.inventoryLog.findMany({
             where: {
                 referenceId: order.id,
                 referenceType: 'ORDER',
-                actionType: 'SALE',
+                actionType: ActionType.SALE,
                 quantityChange: { lt: 0 },
             },
         });
@@ -562,7 +566,7 @@ export class PaymentService {
                     inventoryItemId: inventoryItem.id,
                     productVariantId: log.productVariantId,
                     warehouseId: log.warehouseId,
-                    actionType: 'RETURN',
+                    actionType: ActionType.RETURN,
                     quantityChange: quantityToRestore,
                     beforeQuantity: inventoryItem.quantity,
                     afterQuantity: inventoryItem.quantity + quantityToRestore,
@@ -676,8 +680,8 @@ export class PaymentService {
         const skip = (Number(page) - 1) * Number(limit);
         const take = Number(limit);
 
-        const where: any = {};
-        if (status) where.status = status;
+        const where: Prisma.PaymentTransactionWhereInput = {};
+        if (status) where.status = status as TransactionStatus;
         if (provider) where.provider = provider;
         if (orderCode) {
             where.order = {

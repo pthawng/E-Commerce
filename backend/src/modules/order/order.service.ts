@@ -5,7 +5,7 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
-import { ActionType, OrderStatusEnum, Prisma } from 'src/generated/prisma/client';
+import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { randomBytes } from 'node:crypto';
@@ -57,8 +57,8 @@ export class OrderService {
                 data: {
                     code: this.generateOrderCode(),
                     userId: userId || null,
-                    status: 'pending',
-                    paymentStatus: 'unpaid',
+                    status: OrderStatusEnum.pending,
+                    paymentStatus: PaymentStatusEnum.unpaid,
                     shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
                     billingAddress: (dto.billingAddress ?? dto.shippingAddress) as unknown as Prisma.InputJsonValue,
                     subTotal,
@@ -68,8 +68,8 @@ export class OrderService {
                     transactions: {
                         create: {
                             amount: totalAmount,
-                            type: 'payment',
-                            status: 'pending',
+                            type: TransactionTypeEnum.payment,
+                            status: TransactionStatusEnum.pending,
                             provider: dto.paymentMethod,
                             method: dto.paymentMethod,
                         },
@@ -135,10 +135,10 @@ export class OrderService {
             }
 
             // Sorting
-            let orderBy: any = { createdAt: 'desc' };
+            let orderBy: Prisma.OrderOrderByWithRelationInput = { createdAt: 'desc' };
             if (sort) {
                 const [field, direction] = sort.split(':');
-                orderBy = { [field]: direction };
+                orderBy = { [field]: direction as Prisma.SortOrder };
             }
 
             const [items, total] = await Promise.all([
@@ -190,11 +190,11 @@ export class OrderService {
                 data: {
                     status: nextStatus,
                     // Auto-set timestamps based on status
-                    ...(status === 'confirmed' ? { confirmedAt: new Date() } : {}),
-                    ...(status === 'shipping' ? { shippedAt: new Date() } : {}),
-                    ...(status === 'delivered' ? { deliveredAt: new Date() } : {}),
-                    ...(status === 'completed' ? { completedAt: new Date() } : {}),
-                    ...(status === 'cancelled' ? { cancelledAt: new Date() } : {}),
+                    ...(status === OrderStatusEnum.confirmed ? { confirmedAt: new Date() } : {}),
+                    ...(status === OrderStatusEnum.shipping ? { shippedAt: new Date() } : {}),
+                    ...(status === OrderStatusEnum.delivered ? { deliveredAt: new Date() } : {}),
+                    ...(status === OrderStatusEnum.completed ? { completedAt: new Date() } : {}),
+                    ...(status === OrderStatusEnum.cancelled ? { cancelledAt: new Date() } : {}),
                 }
             });
 
@@ -203,7 +203,7 @@ export class OrderService {
                     orderId: id,
                     action: `STATUS_UPDATE_${status.toUpperCase()}`,
                     fromStatus: order.status,
-                    toStatus: status as any,
+                    toStatus: status as OrderStatusEnum,
                     description: note || `Order status updated to ${status}`,
                     actorId,
                     actorType: actorId ? 'admin' : 'system'
@@ -259,13 +259,13 @@ export class OrderService {
         });
 
         return { cart, variants };
-    }
+  }
 
-    private validateCartItems(
-        cartItems: any[],
-        variants: any[]
-    ) {
-        const priceMismatches: any[] = [];
+  private validateCartItems(
+    cartItems: Prisma.CartItemGetPayload<{}>[],
+    variants: (Prisma.ProductVariantGetPayload<{ include: { inventoryItems: true, product: true } }>)[]
+  ) {
+    const priceMismatches: { variantId: string; sku: string; oldPrice: Prisma.Decimal; newPrice: Prisma.Decimal }[] = [];
 
         for (const item of cartItems) {
             const variant = variants.find((v) => v.id === item.productVariantId);
@@ -284,33 +284,36 @@ export class OrderService {
                 throw new BadRequestException(`Insufficient stock for ${variant.sku}. Available: ${totalStock}`);
             }
 
-            // Check Price Mismatch
-            if (Number(variant.price) !== Number(item.cachedPrice)) {
-                priceMismatches.push({
-                    variantId: variant.id,
-                    sku: variant.sku,
-                    oldPrice: item.cachedPrice,
-                    newPrice: variant.price,
-                });
-            }
-        }
-
-        return priceMismatches;
+      // Check Price Mismatch
+      if (Number(variant.price) !== Number(item.cachedPrice)) {
+        priceMismatches.push({
+          variantId: variant.id,
+          sku: variant.sku,
+          oldPrice: item.cachedPrice,
+          newPrice: variant.price as any as Prisma.Decimal,
+        });
+      }
     }
 
-    private calculateOrderTotals(cartItems: any[], variants: any[]) {
-        let subTotal = 0;
-        const orderItemsData = cartItems.map((item) => {
+    return priceMismatches;
+  }
+
+  private calculateOrderTotals(
+    cartItems: Prisma.CartItemGetPayload<{}>[],
+    variants: (Prisma.ProductVariantGetPayload<{ include: { product: true } }>)[]
+  ) {
+    let subTotal = 0;
+    const orderItemsData = cartItems.map((item) => {
             const variant = variants.find((v) => v.id === item.productVariantId)!;
             const priceToUse = variant.price; // Source of truth
             const lineTotal = Number(priceToUse) * item.quantity;
 
             subTotal += lineTotal;
 
-            return {
-                productVariantId: variant.id,
-                productName: (variant.product.name as any)?.vi ?? (variant.product.name as any)?.en ?? 'Product',
-                sku: variant.sku,
+      return {
+        productVariantId: variant.id,
+        productName: (variant.product.name as Record<string, string>)?.vi ?? (variant.product.name as Record<string, string>)?.en ?? 'Product',
+        sku: variant.sku,
                 variantTitle: variant.variantTitle ?? {},
                 thumbnailUrl: variant.thumbnailUrl,
                 quantity: item.quantity,
@@ -322,13 +325,13 @@ export class OrderService {
         return { orderItemsData, subTotal };
     }
 
-    private async processInventoryDeduction(
-        tx: Prisma.TransactionClient,
-        cartItems: any[],
-        variants: any[],
-        orderId: string,
-        orderCode: string
-    ) {
+  private async processInventoryDeduction(
+    tx: Prisma.TransactionClient,
+    cartItems: Prisma.CartItemGetPayload<{}>[],
+    variants: (Prisma.ProductVariantGetPayload<{ include: { inventoryItems: true } }>)[],
+    orderId: string,
+    orderCode: string
+  ) {
         for (const item of cartItems) {
             const variant = variants.find((v) => v.id === item.productVariantId)!;
             let remainingToDeduct = item.quantity;
@@ -351,7 +354,7 @@ export class OrderService {
                             inventoryItemId: inv.id,
                             productVariantId: variant.id,
                             warehouseId: inv.warehouseId,
-                            actionType: 'SALE',
+                            actionType: ActionType.SALE,
                             quantityChange: -deduct,
                             beforeQuantity: inv.quantity,
                             afterQuantity: inv.quantity - deduct,
