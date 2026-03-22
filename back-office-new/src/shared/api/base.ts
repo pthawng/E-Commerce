@@ -56,8 +56,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => {
         // Unwrap ApiResponse to return only the 'data' payload
-        // This makes hooks cleaner: const { data } = useProducts() -> data is Product[]
-        return response.data?.data;
+        // If the backend returns { success: true, data: null }, return an empty result or undefined
+        // to prevent 'Cannot read properties of null' downstream.
+        const unwrapped = response.data?.data;
+        
+        // If it's null, we return undefined instead to be safer with optional chaining
+        return unwrapped === null ? undefined : unwrapped;
     },
     async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };

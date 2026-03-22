@@ -1,5 +1,5 @@
 import { api as axiosClient } from '@/shared/api/base';
-import type { Category, CreateCategoryDTO, UpdateCategoryDTO, CategoryFilters } from '../model/types';
+import type { Category, CreateCategoryDTO, UpdateCategoryDTO } from '../model/types';
 
 /**
  * Category API Service

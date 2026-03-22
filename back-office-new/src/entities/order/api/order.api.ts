@@ -11,7 +11,12 @@ export const orderApi = {
      * Get paginated list of orders with filters
      */
     getOrders: async (params?: OrderFilters): Promise<PaginatedResponse<Order>> => {
-        return axiosClient.get('/admin/orders', { params });
+        // Clear empty/undefined params to avoid 400 Bad Request on some backends
+        const cleanParams = params ? Object.fromEntries(
+            Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+        ) : undefined;
+
+        return axiosClient.get('/admin/orders', { params: cleanParams });
     },
 
     /**

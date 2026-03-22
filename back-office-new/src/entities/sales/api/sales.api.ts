@@ -3,6 +3,5 @@ import type { PaginatedTransactions, TransactionQueryParams } from '../model/typ
 
 export const salesApi = {
     getTransactions: (params?: TransactionQueryParams) =>
-        api.get<PaginatedTransactions>('/payments/transactions', { params })
-            .then(res => res.data),
+        api.get<PaginatedTransactions>('/payments/transactions', { params }),
 };

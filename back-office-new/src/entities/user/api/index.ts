@@ -54,18 +54,22 @@ export const refreshTokenApi = async (refreshToken: string): Promise<{ accessTok
 };
 
 export const getUsersApi = async (query: UserQueryDto): Promise<PaginatedResponse<User>> => {
-    return api.get<PaginatedResponse<User>>('/users', { params: query }) as unknown as PaginatedResponse<User>;
+    // Clear empty/undefined params to avoid 400 Bad Request
+    const cleanParams = Object.fromEntries(
+        Object.entries(query).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    return api.get<PaginatedResponse<User>>('/admin/rbac/users', { params: cleanParams }) as unknown as PaginatedResponse<User>;
 };
 
 export const createUserApi = async (data: CreateUserDto): Promise<User> => {
-    return api.post<User>('/users', data) as unknown as User;
+    return api.post<User>('/admin/rbac/users', data) as unknown as User;
 };
 
 export const updateUserApi = async (id: string, data: UpdateUserDto): Promise<User> => {
-    return api.patch<User>(`/users/${id}`, data) as unknown as User;
+    return api.patch<User>(`/admin/rbac/users/${id}`, data) as unknown as User;
 };
 
 export const deleteUserApi = async (id: string): Promise<boolean> => {
-    await api.delete(`/users/${id}`);
+    await api.delete(`/admin/rbac/users/${id}`);
     return true;
 };
