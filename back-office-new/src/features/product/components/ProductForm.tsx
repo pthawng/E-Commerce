@@ -6,9 +6,10 @@ import {
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useCategoryTree } from '@/features/category/hooks';
-import { useCreateProduct, useUpdateProduct, useProduct } from '../hooks';
-import type { CreateProductDTO } from '../types';
+import { useCategoryTree } from '@/entities/category/model/queries';
+import { useCreateProduct, useUpdateProduct } from '@/entities/product/model/mutations';
+import { useProduct } from '@/entities/product/model/queries';
+import type { CreateProductDTO } from '@/entities/product/model/schema';
 
 const { Dragger } = Upload;
 
@@ -29,12 +30,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ productId }) => {
 
     // Flatten category tree to flat options
     const flatCategories = React.useMemo(() => {
-        const flatten = (cats: typeof categories, depth = 0): { label: string; value: string }[] =>
+        const flatten = (cats: any[], depth = 0): { label: string; value: string }[] =>
             (cats ?? []).flatMap((c) => [
-                { label: `${'— '.repeat(depth)}${c.name.vi ?? c.name.en}`, value: c.id },
+                { label: `${'— '.repeat(depth)}${c.name?.vi ?? c.name?.en ?? c.slug}`, value: c.id },
                 ...flatten(c.children, depth + 1),
             ]);
-        return flatten(categories);
+        return flatten(categories as any[]);
     }, [categories]);
 
     useEffect(() => {
@@ -45,7 +46,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ productId }) => {
                 slug: product.slug,
                 descVi: product.description?.vi ?? '',
                 descEn: product.description?.en ?? '',
-                categoryIds: product.categories?.map((c) => c.category.id) ?? [],
+                categoryIds: product.categoryId,
                 hasVariants: product.hasVariants,
                 isActive: product.isActive,
                 isFeatured: product.isFeatured,
@@ -56,23 +57,23 @@ export const ProductForm: React.FC<ProductFormProps> = ({ productId }) => {
     const onFinish = async (values: Record<string, unknown>) => {
         const dto: CreateProductDTO = {
             name: { vi: values.nameVi as string, en: values.nameEn as string },
-            description: { vi: values.descVi as string, en: values.descEn as string },
-            slug: values.slug as string | undefined,
-            categoryIds: values.categoryIds as string[] | undefined,
+            description: values.descVi || values.descEn ? { 
+                vi: values.descVi as string || '', 
+                en: values.descEn as string || '' 
+            } : undefined,
+            slug: (values.slug as string) || (values.nameEn as string).toLowerCase().replace(/\s+/g, '-'),
+            categoryId: (values.categoryIds as string[])?.[0], // Single category
             hasVariants: values.hasVariants as boolean,
             isActive: values.isActive as boolean,
             isFeatured: values.isFeatured as boolean,
-            basePrice: values.basePrice as number | undefined,
-            baseCompareAtPrice: values.baseCompareAtPrice as number | undefined,
         };
-        const images = fileList.map((f) => f.originFileObj as File).filter(Boolean);
 
         try {
             if (isEditing && productId) {
-                await updateProduct.mutateAsync({ id: productId, data: dto, images });
+                await updateProduct.mutateAsync({ id: productId, data: dto });
                 message.success('Product updated!');
             } else {
-                await createProduct.mutateAsync({ data: dto, images });
+                await createProduct.mutateAsync(dto);
                 message.success('Product created!');
             }
             navigate('/products');
@@ -153,11 +154,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({ productId }) => {
                 {/* Right Column */}
                 <Col xs={24} lg={8}>
                     <Card title="Organization" bordered={false} style={{ marginBottom: 16 }}>
-                        <Form.Item label="Categories" name="categoryIds">
+                        <Form.Item label="Category" name="categoryIds">
                             <Select
-                                mode="multiple"
                                 options={flatCategories}
-                                placeholder="Select categories"
+                                placeholder="Select category"
                                 allowClear
                             />
                         </Form.Item>

@@ -10,8 +10,8 @@ import type { DataNode } from 'antd/es/tree';
 import { SplitLayout } from '@/shared/ui/SplitLayout';
 import {
     useCategoryTree, useCreateCategory, useUpdateCategory, useDeleteCategory,
-} from '../hooks';
-import type { Category, CreateCategoryDTO } from '../types';
+} from '@/entities/category/model/queries';
+import type { Category, CreateCategoryDTO } from '@/entities/category/model/types';
 
 const { Title } = Typography;
 

@@ -52,3 +52,41 @@ export const useDeleteProduct = () => {
         },
     });
 };
+
+/**
+ * Variant Mutations
+ */
+export const useCreateVariant = (productId: string) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: any) => productApi.createVariant(productId, data),
+        onSuccess: () => {
+            void message.success('Variant created');
+            void queryClient.invalidateQueries({ queryKey: productKeys.details(productId) });
+            // If there's a specific variants key in queries.ts, invalidate it too
+        },
+    });
+};
+
+export const useUpdateVariant = (productId: string) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ variantId, data }: { variantId: string; data: any }) => 
+            productApi.updateVariant(productId, variantId, data),
+        onSuccess: () => {
+            void message.success('Variant updated');
+            void queryClient.invalidateQueries({ queryKey: productKeys.details(productId) });
+        },
+    });
+};
+
+export const useDeleteVariant = (productId: string) => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (variantId: string) => productApi.deleteVariant(productId, variantId),
+        onSuccess: () => {
+            void message.success('Variant deleted');
+            void queryClient.invalidateQueries({ queryKey: productKeys.details(productId) });
+        },
+    });
+};

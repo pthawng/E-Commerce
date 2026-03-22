@@ -18,9 +18,16 @@ const loginSchema = z.object({
 
 type LoginFormInputs = z.infer<typeof loginSchema>;
 
+interface LocationState {
+    from?: {
+        pathname: string;
+    };
+}
+
 export const LoginForm = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const state = location.state as LocationState;
     const { login } = useAuthStore();
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -44,7 +51,7 @@ export const LoginForm = () => {
 
             // Short delay to let user see success message
             setTimeout(() => {
-                const from = (location.state as any)?.from?.pathname || '/dashboard';
+                const from = state?.from?.pathname || '/dashboard';
                 navigate(from, { replace: true });
             }, 500);
 

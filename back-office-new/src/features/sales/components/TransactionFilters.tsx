@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, Input, Select, Space, Button } from 'antd';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
-import type { TransactionQueryParams } from '../types';
+import type { TransactionQueryParams } from '@/entities/sales/model/types';
 
 interface ITransactionFiltersProps {
     onFiltersChange: (filters: Partial<TransactionQueryParams>) => void;

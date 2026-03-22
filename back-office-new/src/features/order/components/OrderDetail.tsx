@@ -7,15 +7,15 @@ import {
     CheckCircleOutlined, SyncOutlined, CarOutlined,
     CloseCircleOutlined, WalletOutlined, UserOutlined
 } from '@ant-design/icons';
-import type { Order, OrderTimeline } from '../types';
-import { OrderStatus } from '../types';
+import type { Order, OrderTimeline, OrderStatus } from '@/entities/order/model/types';
+import { OrderStatus as OrderStatusEnum } from '@/entities/order/model/types';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
 
-import { useUpdateOrderStatus, useCancelOrder, useUpdateTracking } from '../hooks';
+import { useUpdateOrderStatus, useCancelOrder, useUpdateTracking } from '@/entities/order/model/queries';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -65,11 +65,11 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
 
     const getTimelineIcon = (timeline: OrderTimeline) => {
         switch (timeline.toStatus) {
-            case OrderStatus.CONFIRMED: return <CheckCircleOutlined className="text-blue-500" />;
-            case OrderStatus.PROCESSING: return <SyncOutlined spin className="text-orange-500" />;
-            case OrderStatus.SHIPPING: return <CarOutlined className="text-purple-500" />;
-            case OrderStatus.DELIVERED: return <CheckCircleOutlined className="text-green-500" />;
-            case OrderStatus.CANCELLED: return <CloseCircleOutlined className="text-red-500" />;
+            case OrderStatusEnum.CONFIRMED: return <CheckCircleOutlined className="text-blue-500" />;
+            case OrderStatusEnum.PROCESSING: return <SyncOutlined spin className="text-orange-500" />;
+            case OrderStatusEnum.SHIPPING: return <CarOutlined className="text-purple-500" />;
+            case OrderStatusEnum.DELIVERED: return <CheckCircleOutlined className="text-green-500" />;
+            case OrderStatusEnum.CANCELLED: return <CloseCircleOutlined className="text-red-500" />;
             default: return null;
         }
     };
@@ -87,26 +87,26 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
                 </Space>
 
                 <Space wrap>
-                    {order.status === OrderStatus.PENDING && (
-                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatus.CONFIRMED)}>Xác nhận đơn</Button>
+                    {order.status === OrderStatusEnum.PENDING && (
+                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatusEnum.CONFIRMED)}>Xác nhận đơn</Button>
                     )}
-                    {order.status === OrderStatus.CONFIRMED && (
-                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatus.PROCESSING)}>Bắt đầu xử lý</Button>
+                    {order.status === OrderStatusEnum.CONFIRMED && (
+                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatusEnum.PROCESSING)}>Bắt đầu xử lý</Button>
                     )}
-                    {order.status === OrderStatus.PROCESSING && (
+                    {order.status === OrderStatusEnum.PROCESSING && (
                         <Button onClick={() => {
                             setTrackingCode(order.trackingCode || '');
                             setTrackingModalVisible(true);
                         }}>Cập nhật vận đơn</Button>
                     )}
-                    {order.status === OrderStatus.PROCESSING && (
-                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatus.SHIPPING)}>Bắt đầu giao hàng</Button>
+                    {order.status === OrderStatusEnum.PROCESSING && (
+                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatusEnum.SHIPPING)}>Bắt đầu giao hàng</Button>
                     )}
-                    {order.status === OrderStatus.SHIPPING && (
-                        <Button type="primary" className="bg-green-600 border-green-600" onClick={() => handleUpdateStatus(OrderStatus.DELIVERED)}>Đã giao hàng</Button>
+                    {order.status === OrderStatusEnum.SHIPPING && (
+                        <Button type="primary" className="bg-green-600 border-green-600" onClick={() => handleUpdateStatus(OrderStatusEnum.DELIVERED)}>Đã giao hàng</Button>
                     )}
 
-                    {!([OrderStatus.CANCELLED, OrderStatus.DELIVERED, OrderStatus.COMPLETED] as OrderStatus[]).includes(order.status) && (
+                    {!([OrderStatusEnum.CANCELLED, OrderStatusEnum.DELIVERED, OrderStatusEnum.COMPLETED] as OrderStatus[]).includes(order.status) && (
                         <Button danger onClick={() => setCancelModalVisible(true)}>Hủy đơn</Button>
                     )}
                 </Space>

@@ -9,13 +9,14 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import { SplitLayout } from '@/shared/ui/SplitLayout';
-import { useProducts, useUpdateProduct } from '../hooks';
-import type { Product } from '../types';
+import { useProducts } from '@/entities/product/model/queries';
+import { useUpdateProduct } from '@/entities/product/model/mutations';
+import type { Product, Multilingual } from '@ecommerce/shared';
 
 const { Title, Text } = Typography;
 
 // Helper: get display name (vi first, then en)
-const displayName = (name: Record<string, string> | undefined) =>
+const displayName = (name: Multilingual | undefined) =>
     name?.vi ?? name?.en ?? '—';
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
@@ -79,16 +80,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onClose, onEdit 
             <Descriptions column={1} size="small" bordered>
                 <Descriptions.Item label="Name (vi)">{product.name.vi ?? '—'}</Descriptions.Item>
                 <Descriptions.Item label="Name (en)">{product.name.en ?? '—'}</Descriptions.Item>
-                <Descriptions.Item label="Categories">
-                    {product.categories?.map((c) => (
-                        <Tag key={c.category.id}>{displayName(c.category.name)}</Tag>
-                    )) ?? <Text type="secondary">—</Text>}
-                </Descriptions.Item>
+                <Descriptions.Item label="Category ID">{product.categoryId ?? <Text type="secondary">—</Text>}</Descriptions.Item>
                 <Descriptions.Item label="Has Variants">
                     <Tag color={product.hasVariants ? 'blue' : 'default'}>{product.hasVariants ? 'Yes' : 'No'}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Variants">
-                    <Badge count={product._count?.variants ?? product.variants?.length ?? 0} showZero color="#4096ff" />
+                    <Badge count={product.variants?.length ?? 0} showZero color="#4096ff" />
                 </Descriptions.Item>
                 <Descriptions.Item label="Active">
                     <Popconfirm
@@ -152,16 +149,14 @@ export const ProductTable: React.FC = () => {
             ),
         },
         {
-            title: 'Categories',
-            key: 'categories',
-            width: 140,
+            title: 'Price Range',
+            key: 'price',
+            width: 160,
             render: (_, r) => (
-                <>
-                    {r.categories?.slice(0, 2).map((c) => (
-                        <Tag key={c.category.id} style={{ fontSize: 11 }}>{displayName(c.category.name)}</Tag>
-                    ))}
-                    {(r.categories?.length ?? 0) > 2 && <Tag>+{(r.categories?.length ?? 0) - 2}</Tag>}
-                </>
+                <Text strong>
+                    {r.displayPriceMin?.toLocaleString()}₫
+                    {r.displayPriceMax && r.displayPriceMax > r.displayPriceMin! && ` - ${r.displayPriceMax.toLocaleString()}₫`}
+                </Text>
             ),
         },
         {

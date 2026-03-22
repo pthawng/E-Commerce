@@ -1,4 +1,4 @@
-import type { PaginationMeta } from '@/features/product/types';
+import type { PaginatedResponse } from '@ecommerce/shared';
 
 export type TransactionStatus = 'pending' | 'success' | 'failed' | 'reversed';
 export type TransactionType = 'payment' | 'refund';
@@ -23,10 +23,7 @@ export interface PaymentTransaction {
     updatedAt: string;
 }
 
-export interface PaginatedTransactions {
-    items: PaymentTransaction[];
-    meta: PaginationMeta;
-}
+export type PaginatedTransactions = PaginatedResponse<PaymentTransaction>;
 
 export interface TransactionQueryParams {
     page?: number;

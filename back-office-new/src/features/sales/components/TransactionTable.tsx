@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table, Tag, Typography, Tooltip, Space, Card } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { PaymentTransaction } from '../types';
+import type { PaymentTransaction } from '@/entities/sales/model/types';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
 

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Table, Tag, Typography, Tooltip, Space } from 'antd';
+import { Table, Tag, Typography, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { Order } from '../types';
-import { OrderStatus, PaymentStatus } from '../types';
+import type { Order, OrderStatus, PaymentStatus } from '@/entities/order/model/types';
+import { OrderStatus as OrderStatusEnum, PaymentStatus as PaymentStatusEnum } from '@/entities/order/model/types';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
@@ -30,24 +30,24 @@ export const OrderTable: React.FC<OrderTableProps> = ({
 }) => {
     const getStatusColor = (status: OrderStatus) => {
         switch (status) {
-            case OrderStatus.PENDING: return 'orange';
-            case OrderStatus.CONFIRMED: return 'cyan';
-            case OrderStatus.PROCESSING: return 'blue';
-            case OrderStatus.SHIPPING: return 'purple';
-            case OrderStatus.DELIVERED: return 'green';
-            case OrderStatus.COMPLETED: return 'success';
-            case OrderStatus.CANCELLED: return 'error';
-            case OrderStatus.RETURNED: return 'magenta';
-            case OrderStatus.REFUNDED: return 'volcano';
+            case OrderStatusEnum.PENDING: return 'orange';
+            case OrderStatusEnum.CONFIRMED: return 'cyan';
+            case OrderStatusEnum.PROCESSING: return 'blue';
+            case OrderStatusEnum.SHIPPING: return 'purple';
+            case OrderStatusEnum.DELIVERED: return 'green';
+            case OrderStatusEnum.COMPLETED: return 'success';
+            case OrderStatusEnum.CANCELLED: return 'error';
+            case OrderStatusEnum.RETURNED: return 'magenta';
+            case OrderStatusEnum.REFUNDED: return 'volcano';
             default: return 'default';
         }
     };
 
     const getPaymentStatusColor = (status: PaymentStatus) => {
         switch (status) {
-            case PaymentStatus.PAID: return 'green';
-            case PaymentStatus.UNPAID: return 'orange';
-            case PaymentStatus.REFUNDED: return 'error';
+            case PaymentStatusEnum.PAID: return 'green';
+            case PaymentStatusEnum.UNPAID: return 'orange';
+            case PaymentStatusEnum.REFUNDED: return 'error';
             default: return 'default';
         }
     };

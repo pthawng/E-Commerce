@@ -41,5 +41,24 @@ export const productApi = {
      */
     deleteProduct: async (id: string): Promise<void> => {
         return axiosClient.delete(`/admin/products/${id}`);
+    },
+
+    /**
+     * Variants API
+     */
+    getVariants: async (productId: string): Promise<any[]> => {
+        return axiosClient.get(`/admin/products/${productId}/variants`);
+    },
+
+    createVariant: async (productId: string, data: any): Promise<any> => {
+        return axiosClient.post(`/admin/products/${productId}/variants`, data);
+    },
+
+    updateVariant: async (productId: string, variantId: string, data: any): Promise<any> => {
+        return axiosClient.put(`/admin/products/${productId}/variants/${variantId}`, data);
+    },
+
+    deleteVariant: async (productId: string, variantId: string): Promise<void> => {
+        return axiosClient.delete(`/admin/products/${productId}/variants/${variantId}`);
     }
 };

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Typography, Space } from 'antd';
 import { TransactionFilters } from '../components/TransactionFilters';
 import { TransactionTable } from '../components/TransactionTable';
-import { useTransactions } from '../hooks';
-import type { TransactionQueryParams } from '../types';
+import { useTransactions } from '@/entities/sales/model/queries';
+import type { TransactionQueryParams } from '@/entities/sales/model/types';
 import { DollarOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;

@@ -1,12 +1,12 @@
 import React from 'react';
-import { Card, Input, Select, Space, DatePicker } from 'antd';
-import { OrderStatus } from '../types';
+import { Card, Input, Select, DatePicker } from 'antd';
+import { OrderStatus as OrderStatusValue } from '@/entities/order/model/types';
 
 const { Search } = Input;
 const { RangePicker } = DatePicker;
 
 interface OrderFiltersProps {
-    onFiltersChange: (filters: any) => void;
+    onFiltersChange: (filters: Record<string, any>) => void;
     loading?: boolean;
 }
 
@@ -29,7 +29,7 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({ onFiltersChange, loa
                     allowClear
                     className="w-[180px]"
                     onChange={(value) => onFiltersChange({ status: value, page: 1 })}
-                    options={Object.values(OrderStatus).map((status) => ({
+                    options={Object.values(OrderStatusValue).map((status) => ({
                         label: status.toUpperCase().replace('_', ' '),
                         value: status,
                     }))}

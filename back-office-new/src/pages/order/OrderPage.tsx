@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { SplitLayout } from '@/shared/ui/SplitLayout';
-import { OrderFilters } from '../components/OrderFilters';
-import { OrderTable } from '../components/OrderTable';
-import { OrderDetail } from '../components/OrderDetail';
-import { useOrders, useOrder } from '../hooks';
-import type { OrderFilters as IOrderFilters } from '../types';
+import { OrderFilters } from '@/features/order/components/OrderFilters';
+import { OrderTable } from '@/features/order/components/OrderTable';
+import { OrderDetail } from '@/features/order/components/OrderDetail';
+import { useOrders, useOrder } from '@/entities/order/model/queries';
+import type { OrderFilters as IOrderFilters } from '@/entities/order/model/types';
 
 export const OrderPage: React.FC = () => {
     const [filters, setFilters] = useState<IOrderFilters>({ page: 1, limit: 10 });
