@@ -31,6 +31,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@ecommerce/shared": [
+        "../shared/src"
       ]
     }
   },
