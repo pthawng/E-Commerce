@@ -1,66 +1,97 @@
 import React from 'react';
-import { Card, Statistic, Row, Col } from 'antd';
+import { Row, Col, Statistic } from 'antd';
 import {
     DollarOutlined,
     ShoppingCartOutlined,
     WarningOutlined,
     FundOutlined,
 } from '@ant-design/icons';
-
-// In a real app, this data would come from the API
-const statsData = {
-    revenue: 45231.89,
-    ordersToday: 124,
-    lowStockItems: 12,
-    conversionRate: 3.4,
-};
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { useDashboardStats } from '@/entities/dashboard/model/queries';
 
 export const DashboardStats: React.FC = () => {
+    const { data: stats, isLoading } = useDashboardStats();
+
+    const displayData = stats || {
+        revenue: 0,
+        ordersToday: 0,
+        lowStockItems: 0,
+        conversionRate: 0,
+    };
+
     return (
         <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} lg={6}>
-                <Card bordered={false}>
+                <GlassCard 
+                    bordered={false} 
+                    loading={isLoading}
+                    style={{ 
+                        background: 'linear-gradient(135deg, rgba(63, 134, 0, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
+                        borderLeft: '4px solid #3f8600'
+                    }}
+                >
                     <Statistic
                         title="Total Revenue (Today)"
-                        value={statsData.revenue}
+                        value={displayData.revenue}
                         precision={2}
-                        valueStyle={{ color: '#3f8600' }}
+                        valueStyle={{ color: '#3f8600', fontWeight: '800', fontSize: '24px' }}
                         prefix={<DollarOutlined />}
                         suffix="$"
                     />
-                </Card>
+                </GlassCard>
             </Col>
             <Col xs={24} sm={12} lg={6}>
-                <Card bordered={false}>
+                <GlassCard 
+                    bordered={false} 
+                    loading={isLoading}
+                    style={{ 
+                        background: 'linear-gradient(135deg, rgba(24, 144, 255, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
+                        borderLeft: '4px solid #1890ff'
+                    }}
+                >
                     <Statistic
                         title="Orders Today"
-                        value={statsData.ordersToday}
-                        valueStyle={{ color: '#1890ff' }}
+                        value={displayData.ordersToday}
+                        valueStyle={{ color: '#1890ff', fontWeight: '800', fontSize: '24px' }}
                         prefix={<ShoppingCartOutlined />}
                     />
-                </Card>
+                </GlassCard>
             </Col>
             <Col xs={24} sm={12} lg={6}>
-                <Card bordered={false}>
+                <GlassCard 
+                    bordered={false} 
+                    loading={isLoading}
+                    style={{ 
+                        background: 'linear-gradient(135deg, rgba(207, 19, 34, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
+                        borderLeft: '4px solid #cf1322'
+                    }}
+                >
                     <Statistic
                         title="Conversion Rate"
-                        value={statsData.conversionRate}
+                        value={displayData.conversionRate}
                         precision={1}
-                        valueStyle={{ color: '#cf1322' }}
+                        valueStyle={{ color: '#cf1322', fontWeight: '800', fontSize: '24px' }}
                         prefix={<FundOutlined />}
                         suffix="%"
                     />
-                </Card>
+                </GlassCard>
             </Col>
             <Col xs={24} sm={12} lg={6}>
-                <Card bordered={false}>
+                <GlassCard 
+                    bordered={false} 
+                    loading={isLoading}
+                    style={{ 
+                        background: 'linear-gradient(135deg, rgba(250, 173, 20, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
+                        borderLeft: '4px solid #faad14'
+                    }}
+                >
                     <Statistic
                         title="Low Stock Alerts"
-                        value={statsData.lowStockItems}
-                        valueStyle={{ color: '#faad14' }}
+                        value={displayData.lowStockItems}
+                        valueStyle={{ color: '#faad14', fontWeight: '800', fontSize: '24px' }}
                         prefix={<WarningOutlined />}
                     />
-                </Card>
+                </GlassCard>
             </Col>
         </Row>
     );

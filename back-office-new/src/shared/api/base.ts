@@ -55,12 +55,19 @@ api.interceptors.request.use(
  */
 api.interceptors.response.use(
     (response) => {
-        // Unwrap ApiResponse to return only the 'data' payload
-        // If the backend returns { success: true, data: null }, return an empty result or undefined
-        // to prevent 'Cannot read properties of null' downstream.
-        const unwrapped = response.data?.data;
+        const result = response.data;
         
-        // If it's null, we return undefined instead to be safer with optional chaining
+        // Handle pagination: If backend returns meta alongside data, 
+        // we wrap it for PaginatedResponse compatibility.
+        if (result?.meta && Array.isArray(result.data)) {
+            return {
+                items: result.data,
+                meta: result.meta
+            };
+        }
+
+        // Standard unwrapping for non-paginated or nested paginated responses
+        const unwrapped = result?.data;
         return unwrapped === null ? undefined : unwrapped;
     },
     async (error: AxiosError<ApiError>) => {

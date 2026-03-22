@@ -6,6 +6,7 @@ import {
     RecentOrders,
     LowStockAlerts,
     TopProducts,
+    SmartAssistant,
 } from '@/features/dashboard';
 
 const { Title } = Typography;
@@ -16,6 +17,12 @@ export const DashboardPage: React.FC = () => {
             <div style={{ marginBottom: 24 }}>
                 <Title level={2} style={{ margin: 0, color: '#0B2545' }}>Dashboard</Title>
             </div>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col span={24}>
+                    <SmartAssistant />
+                </Col>
+            </Row>
 
             <DashboardStats />
 
