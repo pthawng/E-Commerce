@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { message } from 'antd';
 import type { ApiResponse, ApiError } from '@ecommerce/shared';
 
@@ -55,8 +55,9 @@ api.interceptors.request.use(
  */
 api.interceptors.response.use(
     (response) => {
-        // Return only the data (ApiResponse<T>) to simplify API calls
-        return response.data;
+        // Unwrap ApiResponse to return only the 'data' payload
+        // This makes hooks cleaner: const { data } = useProducts() -> data is Product[]
+        return response.data?.data;
     },
     async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };

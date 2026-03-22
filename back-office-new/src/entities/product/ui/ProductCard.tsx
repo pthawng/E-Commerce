@@ -42,7 +42,7 @@ export const ProductCard = ({ product, locale = 'vi', onClick, className }: Prop
                 <Title level={5} className="!m-0 line-clamp-2 flex-1" title={productName}>
                     {productName}
                 </Title>
-                <ProductStatusBadge isActive={product.isActive} />
+                <ProductStatusBadge status={product.isActive ? 'active' : 'inactive'} />
             </div>
             
             <Text type="secondary" className="line-clamp-2 text-sm flex-1 mb-4 italic">

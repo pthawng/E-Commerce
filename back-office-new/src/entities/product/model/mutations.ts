@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '../api/product.api';
 import { productKeys } from './queries';
 import { message } from 'antd';
-import type { ApiResponse, Product } from '@ecommerce/shared';
+import type { Product } from '@ecommerce/shared';
 import type { UpdateProductDTO } from './schema';
 
 /**
@@ -21,18 +21,18 @@ export const useCreateProduct = () => {
 
 /**
  * Mutation for updating a product
+ * Automatically invalidates detail and lists caches
  */
 export const useUpdateProduct = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: ({ id, data }: { id: string; data: UpdateProductDTO }) => 
             productApi.updateProduct(id, data),
-        onSuccess: (response: ApiResponse<Product>) => {
-            const product = response.data;
+        onSuccess: (product: Product) => {
             if (product) {
                 void message.success('Product updated successfully');
-                void queryClient.invalidateQueries({ queryKey: productKeys.detail(product.id) });
-                void queryClient.invalidateQueries({ queryKey: productKeys.detail(product.slug) });
+                void queryClient.invalidateQueries({ queryKey: productKeys.details(product.id) });
+                void queryClient.invalidateQueries({ queryKey: productKeys.details(product.slug) });
             }
             void queryClient.invalidateQueries({ queryKey: productKeys.lists() });
         },

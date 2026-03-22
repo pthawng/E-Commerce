@@ -6,6 +6,14 @@
 import { MediaType } from '../enums';
 
 /**
+ * Standard Multilingual field structure
+ */
+export interface Multilingual {
+  vi: string;
+  en: string;
+}
+
+/**
  * Product Media
  */
 export interface ProductMedia {
@@ -13,7 +21,7 @@ export interface ProductMedia {
   productId: string;
   url: string;
   type: MediaType;
-  altText?: any; // JSON field
+  altText?: Multilingual; // JSON field
   isThumbnail: boolean;
   order: number;
   createdAt: Date | string;
@@ -26,7 +34,7 @@ export interface ProductVariant {
   id: string;
   productId: string;
   sku: string;
-  variantTitle?: any; // JSON field
+  variantTitle?: Multilingual; // JSON field
   price: number;
   compareAtPrice?: number;
   costPrice?: number;
@@ -44,9 +52,9 @@ export interface ProductVariant {
 export interface Product {
   id: string;
   categoryId?: string;
-  name: any; // JSON field (multilingual)
+  name: Multilingual; // JSON field (multilingual)
   slug: string;
-  description?: any; // JSON field
+  description?: Multilingual; // JSON field
   displayPriceMin?: number;
   displayPriceMax?: number;
   hasVariants: boolean;
@@ -63,7 +71,7 @@ export interface Product {
  */
 export interface ProductSummary {
   id: string;
-  name: any; // JSON field
+  name: Multilingual; // JSON field
   slug: string;
   displayPriceMin?: number;
   displayPriceMax?: number;
@@ -78,7 +86,7 @@ export interface ProductSummary {
 export interface Category {
   id: string;
   parentId?: string;
-  name: any; // JSON field
+  name: Multilingual; // JSON field
   slug: string;
   isActive: boolean;
   order: number;

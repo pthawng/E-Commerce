@@ -1,11 +1,10 @@
 import { z } from 'zod';
 
-// Support for multilingual JSON fields as defined in shared/BE
-// Using z.custom as an escape hatch for Zod v4 compatibility in this environment
-const multilingualSchema = z.custom<Record<string, string>>(
-    (val) => typeof val === 'object' && val !== null && Object.keys(val).length > 0,
-    { message: 'At least one language version is required' }
-);
+// Support for strict multilingual JSON fields (vi/en)
+const multilingualSchema = z.object({
+    vi: z.string().min(1, 'Tiếng Việt là bắt buộc'),
+    en: z.string().min(1, 'English is required'),
+});
 
 export const productVariantSchema = z.object({
     sku: z.string().min(1, 'SKU is required'),
@@ -26,6 +25,11 @@ export const productSchema = z.object({
     isFeatured: z.boolean().default(false),
     hasVariants: z.boolean().default(false),
     variants: z.array(productVariantSchema).optional(),
+    media: z.array(z.object({
+        url: z.string().url(),
+        isThumbnail: z.boolean().default(false),
+        order: z.number().default(0),
+    })).optional(),
 });
 
 export type CreateProductDTO = z.infer<typeof productSchema>;
