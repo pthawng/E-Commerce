@@ -6,11 +6,14 @@ const { Search } = Input;
 const { RangePicker } = DatePicker;
 
 interface OrderFiltersProps {
+    filters: Record<string, any>;
     onFiltersChange: (filters: Record<string, any>) => void;
     loading?: boolean;
 }
 
-export const OrderFilters: React.FC<OrderFiltersProps> = ({ onFiltersChange, loading }) => {
+import dayjs from 'dayjs';
+
+export const OrderFilters: React.FC<OrderFiltersProps> = ({ filters, onFiltersChange, loading }) => {
     return (
         <Card className="mb-4 shadow-sm border-0">
             <div className="flex flex-wrap gap-4 items-center">
@@ -18,6 +21,8 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({ onFiltersChange, loa
                     <Search
                         placeholder="Tìm theo mã đơn hàng hoặc tên khách hàng..."
                         allowClear
+                        value={filters.search}
+                        onChange={(e) => onFiltersChange({ search: e.target.value, page: 1 })}
                         onSearch={(value) => onFiltersChange({ search: value, page: 1 })}
                         style={{ width: '100%' }}
                         loading={loading}
@@ -28,6 +33,7 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({ onFiltersChange, loa
                     placeholder="Trạng thái"
                     allowClear
                     className="w-[180px]"
+                    value={filters.status}
                     onChange={(value) => onFiltersChange({ status: value, page: 1 })}
                     options={Object.values(OrderStatusValue).map((status) => ({
                         label: status.toUpperCase().replace('_', ' '),
@@ -37,6 +43,7 @@ export const OrderFilters: React.FC<OrderFiltersProps> = ({ onFiltersChange, loa
 
                 <RangePicker
                     className="w-[300px]"
+                    value={filters.startDate && filters.endDate ? [dayjs(filters.startDate), dayjs(filters.endDate)] : null}
                     onChange={(dates) => {
                         if (dates) {
                             onFiltersChange({

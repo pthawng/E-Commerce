@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Table, Tag, Button, Image, Typography, Descriptions, Space,
-    Popconfirm, Switch, message, Badge,
+    Popconfirm, Switch, message, Badge, Input,
 } from 'antd';
 import {
     PlusOutlined, EditOutlined, PictureOutlined,
@@ -117,12 +117,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onClose, onEdit 
     );
 };
 
+import { useUrlFilters } from '@/shared/hooks/useUrlFilters';
+
 // ─── Main Table ───────────────────────────────────────────────────────────────
 export const ProductTable: React.FC = () => {
     const navigate = useNavigate();
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(10);
-    const { data, isLoading } = useProducts({ page, limit });
+    const [filters, setFilters] = useUrlFilters({ page: 1, limit: 10, search: '' });
+    const { data, isLoading } = useProducts(filters);
     const [selected, setSelected] = useState<Product | null>(null);
 
     const columns: ColumnsType<Product> = [
@@ -175,7 +176,15 @@ export const ProductTable: React.FC = () => {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Input.Search
+                    placeholder="Search products..."
+                    allowClear
+                    value={filters.search}
+                    onChange={(e) => setFilters({ search: e.target.value, page: 1 })}
+                    onSearch={(v) => setFilters({ search: v, page: 1 })}
+                    style={{ width: 300 }}
+                />
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/products/create')}>
                     Add Product
                 </Button>
@@ -189,12 +198,12 @@ export const ProductTable: React.FC = () => {
                         loading={isLoading}
                         size="middle"
                         pagination={{
-                            current: page,
-                            pageSize: limit,
+                            current: filters.page,
+                            pageSize: filters.limit,
                             total: data?.meta?.total ?? 0,
                             showSizeChanger: true,
                             showTotal: (t, r) => `${r[0]}-${r[1]} of ${t}`,
-                            onChange: (p, l) => { setPage(p); setLimit(l); },
+                            onChange: (p, l) => setFilters({ page: p, limit: l }),
                         }}
                         onRow={(r) => ({
                             onClick: () => setSelected(r),

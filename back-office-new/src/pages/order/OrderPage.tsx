@@ -5,21 +5,23 @@ import { OrderTable } from '@/features/order/components/OrderTable';
 import { OrderDetail } from '@/features/order/components/OrderDetail';
 import { useOrders, useOrder } from '@/entities/order/model/queries';
 import type { OrderFilters as IOrderFilters } from '@/entities/order/model/types';
+import { useUrlFilters } from '@/shared/hooks/useUrlFilters';
 
 export const OrderPage: React.FC = () => {
-    const [filters, setFilters] = useState<IOrderFilters>({ page: 1, limit: 10 });
+    const [filters, setFilters] = useUrlFilters<IOrderFilters>({ page: 1, limit: 10 });
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
     const { data, isLoading } = useOrders(filters);
     const { data: selectedOrder, isLoading: isLoadingDetail } = useOrder(selectedOrderId);
 
     const handleFiltersChange = (newFilters: Partial<IOrderFilters>) => {
-        setFilters(prev => ({ ...prev, ...newFilters, page: newFilters.page || 1 }));
+        setFilters({ ...newFilters, page: newFilters.page || 1 });
     };
 
     return (
         <div className="h-full flex flex-col">
             <OrderFilters
+                filters={filters}
                 onFiltersChange={handleFiltersChange}
                 loading={isLoading}
             />
