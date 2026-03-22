@@ -1,4 +1,4 @@
-import axiosClient from '@/shared/api/axiosClient';
+import { api as axiosClient } from '@/shared/api/base';
 import type { ApiResponse, PaginatedResponse } from '@ecommerce/shared';
 import type { Product, ProductFilters } from '../model/types';
 import type { CreateProductDTO, UpdateProductDTO } from '../model/schema';
