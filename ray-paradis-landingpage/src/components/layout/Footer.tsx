@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
+import { Section } from '@/components/layout/Section';
+import { Container } from '@/components/layout/Container';
 
 export const Footer = () => {
   const { t } = useTranslation();
@@ -29,115 +31,111 @@ export const Footer = () => {
   };
 
   return (
-    <footer className="bg-secondary/50">
-      {/* Hairline top border */}
-      <div className="hairline" />
-      
-      <div className="container mx-auto px-6 sm:px-8 lg:px-16">
-        {/* Main Footer */}
-        <div className="py-16 sm:py-20 lg:py-24">
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-10 sm:gap-12 lg:gap-16">
-            {/* Brand */}
-            <div className="col-span-2 sm:col-span-2 lg:col-span-1 mb-4 lg:mb-0">
-              <motion.h3
-                className="font-display text-lg sm:text-xl tracking-luxury text-primary mb-4 font-normal"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
-              >
-                RAY PARADIS
-              </motion.h3>
-              <p className="font-body text-xs sm:text-sm text-muted-foreground leading-relaxed tracking-wide max-w-xs">
-                {t.footer.tagline}
-              </p>
-            </div>
+    <Section as="footer" padding="lg" withHairline="top" className="bg-secondary/20">
+      <Container>
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-16 pb-20">
+          {/* Brand Column */}
+          <div className="col-span-2 lg:col-span-1">
+            <motion.h3
+              className="font-display text-2xl tracking-luxury text-primary mb-6 font-normal"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.8 }}
+            >
+              RAY PARADIS
+            </motion.h3>
+            <p className="font-body text-sm text-muted-foreground leading-relaxed max-w-xs">
+              {t.footer.tagline}
+            </p>
+          </div>
 
-            {/* Collections */}
-            <div>
-              <h4 className="font-body text-2xs uppercase tracking-ultra text-foreground mb-5 sm:mb-6">
-                {t.footer.collections}
-              </h4>
-              <ul className="space-y-3 sm:space-y-4">
-                {footerLinks.collections.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="font-body text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors duration-500 tracking-wide"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Links Columns */}
+          <div>
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+              {t.footer.collections}
+            </h4>
+            <ul className="space-y-4">
+              {footerLinks.collections.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            {/* About */}
-            <div>
-              <h4 className="font-body text-2xs uppercase tracking-ultra text-foreground mb-5 sm:mb-6">
-                {t.footer.about}
-              </h4>
-              <ul className="space-y-3 sm:space-y-4">
-                {footerLinks.about.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="font-body text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors duration-500 tracking-wide"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div>
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+              {t.footer.about}
+            </h4>
+            <ul className="space-y-4">
+              {footerLinks.about.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            {/* Contact */}
-            <div>
-              <h4 className="font-body text-2xs uppercase tracking-ultra text-foreground mb-5 sm:mb-6">
-                {t.footer.contact}
-              </h4>
-              <ul className="space-y-3 sm:space-y-4">
-                {footerLinks.contact.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="font-body text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors duration-500 tracking-wide"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div>
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+              {t.footer.contact}
+            </h4>
+            <ul className="space-y-4">
+              {footerLinks.contact.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            {/* Legal */}
-            <div>
-              <h4 className="font-body text-2xs uppercase tracking-ultra text-foreground mb-5 sm:mb-6">
-                {t.footer.legal}
-              </h4>
-              <ul className="space-y-3 sm:space-y-4">
-                {footerLinks.legal.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="font-body text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors duration-500 tracking-wide"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div>
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+              {t.footer.legal}
+            </h4>
+            <ul className="space-y-4">
+              {footerLinks.legal.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="hairline" />
-        <div className="py-6 sm:py-8">
-          <p className="font-body text-2xs sm:text-xs text-center text-muted-foreground/60 tracking-wider">
+        <div className="pt-8 border-t border-border/10 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40">
             {t.footer.copyright}
           </p>
+          <div className="flex gap-8">
+            <span className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 italic">
+              Legacy in every facet.
+            </span>
+          </div>
         </div>
-      </div>
-    </footer>
+      </Container>
+    </Section>
   );
 };

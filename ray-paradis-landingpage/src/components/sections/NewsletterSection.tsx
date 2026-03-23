@@ -5,13 +5,16 @@ import useOverlapInView from '@/hooks/useOverlapInView';
 import { useTranslation } from '@/hooks/useTranslation';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Section } from '@/components/layout/Section';
+import { Container } from '@/components/layout/Container';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const emailSchema = z.string().email().max(255);
 
 export const NewsletterSection = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const ref = useRef(null);
   const isInView = useOverlapInView(ref, 0.15, { once: true });
   const { t } = useTranslation();
@@ -35,23 +38,23 @@ export const NewsletterSection = () => {
   };
 
   return (
-    <section className="bg-background section-vertical relative overflow-hidden">
+    <Section padding="lg" withHairline="bottom" className="bg-background relative overflow-hidden">
       {/* Decorative Background */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] sm:w-[900px] h-[600px] sm:h-[900px] rounded-full bg-gradient-radial from-primary/8 to-transparent" />
+      <div className="absolute inset-0 opacity-40">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gradient-radial from-gold/5 via-transparent to-transparent blur-3xl" />
       </div>
 
-      <div className="container mx-auto px-6 sm:px-8 lg:px-20 relative">
+      <Container>
         <motion.div
           ref={ref}
-          className="max-w-xl mx-auto text-center"
+          className="max-w-2xl mx-auto text-center relative z-10"
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, ease: 'easeInOut' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
           {/* Section Header */}
           <motion.p
-            className="font-body text-xs sm:text-sm uppercase tracking-ultra text-muted-foreground mb-6"
+            className="font-body text-xs uppercase tracking-ultra text-muted-foreground mb-6"
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.2, duration: 0.8 }}
@@ -60,7 +63,7 @@ export const NewsletterSection = () => {
           </motion.p>
           
           <motion.h2
-            className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-primary tracking-wide font-normal leading-tight"
+            className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary tracking-luxury font-normal leading-tight"
             initial={{ opacity: 0, y: 15 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.3, duration: 0.8 }}
@@ -69,7 +72,7 @@ export const NewsletterSection = () => {
           </motion.h2>
 
           <motion.p
-            className="font-body text-sm sm:text-base text-muted-foreground mt-8 mb-12 leading-relaxed max-w-md mx-auto"
+            className="font-body text-base text-muted-foreground mt-8 mb-16 leading-relaxed max-w-md mx-auto"
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.4, duration: 0.8 }}
@@ -77,55 +80,48 @@ export const NewsletterSection = () => {
             {t.newsletter.description}
           </motion.p>
 
-          {/* Minimalist Form with Gold Underline */}
+          {/* SaaS-ready Form */}
           <motion.form
             onSubmit={handleSubmit}
-            className="max-w-sm mx-auto"
+            className="max-w-md mx-auto flex flex-col sm:flex-row gap-4 items-center"
             initial={{ opacity: 0, y: 15 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.6, duration: 0.8 }}
           >
-            <div className="relative mb-8">
-              <input
+            <div className="flex-1 w-full">
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
                 placeholder={t.newsletter.placeholder}
-                className="w-full px-0 py-4 bg-transparent border-0 border-b border-border/40 text-foreground font-body text-sm placeholder:text-muted-foreground/50 focus:outline-none transition-colors duration-500 tracking-wide text-center"
+                className="text-center sm:text-left h-14"
                 required
                 maxLength={255}
               />
-              {/* Gold/Primary underline animation */}
-              <motion.div
-                className="absolute bottom-0 left-1/2 h-px bg-primary"
-                initial={{ width: 0, x: '-50%' }}
-                animate={{ 
-                  width: isFocused ? '100%' : '0%',
-                  x: '-50%'
-                }}
-                transition={{ duration: 0.5, ease: 'easeInOut' }}
-              />
             </div>
 
-            <motion.button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="group relative inline-block w-full sm:w-auto cta-quiet"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              variant="luxury"
+              size="lg"
+              className="w-full sm:w-auto min-w-[160px]"
             >
-              <span className="block px-12 py-4 border border-primary/40 text-primary font-body text-xs uppercase tracking-ultra overflow-hidden relative">
-                <span className="absolute inset-0 bg-primary -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-luxury" />
-                <span className="relative z-10 group-hover:text-primary-foreground transition-colors duration-700">
-                  {isLoading ? '...' : t.newsletter.button}
-                </span>
-              </span>
-            </motion.button>
+              {isLoading ? '...' : t.newsletter.button}
+            </Button>
           </motion.form>
+
+          {/* Microcopy bridge */}
+          <motion.p
+            className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground/60 mt-10"
+            initial={{ opacity: 0 }}
+            animate={isInView ? { opacity: 1 } : {}}
+            transition={{ delay: 0.8, duration: 0.8 }}
+          >
+            Limited invitations. Endless resonance.
+          </motion.p>
         </motion.div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 };

@@ -3,6 +3,8 @@ import { useRef, useState, useEffect } from 'react';
 import useOverlapInView from '@/hooks/useOverlapInView';
 import SplitReveal from '@/components/effects/SplitReveal';
 import { sectionVariants, stagger as tokenStagger, durations, easing } from '@/components/effects/motionTokens';
+import { Section } from '@/components/layout/Section';
+import { Container } from '@/components/layout/Container';
 import jewelryNecklace from '@/assets/jewelry-necklace.jpg';
 import jewelryRing from '@/assets/jewelry-ring.jpg';
 import jewelryEarrings from '@/assets/jewelry-earrings.jpg';
@@ -78,71 +80,71 @@ export const CuratedFavoritesSection = () => {
   }, []);
 
   return (
-    <section id="curated" className="bg-secondary/30 overflow-hidden section-vertical">
-      <div className="container mx-auto px-6 sm:px-8 lg:px-20">
+    <Section id="curated" padding="lg" withHairline="top" className="bg-secondary/30 overflow-hidden">
+      <Container>
         {/* Header */}
         <motion.div
           ref={ref}
-          className="text-center mb-16 sm:mb-20 lg:mb-24"
+          className="text-center mb-16 sm:mb-24"
           initial="hidden"
           animate={isInView ? 'visible' : 'hidden'}
           variants={sectionVariants}
           transition={{ duration: durations.section, ease: easing }}
         >
-          <p className="font-body text-xs sm:text-sm uppercase tracking-ultra text-muted-foreground mb-5">
+          <p className="font-body text-xs uppercase tracking-ultra text-muted-foreground mb-6">
             Curated Selection
           </p>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-primary tracking-wide font-normal">
-            <SplitReveal lines={['<span class="italic">Favorites</span>']} stagger={0.12} />
+          <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary tracking-luxury font-normal">
+            <SplitReveal lines={['<span class="italic text-primary/90">Favorites</span>']} stagger={0.12} />
           </h2>
         </motion.div>
 
         {/* Horizontal Scroll Container */}
-        <div className="relative -mx-6 sm:-mx-8 lg:-mx-20">
+        <div className="relative -mx-6 sm:-mx-8 lg:-mx-16">
           <div
             ref={scrollRef}
-            className="flex gap-6 sm:gap-8 lg:gap-10 overflow-x-auto snap-x snap-mandatory px-6 sm:px-8 lg:px-20 pb-6 scrollbar-hide"
+            className="flex gap-8 lg:gap-12 overflow-x-auto snap-x snap-mandatory px-6 sm:px-8 lg:px-16 pb-12 scrollbar-hide"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {products.map((product, index) => (
               <motion.div
                 key={product.id}
-                className="flex-shrink-0 w-[80%] sm:w-1/2 lg:w-1/3 snap-center group cursor-pointer"
+                className="flex-shrink-0 w-[85%] sm:w-1/2 lg:w-1/3 snap-center group cursor-pointer"
                 initial="hidden"
                 animate={isInView ? 'visible' : 'hidden'}
                 variants={sectionVariants}
                 transition={{ duration: durations.section, ease: easing, delay: index * tokenStagger.desktop }}
               >
                 {/* Image Container with Glow Effect */}
-                <div className="relative aspect-[3/4] overflow-hidden bg-muted mb-6 tilt-card">
+                <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-8 shadow-luxury transition-all duration-700 hover:shadow-2xl">
                   {/* Glow Effect */}
-                  <div className="absolute -inset-4 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0">
-                    <div className="absolute inset-0 bg-gradient-radial from-primary/20 via-primary/5 to-transparent blur-2xl" />
+                  <div className="absolute -inset-4 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none z-0">
+                    <div className="absolute inset-0 bg-gradient-radial from-gold/20 via-gold/5 to-transparent blur-3xl" />
                   </div>
                   
                   {/* Image */}
                   <motion.img
                     src={product.image}
                     alt={product.name}
-                    className="relative z-10 w-full h-full object-cover transition-transform duration-700 ease-out md:group-hover:scale-[1.02]"
+                    className="relative z-10 w-full h-full object-cover transition-transform duration-1000 ease-luxury group-hover:scale-105"
                   />
                   
                   {/* Holographic shimmer overlay */}
                   <div className="holo-shimmer" />
                   
                   {/* Overlay */}
-                  <div className="absolute inset-0 z-20 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 z-20 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 </div>
 
                 {/* Product Info */}
                 <div className="text-center">
-                  <p className="font-body text-2xs uppercase tracking-ultra text-muted-foreground mb-2">
+                  <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground mb-3">
                     {product.category}
                   </p>
-                  <h3 className="font-display text-xl sm:text-2xl text-primary mb-2 font-normal italic">
+                  <h3 className="font-display text-2xl text-primary mb-2 font-normal italic tracking-wide">
                     {product.name}
                   </h3>
-                  <p className="font-body text-sm text-foreground/70">
+                  <p className="font-body text-sm text-primary/70 font-medium">
                     {product.price}
                   </p>
                 </div>
@@ -158,7 +160,7 @@ export const CuratedFavoritesSection = () => {
               if (!el) return;
               el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
             }}
-            className="hidden md:flex items-center justify-center absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/6 hover:bg-white/12 rounded-full z-30"
+            className="hidden md:flex items-center justify-center absolute left-4 top-[40%] -translate-y-1/2 w-12 h-12 bg-background/80 backdrop-blur-md border border-hairline hover:bg-background rounded-full z-30 transition-all shadow-sm"
           >
             ‹
           </button>
@@ -169,13 +171,13 @@ export const CuratedFavoritesSection = () => {
               if (!el) return;
               el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
             }}
-            className="hidden md:flex items-center justify-center absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/6 hover:bg-white/12 rounded-full z-30"
+            className="hidden md:flex items-center justify-center absolute right-4 top-[40%] -translate-y-1/2 w-12 h-12 bg-background/80 backdrop-blur-md border border-hairline hover:bg-background rounded-full z-30 transition-all shadow-sm"
           >
             ›
           </button>
 
           {/* Pagination dots */}
-          <div className="flex justify-center gap-2 mt-8">
+          <div className="flex justify-center gap-3 mt-4">
             {Array.from({ length: pages }).map((_, i) => (
               <button
                 key={i}
@@ -184,23 +186,12 @@ export const CuratedFavoritesSection = () => {
                   if (!el) return;
                   el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
                 }}
-                className={`w-3 h-3 rounded-full ${i === currentPage ? 'bg-primary' : 'bg-primary/30'}`}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${i === currentPage ? 'bg-primary w-6' : 'bg-primary/20'}`}
               />
             ))}
           </div>
-          {/* Microcopy bridge → Collection */}
-          <div className="text-center mt-6">
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.9, delay: 0.2 }}
-              className="font-body text-xs text-muted-foreground"
-            >
-              Selected by hand, explored in full.
-            </motion.p>
-          </div>
         </div>
-      </div>
-    </section>
+      </Container>
+    </Section>
   );
 };

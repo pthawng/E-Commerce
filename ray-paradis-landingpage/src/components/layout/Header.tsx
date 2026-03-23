@@ -4,8 +4,6 @@ import { Menu, User, ShoppingBag, X } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useStore } from '@/store/useStore';
 import { AuthSheet } from '@/components/auth';
-import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
-import { toast } from 'sonner';
 import UserMenu from '@/features/auth/components/UserMenu';
 import { ShimmerText } from '@/components/effects/ShimmerText';
 import {
@@ -14,6 +12,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from '@/components/ui/sheet';
+import { Container } from '@/components/layout/Container';
 
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -29,19 +28,14 @@ export const Header = () => {
 
     const handleScroll = () => {
       const currentY = window.scrollY;
-      // update scrolled background state
       setIsScrolled(currentY > 50);
 
-      // hide header only after user scrolls past the first viewport
       const passedFirstSection = currentY > window.innerHeight;
-
       const delta = currentY - lastScrollY.current;
 
       if (passedFirstSection && delta > tolerance) {
-        // scrolling down
         setIsHidden(true);
       } else if (delta < -tolerance) {
-        // scrolling up
         setIsHidden(false);
       }
 
@@ -52,11 +46,9 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // detect background color under header to decide whether to use opaque background
   useEffect(() => {
     const getColorAtPoint = (x: number, y: number) => {
       let el = document.elementFromPoint(x, y) as HTMLElement | null;
-      // climb up until we find a non-transparent background or body
       while (el && el !== document.body) {
         const bg = window.getComputedStyle(el).backgroundColor;
         if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return bg;
@@ -66,13 +58,11 @@ export const Header = () => {
     };
 
     const rgbToLuminance = (rgb: string) => {
-      // parse "rgb(a)?" formats
       const nums = rgb.replace(/rgba?\(|\)|\s/g, '').split(',').map(Number);
       const r = nums[0] / 255;
       const g = nums[1] / 255;
       const b = nums[2] / 255;
       const a = nums[3] ?? 1;
-      // ignore fully transparent
       if (a === 0) return 0;
       const srgb = [r, g, b].map((c) =>
         c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
@@ -83,7 +73,7 @@ export const Header = () => {
     const checkBg = () => {
       if (!headerRef.current) return;
       const rect = headerRef.current.getBoundingClientRect();
-      const sampleY = Math.min(window.innerHeight - 1, rect.bottom + 8); // just under header, but inside viewport
+      const sampleY = Math.min(window.innerHeight - 1, rect.bottom + 8);
 
       const xs = [window.innerWidth * 0.25, window.innerWidth * 0.5, window.innerWidth * 0.75];
       const lums = xs.map((x) => {
@@ -91,7 +81,6 @@ export const Header = () => {
         return rgbToLuminance(color);
       });
       const avgLum = lums.reduce((a, b) => a + b, 0) / lums.length;
-      // lower threshold — more permissive for typical site backgrounds and overlays
       setIsOverLightBg(avgLum > 0.6);
     };
 
@@ -121,17 +110,17 @@ export const Header = () => {
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 pointer-events-auto ${
           isScrolled
             ? isOverLightBg
-              ? 'bg-background'
+              ? 'bg-background shadow-sm'
               : 'bg-background/60 backdrop-blur-xl'
             : 'bg-transparent'
         }`}
       >
         {/* Hairline border */}
         <div className={`absolute bottom-0 left-0 right-0 h-px transition-opacity duration-500 ${isScrolled ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="h-full bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+          <div className="h-full bg-border/20" />
         </div>
 
-        <div className="container mx-auto px-6 sm:px-8 lg:px-20">
+        <Container>
           <div className="flex items-center justify-between h-20 sm:h-24 lg:h-28">
             {/* Left - Menu */}
             <div className="flex items-center gap-6 flex-1">
@@ -148,26 +137,23 @@ export const Header = () => {
                   </motion.button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[320px] sm:w-[380px] border-r-0 bg-background/95 backdrop-blur-xl">
-                  <div className="flex flex-col h-full py-8">
-                    {/* Close Button */}
-                    <SheetClose className="absolute top-6 right-6">
-                      <X className="w-5 h-5 text-foreground" strokeWidth={1} />
+                  <div className="flex flex-col h-full py-12">
+                    <SheetClose className="absolute top-8 right-8">
+                      <X className="w-6 h-6 text-foreground/60 hover:text-primary transition-colors" strokeWidth={1} />
                     </SheetClose>
 
-                    {/* Logo */}
-                    <div className="mb-16">
-                      <span className="font-display text-2xl tracking-luxury text-primary">
+                    <div className="mb-20">
+                      <span className="font-display text-3xl tracking-luxury text-primary">
                         Ray Paradis
                       </span>
                     </div>
 
-                    {/* Navigation */}
-                    <nav className="flex flex-col gap-8">
+                    <nav className="flex flex-col gap-10">
                       {navItems.map((item, index) => (
                         <motion.a
                           key={item.label}
                           href={item.href}
-                    className="font-display text-3xl sm:text-4xl text-foreground hover:text-primary transition-colors duration-500"
+                          className="font-display text-4xl sm:text-5xl text-foreground hover:text-primary transition-all duration-500 hover:translate-x-2"
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.1 + 0.08 * index, duration: 0.6 }}
@@ -177,23 +163,21 @@ export const Header = () => {
                       ))}
                     </nav>
 
-                    {/* Footer */}
-                    <div className="mt-auto pt-16 border-t border-border/30">
-                      <p className="font-body text-xs text-muted-foreground tracking-wider">
-                        Handcrafted with love in Vietnam
+                    <div className="mt-auto pt-16 border-t border-border/10">
+                      <p className="font-body text-xs text-muted-foreground/60 tracking-[0.2em] uppercase">
+                        Mastery in motion.
                       </p>
                     </div>
                   </div>
                 </SheetContent>
               </Sheet>
 
-              {/* Desktop Nav Links */}
               <nav className="hidden lg:flex items-center gap-10">
                 {navItems.slice(0, 2).map((item) => (
                   <a
                     key={item.label}
                     href={item.href}
-                    className={`font-body text-sm uppercase tracking-wider ${usingOpaqueBg ? 'text-primary' : 'text-white dark:text-foreground/80'} hover:text-primary transition-colors duration-500`}
+                    className={`font-body text-xs uppercase tracking-[0.2em] ${usingOpaqueBg ? 'text-primary' : 'text-white dark:text-foreground/80'} hover:text-gold transition-colors duration-500`}
                   >
                     {item.label}
                   </a>
@@ -222,7 +206,6 @@ export const Header = () => {
 
             {/* Right - Actions */}
             <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end">
-              {/* Account Icon */}
               {user ? (
                 <UserMenu isOpaque={usingOpaqueBg} />
               ) : (
@@ -234,7 +217,6 @@ export const Header = () => {
                 </button>
               )}
 
-              {/* Cart Icon */}
               <button className="hidden sm:block p-2">
                 <ShoppingBag className={`w-5 h-5 ${usingOpaqueBg ? 'text-primary' : 'text-white dark:text-foreground'}`} strokeWidth={1} />
               </button>
@@ -242,10 +224,9 @@ export const Header = () => {
               <ThemeToggle />
             </div>
           </div>
-        </div>
+        </Container>
       </motion.header>
 
-      {/* Auth Sheet */}
       <AuthSheet open={isAuthOpen} onOpenChange={setIsAuthOpen} />
     </>
   );

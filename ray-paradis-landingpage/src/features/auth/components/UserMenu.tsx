@@ -54,51 +54,56 @@ export const UserMenu: React.FC<{ isOpaque?: boolean }> = ({ isOpaque = false })
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        side="right"
-        sideOffset={28}
-        align="start"
-        className="w-[260px] rounded-md bg-[rgba(18,18,18,0.46)] backdrop-blur-md border border-[rgba(255,255,255,0.06)] shadow-[0_6px_20px_rgba(8,8,8,0.18)] p-3 transition-transform duration-180 ease-out data-[state=open]:translate-x-0 data-[state=closed]:translate-x-1 data-[state=open]:translate-y-4 data-[state=closed]:translate-y-0 data-[state=open]:opacity-100 data-[state=closed]:opacity-0"
+        side="bottom"
+        sideOffset={12}
+        align="end"
+        className="w-[280px] rounded-sm bg-background/80 backdrop-blur-2xl border border-primary/10 shadow-luxury p-0 overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2"
       >
-        <div className="px-2 py-2">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full border border-[rgba(255,255,255,0.04)] flex items-center justify-center bg-[rgba(255,255,255,0.02)] text-sm">
-              <span className="font-display text-sm text-[rgba(255,255,255,0.92)]">{initials}</span>
+        <div className="px-5 py-6 bg-secondary/30">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full border border-primary/10 flex items-center justify-center bg-background text-primary shadow-sm">
+              <span className="font-display text-base tracking-widest">{initials}</span>
             </div>
-            <div>
-              <div className="text-base font-display tracking-wide text-[rgba(255,255,255,0.92)]">{authUser?.fullName || authUser?.email || 'Guest'}</div>
-              <div className="text-xs text-[rgba(255,255,255,0.45)] tracking-wide">{authUser?.email}</div>
+            <div className="flex flex-col">
+              <div className="text-base font-display tracking-wide text-primary leading-tight">
+                {authUser?.fullName || 'Member'}
+              </div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mt-1">
+                Private Client
+              </div>
             </div>
           </div>
         </div>
 
-        <DropdownMenuSeparator />
-
-        <div className="flex flex-col px-2 py-1">
-          <button
+        <div className="p-2">
+          <DropdownMenuItem
             onClick={handleProfile}
-            className="text-sm text-[rgba(255,255,255,0.84)] py-2 text-left hover:text-[rgba(255,255,255,0.98)] transition-colors duration-120 flex items-center gap-3"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm font-body cursor-pointer transition-colors focus:bg-primary/5 focus:text-primary rounded-none"
           >
-            <User className="h-3.5 w-3.5 opacity-80" /> <span>Account</span>
-          </button>
-          <button
+            <User className="h-4 w-4 stroke-[1.2]" />
+            <span className="tracking-wide">Account Settings</span>
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem
             onClick={handleOrders}
-            className="text-sm text-[rgba(255,255,255,0.84)] py-2 text-left hover:text-[rgba(255,255,255,0.98)] transition-colors duration-120 flex items-center gap-3"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm font-body cursor-pointer transition-colors focus:bg-primary/5 focus:text-primary rounded-none"
           >
-            <Box className="h-3.5 w-3.5 opacity-80" /> <span>My orders</span>
-          </button>
-        </div>
+            <Box className="h-4 w-4 stroke-[1.2]" />
+            <span className="tracking-wide">Order History</span>
+          </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+          <DropdownMenuSeparator className="bg-primary/5 my-2" />
 
-        <div className="px-2 py-1">
-          <button
+          <DropdownMenuItem
             onClick={handleLogout}
-            className="w-full text-sm tracking-wide border border-[rgba(255,255,255,0.06)] rounded-md py-2 text-[rgba(255,255,255,0.86)] hover:bg-[rgba(255,255,255,0.02)] transition-colors flex items-center justify-center gap-2"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm font-body cursor-pointer text-destructive focus:bg-destructive/5 focus:text-destructive transition-colors rounded-none"
           >
-            <LogOut className="h-4 w-4 opacity-85" /> Logout
-          </button>
+            <LogOut className="h-4 w-4 stroke-[1.2]" />
+            <span className="tracking-wide">Logout</span>
+          </DropdownMenuItem>
         </div>
       </DropdownMenuContent>
+
     </DropdownMenu>
   );
 };

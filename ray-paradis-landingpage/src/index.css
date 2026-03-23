@@ -3,107 +3,74 @@
 @tailwind utilities;
 
 @layer base {
+
   /* Light Theme - Paper White & Royal Blue */
   :root {
     --background: 0 0% 98%;
-    --foreground: 220 76% 15%;
-
-    --card: 0 0% 99%;
-    --card-foreground: 220 76% 15%;
-
-    --popover: 0 0% 99%;
-    --popover-foreground: 220 76% 15%;
-
-    --primary: 220 76% 15%;
+    --foreground: 225 73% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 225 73% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 73% 10%;
+    --primary: 225 73% 20%;
     --primary-foreground: 0 0% 98%;
-
-    --secondary: 220 20% 96%;
-    --secondary-foreground: 220 76% 15%;
-
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 15% 45%;
-
-    --accent: 220 50% 25%;
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 220 76% 15%;
-
-    --radius: 0.125rem;
+    --secondary: 225 20% 96%;
+    --secondary-foreground: 225 73% 20%;
+    --muted: 225 15% 94%;
+    --muted-foreground: 225 10% 45%;
+    --accent: 225 20% 92%;
+    --accent-foreground: 225 73% 20%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 225 20% 92%;
+    --input: 225 20% 92%;
+    --ring: 225 73% 20%;
+    --radius: 0.75rem;
 
     /* Luxury tokens */
-    --gold: 43 66% 52%;
-    --gold-light: 43 55% 65%;
-    --gold-shimmer: 43 70% 58%;
-    --champagne: 40 35% 92%;
-    --royal-blue: 220 76% 15%;
-    --royal-blue-light: 220 55% 28%;
-    --silver: 220 10% 78%;
+    --gold: 43 51% 52%;
+    --gold-light: 43 51% 72%;
+    --gold-shimmer: 43 51% 92%;
+    --champagne: 34 50% 96%;
+    --royal-blue: 225 73% 20%;
+    --royal-blue-light: 225 73% 40%;
+    --silver: 210 16% 82%;
+    --hairline: 225 20% 92% / 0.5;
 
-    /* Hairline borders */
-    --hairline: 220 20% 92%;
-    --hairline-dark: 220 15% 85%;
-
-    /* Ambient shadows - very subtle */
-    --shadow-ambient: 0 20px 60px -20px hsl(220 50% 20% / 0.08);
-    --shadow-soft: 0 4px 24px -4px hsl(220 50% 20% / 0.06);
-
-    /* Transitions */
-    --transition-luxury: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Ambient shadows - SaaS standard */
+    --shadow-luxury: 0 10px 40px -10px rgba(0,0,0,0.12);
+    --shadow-spotlight: 0 0 20px rgba(212,175,55,0.15);
   }
+
 
   /* Dark Theme - Matte Black & Gold Shimmer */
   .dark {
     --background: 0 0% 2%;
-    --foreground: 43 60% 55%;
-
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 92%;
-
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 92%;
-
-    --primary: 43 60% 52%;
-    --primary-foreground: 0 0% 2%;
-
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 43 55% 55%;
-
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 55%;
-
-    --accent: 43 50% 42%;
-    --accent-foreground: 0 0% 2%;
-
+    --foreground: 0 0% 98%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 225 73% 10%;
+    --secondary: 225 10% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 225 10% 12%;
+    --muted-foreground: 225 5% 65%;
+    --accent: 225 10% 15%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62% 35%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 12%;
-    --input: 0 0% 12%;
-    --ring: 43 60% 52%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 225 10% 15%;
+    --input: 225 10% 15%;
+    --ring: 225 73% 90%;
 
     /* Luxury tokens - Dark */
-    --gold: 43 60% 52%;
-    --gold-light: 43 55% 62%;
-    --gold-shimmer: 43 65% 58%;
-    --champagne: 40 20% 15%;
-    --royal-blue: 220 70% 20%;
-    --royal-blue-light: 220 55% 30%;
-    --silver: 0 0% 35%;
-
-    /* Hairline borders - Dark */
-    --hairline: 0 0% 15%;
-    --hairline-dark: 0 0% 20%;
-
-    /* Ambient shadows - Dark */
-    --shadow-ambient: 0 20px 60px -20px hsl(0 0% 0% / 0.5);
-    --shadow-soft: 0 4px 24px -4px hsl(0 0% 0% / 0.4);
+    --gold: 43 51% 62%;
+    --royal-blue: 225 73% 30%;
+    --hairline: 0 0% 100% / 0.08;
   }
+
 }
 
 @layer base {
@@ -126,7 +93,12 @@
     letter-spacing: 0.01em;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Playfair Display', 'Cormorant Garamond', serif;
     font-weight: 400;
     letter-spacing: 0.04em;
@@ -140,27 +112,24 @@
 }
 
 @layer components {
+
   /* Hairline dividers */
   .hairline {
     @apply h-px w-full;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      hsl(var(--border) / 0.5) 20%,
-      hsl(var(--border) / 0.5) 80%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg,
+        transparent 0%,
+        hsl(var(--border) / 0.5) 20%,
+        hsl(var(--border) / 0.5) 80%,
+        transparent 100%);
   }
 
   .hairline-vertical {
     @apply w-px h-full;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      hsl(var(--border) / 0.5) 20%,
-      hsl(var(--border) / 0.5) 80%,
-      transparent 100%
-    );
+    background: linear-gradient(180deg,
+        transparent 0%,
+        hsl(var(--border) / 0.5) 20%,
+        hsl(var(--border) / 0.5) 80%,
+        transparent 100%);
   }
 
   /* Ghost button base */
@@ -206,19 +175,22 @@
   /* Shimmer skeleton loading */
   .skeleton-shimmer {
     @apply relative overflow-hidden;
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted-foreground) / 0.1) 50%,
-      hsl(var(--muted)) 100%
-    );
+    background: linear-gradient(90deg,
+        hsl(var(--muted)) 0%,
+        hsl(var(--muted-foreground) / 0.1) 50%,
+        hsl(var(--muted)) 100%);
     background-size: 200% 100%;
     animation: shimmer 2s ease-in-out infinite;
   }
 
   @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   /* Luxury image hover */
@@ -238,11 +210,9 @@
   .luxury-image-hover::after {
     content: '';
     @apply absolute inset-0 opacity-0 transition-opacity duration-500 pointer-events-none;
-    background: radial-gradient(
-      circle at center,
-      transparent 30%,
-      hsl(var(--background) / 0.1) 100%
-    );
+    background: radial-gradient(circle at center,
+        transparent 30%,
+        hsl(var(--background) / 0.1) 100%);
   }
 
   .luxury-image-hover:hover::after {
@@ -298,12 +268,10 @@
 
   /* Gold shimmer text for dark mode */
   .dark .text-gold-shimmer {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--gold)) 0%,
-      hsl(var(--gold-shimmer)) 50%,
-      hsl(var(--gold)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--gold)) 0%,
+        hsl(var(--gold-shimmer)) 50%,
+        hsl(var(--gold)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -311,11 +279,9 @@
 
   /* Royal blue gradient for light mode */
   .text-royal-gradient {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--royal-blue)) 0%,
-      hsl(var(--royal-blue-light)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--royal-blue)) 0%,
+        hsl(var(--royal-blue-light)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -330,7 +296,7 @@
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 40%, rgba(255,240,200,0.12), rgba(255,240,200,0.06) 30%, rgba(0,0,0,0) 55%);
+  background: radial-gradient(circle at 40% 40%, rgba(255, 240, 200, 0.12), rgba(255, 240, 200, 0.06) 30%, rgba(0, 0, 0, 0) 55%);
   mix-blend-mode: screen;
   transform: translate3d(-100px, -100px, 0);
   transition: opacity 200ms linear, transform 120ms linear;
@@ -340,7 +306,7 @@
 
 /* class applied to gold elements when spotlighted */
 .is-spotlight {
-  filter: brightness(1.28) saturate(1.08) drop-shadow(0 6px 18px rgba(255,220,150,0.08));
+  filter: brightness(1.28) saturate(1.08) drop-shadow(0 6px 18px rgba(255, 220, 150, 0.08));
   transition: filter 180ms linear;
 }
 
@@ -352,8 +318,8 @@ body::before {
   z-index: 40;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
   background-size: 2px 2px, 3px 3px;
   opacity: 0.8;
   mix-blend-mode: soft-light;
@@ -366,6 +332,7 @@ body::before {
   pointer-events: none;
   overflow: hidden;
 }
+
 .holo-shimmer::before {
   content: '';
   position: absolute;
@@ -373,27 +340,39 @@ body::before {
   top: -40%;
   width: 180%;
   height: 180%;
-  background: linear-gradient(120deg, rgba(255,255,255,0.0) 40%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.0) 60%);
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.0) 40%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0.0) 60%);
   transform: translateX(-100%) rotate(8deg);
   filter: blur(8px);
   opacity: 0;
   will-change: transform, opacity;
 }
+
 .group:hover .holo-shimmer::before,
 .group:focus-within .holo-shimmer::before {
-  animation: holo-sheen 1s cubic-bezier(0.2,0.9,0.2,1) forwards;
+  animation: holo-sheen 1s cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
 }
+
 @keyframes holo-sheen {
-  0% { transform: translateX(-100%) rotate(8deg); opacity: 0; }
-  10% { opacity: 1; }
-  100% { transform: translateX(100%) rotate(8deg); opacity: 0; }
+  0% {
+    transform: translateX(-100%) rotate(8deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(100%) rotate(8deg);
+    opacity: 0;
+  }
 }
 
 /* tilt transform smoothing for product cards */
 .tilt-card {
   transform-style: preserve-3d;
   will-change: transform;
-  transition: transform 220ms cubic-bezier(0.2,0.9,0.2,1);
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 /* ensure gold text uses transition */
@@ -402,62 +381,88 @@ body::before {
   transition: color 220ms ease, filter 220ms ease;
 }
 
-  /* Section vertical rhythm tokens */
+/* Section vertical rhythm tokens */
+.section-vertical {
+  padding-top: 1.5rem;
+  /* 24px */
+  padding-bottom: 2rem;
+  /* 32px */
+}
+
+@media (min-width: 640px) {
   .section-vertical {
-    padding-top: 1.5rem; /* 24px */
-    padding-bottom: 2rem; /* 32px */
+    padding-top: 2rem;
+    /* 32px */
+    padding-bottom: 3rem;
+    /* 48px */
+  }
+}
+
+@media (min-width: 1024px) {
+  .section-vertical {
+    padding-top: 4rem;
+    /* 64px */
+    padding-bottom: 6rem;
+    /* 96px */
+  }
+}
+
+/* Quiet CTA utility */
+.cta-quiet {
+  border-color: hsl(var(--primary) / 0.18);
+  background: transparent;
+  color: hsl(var(--primary));
+  transition: background-color 220ms ease, color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+.cta-quiet::before {
+  /* subtle hover wash implemented in elements; default no heavy overlay */
+  content: '';
+  display: none;
+}
+
+/* Reduced motion: stillness-first */
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-cursor {
+    display: none !important;
   }
 
-  @media (min-width: 640px) {
-    .section-vertical {
-      padding-top: 2rem; /* 32px */
-      padding-bottom: 3rem; /* 48px */
-    }
+  .holo-shimmer::before {
+    display: none !important;
+    animation: none !important;
   }
 
-  @media (min-width: 1024px) {
-    .section-vertical {
-      padding-top: 4rem; /* 64px */
-      padding-bottom: 6rem; /* 96px */
-    }
+  .tilt-card {
+    transform: none !important;
+    transition: none !important;
   }
 
-  /* Quiet CTA utility */
-  .cta-quiet {
-    border-color: hsl(var(--primary) / 0.18);
-    background: transparent;
-    color: hsl(var(--primary));
-    transition: background-color 220ms ease, color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+  .group:hover img {
+    transform: none !important;
   }
 
-  .cta-quiet::before {
-    /* subtle hover wash implemented in elements; default no heavy overlay */
-    content: '';
-    display: none;
+  .group:hover .holo-shimmer::before {
+    transform: none !important;
+    opacity: 0 !important;
   }
 
-  /* Reduced motion: stillness-first */
-  @media (prefers-reduced-motion: reduce) {
-    .spotlight-cursor { display: none !important; }
-    .holo-shimmer::before { display: none !important; animation: none !important; }
-    .tilt-card { transform: none !important; transition: none !important; }
-    .group:hover img { transform: none !important; }
-    .group:hover .holo-shimmer::before { transform: none !important; opacity: 0 !important; }
-    .split-reveal * { transition: none !important; animation: none !important; transform: none !important; }
+  .split-reveal * {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
   }
+}
 
 /* Gold shimmer for hero headline */
 .gold-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(212,175,55,0.08) 20%,
-    rgba(212,175,55,0.18) 35%,
-    rgba(255,255,255,0.9) 50%,
-    rgba(212,175,55,0.18) 65%,
-    rgba(212,175,55,0.08) 80%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(212, 175, 55, 0.08) 20%,
+      rgba(212, 175, 55, 0.18) 35%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(212, 175, 55, 0.18) 65%,
+      rgba(212, 175, 55, 0.08) 80%,
+      transparent 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -467,7 +472,15 @@ body::before {
 }
 
 @keyframes gold-shimmer {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
