@@ -94,11 +94,13 @@ export const Header = () => {
   }, []);
 
   const navItems = [
-    { label: 'Shop', href: '#collection' },
-    { label: 'Story', href: '#heritage' },
-    { label: 'Atelier', href: '#atelier' },
+    { label: 'Shop', href: '/collections' },
+    { label: 'Story', href: '/#heritage' },
+    { label: 'Atelier', href: '/#atelier' },
   ];
-  const usingOpaqueBg = isScrolled && isOverLightBg;
+  
+  // Use primary color if scrolled OR if explicitly over a light background at the top
+  const shouldUsePrimaryColor = isScrolled || isOverLightBg;
 
   return (
     <>
@@ -131,7 +133,7 @@ export const Header = () => {
                     whileTap={{ scale: 0.95 }}
                   >
                     <Menu
-                      className={`w-6 h-6 ${usingOpaqueBg ? 'text-primary' : 'text-white dark:text-foreground'}`}
+                      className={`w-6 h-6 ${shouldUsePrimaryColor ? 'text-primary' : 'text-white dark:text-foreground'}`}
                       strokeWidth={1}
                     />
                   </motion.button>
@@ -177,7 +179,7 @@ export const Header = () => {
                   <a
                     key={item.label}
                     href={item.href}
-                    className={`font-body text-xs uppercase tracking-[0.2em] ${usingOpaqueBg ? 'text-primary' : 'text-white dark:text-foreground/80'} hover:text-gold transition-colors duration-500`}
+                    className={`font-body text-xs uppercase tracking-[0.2em] ${shouldUsePrimaryColor ? 'text-primary' : 'text-white dark:text-foreground/80'} hover:text-gold transition-colors duration-500`}
                   >
                     {item.label}
                   </a>
@@ -185,9 +187,8 @@ export const Header = () => {
               </nav>
             </div>
 
-            {/* Center - Logo */}
             <a
-              href="#"
+              href="/"
               className="absolute left-1/2 -translate-x-1/2"
             >
               <motion.span
@@ -196,7 +197,7 @@ export const Header = () => {
                 className="inline-block"
               >
                 <ShimmerText
-                  className={`font-display text-2xl sm:text-3xl lg:text-4xl tracking-luxury whitespace-nowrap font-normal ${usingOpaqueBg ? 'text-primary' : 'text-white'}`}
+                  className={`font-display text-2xl sm:text-3xl lg:text-4xl tracking-luxury whitespace-nowrap font-normal ${shouldUsePrimaryColor ? 'text-primary' : 'text-white'}`}
                   interval={6000}
                 >
                   Ray Paradis
@@ -207,18 +208,18 @@ export const Header = () => {
             {/* Right - Actions */}
             <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end">
               {user ? (
-                <UserMenu isOpaque={usingOpaqueBg} />
+                <UserMenu isOpaque={shouldUsePrimaryColor} />
               ) : (
                 <button
                   onClick={() => setIsAuthOpen(true)}
                   className="p-2"
                 >
-                  <User className={`w-5 h-5 ${usingOpaqueBg ? 'text-primary' : 'text-white dark:text-foreground'}`} strokeWidth={1} />
+                  <User className={`w-5 h-5 ${shouldUsePrimaryColor ? 'text-primary' : 'text-white dark:text-foreground'}`} strokeWidth={1} />
                 </button>
               )}
 
               <button className="hidden sm:block p-2">
-                <ShoppingBag className={`w-5 h-5 ${usingOpaqueBg ? 'text-primary' : 'text-white dark:text-foreground'}`} strokeWidth={1} />
+                <ShoppingBag className={`w-5 h-5 ${shouldUsePrimaryColor ? 'text-primary' : 'text-white dark:text-foreground'}`} strokeWidth={1} />
               </button>
               
               <ThemeToggle />
