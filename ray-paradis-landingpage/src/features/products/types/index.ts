@@ -34,9 +34,8 @@ export interface Product {
     name: LocalizedString;
     slug: string;
     description?: LocalizedString;
-    basePrice?: number;
-    baseCompareAtPrice?: number;
-    hasVariants: boolean;
+    displayPriceMin?: number;
+    displayPriceMax?: number;
     isActive: boolean;
     isFeatured: boolean;
     variants: ProductVariant[];
@@ -46,22 +45,15 @@ export interface Product {
     updatedAt: string;
 }
 
-export interface ProductResponse {
-    data: Product[];
-    meta: {
-        page: number;
-        take: number;
-        itemCount: number;
-        pageCount: number;
-        hasPreviousPage: boolean;
-        hasNextPage: boolean;
-    };
-}
+import { ApiResponse } from '@shared';
+
+export interface ProductResponse extends ApiResponse<Product[]> {}
 
 export interface ProductParams {
     page?: number;
-    take?: number;
+    limit?: number; // Backend uses 'limit' instead of 'take' in PaginationDto sometimes, or 'take' in TypeORM. Let's align with PaginationDto: 'limit'
     search?: string;
-    sort?: string;
+    sort?: string; // format: field:direction
     categoryId?: string;
+    isFeatured?: boolean;
 }

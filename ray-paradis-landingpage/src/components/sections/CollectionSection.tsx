@@ -1,80 +1,71 @@
-import { motion } from 'framer-motion';
-import { useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
+import { useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import useOverlapInView from '@/hooks/useOverlapInView';
 import { useTranslation } from '@/hooks/useTranslation';
-
-import ringImage from '@/assets/jewelry-ring.jpg';
-import necklaceImage from '@/assets/jewelry-necklace.jpg';
-import braceletImage from '@/assets/jewelry-bracelet.jpg';
-import earringsImage from '@/assets/jewelry-earrings.jpg';
-import tiaraImage from '@/assets/jewelry-tiara.jpg';
-import broochImage from '@/assets/jewelry-brooch.jpg';
-
-const jewelryItems = [
-  { id: 'eternity', image: ringImage, size: 'tall' },
-  { id: 'aurora', image: necklaceImage, size: 'normal' },
-  { id: 'celestial', image: braceletImage, size: 'normal' },
-  { id: 'empress', image: earringsImage, size: 'tall' },
-  { id: 'sovereign', image: tiaraImage, size: 'normal' },
-  { id: 'dynasty', image: broochImage, size: 'normal' },
-] as const;
+import { useProducts } from '@/features/products/hooks/useProducts';
+import { getLocalized } from '@/features/products/utils/productMapper';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CollectionItem = ({ 
-  item, 
+  product, 
   index 
 }: { 
-  item: typeof jewelryItems[number]; 
+  product: any; 
   index: number;
 }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
-  const { t } = useTranslation();
+  const { language, t } = useTranslation();
 
-  const itemData = t.collection.items[item.id as keyof typeof t.collection.items];
+  const name = getLocalized(product.name, language);
+  const description = getLocalized(product.description, language);
+  const image = product.media?.[0]?.url || product.variants?.[0]?.media?.[0]?.url || '';
 
   return (
-    <motion.div
-      ref={ref}
-      className={`relative group cursor-pointer luxury-image-hover ${
-        item.size === 'tall' ? 'sm:row-span-2' : ''
-      }`}
-      initial={{ opacity: 0, y: 30 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ delay: index * 0.06, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden bg-secondary/30">
-        <img
-          src={item.image}
-          alt={itemData.name}
-          className="w-full h-full object-cover transition-all duration-700 ease-out md:group-hover:scale-[1.02]"
-        />
-        
-        {/* Soft inner glow on hover */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-          <div className="absolute inset-3 sm:inset-4 ring-1 ring-inset ring-primary/10 rounded-sm" />
-        </div>
-        
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-600" />
+    <Link to={`/product/${product.slug}`}>
+      <motion.div
+        ref={ref}
+        className="relative group cursor-pointer luxury-image-hover"
+        initial={{ opacity: 0, y: 30 }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ delay: index * 0.06, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {/* Image Container */}
+        <div className="relative aspect-square overflow-hidden bg-secondary/30 rounded-sm">
+          <img
+            src={image}
+            alt={name}
+            className="w-full h-full object-cover transition-all duration-700 ease-out md:group-hover:scale-[1.02]"
+          />
+          
+          {/* Soft inner glow on hover */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            <div className="absolute inset-3 sm:inset-4 ring-1 ring-inset ring-primary/10 rounded-sm" />
+          </div>
+          
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-600" />
 
-        {/* Content */}
-        <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-6 lg:p-8 xl:p-10 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-600 ease-luxury">
-          <h3 className="font-display text-base sm:text-lg lg:text-xl xl:text-2xl text-foreground mb-1.5 sm:mb-2 tracking-wide font-normal">
-            {itemData.name}
-          </h3>
-          <p className="font-body text-2xs sm:text-xs text-muted-foreground mb-3 sm:mb-4 lg:mb-5 leading-relaxed tracking-wide line-clamp-2">
-            {itemData.description}
-          </p>
-          <span className="inline-block font-body text-2xs uppercase tracking-ultra text-primary underline-expand pb-1">
-            {t.collection.viewDetails}
-          </span>
+          {/* Content */}
+          <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-6 lg:p-8 xl:p-10 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-600 ease-luxury">
+            <h3 className="font-display text-base sm:text-lg lg:text-xl xl:text-2xl text-foreground mb-1.5 sm:mb-2 tracking-wide font-normal">
+              {name}
+            </h3>
+            <div 
+              className="font-body text-2xs sm:text-xs text-muted-foreground mb-3 sm:mb-4 lg:mb-5 leading-relaxed tracking-wide line-clamp-2"
+              dangerouslySetInnerHTML={{ __html: description || '' }}
+            />
+            <span className="inline-block font-body text-2xs uppercase tracking-ultra text-primary underline-expand pb-1">
+              {t.collection.viewDetails}
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Hairline border on hover */}
-      <div className="absolute inset-0 border border-primary/0 group-hover:border-primary/10 transition-colors duration-600 pointer-events-none" />
-    </motion.div>
+        {/* Hairline border on hover */}
+        <div className="absolute inset-0 border border-primary/0 group-hover:border-primary/10 transition-colors duration-600 pointer-events-none" />
+      </motion.div>
+    </Link>
   );
 };
 
@@ -82,6 +73,9 @@ export const CollectionSection = () => {
   const ref = useRef(null);
   const isInView = useOverlapInView(ref, 0.17, { once: true });
   const { t } = useTranslation();
+
+  const { data: productsRes, isLoading } = useProducts({ limit: 6 });
+  const products = useMemo(() => productsRes?.data || [], [productsRes]);
 
   return (
     <section id="collection" className="bg-background section-vertical">
@@ -118,11 +112,25 @@ export const CollectionSection = () => {
           />
         </motion.div>
 
-        {/* Grid - 1 col mobile, 2 col tablet, 3 col desktop */}
+        {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
-          {jewelryItems.map((item, index) => (
-            <CollectionItem key={item.id} item={item} index={index} />
-          ))}
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="aspect-square bg-secondary/10 relative rounded-sm overflow-hidden">
+                <Skeleton className="w-full h-full" />
+              </div>
+            ))
+          ) : products.length > 0 ? (
+            products.map((product, index) => (
+              <CollectionItem key={product.id} product={product} index={index} />
+            ))
+          ) : (
+            <div className="col-span-full py-20 text-center">
+              <p className="font-body text-xs uppercase tracking-ultra text-muted-foreground/40">
+                Awaiting the next creation...
+              </p>
+            </div>
+          )}
         </div>
         {/* Microcopy bridge → Atelier */}
         <div className="text-center mt-8">

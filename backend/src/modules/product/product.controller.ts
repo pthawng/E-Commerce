@@ -20,6 +20,7 @@ import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger
 import { Public } from 'src/common/decorators/public.decorator';
 import { PaginationDto } from 'src/common/pagination';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 
@@ -29,12 +30,11 @@ import { ProductService } from './product.service';
 export class ProductController {
   constructor(private readonly productService: ProductService) { }
 
-  // GET ALL PRODUCTS (PAGINATED)
   @Public()
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm (phân trang)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Danh sách sản phẩm kèm meta phân trang' })
-  findAllPaginated(@Query() dto: PaginationDto) {
+  findAllPaginated(@Query() dto: ProductQueryDto) {
     return this.productService.findAllPaginated(dto);
   }
 

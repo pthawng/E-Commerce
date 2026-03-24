@@ -64,6 +64,7 @@ export interface Product {
   updatedAt: Date | string;
   variants?: ProductVariant[];
   media?: ProductMedia[];
+  categories?: Array<{ category: Category }>;
 }
 
 /**

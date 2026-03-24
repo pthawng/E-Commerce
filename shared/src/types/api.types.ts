@@ -23,7 +23,7 @@ export interface ApiResponse<T = any> {
 export interface PaginationMeta {
   page: number;
   limit: number;
-  total: number;
+  totalItems: number;
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;

@@ -6,9 +6,10 @@ import { SpotlightCursor } from '@/components/effects/SpotlightCursor';
 
 interface LayoutProps {
   children: React.ReactNode;
+  forceHeaderOpaque?: boolean;
 }
 
-export const Layout = ({ children }: LayoutProps) => {
+export const Layout = ({ children, forceHeaderOpaque }: LayoutProps) => {
   const { theme } = useStore();
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
-      <Header />
+      <Header forceOpaque={forceHeaderOpaque} />
       <SpotlightCursor />
       <main>{children}</main>
       <Footer />

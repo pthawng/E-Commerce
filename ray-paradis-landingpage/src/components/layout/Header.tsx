@@ -14,21 +14,21 @@ import {
 } from '@/components/ui/sheet';
 import { Container } from '@/components/layout/Container';
 
-export const Header = () => {
+export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const lastScrollY = useRef(0);
   const headerRef = useRef<HTMLElement | null>(null);
   const [isOverLightBg, setIsOverLightBg] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const { user } = useStore();
+  const { user, theme } = useStore();
 
   useEffect(() => {
     const tolerance = 10;
 
     const handleScroll = () => {
       const currentY = window.scrollY;
-      setIsScrolled(currentY > 50);
+      setIsScrolled(currentY > 50 || !!forceOpaque);
 
       const passedFirstSection = currentY > window.innerHeight;
       const delta = currentY - lastScrollY.current;
@@ -42,9 +42,10 @@ export const Header = () => {
       lastScrollY.current = currentY;
     };
 
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [forceOpaque]);
 
   useEffect(() => {
     const getColorAtPoint = (x: number, y: number) => {
@@ -73,15 +74,23 @@ export const Header = () => {
     const checkBg = () => {
       if (!headerRef.current) return;
       const rect = headerRef.current.getBoundingClientRect();
-      const sampleY = Math.min(window.innerHeight - 1, rect.bottom + 8);
+      const sampleY = Math.min(window.innerHeight - 1, rect.bottom + 12);
 
-      const xs = [window.innerWidth * 0.25, window.innerWidth * 0.5, window.innerWidth * 0.75];
+      const xs = [
+        window.innerWidth * 0.1, 
+        window.innerWidth * 0.25, 
+        window.innerWidth * 0.5, 
+        window.innerWidth * 0.75,
+        window.innerWidth * 0.9
+      ];
       const lums = xs.map((x) => {
         const color = getColorAtPoint(x, sampleY);
         return rgbToLuminance(color);
       });
       const avgLum = lums.reduce((a, b) => a + b, 0) / lums.length;
-      setIsOverLightBg(avgLum > 0.6);
+      
+      // Being more selective: Only switch to blue if the background is significantly bright
+      setIsOverLightBg(avgLum > 0.7);
     };
 
     checkBg();
@@ -99,8 +108,10 @@ export const Header = () => {
     { label: 'Atelier', href: '/#atelier' },
   ];
   
-  // Use primary color if scrolled OR if explicitly over a light background at the top
-  const shouldUsePrimaryColor = isScrolled || isOverLightBg;
+  // High contrast color detection:
+  // - Primarily rely on detected background luminance
+  // - Honor forceOpaque as it implies a light/brand background is present
+  const shouldUsePrimaryColor = isOverLightBg || !!forceOpaque;
 
   return (
     <>

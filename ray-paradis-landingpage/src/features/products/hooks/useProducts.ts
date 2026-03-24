@@ -23,6 +23,6 @@ export function useProduct(slug: string) {
         queryKey: productKeys.detail(slug),
         queryFn: () => productApi.getBySlug(slug),
         enabled: !!slug,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 5, // 5 minutes
     });
 }

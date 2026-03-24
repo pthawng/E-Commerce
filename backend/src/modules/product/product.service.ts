@@ -4,6 +4,7 @@ import { slugify } from 'src/common/utils/string.helper';
 import type { Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto, CreateProductVariantInputDto } from './dto/create-product.dto';
+import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductStorageService } from './product.storage/product-storage.service';
 import { VariantService } from './variants/variant.service';
@@ -20,7 +21,7 @@ export class ProductService {
   // ---------------------------
   // GET ALL PRODUCTS (PAGINATED)
   // ---------------------------
-  async findAllPaginated(dto: PaginationDto): Promise<PaginatedResult<any>> {
+  async findAllPaginated(dto: ProductQueryDto): Promise<PaginatedResult<any>> {
     type PrismaProduct = Prisma.ProductGetPayload<{
       include: {
         variants: true;
@@ -31,6 +32,30 @@ export class ProductService {
     type ProductWhereInput = Prisma.ProductWhereInput;
 
     const baseWhere: ProductWhereInput = { deletedAt: null };
+
+    // Build dynamic filters
+    if (dto.categoryId) {
+      baseWhere.categories = {
+        some: { categoryId: dto.categoryId },
+      };
+    }
+
+    if (dto.isFeatured !== undefined) {
+      baseWhere.isFeatured = dto.isFeatured;
+    }
+
+    if (dto.isActive !== undefined) {
+      baseWhere.isActive = dto.isActive;
+    }
+
+    if (dto.search) {
+      const searchLower = dto.search.toLowerCase();
+      baseWhere.OR = [
+        { name: { path: ['vi'], string_contains: searchLower } },
+        { name: { path: ['en'], string_contains: searchLower } },
+        { slug: { contains: searchLower, mode: 'insensitive' } },
+      ];
+    }
 
     const result = await this.paginationService.paginate<PrismaProduct>({
       findMany: (args) => {
