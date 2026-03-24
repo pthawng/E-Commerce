@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ interface ProductCardProps {
   price: string;
   category: string;
   image: string;
+  slug: string;
   hoverImage?: string;
   isNew?: boolean;
   className?: string;
@@ -20,6 +22,7 @@ export const ProductCard = ({
   price,
   category,
   image,
+  slug,
   hoverImage,
   isNew,
   className,
@@ -63,9 +66,12 @@ export const ProductCard = ({
       
       <CardFooter className="p-4 pt-0 justify-center h-14">
         <div className="flex items-center gap-6 opacity-0 group-hover:opacity-100 transition-all duration-700 translate-y-2 group-hover:translate-y-0">
-          <button className="font-body text-[10px] uppercase tracking-ultra text-primary/60 border-b border-primary/20 hover:text-gold hover:border-gold transition-all duration-500 pb-1">
+          <Link 
+            to={`/product/${slug}`}
+            className="font-body text-[10px] uppercase tracking-ultra text-primary/60 border-b border-primary/20 hover:text-gold hover:border-gold transition-all duration-500 pb-1"
+          >
             Quick View
-          </button>
+          </Link>
           <div className="w-px h-3 bg-primary/10" />
           <button className="font-body text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center gap-2">
             Add to Cart

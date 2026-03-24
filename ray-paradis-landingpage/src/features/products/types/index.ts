@@ -12,6 +12,23 @@ export interface ProductMedia {
     order: number;
 }
 
+export interface Attribute {
+    id: string;
+    code: string;
+    name: LocalizedString;
+}
+
+export interface AttributeValue {
+    id: string;
+    value: LocalizedString;
+    metaValue?: string;
+    attribute: Attribute;
+}
+
+export interface VariantAttribute {
+    attributeValue: AttributeValue;
+}
+
 export interface ProductVariant {
     id: string;
     sku: string;
@@ -19,7 +36,8 @@ export interface ProductVariant {
     compareAtPrice?: number;
     variantTitle: any;
     isDefault: boolean;
-    attributes: any[];
+    thumbnailUrl?: string;
+    attributes: VariantAttribute[];
     media: ProductMedia[];
 }
 

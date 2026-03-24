@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useRef, useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import useOverlapInView from '@/hooks/useOverlapInView';
 import SplitReveal from '@/components/effects/SplitReveal';
 import { sectionVariants, stagger as tokenStagger, durations, easing } from '@/components/effects/motionTokens';
@@ -107,44 +108,48 @@ export const CuratedFavoritesSection = () => {
                   </p>
                </div>
             ) : (
-              products.map((product, index) => (
-                <motion.div
+                products.map((product, index) => (
+                <Link 
                   key={product.id}
-                  className="flex-shrink-0 w-[85%] sm:w-1/2 lg:w-1/3 snap-center group cursor-pointer"
-                  initial="hidden"
-                  animate={isInView ? 'visible' : 'hidden'}
-                  variants={sectionVariants}
-                  transition={{ duration: durations.section, ease: easing, delay: index * tokenStagger.desktop }}
+                  to={`/product/${product.slug}`}
+                  className="flex-shrink-0 w-[85%] sm:w-1/2 lg:w-1/3 snap-center group cursor-pointer block"
                 >
-                  {/* Image Container with Glow Effect */}
-                  <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-8 shadow-luxury transition-all duration-700 hover:shadow-2xl">
-                    <div className="absolute -inset-4 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none z-0">
-                      <div className="absolute inset-0 bg-gradient-radial from-gold/20 via-gold/5 to-transparent blur-3xl" />
+                  <motion.div
+                    initial="hidden"
+                    animate={isInView ? 'visible' : 'hidden'}
+                    variants={sectionVariants}
+                    transition={{ duration: durations.section, ease: easing, delay: index * tokenStagger.desktop }}
+                  >
+                    {/* Image Container with Glow Effect */}
+                    <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-8 shadow-luxury transition-all duration-700 hover:shadow-2xl">
+                      <div className="absolute -inset-4 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none z-0">
+                        <div className="absolute inset-0 bg-gradient-radial from-gold/20 via-gold/5 to-transparent blur-3xl" />
+                      </div>
+                      
+                      <motion.img
+                        src={product.image}
+                        alt={product.name}
+                        className="relative z-10 w-full h-full object-cover transition-transform duration-1000 ease-luxury group-hover:scale-105"
+                      />
+                      
+                      <div className="holo-shimmer" />
+                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     </div>
-                    
-                    <motion.img
-                      src={product.image}
-                      alt={product.name}
-                      className="relative z-10 w-full h-full object-cover transition-transform duration-1000 ease-luxury group-hover:scale-105"
-                    />
-                    
-                    <div className="holo-shimmer" />
-                    <div className="absolute inset-0 z-20 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="text-center">
-                    <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground mb-3">
-                      {product.category}
-                    </p>
-                    <h3 className="font-display text-2xl text-primary mb-2 font-normal italic tracking-wide">
-                      {product.name}
-                    </h3>
-                    <p className="font-body text-sm text-primary/70 font-medium">
-                      {product.price}
-                    </p>
-                  </div>
-                </motion.div>
+  
+                    {/* Product Info */}
+                    <div className="text-center">
+                      <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground mb-3">
+                        {product.category}
+                      </p>
+                      <h3 className="font-display text-2xl text-primary mb-2 font-normal italic tracking-wide">
+                        {product.name}
+                      </h3>
+                      <p className="font-body text-sm text-primary/70 font-medium">
+                        {product.price}
+                      </p>
+                    </div>
+                  </motion.div>
+                </Link>
               ))
             )}
           </div>

@@ -23,10 +23,23 @@ import { useStore } from "@/store/useStore";
 import { getLocalized, mapProductToCardProps } from "@/features/products/utils/productMapper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LocalizedString, AttributeValue } from "@/features/products/types";
+import { translations } from "@/i18n/translations";
 
 export const ProductDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { language, formatPrice } = useStore();
+  
+  // Translation helper
+  const t = (path: string) => {
+    const keys = path.split('.');
+    let result: any = translations[language];
+    for (const key of keys) {
+      if (result) result = result[key];
+    }
+    return result || path;
+  };
+
   const [activeAccordion, setActiveAccordion] = useState<string | null>("craftsmanship");
 
   // Fetch Main Product
@@ -37,7 +50,6 @@ export const ProductDetailPage = () => {
   const { data: recommendationsRes } = useProducts({
     categoryId,
     limit: 4,
-    // exclude current product if possible, but for now just 4
   });
 
   const recommendations = useMemo(() => {
@@ -47,19 +59,90 @@ export const ProductDetailPage = () => {
       .map(p => mapProductToCardProps(p, language, formatPrice));
   }, [recommendationsRes?.data, product?.id, language, formatPrice]);
 
-  // Variant State
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  // --- Senior Variant Selection Logic ---
+  
+  // 1. Extract all available attributes across variants
+  const availableAttributes = useMemo(() => {
+    if (!product?.variants) return [];
+    
+    const attrMap = new Map<string, { id: string; code: string; name: LocalizedString; values: Map<string, AttributeValue> }>();
+    
+    product.variants.forEach(variant => {
+      variant.attributes.forEach(va => {
+        const val = va.attributeValue;
+        const attr = val.attribute;
+        
+        if (!attrMap.has(attr.code)) {
+          attrMap.set(attr.code, {
+            id: attr.id,
+            code: attr.code,
+            name: attr.name,
+            values: new Map()
+          });
+        }
+        
+        const currentAttr = attrMap.get(attr.code)!;
+        if (!currentAttr.values.has(val.id)) {
+          currentAttr.values.set(val.id, val);
+        }
+      });
+    });
+    
+    return Array.from(attrMap.values()).map(attr => ({
+      ...attr,
+      values: Array.from(attr.values.values())
+    }));
+  }, [product]);
 
+  // 2. Selection State: attributeCode -> valueId
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
+
+  // 3. Initialize selection from default variant
   useEffect(() => {
-    if (product?.variants?.length && !selectedVariantId) {
-       const defaultVar = product.variants.find(v => v.isDefault) || product.variants[0];
-       setSelectedVariantId(defaultVar.id);
-    }
-  }, [product, selectedVariantId]);
+     if (product?.variants?.length && Object.keys(selectedAttributes).length === 0) {
+        const defaultVar = product.variants.find(v => v.isDefault) || product.variants[0];
+        const initialSelections: Record<string, string> = {};
+        defaultVar.attributes.forEach(va => {
+          initialSelections[va.attributeValue.attribute.code] = va.attributeValue.id;
+        });
+        setSelectedAttributes(initialSelections);
+     }
+  }, [product, selectedAttributes]);
 
+  // 4. Resolve current variant based on selections
   const selectedVariant = useMemo(() => {
-    return product?.variants?.find(v => v.id === selectedVariantId) || product?.variants?.[0];
-  }, [product, selectedVariantId]);
+    if (!product?.variants) return null;
+    
+    // Attempt to find a variant that matches ALL selected attributes
+    const match = product.variants.find(variant => {
+      // For every selected attribute, the variant must have that exact value
+      return Object.entries(selectedAttributes).every(([attrCode, valId]) => {
+        return variant.attributes.some(va => 
+          va.attributeValue.attribute.code === attrCode && va.attributeValue.id === valId
+        );
+      });
+    });
+    
+    return match || product.variants.find(v => v.isDefault) || product.variants[0];
+  }, [product, selectedAttributes]);
+
+  // --- SEO & Metadata ---
+  useEffect(() => {
+    if (product) {
+      const name = getLocalized(product.name, language);
+      document.title = `${name} | Ray Paradis Heritage`;
+      
+      // Update meta description (simple approach without helmet)
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      const desc = getLocalized(product.description, language)?.replace(/<[^>]*>/g, '').slice(0, 160);
+      metaDesc.setAttribute('content', desc || `Discover ${name} by Ray Paradis.`);
+    }
+  }, [product, language]);
 
   if (isLoading) {
     return (
@@ -94,7 +177,7 @@ export const ProductDetailPage = () => {
       <Layout forceHeaderOpaque={true}>
         <div className="pt-40 pb-40 text-center">
           <Container>
-            <Alert className="max-w-md mx-auto border-destructive/20 bg-destructive/5 py-12">
+            <Alert className="max-w-md mx-auto border-destructive/20 bg-destructive/5 py-12 shadow-luxury">
               <ShoppingBag className="w-12 h-12 text-destructive/20 mx-auto mb-6" />
               <AlertTitle className="text-destructive font-display text-2xl mb-4 italic">Lost Treasure</AlertTitle>
               <AlertDescription className="text-destructive/80 font-body text-sm mb-8">
@@ -117,7 +200,7 @@ export const ProductDetailPage = () => {
 
   const images = product.media?.length 
     ? product.media.map(m => m.url) 
-    : [product.variants?.[0]?.media?.[0]?.url || ''];
+    : [selectedVariant?.thumbnailUrl || ''];
 
   const priceFormatted = formatPrice(
     selectedVariant?.price || product.displayPriceMin || 0
@@ -143,7 +226,7 @@ export const ProductDetailPage = () => {
                 {images.map((img, i) => (
                   <motion.div
                     key={i}
-                    className="aspect-[4/5] overflow-hidden rounded-xl bg-secondary/10"
+                    className="aspect-[4/5] overflow-hidden rounded-xl bg-secondary/10 shadow-luxury-soft"
                     initial={{ opacity: 0, scale: 0.98 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
@@ -167,9 +250,17 @@ export const ProductDetailPage = () => {
                   <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary italic font-normal tracking-luxury leading-tight">
                     {getLocalized(product.name, language)}
                   </h1>
-                  <p className="font-body text-2xl text-primary font-light">
-                    {priceFormatted}
-                  </p>
+                  <AnimatePresence mode="wait">
+                    <motion.p 
+                      key={selectedVariant?.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="font-body text-2xl text-primary font-light"
+                    >
+                      {priceFormatted}
+                    </motion.p>
+                  </AnimatePresence>
                 </header>
 
                 <div className="space-y-10">
@@ -177,43 +268,52 @@ export const ProductDetailPage = () => {
                     dangerouslySetInnerHTML={{ __html: getLocalized(product.description, language) || '' }}
                   />
 
-                  {/* Variant Selector */}
-                  {product.variants && product.variants.length > 1 && (
-                    <div className="space-y-6">
-                      <div className="space-y-3">
-                        <span className="font-body text-[10px] uppercase tracking-widest text-primary/60">
-                          Selection: <span className="text-primary">
-                            {getLocalized(selectedVariant?.variantTitle, language) || 'Default'}
-                          </span>
-                        </span>
-                        <div className="flex flex-wrap gap-4">
-                          {product.variants.map((v) => (
-                            <button
-                              key={v.id}
-                              onClick={() => setSelectedVariantId(v.id)}
-                              className={cn(
-                                "px-4 h-12 rounded-xl border text-[10px] uppercase tracking-widest transition-all duration-300",
-                                selectedVariantId === v.id
-                                  ? "border-gold bg-gold/5 text-primary shadow-luxury-soft"
-                                  : "border-border/10 text-muted-foreground hover:border-border/40"
-                              )}
-                            >
-                              {getLocalized(v.variantTitle, language) || 'Variant'}
-                            </button>
-                          ))}
+                  {/* --- Advanced Attribute Selectors --- */}
+                  {availableAttributes.length > 0 && (
+                    <div className="space-y-8">
+                      {availableAttributes.map((attr) => (
+                        <div key={attr.id} className="space-y-4">
+                          <label className="font-body text-[10px] uppercase tracking-widest text-primary/60 block">
+                            {getLocalized(attr.name, language)}
+                          </label>
+                          <div className="flex flex-wrap gap-3">
+                            {attr.values.map((val) => {
+                              const isSelected = selectedAttributes[attr.code] === val.id;
+                              return (
+                                <button
+                                  key={val.id}
+                                  onClick={() => setSelectedAttributes(prev => ({ ...prev, [attr.code]: val.id }))}
+                                  className={cn(
+                                    "px-5 h-12 rounded-xl border text-[10px] uppercase tracking-widest transition-all duration-500",
+                                    isSelected
+                                      ? "border-gold bg-gold/5 text-primary shadow-luxury-soft ring-1 ring-gold/20"
+                                      : "border-border/10 text-muted-foreground hover:border-border/40 hover:bg-secondary/20"
+                                  )}
+                                >
+                                  {val.metaValue && (
+                                    <span 
+                                      className="inline-block w-2 H-2 rounded-full mr-2 mb-0.5" 
+                                      style={{ backgroundColor: val.metaValue }}
+                                    />
+                                  )}
+                                  {getLocalized(val.value, language)}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   )}
 
                   {/* Add to Cart */}
                   <div className="space-y-4 pt-4">
                     <Button variant="luxury" className="w-full h-14 group">
-                      <span className="mr-2">Add to Collection</span>
+                      <span className="mr-2">{t('pdp.addToCollection')}</span>
                       <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                     </Button>
                     <p className="text-center font-body text-[10px] text-muted-foreground tracking-wide">
-                      GIA Certified / Handcrafted in Atelier
+                      GIA Certified / Handcrafted in Atelier / SKU: {selectedVariant?.sku}
                     </p>
                   </div>
 
@@ -222,19 +322,19 @@ export const ProductDetailPage = () => {
                     {[
                       { 
                         id: "craftsmanship", 
-                        label: "The Craftsmanship", 
+                        label: t('pdp.craftsmanship'), 
                         content: "Each masterpiece is meticulously hand-assembled by our master artisans, requiring over 40 hours of focused dedication to perfect every facet and link.", 
                         icon: ShieldCheck 
                       },
                       { 
                         id: "shipping", 
-                        label: "Delivery & Returns", 
+                        label: t('pdp.delivery'), 
                         content: "Complimentary worldwide white-glove delivery. Insured and handled with the utmost care. Returns accepted within 14 days in original condition.", 
                         icon: Truck 
                       },
                       { 
                         id: "care", 
-                        label: "Care Guide", 
+                        label: t('pdp.careGuide'), 
                         content: "Clean gently with a soft cloth. We offer professional polishing and inspection services at our boutique to maintain the eternal radiance of your jewel.", 
                         icon: RotateCcw 
                       },
@@ -282,7 +382,7 @@ export const ProductDetailPage = () => {
                     Digital Atelier
                   </p>
                   <h2 className="font-display text-3xl sm:text-4xl italic font-normal tracking-luxury text-primary">
-                    Complete the Look
+                    {t('pdp.completeLook')}
                   </h2>
                 </div>
               </div>
