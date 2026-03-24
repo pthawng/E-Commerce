@@ -39,6 +39,7 @@ export interface ProductVariant {
     thumbnailUrl?: string;
     attributes: VariantAttribute[];
     media: ProductMedia[];
+    stock?: number;
 }
 
 export interface Category {

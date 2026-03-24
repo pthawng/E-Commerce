@@ -6,6 +6,7 @@ import { useStore } from '@/store/useStore';
 import { AuthSheet } from '@/components/auth';
 import UserMenu from '@/features/auth/components/UserMenu';
 import { ShimmerText } from '@/components/effects/ShimmerText';
+import { useCartStore } from '@/features/cart/store/useCartStore';
 import {
   Sheet,
   SheetContent,
@@ -22,6 +23,9 @@ export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
   const [isOverLightBg, setIsOverLightBg] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const { user, theme } = useStore();
+  const { setOpen, items } = useCartStore();
+  
+  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   useEffect(() => {
     const tolerance = 10;
@@ -229,8 +233,20 @@ export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
                 </button>
               )}
 
-              <button className="hidden sm:block p-2">
+              <button 
+                className="p-2 relative group"
+                onClick={() => setOpen(true)}
+              >
                 <ShoppingBag className={`w-5 h-5 ${shouldUsePrimaryColor ? 'text-primary' : 'text-white dark:text-foreground'}`} strokeWidth={1} />
+                {cartItemCount > 0 && (
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-1 right-1 w-4 h-4 bg-gold text-primary font-body text-[9px] flex items-center justify-center rounded-full border border-background shadow-sm"
+                  >
+                    {cartItemCount}
+                  </motion.span>
+                )}
               </button>
               
               <ThemeToggle />
