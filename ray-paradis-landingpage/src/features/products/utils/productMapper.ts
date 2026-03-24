@@ -13,8 +13,8 @@ export const getLocalized = (str: LocalizedString | undefined, lang: string): st
  * Transforms Backend Product model to Frontend Display model
  */
 export const mapProductToCardProps = (
-    product: Product, 
-    lang: string, 
+    product: Product,
+    lang: string,
     formatPrice: (price: number) => string
 ) => {
     // 1. Get Thumbnail
@@ -30,8 +30,10 @@ export const mapProductToCardProps = (
 
     return {
         id: product.id,
+        variantId: product.variants?.find(v => v.isDefault)?.id || product.variants?.[0]?.id || product.id,
         name: getLocalized(product.name, lang),
         price: formatPrice(rawPrice),
+        rawPrice: rawPrice,
         category: categoryName,
         image: thumbnail?.url || '',
         hoverImage: hoverMedia?.url,

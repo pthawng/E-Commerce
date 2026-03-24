@@ -12,7 +12,8 @@ export const productKeys = {
 
 export function useProducts(params?: ProductParams) {
     return useQuery({
-        queryKey: productKeys.list(params || {}),
+        // Senior fix: stringify params as part of the key to ensure stability even if a new object is passed
+        queryKey: [...productKeys.lists(), JSON.stringify(params || {})],
         queryFn: () => productApi.getAll(params),
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
@@ -20,7 +21,8 @@ export function useProducts(params?: ProductParams) {
 
 export function useProduct(slug: string) {
     return useQuery({
-        queryKey: productKeys.detail(slug),
+        // Senior fix: ensure key is perfectly stable
+        queryKey: [...productKeys.detail(slug || 'none')],
         queryFn: () => productApi.getBySlug(slug),
         enabled: !!slug,
         staleTime: 1000 * 60 * 5, // 5 minutes

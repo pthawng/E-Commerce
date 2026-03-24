@@ -5,10 +5,14 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+import { useCartStore } from "@/features/cart/store/useCartStore";
+
 interface ProductCardProps {
   id: string;
+  variantId?: string;
   name: string;
   price: string;
+  rawPrice?: number;
   category: string;
   image: string;
   slug: string;
@@ -18,8 +22,11 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({
+  id,
+  variantId,
   name,
   price,
+  rawPrice,
   category,
   image,
   slug,
@@ -27,8 +34,26 @@ export const ProductCard = ({
   isNew,
   className,
 }: ProductCardProps) => {
+  const addItem = useCartStore((state) => state.addItem);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const idToUse = variantId || id;
+    if (idToUse) {
+      addItem(idToUse, 1, {
+        productId: id,
+        name: { en: name }, 
+        price: rawPrice || 0,
+        image: image,
+        slug: slug
+      });
+    }
+  };
+
   return (
     <Card className={cn("group flex flex-col h-full overflow-hidden border-none transition-all duration-700 bg-background shadow-luxury-soft hover:shadow-luxury", className)}>
+      {/* ... previous content ... */}
       <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/10">
         {isNew && (
           <Badge className="absolute top-4 left-4 z-20 bg-gold text-primary hover:bg-gold/90 border-none rounded-full px-3 py-1 text-[10px] uppercase tracking-widest pointer-events-none">
@@ -73,7 +98,10 @@ export const ProductCard = ({
             Quick View
           </Link>
           <div className="w-px h-3 bg-primary/10" />
-          <button className="font-body text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center gap-2">
+          <button 
+            onClick={handleAddToCart}
+            className="font-body text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center gap-2"
+          >
             Add to Cart
           </button>
         </div>

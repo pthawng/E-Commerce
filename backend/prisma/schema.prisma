@@ -1,5 +1,5 @@
 generator client {
-  provider       = "prisma-client"
+  provider       = "prisma-client-js"
   output         = "../src/generated/prisma"
   moduleFormat   = "commonjs"
   engineType     = "client"
@@ -353,6 +353,7 @@ model ProductVariant {
   inventoryItems InventoryItem[]
   inventoryLogs  InventoryLog[]
   transfers      InventoryTransfer[]
+  cartItems      CartItem[]
 
   @@index([productId], map: "idx_variants_product_id")
   @@index([sku], map: "idx_variants_sku")
@@ -486,6 +487,7 @@ model CartItem {
   id               String   @id @default(uuid()) @db.Uuid
   cart             Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   cartId           String   @db.Uuid
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
   productVariantId String   @db.Uuid
   quantity         Int      @default(1)
   cachedPrice      Decimal  @db.Decimal(19,2)

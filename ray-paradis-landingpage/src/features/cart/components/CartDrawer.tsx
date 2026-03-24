@@ -17,12 +17,21 @@ import { Link } from 'react-router-dom';
 import { CartConfidence } from './CartConfidence';
 
 export const CartDrawer = () => {
-    const { items, isOpen, setOpen, getTotals } = useCartStore();
+    const { items, isOpen, setOpen, totals, fetchCart, status } = useCartStore();
     const { t } = useTranslation();
     const { formatPrice } = useStore();
-    const { subtotal, shipping, total, isFreeShipping } = getTotals();
+    const { subtotal, shipping, total, isFreeShipping } = totals;
+
+    // Sync latest cart when drawer opens (only on open)
+    React.useEffect(() => {
+        if (isOpen) {
+            fetchCart();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const isEmpty = items.length === 0;
+    const isSyncing = status === 'syncing';
 
     return (
         <Sheet open={isOpen} onOpenChange={setOpen}>
@@ -35,8 +44,13 @@ export const CartDrawer = () => {
                 </SheetHeader>
 
                 {/* Body */}
-                <div className="flex-grow flex flex-col overflow-hidden">
-                    {isEmpty ? (
+                <div className="flex-grow flex flex-col overflow-hidden relative">
+                    {isSyncing && items.length > 0 && (
+                        <div className="absolute inset-0 bg-background/20 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                            <div className="w-1 h-1 bg-gold rounded-full animate-ping" />
+                        </div>
+                    )}
+                    {isEmpty && !isSyncing ? (
                         <div className="flex-grow flex flex-col items-center justify-center p-12 text-center">
                             <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center mb-6">
                                 <ShoppingBag className="text-muted-foreground/40" size={32} strokeWidth={1} />
@@ -45,18 +59,21 @@ export const CartDrawer = () => {
                                 {t.cart.empty}
                             </h3>
                             <Button 
+                                asChild
                                 variant="link" 
-                                className="text-gold uppercase tracking-widest text-[10px] mt-4"
+                                className="text-gold uppercase tracking-widest text-[10px] mt-4 shadow-none hover:no-underline"
                                 onClick={() => setOpen(false)}
                             >
-                                {t.cart.continueShopping}
+                                <Link to="/collections">
+                                    {t.cart.continueShopping}
+                                </Link>
                             </Button>
                         </div>
                     ) : (
                         <ScrollArea className="flex-grow px-6">
                             <div className="py-2">
                                 {items.map((item) => (
-                                    <CartItem key={item.id} item={item} layout="drawer" />
+                                    <CartItem key={item.variantId} item={item} layout="drawer" />
                                 ))}
                             </div>
                         </ScrollArea>

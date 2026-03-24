@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
+import { useCartStore } from '@/features/cart/store/useCartStore';
 
 interface ProductCardProps {
     product: Product;
@@ -10,24 +11,37 @@ interface ProductCardProps {
 
 export const ProductCard = ({ product }: ProductCardProps) => {
     const { language, formatPrice } = useStore();
+    const addItem = useCartStore((state) => state.addItem);
 
     // 1. Get localized name
     const name = product.name[language] || Object.values(product.name)[0];
 
     // 2. Get main image
-    // Prioritize thumbnail, then ordered first image, then placeholder
-    const thumbnail = product.media.find(m => m.isThumbnail) || product.media[0];
-    const imageUrl = thumbnail ? thumbnail.url : '/placeholder.png'; // Todo: Add real placeholder
+    const thumbnail = product.media?.find(m => m.isThumbnail) || product.media?.[0];
+    const imageUrl = thumbnail ? thumbnail.url : '/placeholder.png';
 
     // 3. Get Price
-    // If product has variants, logic can be complex. For now, use basePrice or price of first variant.
-    // In a real app, you might show "From [minPrice]"
     let price = 0;
-    if (!product.hasVariants && product.basePrice) {
-        price = product.basePrice;
+    if (!product.hasVariants && (product as any).basePrice) {
+        price = (product as any).basePrice;
     } else if (product.variants && product.variants.length > 0) {
         price = product.variants[0].price;
     }
+
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const variantId = product.variants?.find(v => v.isDefault)?.id || product.variants?.[0]?.id;
+        if (variantId) {
+            addItem(variantId, 1, {
+                productId: product.id,
+                name: product.name,
+                price: price,
+                image: imageUrl,
+                slug: product.slug
+            });
+        }
+    };
 
     return (
         <Card className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300">
@@ -58,7 +72,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             </CardContent>
 
             <CardFooter className="p-4 pt-0">
-                <Button className="w-full gap-2 group-hover:bg-primary/90">
+                <Button 
+                    onClick={handleAddToCart}
+                    className="w-full gap-2 group-hover:bg-primary/90"
+                >
                     <ShoppingCart size={16} />
                     Add to Cart
                 </Button>

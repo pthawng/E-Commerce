@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type RefObject } from 'react';
+import React, { useState, useEffect, useRef, type RefObject } from 'react';
 import { motion } from 'framer-motion';
 import { Menu, User, ShoppingBag, X } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -15,96 +15,53 @@ import {
 } from '@/components/ui/sheet';
 import { Container } from '@/components/layout/Container';
 
-export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
+export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const lastScrollY = useRef(0);
   const headerRef = useRef<HTMLElement | null>(null);
-  const [isOverLightBg, setIsOverLightBg] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const { user, theme } = useStore();
   const { setOpen, items } = useCartStore();
   
-  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const cartItemCount = (items || []).reduce((sum, item) => sum + item.quantity, 0);
 
   useEffect(() => {
     const tolerance = 10;
+    let throttleTimeout: any;
 
     const handleScroll = () => {
-      const currentY = window.scrollY;
-      setIsScrolled(currentY > 50 || !!forceOpaque);
-
-      const passedFirstSection = currentY > window.innerHeight;
-      const delta = currentY - lastScrollY.current;
-
-      if (passedFirstSection && delta > tolerance) {
-        setIsHidden(true);
-      } else if (delta < -tolerance) {
-        setIsHidden(false);
-      }
-
-      lastScrollY.current = currentY;
-    };
-
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [forceOpaque]);
-
-  useEffect(() => {
-    const getColorAtPoint = (x: number, y: number) => {
-      let el = document.elementFromPoint(x, y) as HTMLElement | null;
-      while (el && el !== document.body) {
-        const bg = window.getComputedStyle(el).backgroundColor;
-        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return bg;
-        el = el.parentElement;
-      }
-      return window.getComputedStyle(document.body).backgroundColor;
-    };
-
-    const rgbToLuminance = (rgb: string) => {
-      const nums = rgb.replace(/rgba?\(|\)|\s/g, '').split(',').map(Number);
-      const r = nums[0] / 255;
-      const g = nums[1] / 255;
-      const b = nums[2] / 255;
-      const a = nums[3] ?? 1;
-      if (a === 0) return 0;
-      const srgb = [r, g, b].map((c) =>
-        c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-      );
-      return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
-    };
-
-    const checkBg = () => {
-      if (!headerRef.current) return;
-      const rect = headerRef.current.getBoundingClientRect();
-      const sampleY = Math.min(window.innerHeight - 1, rect.bottom + 12);
-
-      const xs = [
-        window.innerWidth * 0.1, 
-        window.innerWidth * 0.25, 
-        window.innerWidth * 0.5, 
-        window.innerWidth * 0.75,
-        window.innerWidth * 0.9
-      ];
-      const lums = xs.map((x) => {
-        const color = getColorAtPoint(x, sampleY);
-        return rgbToLuminance(color);
-      });
-      const avgLum = lums.reduce((a, b) => a + b, 0) / lums.length;
+      if (throttleTimeout) return;
       
-      // Being more selective: Only switch to blue if the background is significantly bright
-      setIsOverLightBg(avgLum > 0.7);
+      throttleTimeout = setTimeout(() => {
+        const currentY = window.scrollY;
+        const nextScrolled = currentY > 50 || !!forceOpaque;
+        
+        setIsScrolled(prev => {
+          if (prev !== nextScrolled) return nextScrolled;
+          return prev;
+        });
+
+        const passedFirstSection = currentY > window.innerHeight;
+        const delta = currentY - lastScrollY.current;
+
+        if (passedFirstSection && delta > tolerance) {
+          setIsHidden(prev => prev !== true ? true : prev);
+        } else if (delta < -tolerance) {
+          setIsHidden(prev => prev !== false ? false : prev);
+        }
+
+        lastScrollY.current = currentY;
+        throttleTimeout = null;
+      }, 50); // 50ms throttle for scroll stability
     };
 
-    checkBg();
-    window.addEventListener('scroll', checkBg, { passive: true });
-    window.addEventListener('resize', checkBg);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', checkBg);
-      window.removeEventListener('resize', checkBg);
+      window.removeEventListener('scroll', handleScroll);
+      if (throttleTimeout) clearTimeout(throttleTimeout);
     };
-  }, []);
+  }, [forceOpaque]);
 
   const navItems = [
     { label: 'Shop', href: '/collections' },
@@ -112,10 +69,7 @@ export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
     { label: 'Atelier', href: '/#atelier' },
   ];
   
-  // High contrast color detection:
-  // - Primarily rely on detected background luminance
-  // - Honor forceOpaque as it implies a light/brand background is present
-  const shouldUsePrimaryColor = isOverLightBg || !!forceOpaque;
+  const shouldUsePrimaryColor = !!forceOpaque || (isScrolled && theme === 'light');
 
   return (
     <>
@@ -125,21 +79,17 @@ export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
         animate={{ y: isHidden ? -120 : 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 pointer-events-auto ${
-          isScrolled
-            ? isOverLightBg
-              ? 'bg-background shadow-sm'
-              : 'bg-background/60 backdrop-blur-xl'
+          isScrolled || !!forceOpaque
+            ? 'bg-background shadow-sm border-b border-border/10'
             : 'bg-transparent'
         }`}
       >
-        {/* Hairline border */}
         <div className={`absolute bottom-0 left-0 right-0 h-px transition-opacity duration-500 ${isScrolled ? 'opacity-100' : 'opacity-0'}`}>
           <div className="h-full bg-border/20" />
         </div>
 
         <Container>
           <div className="flex items-center justify-between h-20 sm:h-24 lg:h-28">
-            {/* Left - Menu */}
             <div className="flex items-center gap-6 flex-1">
               <Sheet>
                 <SheetTrigger asChild>
@@ -220,7 +170,6 @@ export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
               </motion.span>
             </a>
 
-            {/* Right - Actions */}
             <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end">
               {user ? (
                 <UserMenu isOpaque={shouldUsePrimaryColor} />
@@ -258,4 +207,6 @@ export const Header = ({ forceOpaque }: { forceOpaque?: boolean }) => {
       <AuthSheet open={isAuthOpen} onOpenChange={setIsAuthOpen} />
     </>
   );
-};
+});
+
+Header.displayName = 'Header';

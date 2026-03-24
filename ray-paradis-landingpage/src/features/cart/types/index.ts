@@ -22,6 +22,7 @@ export interface CartTotals {
     tax: number;
     total: number;
     isFreeShipping: boolean;
+    shippingThreshold: number;
 }
 
 export type CartStatus = 'idle' | 'syncing' | 'success' | 'error';

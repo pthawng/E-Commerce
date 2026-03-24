@@ -13,10 +13,14 @@ import { CartItem } from '../features/cart/components/CartItem';
 import { CartConfidence } from '../features/cart/components/CartConfidence';
 
 export const CartPage = () => {
-    const { items, getTotals, clearCart } = useCartStore();
+    const { items, totals, clearCart, fetchCart } = useCartStore();
     const { t } = useTranslation();
     const { formatPrice } = useStore();
-    const { subtotal, shipping, total, isFreeShipping } = getTotals();
+    const { subtotal, shipping, total, isFreeShipping } = totals;
+
+    React.useEffect(() => {
+        fetchCart();
+    }, [fetchCart]);
 
     const isEmpty = items.length === 0;
 
@@ -73,7 +77,7 @@ export const CartPage = () => {
                                     <div className="border-t border-hairline">
                                         <AnimatePresence mode="popLayout">
                                             {items.map((item) => (
-                                                <CartItem key={item.id} item={item} layout="page" />
+                                                <CartItem key={item.variantId} item={item} layout="page" />
                                             ))}
                                         </AnimatePresence>
                                     </div>

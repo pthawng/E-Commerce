@@ -21,12 +21,17 @@ export class ApiClientError extends Error {
 async function handleAxiosResponse<T>(promise: Promise<any>): Promise<ApiResponse<T>> {
   try {
     const res = await promise;
+    // Improved null checks for response and data
+    if (!res || res.data === undefined || res.data === null) {
+        throw new ApiClientError(500, 'Invalid response structure from server: data is missing or null');
+    }
     return res.data as ApiResponse<T>;
   } catch (err: any) {
+    if (err instanceof ApiClientError) throw err;
+    
     const status = err?.response?.status || 500;
     const data = err?.response?.data;
     if (status === 401) {
-      // auth cleared by axios interceptor already
       throw new ApiClientError(401, 'Unauthorized - Please login again');
     }
     const apiError = (data || {}) as ApiError;

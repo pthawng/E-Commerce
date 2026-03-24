@@ -1,38 +1,80 @@
-import { CartItem } from '../types';
+import { apiGet, apiPost, apiPatch, apiDelete } from '@/services/apiClient';
+import { API_ENDPOINTS } from '@shared';
+
+const SESSION_KEY = 'rp_cart_session';
 
 /**
  * Cart Service
- * Handles synchronization between local store and backend.
+ * Handles data fetching and mutation with the backend.
+ * Pricing authority is moved to the backend.
  */
 export const CartService = {
     /**
-     * Sync local cart to server (Merge strategy)
+     * Get or create a persistent guest session ID
      */
-    syncCart: async (items: CartItem[]): Promise<CartItem[]> => {
-        // Mock API call
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(items), 800);
+    getSessionId: (): string => {
+        let sessionId = localStorage.getItem(SESSION_KEY);
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            localStorage.setItem(SESSION_KEY, sessionId);
+        }
+        return sessionId;
+    },
+
+    /**
+     * Get backend cart totals and items
+     */
+    getCart: async (): Promise<any> => {
+        const sessionId = CartService.getSessionId();
+        const response = await apiGet(API_ENDPOINTS.CART.BASE, {
+            headers: { 'x-client-session-id': sessionId }
         });
-        
-        /* TODO: Real API
-        const response = await apiClient.post('/cart/sync', { items });
         return response.data;
-        */
     },
 
     /**
      * Add single item to server cart
      */
-    addItem: async (item: CartItem): Promise<void> => {
-        // Mock API call
-        return new Promise((resolve) => setTimeout(resolve, 500));
+    addItem: async (variantId: string, quantity: number): Promise<any> => {
+        const sessionId = CartService.getSessionId();
+        const response = await apiPost(API_ENDPOINTS.CART.BASE, { variantId, quantity }, {
+            headers: { 'x-client-session-id': sessionId }
+        });
+        return response.data;
+    },
+
+    /**
+     * Update item quantity
+     */
+    updateItem: async (variantId: string, quantity: number): Promise<any> => {
+        const sessionId = CartService.getSessionId();
+        const response = await apiPatch(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, { quantity }, {
+            headers: { 'x-client-session-id': sessionId }
+        });
+        return response.data;
     },
 
     /**
      * Remove item from server cart
      */
-    removeItem: async (itemId: string): Promise<void> => {
-        // Mock API call
-        return new Promise((resolve) => setTimeout(resolve, 500));
+    removeItem: async (variantId: string): Promise<any> => {
+        const sessionId = CartService.getSessionId();
+        const response = await apiDelete(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, {
+            headers: { 'x-client-session-id': sessionId }
+        });
+        return response.data;
+    },
+
+    /**
+     * Merge guest cart into user cart
+     */
+    mergeCart: async (): Promise<any> => {
+        const sessionId = CartService.getSessionId();
+        const response = await apiPost(`${API_ENDPOINTS.CART.BASE}/merge`, {}, {
+            headers: { 'x-client-session-id': sessionId }
+        });
+        // Clear guest session after successful merge
+        localStorage.removeItem(SESSION_KEY);
+        return response.data;
     }
 };

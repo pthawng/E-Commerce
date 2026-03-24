@@ -16,7 +16,7 @@ async function bootstrap() {
     origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'http://localhost:8080', 'http://localhost:5174'],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization, Accept',
+    allowedHeaders: 'Content-Type, Authorization, Accept, x-client-session-id',
   });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )

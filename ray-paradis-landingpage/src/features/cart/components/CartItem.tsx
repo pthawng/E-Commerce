@@ -52,7 +52,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                         {item.name[language] || item.name['en']}
                     </h3>
                     <button 
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.variantId)}
                         className="text-muted-foreground hover:text-primary transition-colors p-1"
                     >
                         <X size={isPage ? 18 : 14} strokeWidth={1.2} />
@@ -72,7 +72,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                 <div className="mt-auto flex justify-between items-center">
                     <div className="flex items-center border border-hairline overflow-hidden">
                         <button 
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
                             className="p-1.5 hover:bg-secondary/20 transition-colors"
                         >
                             <Minus size={12} strokeWidth={1} />
@@ -81,7 +81,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                             {item.quantity}
                         </span>
                         <button 
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
                             className="p-1.5 hover:bg-secondary/20 transition-colors"
                         >
                             <Plus size={12} strokeWidth={1} />

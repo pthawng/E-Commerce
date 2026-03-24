@@ -38,12 +38,14 @@ export const ProductDetailPage = () => {
     // Fetch Main Product
     const { data: product, isLoading, isError, refetch } = useProduct(slug || "");
 
-    // Fetch Recommendations (Same Category)
+    // Fetch Recommendations (Memoized params to prevent re-render loops)
     const categoryId = product?.categories?.[0]?.category?.id;
-    const { data: recommendationsRes } = useProducts({
+    const recommendationsParams = useMemo(() => ({
         categoryId,
         limit: 4,
-    });
+    }), [categoryId]);
+
+    const { data: recommendationsRes } = useProducts(recommendationsParams);
 
     const recommendations = useMemo(() => {
         return (recommendationsRes?.data || [])
@@ -96,11 +98,17 @@ export const ProductDetailPage = () => {
             const defaultVar = product.variants.find(v => v.isDefault) || product.variants[0];
             const initialSelections: Record<string, string> = {};
             defaultVar.attributes.forEach(va => {
-                initialSelections[va.attributeValue.attribute.code] = va.attributeValue.id;
+                if (va?.attributeValue?.attribute?.code) {
+                    initialSelections[va.attributeValue.attribute.code] = va.attributeValue.id;
+                }
             });
-            setSelectedAttributes(initialSelections);
+            
+            // Only update if we actually found attributes to select
+            if (Object.keys(initialSelections).length > 0) {
+                setSelectedAttributes(initialSelections);
+            }
         }
-    }, [product, selectedAttributes]);
+    }, [product?.id, selectedAttributes]);
 
     // 4. Resolve current variant based on selections
     const selectedVariant = useMemo(() => {
@@ -122,13 +130,10 @@ export const ProductDetailPage = () => {
     const handleAddToCart = () => {
         if (!product || !selectedVariant) return;
 
-        const cartItem = {
-            id: `${product.id}-${selectedVariant.id}`,
+        addItem(selectedVariant.id, 1, {
             productId: product.id,
-            variantId: selectedVariant.id,
             name: product.name,
-            price: selectedVariant.price,
-            quantity: 1,
+            price: Number(selectedVariant.price),
             image: selectedVariant.media?.[0]?.url || product.media?.[0]?.url || '',
             slug: product.slug,
             attributes: selectedVariant.attributes.map(va => ({
@@ -136,9 +141,7 @@ export const ProductDetailPage = () => {
                 value: getLocalized(va.attributeValue.value, language)
             })),
             stock: selectedVariant.stock
-        };
-
-        addItem(cartItem);
+        });
     };
 
     // --- SEO & Metadata ---
@@ -156,7 +159,7 @@ export const ProductDetailPage = () => {
             const desc = getLocalized(product.description, language)?.replace(/<[^>]*>/g, '').slice(0, 160);
             metaDesc.setAttribute('content', desc || `Discover ${name} by Ray Paradis.`);
         }
-    }, [product, language]);
+    }, [product?.id, language]);
 
     if (isLoading) {
         return (
