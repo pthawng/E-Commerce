@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef, type RefObject } from 'react';
 import { motion } from 'framer-motion';
 import { Menu, User, ShoppingBag, X } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useStore } from '@/store/useStore';
+import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { AuthSheet } from '@/components/auth';
 import UserMenu from '@/features/auth/components/UserMenu';
 import { ShimmerText } from '@/components/effects/ShimmerText';
@@ -21,7 +24,9 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
   const lastScrollY = useRef(0);
   const headerRef = useRef<HTMLElement | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const { user, theme } = useStore();
+  const { theme, language } = useStore();
+  const user = useAuthStore((s) => s.user);
+  const { t } = useTranslation();
   const { setOpen, items } = useCartStore();
   
   const cartItemCount = (items || []).reduce((sum, item) => sum + item.quantity, 0);
@@ -64,9 +69,9 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
   }, [forceOpaque]);
 
   const navItems = [
-    { label: 'Shop', href: '/collections' },
-    { label: 'Story', href: '/#heritage' },
-    { label: 'Atelier', href: '/#atelier' },
+    { label: t.nav.collections, href: '/collections' },
+    { label: t.nav.heritage, href: '/#heritage' },
+    { label: t.nav.craftsmanship, href: '/#atelier' },
   ];
   
   const shouldUsePrimaryColor = !!forceOpaque || (isScrolled && theme === 'light');
@@ -89,8 +94,8 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
         </div>
 
         <Container>
-          <div className="flex items-center justify-between h-20 sm:h-24 lg:h-28">
-            <div className="flex items-center gap-6 flex-1">
+          <div className="relative flex items-center justify-between h-20 sm:h-24 lg:h-28">
+            <div className="flex items-center gap-8 flex-1">
               <Sheet>
                 <SheetTrigger asChild>
                   <motion.button
@@ -130,7 +135,11 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                       ))}
                     </nav>
 
-                    <div className="mt-auto pt-16 border-t border-border/10">
+                    <div className="mt-auto pt-16 border-t border-border/10 flex flex-col gap-6">
+                      <div className="flex items-center justify-between">
+                        <ThemeToggle />
+                        <LanguageToggle isOpaque={true} />
+                      </div>
                       <p className="font-body text-xs text-muted-foreground/60 tracking-[0.2em] uppercase">
                         Mastery in motion.
                       </p>
@@ -139,7 +148,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                 </SheetContent>
               </Sheet>
 
-              <nav className="hidden lg:flex items-center gap-10">
+              <nav className="hidden lg:flex items-center gap-8">
                 {navItems.slice(0, 2).map((item) => (
                   <a
                     key={item.label}
@@ -198,6 +207,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                 )}
               </button>
               
+              <LanguageToggle isOpaque={shouldUsePrimaryColor} />
               <ThemeToggle />
             </div>
           </div>

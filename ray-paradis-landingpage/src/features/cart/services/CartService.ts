@@ -24,10 +24,11 @@ export const CartService = {
     /**
      * Get backend cart totals and items
      */
-    getCart: async (): Promise<any> => {
+    getCart: async (signal?: AbortSignal): Promise<any> => {
         const sessionId = CartService.getSessionId();
         const response = await apiGet(API_ENDPOINTS.CART.BASE, {
-            headers: { 'x-client-session-id': sessionId }
+            headers: { 'x-client-session-id': sessionId },
+            signal
         });
         return response.data;
     },
@@ -35,10 +36,11 @@ export const CartService = {
     /**
      * Add single item to server cart
      */
-    addItem: async (variantId: string, quantity: number): Promise<any> => {
+    addItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal): Promise<any> => {
         const sessionId = CartService.getSessionId();
-        const response = await apiPost(API_ENDPOINTS.CART.BASE, { variantId, quantity }, {
-            headers: { 'x-client-session-id': sessionId }
+        const response = await apiPost(API_ENDPOINTS.CART.BASE, { variantId, quantity, version }, {
+            headers: { 'x-client-session-id': sessionId },
+            signal
         });
         return response.data;
     },
@@ -46,10 +48,11 @@ export const CartService = {
     /**
      * Update item quantity
      */
-    updateItem: async (variantId: string, quantity: number): Promise<any> => {
+    updateItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal): Promise<any> => {
         const sessionId = CartService.getSessionId();
-        const response = await apiPatch(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, { quantity }, {
-            headers: { 'x-client-session-id': sessionId }
+        const response = await apiPatch(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, { quantity, version }, {
+            headers: { 'x-client-session-id': sessionId },
+            signal
         });
         return response.data;
     },
@@ -57,10 +60,12 @@ export const CartService = {
     /**
      * Remove item from server cart
      */
-    removeItem: async (variantId: string): Promise<any> => {
+    removeItem: async (variantId: string, version?: number, signal?: AbortSignal): Promise<any> => {
         const sessionId = CartService.getSessionId();
         const response = await apiDelete(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, {
-            headers: { 'x-client-session-id': sessionId }
+            headers: { 'x-client-session-id': sessionId },
+            params: { version },
+            signal
         });
         return response.data;
     },

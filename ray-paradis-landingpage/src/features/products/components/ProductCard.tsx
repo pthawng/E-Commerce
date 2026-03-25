@@ -20,13 +20,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     const thumbnail = product.media?.find(m => m.isThumbnail) || product.media?.[0];
     const imageUrl = thumbnail ? thumbnail.url : '/placeholder.png';
 
-    // 3. Get Price
-    let price = 0;
-    if (!product.hasVariants && (product as any).basePrice) {
-        price = (product as any).basePrice;
-    } else if (product.variants && product.variants.length > 0) {
-        price = product.variants[0].price;
-    }
+    // 3. Get Price (Prefer displayPriceMin, fallback to first variant)
+    const price = product.displayPriceMin || product.variants?.[0]?.price || 0;
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();

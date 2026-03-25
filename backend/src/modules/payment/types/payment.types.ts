@@ -3,7 +3,7 @@
  * Defines supported payment methods
  */
 export enum PaymentMethodEnum {
-    COD = 'COD',
+    VIETQR = 'VIETQR',
     VNPAY = 'VNPAY',
     PAYPAL = 'PAYPAL',
 }

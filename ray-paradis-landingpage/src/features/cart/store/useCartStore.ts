@@ -11,6 +11,7 @@ interface CartState {
     isOpen: boolean;
     error: string | null;
     recentlyAddedId: string | null;
+    version: number;
     
     // Actions
     fetchCart: () => Promise<void>;
@@ -22,11 +23,12 @@ interface CartState {
     mergeOnLogin: () => Promise<void>;
     
     // Internal Sync
-    _syncWithBackend: (action: () => Promise<any>) => Promise<void>;
+    _syncWithBackend: (action: (version: number, signal: AbortSignal) => Promise<any>) => Promise<void>;
 }
 
-// Request Queue implementation to prevent race conditions
-let pendingRequest: Promise<any> | null = null;
+// Module-level state for cancellation and debouncing
+let activeAbortController: AbortController | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const DEFAULT_TOTALS: CartTotals = {
     subtotal: 0,
@@ -34,7 +36,7 @@ const DEFAULT_TOTALS: CartTotals = {
     tax: 0,
     total: 0,
     isFreeShipping: false,
-    shippingThreshold: 10000,
+    shippingThreshold: 2000000,
 };
 
 export const useCartStore = create<CartState>()(
@@ -46,6 +48,7 @@ export const useCartStore = create<CartState>()(
             isOpen: false,
             error: null,
             recentlyAddedId: null,
+            version: 1,
 
             fetchCart: async () => {
                 set({ status: 'syncing' });
@@ -54,6 +57,7 @@ export const useCartStore = create<CartState>()(
                     set({ 
                         items: data.items, 
                         totals: data.totals,
+                        version: data.version || 1,
                         status: 'idle' 
                     });
                 } catch (err: any) {
@@ -62,29 +66,52 @@ export const useCartStore = create<CartState>()(
             },
 
             _syncWithBackend: async (action) => {
-                if (pendingRequest) {
-                    await pendingRequest;
+                // 1. Cancel previous in-flight request
+                if (activeAbortController) {
+                    activeAbortController.abort();
                 }
                 
-                pendingRequest = action();
+                // 2. Clear previous debouncing
+                if (debounceTimer) {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = null;
+                }
+
+                activeAbortController = new AbortController();
+                const signal = activeAbortController.signal;
+                
                 set({ status: 'syncing' });
                 
                 try {
-                    const data = await pendingRequest;
-                    if (!data) throw new Error('No data received from server');
+                    const data = await action(get().version, signal);
+                    if (!data) return; // Likely aborted or empty response
                     
                     set({ 
                         items: data.items || [], 
                         totals: data.totals || DEFAULT_TOTALS,
-                        status: 'success' 
+                        version: data.version || get().version,
+                        status: 'success',
+                        error: null
                     });
                     setTimeout(() => set({ status: 'idle' }), 1000);
                 } catch (err: any) {
+                    if (err.name === 'AbortError') return;
+
+                    // 409 Conflict Handling (Versioning)
+                    if (err.response?.status === 409 || err.code === 'CART_VERSION_MISMATCH') {
+                        toast.info("Updating cart to latest state...", {
+                            description: "Your cart was modified in another tab."
+                        });
+                        await get().fetchCart();
+                        return;
+                    }
+
                     set({ status: 'error', error: err.message });
                     console.error("Cart Sync Failed:", err);
-                    // Senior Note: Removing recursive fetchCart call in error handler to prevent loops
                 } finally {
-                    pendingRequest = null;
+                    if (activeAbortController?.signal === signal) {
+                        activeAbortController = null;
+                    }
                 }
             },
 
@@ -133,6 +160,7 @@ export const useCartStore = create<CartState>()(
                     newItems = [...existingItems, newItem];
                 }
 
+                // Optimistic Update
                 set({
                     items: newItems,
                     totals: (get() as any)._recalculateTotals(newItems),
@@ -140,7 +168,7 @@ export const useCartStore = create<CartState>()(
                     recentlyAddedId: variantId
                 });
 
-                await get()._syncWithBackend(() => CartService.addItem(variantId, quantity));
+                await get()._syncWithBackend((v, signal) => CartService.addItem(variantId, quantity, v, signal));
                 setTimeout(() => set({ recentlyAddedId: null }), 3000);
             },
 
@@ -150,7 +178,7 @@ export const useCartStore = create<CartState>()(
                     items: newItems,
                     totals: (get() as any)._recalculateTotals(newItems)
                 });
-                await get()._syncWithBackend(() => CartService.removeItem(variantId));
+                await get()._syncWithBackend((v, signal) => CartService.removeItem(variantId, v, signal));
             },
 
             updateQuantity: async (variantId, quantity) => {
@@ -159,13 +187,19 @@ export const useCartStore = create<CartState>()(
                     return;
                 }
 
+                // 1. Optimistic UI update
                 const newItems = get().items.map(i => i.variantId === variantId ? { ...i, quantity } : i);
                 set({
                     items: newItems,
                     totals: (get() as any)._recalculateTotals(newItems)
                 });
 
-                await get()._syncWithBackend(() => CartService.updateItem(variantId, quantity));
+                // 2. Debounced API Sync (Last-Write-Wins)
+                if (debounceTimer) clearTimeout(debounceTimer);
+                
+                debounceTimer = setTimeout(() => {
+                    get()._syncWithBackend((v, signal) => CartService.updateItem(variantId, quantity, v, signal));
+                }, 300);
             },
 
             mergeOnLogin: async () => {
@@ -180,7 +214,7 @@ export const useCartStore = create<CartState>()(
         {
             name: 'ray-paradis-cart',
             storage: createJSONStorage(() => localStorage),
-            partialize: (state) => ({ items: state.items, totals: state.totals }),
+            partialize: (state) => ({ items: state.items, totals: state.totals, version: state.version }),
         }
     )
 );

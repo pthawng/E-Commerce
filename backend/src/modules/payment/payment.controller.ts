@@ -12,7 +12,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Public } from '@common/decorators/public.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { ConfirmCODPaymentDto, RefundPaymentDto } from './dto/refund.dto';
+import { ConfirmVietQRPaymentDto, RefundPaymentDto } from './dto/refund.dto';
 import { PaymentService } from './payment.service';
 import { PaymentMethodEnum } from './types/payment.types';
 import { OrderPaymentService } from '@modules/order/services/order-payment.service';
@@ -221,22 +221,22 @@ export class PaymentController {
     }
 
     /**
-     * Confirm COD payment (staff only)
+     * Confirm VIETQR payment (staff only)
      */
-    @Post('cod/confirm')
-    @ApiOperation({ summary: 'Confirm COD payment (staff only)' })
+    @Post('vietqr/confirm')
+    @ApiOperation({ summary: 'Confirm VIETQR payment (staff only)' })
     @ApiResponse({
         status: 200,
-        description: 'COD payment confirmed',
+        description: 'VIETQR payment confirmed',
     })
-    async confirmCODPayment(
-        @Body() dto: ConfirmCODPaymentDto,
+    async confirmVietQRPayment(
+        @Body() dto: ConfirmVietQRPaymentDto,
         @Req() req: Request,
     ) {
         // In production, get user ID from JWT token
         const confirmedBy = (req as any).user?.id || 'system';
 
-        await this.paymentService.confirmCODPayment(
+        await this.paymentService.confirmVietQRPayment(
             dto.orderId,
             dto.amount,
             confirmedBy,
@@ -244,7 +244,7 @@ export class PaymentController {
         );
 
         return {
-            message: 'COD payment confirmed successfully',
+            message: 'VietQR payment confirmed successfully',
         };
     }
 

@@ -1,20 +1,16 @@
 import React from 'react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
-import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Box } from 'lucide-react';
 
 export const UserMenu: React.FC<{ isOpaque?: boolean }> = ({ isOpaque = false }) => {
   const authUser = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
-  const logoutPublic = useStore((s) => s.logout);
   const navigate = useNavigate();
 
   const handleLogout = () => {
     clearAuth();
-    logoutPublic?.();
-    // optional: navigate to home
     navigate('/');
   };
 
@@ -28,8 +24,8 @@ export const UserMenu: React.FC<{ isOpaque?: boolean }> = ({ isOpaque = false })
 
   const initials = authUser
     ? (authUser.fullName
-        ? authUser.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-        : authUser.email.slice(0, 2).toUpperCase())
+      ? authUser.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+      : authUser.email.slice(0, 2).toUpperCase())
     : 'U';
 
   return (
@@ -40,11 +36,10 @@ export const UserMenu: React.FC<{ isOpaque?: boolean }> = ({ isOpaque = false })
           aria-label="Open user menu"
         >
           <div
-            className={`w-8 h-8 rounded-full border flex items-center justify-center bg-[rgba(255,255,255,0.02)] ${
-              isOpaque
+            className={`w-8 h-8 rounded-full border flex items-center justify-center bg-[rgba(255,255,255,0.02)] ${isOpaque
                 ? 'border-primary text-primary'
                 : 'border-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.92)]'
-            }`}
+              }`}
           >
             <span className="font-display text-xs">
               {initials}
@@ -83,7 +78,7 @@ export const UserMenu: React.FC<{ isOpaque?: boolean }> = ({ isOpaque = false })
             <User className="h-4 w-4 stroke-[1.2]" />
             <span className="tracking-wide">Account Settings</span>
           </DropdownMenuItem>
-          
+
           <DropdownMenuItem
             onClick={handleOrders}
             className="flex items-center gap-3 px-3 py-2.5 text-sm font-body cursor-pointer transition-colors focus:bg-primary/5 focus:text-primary rounded-none"

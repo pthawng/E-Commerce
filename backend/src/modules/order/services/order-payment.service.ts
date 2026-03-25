@@ -56,7 +56,7 @@ export class OrderPaymentService {
      * 3. Create order (pending_payment or confirmed)
      * 4. Create payment transaction
      * 5. For online payment: generate payment URL
-     * 6. For COD: auto-confirm order
+     * 6. For VIETQR: user should scan QR and wait for confirmation
      * 
      * @throws BadRequestException - Empty cart, invalid data
      * @throws ConflictException - Insufficient stock
@@ -102,11 +102,10 @@ export class OrderPaymentService {
         );
 
         // Step 4: Execute order creation in transaction
-        const isCOD = dto.paymentMethod === 'COD';
-        const orderStatus = isCOD ? 'confirmed' : 'pending_payment';
-        const paymentDeadline = isCOD
-            ? null
-            : new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+        const isVietQR = dto.paymentMethod === 'VIETQR';
+        // Note: For VietQR (manual), we keep it as pending_payment until staff confirms
+        const orderStatus = 'pending_payment'; 
+        const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
 
         try {
             const result = await this.prisma.$transaction(async (tx) => {
@@ -122,28 +121,20 @@ export class OrderPaymentService {
                     paymentDeadline,
                 });
 
-                // 4b. Reserve inventory OR deduct immediately
-                if (!isCOD) {
-                    await this.inventoryService.reserve(
-                        order.id,
-                        allocations,
-                        paymentDeadline!,
-                        tx,
-                    );
-                } else {
-                    await this.inventoryService.directDeduct(
-                        order.id,
-                        allocations,
-                        tx,
-                    );
-                }
+                // 4b. Reserve inventory (always reserve for VietQR/Online)
+                await this.inventoryService.reserve(
+                    order.id,
+                    allocations,
+                    paymentDeadline,
+                    tx,
+                );
 
                 // 4c. Create payment transaction
                 const payment = await this.createPaymentTransaction(tx, {
                     orderId: order.id,
                     amount: totalAmount,
                     provider: dto.paymentMethod,
-                    status: isCOD ? 'success' : 'pending',
+                    status: 'pending',
                 });
 
                 // 4d. Clear cart
@@ -156,7 +147,7 @@ export class OrderPaymentService {
 
             // Step 5: Generate payment URL (outside transaction)
             let paymentUrl: string | null = null;
-            if (!isCOD) {
+            if (!isVietQR) {
                 try {
                     paymentUrl = await this.paymentService.generatePaymentUrl(
                         result.order.id,
@@ -182,7 +173,7 @@ export class OrderPaymentService {
                 result.order,
                 result.payment,
                 paymentUrl,
-                isCOD,
+                isVietQR,
             );
         } catch (error) {
             this.logger.error('Failed to create order with payment', error);
@@ -525,7 +516,7 @@ export class OrderPaymentService {
         order: any,
         payment: any,
         paymentUrl: string | null,
-        isCOD: boolean,
+        isVietQR: boolean,
     ): OrderPaymentResponseDto {
         const orderSummary: OrderSummaryDto = {
             id: order.id,
@@ -546,12 +537,12 @@ export class OrderPaymentService {
             status: payment.status,
         };
 
-        const flowStatus: PaymentFlowStatus = isCOD
-            ? PaymentFlowStatus.CONFIRMED
+        const flowStatus: PaymentFlowStatus = isVietQR
+            ? PaymentFlowStatus.PENDING_PAYMENT // For VietQR, it's pending until confirmed
             : PaymentFlowStatus.PENDING_PAYMENT;
 
-        const message = isCOD
-            ? 'Order confirmed successfully. Payment on delivery.'
+        const message = isVietQR
+            ? 'Order created successfully. Please scan VietQR to complete payment.'
             : 'Order created successfully. Please complete payment within 15 minutes.';
 
         return {

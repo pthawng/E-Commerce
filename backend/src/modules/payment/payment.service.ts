@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CODProvider } from './providers/cod/cod.provider';
+import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
 import { VNPayProvider } from './providers/vnpay/vnpay.provider';
 import { IdempotencyService } from './services/idempotency.service';
@@ -33,14 +33,14 @@ export class PaymentService {
         private readonly prisma: PrismaService,
         private readonly vnpayProvider: VNPayProvider,
         private readonly paypalProvider: PayPalProvider,
-        private readonly codProvider: CODProvider,
+        private readonly vietqrProvider: VietQRProvider,
         private readonly idempotencyService: IdempotencyService,
     ) {
         // Register payment providers
         this.providers = new Map<PaymentMethodEnum, IPaymentProvider>([
             [PaymentMethodEnum.VNPAY, this.vnpayProvider],
             [PaymentMethodEnum.PAYPAL, this.paypalProvider],
-            [PaymentMethodEnum.COD, this.codProvider],
+            [PaymentMethodEnum.VIETQR, this.vietqrProvider],
         ]);
     }
 
@@ -424,9 +424,9 @@ export class PaymentService {
     }
 
     /**
-     * Confirm COD payment (manual confirmation by staff)
+     * Confirm VIETQR payment (manual confirmation by staff)
      */
-    async confirmCODPayment(
+    async confirmVietQRPayment(
         orderId: string,
         amount: number,
         confirmedBy: string,
@@ -442,18 +442,18 @@ export class PaymentService {
                 throw new NotFoundException(`Order ${orderId} not found`);
             }
 
-            // Find pending COD transaction
-            const codTransaction = order.transactions.find(
-                (t) => t.provider === PaymentMethodEnum.COD && t.status === TransactionStatusEnum.pending,
+            // Find pending VIETQR transaction
+            const vietqrTransaction = order.transactions.find(
+                (t) => t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
             );
 
-            if (!codTransaction) {
-                throw new BadRequestException('No pending COD transaction found');
+            if (!vietqrTransaction) {
+                throw new BadRequestException('No pending VIETQR transaction found');
             }
 
             // Update transaction
             await tx.paymentTransaction.update({
-                where: { id: codTransaction.id },
+                where: { id: vietqrTransaction.id },
                 data: {
                     status: TransactionStatusEnum.success,
                     gatewayResponse: {
@@ -478,9 +478,9 @@ export class PaymentService {
             await tx.orderTimeline.create({
                 data: {
                     orderId,
-                    action: 'COD_PAYMENT_CONFIRMED',
+                    action: 'VIETQR_PAYMENT_CONFIRMED',
                     toStatus: 'confirmed',
-                    description: `COD payment confirmed by staff`,
+                    description: `VietQR payment confirmed by staff`,
                     actorId: confirmedBy,
                     actorType: 'staff',
                     metadata: { amount, note },
@@ -488,7 +488,7 @@ export class PaymentService {
             });
         });
 
-        this.logger.log(`COD payment confirmed for order ${orderId}`);
+        this.logger.log(`VietQR payment confirmed for order ${orderId}`);
     }
 
     /**
@@ -598,10 +598,10 @@ export class PaymentService {
      * @param orderId - Order ID
      * @param orderCode - Order code for display
      * @param amount - Payment amount
-     * @param provider - Payment provider (COD/VNPAY/PAYPAL)
+     * @param provider - Payment provider (VIETQR/VNPAY/PAYPAL)
      * @param returnUrl - Optional return URL
      * @param cancelUrl - Optional cancel URL
-     * @returns Payment URL or null for COD
+     * @returns Payment URL or null for VIETQR
      */
     async generatePaymentUrl(
         orderId: string,
@@ -615,8 +615,8 @@ export class PaymentService {
             `Generating payment URL: provider=${provider}, orderId=${orderId}`,
         );
 
-        // COD doesn't need payment URL
-        if (provider === 'COD') {
+        // VIETQR doesn't need payment URL (static QR or manual)
+        if (provider === 'VIETQR' || provider === 'COD') {
             return null;
         }
 
@@ -633,6 +633,8 @@ export class PaymentService {
                 paymentMethod = PaymentMethodEnum.VNPAY;
             } else if (provider === 'PAYPAL') {
                 paymentMethod = PaymentMethodEnum.PAYPAL;
+            } else if (provider === 'VIETQR' || provider === 'COD') {
+                 paymentMethod = PaymentMethodEnum.VIETQR;
             } else {
                 throw new BadRequestException(`Unsupported payment provider: ${provider}`);
             }

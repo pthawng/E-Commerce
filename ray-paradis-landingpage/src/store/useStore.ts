@@ -5,11 +5,7 @@ type Theme = 'light' | 'dark';
 type Language = 'en' | 'vi';
 type Currency = 'USD' | 'VND';
 
-interface User {
-  name: string;
-  email: string;
-  initials: string;
-}
+// User info moved to useAuthStore for Single Source of Truth
 
 interface CurrencyConfig {
   code: Currency;
@@ -37,24 +33,12 @@ interface AppState {
   theme: Theme;
   language: Language;
   currency: Currency;
-  user: User | null;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   setLanguage: (language: Language) => void;
   setCurrency: (currency: Currency) => void;
   formatPrice: (priceInVND: number) => string;
-  login: (name: string, email: string) => void;
-  logout: () => void;
 }
-
-const getInitials = (name: string): string => {
-  return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-};
 
 export const useStore = create<AppState>()(
   persist(
@@ -62,7 +46,6 @@ export const useStore = create<AppState>()(
       theme: 'light',
       language: 'en',
       currency: 'USD',
-      user: null,
       setTheme: (theme) => {
         document.documentElement.classList.remove('light', 'dark');
         document.documentElement.classList.add(theme);
@@ -93,14 +76,6 @@ export const useStore = create<AppState>()(
           maximumFractionDigits: currency === 'VND' ? 0 : 2,
         }).format(convertedPrice);
       },
-      login: (name, email) => set({ 
-        user: { 
-          name, 
-          email, 
-          initials: getInitials(name) 
-        } 
-      }),
-      logout: () => set({ user: null }),
     }),
     {
       name: 'ray-paradis-store',

@@ -267,7 +267,9 @@ var API_ENDPOINTS = {
     BASE: "/api/orders",
     BY_ID: (id) => `/api/orders/${id}`,
     BY_CODE: (code) => `/api/orders/code/${code}`,
-    MY_ORDERS: "/api/orders/my"
+    MY_ORDERS: "/api/orders/my",
+    PREPARE_CHECKOUT: "/api/orders/checkout-prepare",
+    CREATE_WITH_PAYMENT: "/api/orders/create-with-payment"
   },
   // Cart
   CART: {

@@ -1,5 +1,6 @@
 import {
     BadRequestException,
+    ConflictException,
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
@@ -88,14 +89,22 @@ export class CartService {
             include: {
                 product: { select: { name: true, slug: true, isActive: true } },
                 inventoryItems: { select: { quantity: true, reservedQuantity: true } },
-                media: { where: { isThumbnail: true }, take: 1 }
+                media: { where: { isThumbnail: true }, take: 1 },
+                attributes: {
+                    include: {
+                        attributeValue: {
+                            include: {
+                                attribute: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
         // 3. Map items and calculate totals
         let subtotal = 0;
         const mappedItems: any[] = [];
-        
         for (const item of items) {
             const v = variants.find(v => v.id === item.productVariantId);
             if (!v) continue;
@@ -111,14 +120,17 @@ export class CartService {
                 id: item.id,
                 variantId: v.id,
                 productId: v.productId,
-                name: this.getLocalizedName(v.product.name),
+                name: v.product.name,
                 slug: v.product.slug,
                 price: currentPrice,
                 quantity: item.quantity,
                 image: v.thumbnailUrl || v.media?.[0]?.url || '',
                 stock: totalStock,
                 isAvailable: v.isActive && v.product.isActive && totalStock > 0,
-                attributes: []
+                attributes: v.attributes?.map(va => ({
+                    name: this.getLocalizedName(va.attributeValue.attribute.name),
+                    value: this.getLocalizedName(va.attributeValue.value)
+                })) || []
             });
         }
 
@@ -132,6 +144,7 @@ export class CartService {
 
         return {
             id: cart.id,
+            version: (cart as any).version,
             items: mappedItems,
             totals: {
                 subtotal,
@@ -142,11 +155,12 @@ export class CartService {
                 shippingThreshold: SHIPPING_THRESHOLD,
             }
         };
-    }
+}
 
     private emptyCartResponse() {
         return {
             items: [],
+            version: 1,
             totals: {
                 subtotal: 0,
                 shipping: 0,
@@ -193,6 +207,14 @@ export class CartService {
             });
         }
 
+        if (dto.version !== undefined && (cart as any).version !== dto.version) {
+            throw new ConflictException({
+                message: 'Cart has been updated in another session',
+                code: 'CART_VERSION_MISMATCH',
+                currentVersion: (cart as any).version
+            });
+        }
+
         // 3. Upsert Cart Item
         const existingItem = await this.prisma.cartItem.findUnique({
             where: {
@@ -203,25 +225,33 @@ export class CartService {
             }
         });
 
-        if (existingItem) {
-            const requestedQty = existingItem.quantity + dto.quantity;
-            const finalQty = Math.min(requestedQty, availableStock, 99);
+        await this.prisma.$transaction(async (tx) => {
+            if (existingItem) {
+                const requestedQty = existingItem.quantity + dto.quantity;
+                const finalQty = Math.min(requestedQty, availableStock, 99);
 
-            await this.prisma.cartItem.update({
-                where: { id: existingItem.id },
-                data: { quantity: finalQty, cachedPrice: variant.price }
+                await tx.cartItem.update({
+                    where: { id: existingItem.id },
+                    data: { quantity: finalQty, cachedPrice: variant.price }
+                });
+            } else {
+                const finalQty = Math.min(dto.quantity, availableStock, 99);
+                await tx.cartItem.create({
+                    data: {
+                        cartId: cart.id,
+                        productVariantId: dto.variantId,
+                        quantity: finalQty,
+                        cachedPrice: variant.price
+                    }
+                });
+            }
+
+            // Increment version
+            await tx.cart.update({
+                where: { id: cart.id },
+                data: { version: { increment: 1 } } as any
             });
-        } else {
-            const finalQty = Math.min(dto.quantity, availableStock, 99);
-            await this.prisma.cartItem.create({
-                data: {
-                    cartId: cart.id,
-                    productVariantId: dto.variantId,
-                    quantity: finalQty,
-                    cachedPrice: variant.price
-                }
-            });
-        }
+        });
 
         return this.getCart(userId, sessionId);
     }
@@ -230,10 +260,18 @@ export class CartService {
     // 3. UPDATE ITEM
     // ============================================
     async updateItem(userId: string | undefined, sessionId: string | undefined, variantId: string, dto: UpdateCartItemDto) {
-        if (dto.quantity <= 0) return this.removeItem(userId, sessionId, variantId);
+        if (dto.quantity <= 0) return this.removeItem(userId, sessionId, variantId, dto.version);
 
         const cart = await this.findCartRaw(userId, sessionId);
         if (!cart) throw new NotFoundException('Cart not found');
+
+        if (dto.version !== undefined && (cart as any).version !== dto.version) {
+            throw new ConflictException({
+                message: 'Cart has been updated in another session',
+                code: 'CART_VERSION_MISMATCH',
+                currentVersion: (cart as any).version
+            });
+        }
 
         const variant = await this.prisma.productVariant.findUnique({
             where: { id: variantId },
@@ -244,14 +282,22 @@ export class CartService {
         const availableStock = variant.inventoryItems.reduce((acc, inv) => acc + inv.quantity - inv.reservedQuantity, 0);
         const finalQty = Math.min(dto.quantity, availableStock, 99);
 
-        await this.prisma.cartItem.update({
-            where: {
-                cartId_productVariantId: {
-                    cartId: cart.id,
-                    productVariantId: variantId
-                }
-            },
-            data: { quantity: finalQty }
+        await this.prisma.$transaction(async (tx) => {
+            await tx.cartItem.update({
+                where: {
+                    cartId_productVariantId: {
+                        cartId: cart.id,
+                        productVariantId: variantId
+                    }
+                },
+                data: { quantity: finalQty }
+            });
+
+            // Increment version
+            await tx.cart.update({
+                where: { id: cart.id },
+                data: { version: { increment: 1 } } as any
+            });
         });
 
         return this.getCart(userId, sessionId);
@@ -260,15 +306,31 @@ export class CartService {
     // ============================================
     // 4. REMOVE ITEM
     // ============================================
-    async removeItem(userId: string | undefined, sessionId: string | undefined, variantId: string) {
+    async removeItem(userId: string | undefined, sessionId: string | undefined, variantId: string, version?: number) {
         const cart = await this.findCartRaw(userId, sessionId);
         if (!cart) return this.emptyCartResponse();
 
-        await this.prisma.cartItem.deleteMany({
-            where: {
-                cartId: cart.id,
-                productVariantId: variantId
-            }
+        if (version !== undefined && (cart as any).version !== version) {
+            throw new ConflictException({
+                message: 'Cart has been updated in another session',
+                code: 'CART_VERSION_MISMATCH',
+                currentVersion: (cart as any).version
+            });
+        }
+
+        await this.prisma.$transaction(async (tx) => {
+            await tx.cartItem.deleteMany({
+                where: {
+                    cartId: cart.id,
+                    productVariantId: variantId
+                }
+            });
+
+            // Increment version
+            await tx.cart.update({
+                where: { id: cart.id },
+                data: { version: { increment: 1 } } as any
+            });
         });
 
         return this.getCart(userId, sessionId);
@@ -286,12 +348,12 @@ export class CartService {
             userCart = await this.prisma.cart.create({ data: { userId } });
         }
 
-        const guestItems = await this.prisma.cartItem.findMany({ 
+        const guestItems = await this.prisma.cartItem.findMany({
             where: { cartId: guestCart.id },
-            include: { 
-                productVariant: { 
-                    include: { inventoryItems: true } 
-                } 
+            include: {
+                productVariant: {
+                    include: { inventoryItems: true }
+                }
             } as any
         }) as any[];
 

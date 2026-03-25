@@ -15,7 +15,8 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "text-primary/70 hover:bg-primary/5 hover:text-primary transition-colors",
         link: "text-primary underline-offset-4 hover:underline",
-        luxury: "relative overflow-hidden border border-primary/30 bg-transparent text-primary before:absolute before:inset-0 before:-translate-x-full before:bg-primary before:transition-transform before:duration-700 hover:text-primary-foreground hover:border-primary hover:before:translate-x-0 [&>*]:relative [&>*]:z-10",
+        luxury: "relative isolate overflow-hidden border border-primary/30 bg-transparent text-primary before:absolute before:inset-0 before:-translate-x-full before:bg-primary before:transition-transform before:duration-700 before:z-[-1] hover:text-primary-foreground hover:border-primary hover:before:translate-x-0",
+        "luxury-light": "relative isolate overflow-hidden border border-white/40 bg-transparent text-white before:absolute before:inset-0 before:-translate-x-full before:bg-white before:transition-transform before:duration-700 before:z-[-1] hover:text-primary hover:border-white hover:before:translate-x-0",
         "ghost-minimal": "text-muted-foreground hover:text-foreground",
       },
       size: {

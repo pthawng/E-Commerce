@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards, Query, Headers } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { CurrentSession } from 'src/common/decorators/current-session.decorator';
 import { OptionalJwtAuthGuard } from 'src/common/guards/optional-jwt.guard';
@@ -27,9 +27,11 @@ export class OrderController {
     @ApiOperation({ summary: 'Tạo đơn hàng từ giỏ hàng (Checkout)' })
     createOrder(
         @Body() dto: CreateOrderDto,
+        @Headers('x-idempotency-key') idempotencyKey: string,
         @Req() req: { user?: RequestUserPayload },
         @CurrentSession() sessionId?: string,
     ) {
+        dto.idempotencyKey = dto.idempotencyKey || idempotencyKey;
         return this.orderService.createOrder(req.user?.userId, sessionId, dto);
     }
 
@@ -83,9 +85,11 @@ export class OrderController {
     })
     async createOrderWithPayment(
         @Body() dto: CreateOrderWithPaymentDto,
+        @Headers('x-idempotency-key') idempotencyKey: string,
         @Req() req: { user?: RequestUserPayload },
         @CurrentSession() sessionId?: string,
     ): Promise<OrderPaymentResponseDto> {
+        (dto as any).idempotencyKey = (dto as any).idempotencyKey || idempotencyKey;
         return this.orderPaymentService.createOrderWithPayment(
             dto,
             req.user?.userId,

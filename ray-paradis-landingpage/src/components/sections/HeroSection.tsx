@@ -31,7 +31,7 @@ export const HeroSection = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <Section padding="none" className="relative min-h-screen flex items-end justify-center overflow-hidden">
+    <Section padding="none" className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
         <motion.img
@@ -55,7 +55,7 @@ export const HeroSection = () => {
       />
 
       {/* Content */}
-      <Container ref={containerRef} className="relative z-20 text-center pb-24 sm:pb-28 lg:pb-32">
+      <Container ref={containerRef} className="relative z-20 text-center pt-20 sm:pt-24 lg:pt-28 pb-24">
         <motion.div
           initial="hidden"
           animate="visible"
@@ -64,11 +64,11 @@ export const HeroSection = () => {
           className="max-w-4xl mx-auto"
         >
           {/* Main Headline */}
-          <motion.h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl text-primary-foreground dark:text-foreground leading-[1.1] tracking-luxury font-normal mb-8">
+          <motion.h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-primary-foreground dark:text-foreground leading-[1.2] tracking-luxury font-normal mb-8 px-4">
             <SplitReveal
               lines={[
-                '<span class="italic">Timeless</span> Jewelry.',
-                '<span class="gold-shimmer">Quiet Luxury.</span>',
+                '<span><span class="italic">Timeless</span> Jewelry</span>',
+                '<span class="gold-shimmer text-[0.85em] mt-2 block opacity-100">Quiet Luxury</span>',
               ]}
               stagger={0.15}
               className="text-center"
@@ -108,35 +108,37 @@ export const HeroSection = () => {
             </Button>
           </motion.div>
 
-          {/* Microcopy bridge → Featured */}
-          <motion.p
-            className="font-body text-xs text-muted-foreground/60 mt-8 uppercase tracking-[0.2em]"
-            initial="hidden"
-            animate="visible"
-            variants={sectionVariants}
-            transition={{ delay: 1.9, duration: durations.section, ease: easing }}
-          >
-            Crafted to reveal a single idea: timeless presence.
-          </motion.p>
         </motion.div>
 
-        {/* Scroll Indicator */}
-        <motion.div
-          className="absolute bottom-12 left-1/2 -translate-x-1/2"
-          initial="hidden"
-          animate="visible"
-          variants={sectionVariants}
-          transition={{ delay: 2.2, duration: durations.section, ease: easing }}
-        >
-          <div className="w-px h-16 bg-primary-foreground/20 dark:bg-gold/20 relative overflow-hidden">
-            <motion.div
-              className="absolute top-0 left-0 w-full h-1/3 bg-gold/60"
-              animate={{ y: [0, 48, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </div>
-        </motion.div>
       </Container>
+
+      {/* Scroll Indicator - Bottom of Section */}
+      <motion.div
+        className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30"
+        initial="hidden"
+        animate="visible"
+        variants={sectionVariants}
+        transition={{ delay: 2.2, duration: durations.section, ease: easing }}
+      >
+        <div className="w-px h-16 bg-primary-foreground/20 dark:bg-gold/20 relative overflow-hidden">
+          <motion.div
+            className="absolute top-0 left-0 w-full h-1/3 bg-gold/60"
+            animate={{ y: [0, 48, 0] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </div>
+      </motion.div>
+
+      {/* Microcopy bridge → Featured - Bottom of Section */}
+      <motion.p
+        className="absolute bottom-4 left-0 w-full font-body text-[10px] sm:text-[11px] text-primary-foreground/40 uppercase tracking-[0.4em] text-center px-4 z-30"
+        initial="hidden"
+        animate="visible"
+        variants={sectionVariants}
+        transition={{ delay: 2.5, duration: durations.section, ease: easing }}
+      >
+        Crafted to reveal a single idea: timeless presence
+      </motion.p>
     </Section>
   );
 };

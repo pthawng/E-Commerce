@@ -12,6 +12,11 @@ export class AddToCartDto {
     @Min(1, { message: 'Minimum quantity is 1' })
     @Max(99, { message: 'Max quantity per add is 99' })
     quantity: number;
+
+    @ApiPropertyOptional({ description: 'Current cart version for optimistic locking' })
+    @IsInt()
+    @IsOptional()
+    version?: number;
 }
 
 export class UpdateCartItemDto {
@@ -20,6 +25,11 @@ export class UpdateCartItemDto {
     @Min(0)
     @Max(999)
     quantity: number;
+
+    @ApiPropertyOptional({ description: 'Current cart version for optimistic locking' })
+    @IsInt()
+    @IsOptional()
+    version?: number;
 }
 
 export class RefreshCartDto {

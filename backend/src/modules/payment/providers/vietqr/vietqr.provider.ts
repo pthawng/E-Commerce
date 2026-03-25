@@ -9,18 +9,18 @@ import {
 } from '../../types/payment.types';
 
 /**
- * COD (Cash on Delivery) Payment Provider
- * Simple provider for cash payments
+ * VietQR Payment Provider
+ * Simple provider for manual QR bank transfers
  */
 @Injectable()
-export class CODProvider extends BasePaymentProvider {
+export class VietQRProvider extends BasePaymentProvider {
     constructor() {
-        super('CODProvider');
+        super('VietQRProvider');
     }
 
     /**
-     * Create COD payment
-     * No external API calls needed
+     * Create VietQR payment
+     * No external API calls needed for now (returns manual instructions or static QR)
      */
     protected async doCreatePayment(
         orderId: string,
@@ -32,17 +32,17 @@ export class CODProvider extends BasePaymentProvider {
         return {
             success: true,
             transactionId,
-            message: 'COD payment created. Payment will be collected on delivery.',
+            message: 'VietQR payment created. Please scan the QR code to finish your transfer.',
             metadata: {
-                paymentMethod: 'COD',
+                paymentMethod: 'VIETQR',
                 amount,
-                note: 'Customer will pay cash on delivery',
+                note: 'Customer will pay via VietQR transfer',
             },
         };
     }
 
     /**
-     * Verify COD callback
+     * Verify VietQR callback
      * For manual confirmation by staff
      */
     protected async doVerifyCallback(
@@ -57,7 +57,7 @@ export class CODProvider extends BasePaymentProvider {
             status: confirmed
                 ? TransactionStatus.SUCCESS
                 : TransactionStatus.PENDING,
-            paymentMethod: PaymentMethodEnum.COD,
+            paymentMethod: PaymentMethodEnum.VIETQR,
             gatewayResponse: {
                 confirmedBy: callbackData.confirmedBy,
                 confirmedAt: callbackData.confirmedAt,
@@ -67,7 +67,7 @@ export class CODProvider extends BasePaymentProvider {
     }
 
     /**
-     * Process COD refund
+     * Process VietQR refund
      * No external API needed, just record the refund
      */
     protected async doProcessRefund(
@@ -81,16 +81,16 @@ export class CODProvider extends BasePaymentProvider {
             success: true,
             refundTransactionId: refundTxnRef,
             amount,
-            message: 'COD refund recorded. Cash will be returned to customer.',
+            message: 'VietQR refund recorded. Please refund via bank transfer manually.',
             metadata: {
                 originalTransactionId: transactionId,
                 reason,
-                note: 'Manual cash refund required',
+                note: 'Manual bank refund required',
             },
         };
     }
 
     getPaymentMethod(): PaymentMethodEnum {
-        return PaymentMethodEnum.COD;
+        return PaymentMethodEnum.VIETQR;
     }
 }

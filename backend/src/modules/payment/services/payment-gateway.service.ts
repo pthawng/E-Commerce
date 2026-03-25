@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { VNPayProvider } from '../providers/vnpay/vnpay.provider';
 import { PayPalProvider } from '../providers/paypal/paypal.provider';
-import { CODProvider } from '../providers/cod/cod.provider';
+import { VietQRProvider } from '../providers/vietqr/vietqr.provider';
 
 /**
  * Payment Gateway Service
@@ -16,7 +16,7 @@ export class PaymentGatewayService {
     constructor(
         private readonly vnpayProvider: VNPayProvider,
         private readonly paypalProvider: PayPalProvider,
-        private readonly codProvider: CODProvider,
+        private readonly vietqrProvider: VietQRProvider,
     ) { }
 
     /**
@@ -42,8 +42,8 @@ export class PaymentGatewayService {
             `Generating payment URL: provider=${provider}, orderId=${orderId}, amount=${amount}`,
         );
 
-        // COD doesn't need payment URL
-        if (provider === 'COD') {
+        // VietQR (manual) doesn't need payment URL (handled by frontend display)
+        if (provider === 'VIETQR' || provider === 'COD') {
             return null;
         }
 

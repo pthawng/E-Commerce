@@ -49,7 +49,6 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslation();
-  const { login } = useStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -148,9 +147,6 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
           };
 
           useAuthStore.getState().setAuth(normalizedUser, authData.tokens);
-          // Update public store for UI
-          const displayName = normalizedUser.fullName || sanitizedEmail;
-          login(displayName, normalizedUser.email || sanitizedEmail);
           toast.success(t.auth.loginSuccess);
           onOpenChange(false);
           resetForm();
@@ -184,8 +180,6 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
             updatedAt: new Date().toISOString(),
           };
           useAuthStore.getState().setAuth(normalizedUser, data.tokens);
-          const displayName = normalizedUser.fullName || normalizedUser.email;
-          login(displayName, normalizedUser.email);
           toast.success(t.auth.registerSuccess);
           onOpenChange(false);
           resetForm();

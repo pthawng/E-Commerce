@@ -120,13 +120,15 @@ export const CartPage = () => {
                                             </span>
                                         </div>
 
-                                        <div className="space-y-6 pt-4">
-                                            <Button 
-                                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-16 rounded-none group text-xs uppercase tracking-widest"
-                                            >
-                                                {t.cart.checkout}
-                                                <ArrowRight size={16} className="ml-2 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
-                                            </Button>
+                                        <div className="space-y-4 pt-4">
+                                            <Link to="/checkout" className="block w-full">
+                                                <Button 
+                                                    className="w-full bg-neutral-900 hover:bg-neutral-800 text-white h-16 rounded-none group text-xs uppercase tracking-widest"
+                                                >
+                                                    {t.cart.checkout}
+                                                    <ArrowRight size={16} className="ml-2 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
+                                                </Button>
+                                            </Link>
                                             
                                             <CartConfidence />
                                         </div>

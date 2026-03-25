@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaymentService } from '../payment.service';
-import { CODProvider } from '../providers/cod/cod.provider';
+import { VietQRProvider } from '../providers/vietqr/vietqr.provider';
 import { PayPalProvider } from '../providers/paypal/paypal.provider';
 import { VNPayProvider } from '../providers/vnpay/vnpay.provider';
 import { IdempotencyService } from '../services/idempotency.service';
@@ -57,7 +57,7 @@ describe('PaymentService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: VNPayProvider, useValue: mockVNPayProvider },
         { provide: PayPalProvider, useValue: {} },
-        { provide: CODProvider, useValue: {} },
+        { provide: VietQRProvider, useValue: {} },
         { provide: IdempotencyService, useValue: mockIdempotencyService },
       ],
     }).compile();

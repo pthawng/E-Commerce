@@ -88,6 +88,7 @@ export const API_ENDPOINTS = {
     REGISTER: '/api/auth/register',
     REFRESH: '/api/auth/refresh',
     LOGOUT: '/api/auth/logout',
+    ME: '/api/auth/me',
     FORGOT_PASSWORD: '/api/auth/forgot-password',
     RESET_PASSWORD: '/api/auth/reset-password',
     RESET_PASSWORD_VERIFY: '/api/auth/reset-password/verify',
@@ -130,6 +131,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `/api/orders/${id}`,
     BY_CODE: (code: string) => `/api/orders/code/${code}`,
     MY_ORDERS: '/api/orders/my',
+    PREPARE_CHECKOUT: '/api/orders/checkout-prepare',
+    CREATE_WITH_PAYMENT: '/api/orders/create-with-payment',
   },
 
   // Cart

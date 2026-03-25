@@ -38,8 +38,8 @@
     --hairline: 225 20% 92% / 0.5;
 
     /* Ambient shadows - SaaS standard */
-    --shadow-luxury: 0 10px 40px -10px rgba(0,0,0,0.12);
-    --shadow-spotlight: 0 0 20px rgba(212,175,55,0.15);
+    --shadow-luxury: 0 10px 40px -10px rgba(0, 0, 0, 0.12);
+    --shadow-spotlight: 0 0 20px rgba(212, 175, 55, 0.15);
   }
 
 
@@ -456,13 +456,11 @@ body::before {
 /* Gold shimmer for hero headline */
 .gold-shimmer {
   background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(212, 175, 55, 0.08) 20%,
-      rgba(212, 175, 55, 0.18) 35%,
-      rgba(255, 255, 255, 0.9) 50%,
-      rgba(212, 175, 55, 0.18) 65%,
-      rgba(212, 175, 55, 0.08) 80%,
-      transparent 100%);
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.9) 25%,
+      rgba(212, 175, 55, 0.4) 50%,
+      rgba(255, 255, 255, 0.9) 75%,
+      rgba(255, 255, 255, 0.6) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

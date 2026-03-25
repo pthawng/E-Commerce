@@ -66,9 +66,9 @@ export class CreateOrderDto {
     @Type(() => AddressDto)
     billingAddress?: AddressDto;
 
-    @ApiProperty({ description: 'Payment method', enum: ['COD', 'VNPAY', 'PAYPAL'] })
+    @ApiProperty({ description: 'Payment method', enum: ['VIETQR', 'VNPAY', 'PAYPAL'] })
     @IsNotEmpty()
-    @IsIn(['COD', 'VNPAY', 'PAYPAL'])
+    @IsIn(['VIETQR', 'VNPAY', 'PAYPAL'])
     paymentMethod: string;
 
     @ApiPropertyOptional({ description: 'Shipping method ID' })
@@ -88,4 +88,9 @@ export class CreateOrderDto {
     @IsOptional()
     @IsBoolean()
     confirmPriceChange?: boolean;
+
+    @ApiPropertyOptional({ description: 'Idempotency key to prevent duplicate orders' })
+    @IsOptional()
+    @IsString()
+    idempotencyKey?: string;
 }

@@ -112,7 +112,7 @@ export const CartDrawer = () => {
                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-14 rounded-none group"
                                 onClick={() => setOpen(false)}
                             >
-                                <Link to="/cart" className="flex items-center justify-center gap-2">
+                                <Link to="/checkout" className="flex items-center justify-center gap-2">
                                     {t.cart.checkout}
                                     <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
                                 </Link>

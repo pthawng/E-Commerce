@@ -11,6 +11,7 @@ interface AuthState {
   setTokens: (tokens: AuthTokens | null) => void;
   clearAuth: () => void;
   getAccessToken: () => string | null;
+  fetchUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -29,6 +30,22 @@ export const useAuthStore = create<AuthState>()(
       },
       getAccessToken: () => {
         return get().tokens?.accessToken || null;
+      },
+      fetchUser: async () => {
+        const { tokens } = get();
+        if (!tokens?.accessToken) return;
+
+        try {
+          const { apiGet } = await import('@/services/apiClient');
+          // Use direct string to avoid circular dependency + stale shared types in complex interceptor flow
+          const resp = await apiGet<User>('/api/auth/me');
+          if (resp.data) {
+            set({ user: resp.data });
+          }
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+          // Don't clear auth here unless it's a 401, but interceptor handles that
+        }
       },
     }),
     {

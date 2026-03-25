@@ -10,6 +10,7 @@ import {
     ParseUUIDPipe,
     HttpCode,
     Req,
+    Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CartService } from './cart.service';
@@ -81,8 +82,9 @@ export class CartController {
         @Param('variantId', new ParseUUIDPipe()) variantId: string,
         @Req() req: { user?: RequestUserPayload },
         @CurrentSession() sessionId?: string,
+        @Query('version') version?: number,
     ) {
-        return this.cartService.removeItem(req.user?.userId, sessionId, variantId);
+        return this.cartService.removeItem(req.user?.userId, sessionId, variantId, version ? Number(version) : undefined);
     }
 
     // -------------------------

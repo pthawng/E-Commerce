@@ -29,6 +29,7 @@ export const calculateTotals = (items: CartItem[]): CartTotals => {
         shipping,
         tax,
         total,
-        isFreeShipping
+        isFreeShipping,
+        shippingThreshold: SHIPPING_THRESHOLD
     };
 };

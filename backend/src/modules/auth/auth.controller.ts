@@ -45,6 +45,15 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  @UseGuards(JwtAccessGuard)
+  @Get('me')
+  @ApiOperation({ summary: 'Lấy thông tin người dùng hiện tại' })
+  @ApiOkResponse({ description: 'Thông tin người dùng' })
+  @ApiUnauthorizedResponse({ description: 'Token không hợp lệ' })
+  async getMe(@CurrentUserId() userId: string) {
+    return this.authService.getMe(userId);
+  }
+
   @Public()
   @UseGuards(ThrottlerGuard)
   @Post('login')

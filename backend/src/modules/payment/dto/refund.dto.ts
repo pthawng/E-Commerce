@@ -29,7 +29,7 @@ export class RefundPaymentDto {
     restoreInventory?: boolean = true;
 }
 
-export class ConfirmCODPaymentDto {
+export class ConfirmVietQRPaymentDto {
     @ApiProperty({
         description: 'Order ID',
         example: '123e4567-e89b-12d3-a456-426614174000',
@@ -49,7 +49,7 @@ export class ConfirmCODPaymentDto {
 
     @ApiProperty({
         description: 'Note from staff',
-        example: 'Payment received in cash',
+        example: 'Payment received via VietQR transfer',
         required: false,
     })
     @IsString()

@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import type { AuthResponse, AuthTokens } from '@shared';
+import type { AuthResponse, AuthTokens, User } from '@shared';
 import * as argon2 from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { randomUUID } from 'node:crypto';
@@ -126,6 +126,21 @@ export class AuthService {
     }
 
     return this.issueTokenPair(user.id, requiredRole === USER_ROLES.ADMIN ? 'admin' : 'customer');
+  }
+
+  // ---------------------------
+  // PROFILE / ME
+  // ---------------------------
+  async getMe(userId: string): Promise<Pick<User, 'id' | 'email' | 'phone' | 'fullName' | 'isActive' | 'isEmailVerified'>> {
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return sanitizeUser(user);
   }
 
   // ---------------------------

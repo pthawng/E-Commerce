@@ -37,7 +37,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
             )}>
                 <img
                     src={item.image}
-                    alt={item.name[language]}
+                    alt={typeof item.name === 'string' ? item.name : (item.name[language] || item.name['en'])}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
             </div>
@@ -49,7 +49,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                         "font-display text-primary truncate pr-4 italic",
                         isPage ? "text-lg sm:text-xl" : "text-sm sm:text-base leading-tight"
                     )}>
-                        {item.name[language] || item.name['en']}
+                        {typeof item.name === 'string' ? item.name : (item.name[language] || item.name['en'])}
                     </h3>
                     <button 
                         onClick={() => removeItem(item.variantId)}

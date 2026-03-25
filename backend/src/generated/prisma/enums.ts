@@ -89,7 +89,7 @@ export type TransactionStatusEnum = (typeof TransactionStatusEnum)[keyof typeof 
 
 
 export const PaymentMethodEnum = {
-  COD: 'COD',
+  VIETQR: 'VIETQR',
   VNPAY: 'VNPAY',
   PAYPAL: 'PAYPAL'
 } as const

@@ -9,8 +9,7 @@ type FailedRequest = {
 };
 
 const axiosInstance: AxiosInstance = axios.create({
-  // Do not set baseURL here so we can use buildApiUrl per-request
-  withCredentials: true, // send cookies (refresh token cookie if used)
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -71,8 +70,12 @@ axiosInstance.interceptors.response.use(
       try {
         const resp = await axios.post(buildApiUrl('/auth/refresh'), { refreshToken });
         const newTokens = resp.data.tokens;
-        // Update store
         useAuthStore.getState().setTokens(newTokens);
+        // Trigger background user sync safely
+        useAuthStore.getState().fetchUser().catch(err => {
+          console.error('[Axios] Background user sync failed after refresh', err);
+        });
+        
         processQueue(null, newTokens.accessToken);
         originalRequest.headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
         return axiosInstance(originalRequest);

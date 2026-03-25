@@ -111,7 +111,7 @@ interface ApiResponse<T = any> {
 interface PaginationMeta {
     page: number;
     limit: number;
-    total: number;
+    totalItems: number;
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
@@ -358,6 +358,13 @@ interface OrderSummary {
  */
 
 /**
+ * Standard Multilingual field structure
+ */
+interface Multilingual {
+    vi: string;
+    en: string;
+}
+/**
  * Product Media
  */
 interface ProductMedia {
@@ -365,7 +372,7 @@ interface ProductMedia {
     productId: string;
     url: string;
     type: MediaType;
-    altText?: any;
+    altText?: Multilingual;
     isThumbnail: boolean;
     order: number;
     createdAt: Date | string;
@@ -377,7 +384,7 @@ interface ProductVariant {
     id: string;
     productId: string;
     sku: string;
-    variantTitle?: any;
+    variantTitle?: Multilingual;
     price: number;
     compareAtPrice?: number;
     costPrice?: number;
@@ -394,9 +401,9 @@ interface ProductVariant {
 interface Product {
     id: string;
     categoryId?: string;
-    name: any;
+    name: Multilingual;
     slug: string;
-    description?: any;
+    description?: Multilingual;
     displayPriceMin?: number;
     displayPriceMax?: number;
     hasVariants: boolean;
@@ -406,13 +413,16 @@ interface Product {
     updatedAt: Date | string;
     variants?: ProductVariant[];
     media?: ProductMedia[];
+    categories?: Array<{
+        category: Category;
+    }>;
 }
 /**
  * Product Summary (cho list)
  */
 interface ProductSummary {
     id: string;
-    name: any;
+    name: Multilingual;
     slug: string;
     displayPriceMin?: number;
     displayPriceMax?: number;
@@ -426,7 +436,7 @@ interface ProductSummary {
 interface Category {
     id: string;
     parentId?: string;
-    name: any;
+    name: Multilingual;
     slug: string;
     isActive: boolean;
     order: number;
@@ -572,6 +582,7 @@ declare const API_ENDPOINTS: {
         readonly REGISTER: "/api/auth/register";
         readonly REFRESH: "/api/auth/refresh";
         readonly LOGOUT: "/api/auth/logout";
+        readonly ME: "/api/auth/me";
         readonly FORGOT_PASSWORD: "/api/auth/forgot-password";
         readonly RESET_PASSWORD: "/api/auth/reset-password";
         readonly RESET_PASSWORD_VERIFY: "/api/auth/reset-password/verify";
@@ -604,6 +615,8 @@ declare const API_ENDPOINTS: {
         readonly BY_ID: (id: string) => string;
         readonly BY_CODE: (code: string) => string;
         readonly MY_ORDERS: "/api/orders/my";
+        readonly PREPARE_CHECKOUT: "/api/orders/checkout-prepare";
+        readonly CREATE_WITH_PAYMENT: "/api/orders/create-with-payment";
     };
     readonly CART: {
         readonly BASE: "/api/cart";
@@ -692,4 +705,4 @@ declare const SESSION: {
     readonly USER_KEY: "user";
 };
 
-export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, type ApiError, type ApiResponse, type AttributeInputType, type AuthResponse, type AuthTokens, type Category, type ChangePasswordPayload, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, type ForgotPasswordPayload, type LoginPayload, MAX_LIMIT, MediaType, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, type Order, type OrderItem, OrderStatus, type OrderSummary, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaginatedResponse, type PaginationMeta, type PaginationQuery, PaymentStatus, type Permission, PermissionAction, PermissionModule, type Product, type ProductMedia, type ProductSummary, type ProductVariant, type RefreshTokenPayload, type RegisterPayload, type ResetPasswordPayload, type Role, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, type User, type UserSummary, type UserWithRoles, type VerifyEmailPayload, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
+export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, type ApiError, type ApiResponse, type AttributeInputType, type AuthResponse, type AuthTokens, type Category, type ChangePasswordPayload, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, type ForgotPasswordPayload, type LoginPayload, MAX_LIMIT, MediaType, type Multilingual, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, type Order, type OrderItem, OrderStatus, type OrderSummary, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaginatedResponse, type PaginationMeta, type PaginationQuery, PaymentStatus, type Permission, PermissionAction, PermissionModule, type Product, type ProductMedia, type ProductSummary, type ProductVariant, type RefreshTokenPayload, type RegisterPayload, type ResetPasswordPayload, type Role, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, type User, type UserSummary, type UserWithRoles, type VerifyEmailPayload, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };

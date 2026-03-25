@@ -80,7 +80,7 @@ enum TransactionStatusEnum {
 
 // Payment method types
 enum PaymentMethodEnum {
-  COD
+  VIETQR
   VNPAY
   PAYPAL
 }
@@ -476,6 +476,7 @@ model Cart {
   id         String      @id @default(uuid()) @db.Uuid
   userId     String?     @db.Uuid
   sessionId  String?     @db.VarChar(100)
+  version    Int         @default(1)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @default(now())
   items      CartItem[]
@@ -542,6 +543,7 @@ model Order {
   deliveredAt           DateTime?
   completedAt           DateTime?
   cancelledAt           DateTime?
+  idempotencyKey        String?           @unique
 
   user                  User?             @relation(fields: [userId], references: [id])
   shippingMethod        ShippingMethod?   @relation(fields: [shippingMethodId], references: [id])

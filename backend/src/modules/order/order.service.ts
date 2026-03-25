@@ -32,6 +32,18 @@ export class OrderService {
     async createOrder(userId: string | undefined, sessionId: string | undefined, dto: CreateOrderDto) {
         if (!userId && !sessionId) throw new BadRequestException('User or Session required');
 
+        // 0. Idempotency Check
+        if (dto.idempotencyKey) {
+            const existingOrder = await this.prisma.order.findUnique({
+                where: { idempotencyKey: dto.idempotencyKey } as any,
+                include: { items: true, transactions: true },
+            });
+            if (existingOrder) {
+                this.logger.log(`Idempotent request for existing order ${existingOrder.code}`);
+                return existingOrder;
+            }
+        }
+
         // 1. Fetch Cart & Variants
         const { cart, variants } = await this.getCartAndVariants(userId, sessionId);
 
@@ -59,6 +71,7 @@ export class OrderService {
                     userId: userId || null,
                     status: OrderStatusEnum.pending,
                     paymentStatus: PaymentStatusEnum.unpaid,
+                    idempotencyKey: dto.idempotencyKey,
                     shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
                     billingAddress: (dto.billingAddress ?? dto.shippingAddress) as unknown as Prisma.InputJsonValue,
                     subTotal,
@@ -74,7 +87,7 @@ export class OrderService {
                             method: dto.paymentMethod,
                         },
                     },
-                },
+                } as any,
             });
 
             // Deduct Inventory
