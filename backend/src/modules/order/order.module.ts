@@ -8,7 +8,11 @@ import { OrderController } from './order.controller';
 import { AdminOrderController } from './admin-order.controller';
 import { OrderService } from './order.service';
 import { OrderPaymentService } from './services/order-payment.service';
+import { CheckoutController } from './controllers/checkout.controller';
+import { CheckoutTokenService } from './services/checkout-token.service';
 import { CleanupExpiredReservationsJob } from './jobs/cleanup-expired-reservations.job';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
     imports: [
@@ -17,13 +21,22 @@ import { CleanupExpiredReservationsJob } from './jobs/cleanup-expired-reservatio
         CartModule,
         InventoryModule,
         forwardRef(() => PaymentModule),
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            useFactory: async (configService: ConfigService) => ({
+                secret: configService.get<string>('JWT_CHECKOUT_SECRET'),
+                signOptions: { expiresIn: configService.get<string>('JWT_CHECKOUT_EXPIRES_IN', '15m') as any },
+            }),
+            inject: [ConfigService],
+        }),
     ],
-    controllers: [OrderController, AdminOrderController],
+    controllers: [OrderController, AdminOrderController, CheckoutController],
     providers: [
         OrderService,
         OrderPaymentService,
+        CheckoutTokenService,
         CleanupExpiredReservationsJob,
     ],
-    exports: [OrderService, OrderPaymentService],
+    exports: [OrderService, OrderPaymentService, CheckoutTokenService],
 })
 export class OrderModule { }

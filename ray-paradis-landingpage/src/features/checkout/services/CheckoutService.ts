@@ -1,4 +1,4 @@
-import { apiPost, apiGet } from '@/services/apiClient';
+import { apiPost } from '@/services/apiClient';
 import { API_ENDPOINTS } from '@shared';
 
 export interface CheckoutSnapshot {
@@ -10,17 +10,18 @@ export interface CheckoutSnapshot {
 export const CheckoutService = {
     /**
      * Step 1: Validate & Snapshot
-     * Backend prepares the final pricing and stock check.
+     * Backend prepares the final pricing, stock check and returns checkoutToken.
      */
-    prepareCheckout: async (sessionId?: string): Promise<any> => {
-        const response = await apiGet(API_ENDPOINTS.ORDERS.PREPARE_CHECKOUT, {
+    validateCheckout: async (sessionId?: string): Promise<{ checkoutToken: string; snapshot: CheckoutSnapshot; expiresAt: string }> => {
+        const response = await apiPost(API_ENDPOINTS.ORDERS.VALIDATE_CHECKOUT, {}, {
             headers: { 'x-client-session-id': sessionId }
         });
-        return response.data;
+        return response.data as { checkoutToken: string; snapshot: CheckoutSnapshot; expiresAt: string };
     },
 
     /**
-     * Step 2 & 3: Commit Order (and optionally initiate payment)
+     * Step 2: Create Order
+     * Commits the order using the checkoutToken.
      */
     createOrder: async (data: any, idempotencyKey: string, sessionId?: string): Promise<any> => {
         const response = await apiPost(API_ENDPOINTS.ORDERS.BASE, data, {
@@ -33,15 +34,10 @@ export const CheckoutService = {
     },
 
     /**
-     * Create order with integrated payment flow
+     * Step 3: Initiate Payment (for retries or manual trigger)
      */
-    createOrderWithPayment: async (data: any, idempotencyKey: string, sessionId?: string): Promise<any> => {
-        const response = await apiPost(API_ENDPOINTS.ORDERS.CREATE_WITH_PAYMENT, data, {
-            headers: { 
-                'x-client-session-id': sessionId,
-                'x-idempotency-key': idempotencyKey
-            }
-        });
-        return response.data;
+    initiatePayment: async (orderId: string, paymentMethod: string): Promise<{ paymentUrl: string }> => {
+        const response = await apiPost(API_ENDPOINTS.ORDERS.INITIATE_PAYMENT, { orderId, paymentMethod });
+        return response.data as { paymentUrl: string };
     }
 };

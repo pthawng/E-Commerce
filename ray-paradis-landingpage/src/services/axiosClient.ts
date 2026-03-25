@@ -51,6 +51,9 @@ axiosInstance.interceptors.response.use(
 
       if (!refreshToken) {
         useAuthStore.getState().clearAuth();
+        import('@/features/cart/store/useCartStore').then(({ useCartStore }) => {
+          useCartStore.getState().clearCart();
+        }).catch(err => console.error('Failed to clear cart on session expire:', err));
         return Promise.reject(error);
       }
 
@@ -82,6 +85,9 @@ axiosInstance.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         useAuthStore.getState().clearAuth();
+        import('@/features/cart/store/useCartStore').then(({ useCartStore }) => {
+          useCartStore.getState().clearCart();
+        }).catch(err => console.error('Failed to clear cart on refresh error:', err));
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

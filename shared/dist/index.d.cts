@@ -582,6 +582,7 @@ declare const API_ENDPOINTS: {
         readonly REGISTER: "/api/auth/register";
         readonly REFRESH: "/api/auth/refresh";
         readonly LOGOUT: "/api/auth/logout";
+        readonly ME: "/api/auth/me";
         readonly FORGOT_PASSWORD: "/api/auth/forgot-password";
         readonly RESET_PASSWORD: "/api/auth/reset-password";
         readonly RESET_PASSWORD_VERIFY: "/api/auth/reset-password/verify";
@@ -614,8 +615,8 @@ declare const API_ENDPOINTS: {
         readonly BY_ID: (id: string) => string;
         readonly BY_CODE: (code: string) => string;
         readonly MY_ORDERS: "/api/orders/my";
-        readonly PREPARE_CHECKOUT: "/api/orders/checkout-prepare";
-        readonly CREATE_WITH_PAYMENT: "/api/orders/create-with-payment";
+        readonly VALIDATE_CHECKOUT: "/api/checkout/validate";
+        readonly INITIATE_PAYMENT: "/api/payments/initiate";
     };
     readonly CART: {
         readonly BASE: "/api/cart";

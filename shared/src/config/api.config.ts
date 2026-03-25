@@ -131,8 +131,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `/api/orders/${id}`,
     BY_CODE: (code: string) => `/api/orders/code/${code}`,
     MY_ORDERS: '/api/orders/my',
-    PREPARE_CHECKOUT: '/api/orders/checkout-prepare',
-    CREATE_WITH_PAYMENT: '/api/orders/create-with-payment',
+    VALIDATE_CHECKOUT: '/api/checkout/validate',
+    INITIATE_PAYMENT: '/api/payments/initiate',
   },
 
   // Cart

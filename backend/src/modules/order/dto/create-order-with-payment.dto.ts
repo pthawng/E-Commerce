@@ -11,10 +11,13 @@ export class CreateOrderWithPaymentDto extends CreateOrderDto {
     // - guestEmail?: string
     // - shippingAddress: AddressDto
     // - billingAddress?: AddressDto
-    // - paymentMethod: string
-    // - shippingMethodId?: string
-    // - note?: string
-    // - confirmPriceChange?: boolean
+    @ApiProperty({
+        description: 'Secure checkout token from validate step',
+        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        required: true,
+    })
+    @IsString()
+    checkoutToken: string;
 
     @ApiProperty({
         description: 'Return URL after payment (optional, frontend can provide)',

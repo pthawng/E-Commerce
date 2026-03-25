@@ -615,8 +615,8 @@ declare const API_ENDPOINTS: {
         readonly BY_ID: (id: string) => string;
         readonly BY_CODE: (code: string) => string;
         readonly MY_ORDERS: "/api/orders/my";
-        readonly PREPARE_CHECKOUT: "/api/orders/checkout-prepare";
-        readonly CREATE_WITH_PAYMENT: "/api/orders/create-with-payment";
+        readonly VALIDATE_CHECKOUT: "/api/checkout/validate";
+        readonly INITIATE_PAYMENT: "/api/payments/initiate";
     };
     readonly CART: {
         readonly BASE: "/api/cart";

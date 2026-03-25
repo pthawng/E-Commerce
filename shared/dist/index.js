@@ -231,6 +231,7 @@ var API_ENDPOINTS = {
     REGISTER: "/api/auth/register",
     REFRESH: "/api/auth/refresh",
     LOGOUT: "/api/auth/logout",
+    ME: "/api/auth/me",
     FORGOT_PASSWORD: "/api/auth/forgot-password",
     RESET_PASSWORD: "/api/auth/reset-password",
     RESET_PASSWORD_VERIFY: "/api/auth/reset-password/verify",
@@ -268,8 +269,8 @@ var API_ENDPOINTS = {
     BY_ID: (id) => `/api/orders/${id}`,
     BY_CODE: (code) => `/api/orders/code/${code}`,
     MY_ORDERS: "/api/orders/my",
-    PREPARE_CHECKOUT: "/api/orders/checkout-prepare",
-    CREATE_WITH_PAYMENT: "/api/orders/create-with-payment"
+    VALIDATE_CHECKOUT: "/api/checkout/validate",
+    INITIATE_PAYMENT: "/api/payments/initiate"
   },
   // Cart
   CART: {

@@ -9,7 +9,16 @@ export const UserMenu: React.FC<{ isOpaque?: boolean }> = ({ isOpaque = false })
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Clear cart first to avoid any sync attempts with old session
+      // Use dynamic import to avoid circular dependencies
+      const { useCartStore } = await import('@/features/cart/store/useCartStore');
+      useCartStore.getState().clearCart();
+    } catch (err) {
+      console.error('Failed to clear cart during logout:', err);
+    }
+    
     clearAuth();
     navigate('/');
   };

@@ -5,7 +5,7 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
-import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, Prisma } from 'src/generated/prisma/client';
+import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, ReservationStatus, Prisma } from 'src/generated/prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
@@ -141,6 +141,7 @@ export class PaymentService {
         paymentMethod: PaymentMethodEnum,
         callbackData: Record<string, any>,
     ): Promise<CallbackData> {
+        this.logger.log(`Processing callback for ${paymentMethod}`);
         const provider = this.getProvider(paymentMethod);
 
         // Verify callback first (to get transaction ID)
@@ -176,38 +177,25 @@ export class PaymentService {
         try {
             // Update order and transaction in a transaction
             await this.prisma.$transaction(async (tx) => {
-                // Find order
-                const order = await tx.order.findUnique({
-                    where: { id: verifiedData.orderId },
-                    include: { transactions: true },
-                });
-
-                if (!order) {
-                    throw new NotFoundException(
-                        `Order ${verifiedData.orderId} not found`,
-                    );
-                }
-
-                // Find transaction
-                const transaction = order.transactions.find(
-                    (t) => t.transactionCode === verifiedData.transactionId,
-                );
+                // 1. Find transaction by transactionCode (Database-level idempotency check)
+                const transaction = await tx.paymentTransaction.findFirst({
+                    where: { transactionCode: verifiedData.transactionId as string },
+                    include: { order: true },
+                }) as any;
 
                 if (!transaction) {
-                    throw new NotFoundException(
-                        `Transaction ${verifiedData.transactionId} not found`,
-                    );
+                    throw new NotFoundException(`Transaction ${verifiedData.transactionId} not found`);
                 }
 
-                // Check if transaction already processed (double-check)
-                if (transaction.status === TransactionStatusEnum.success) {
-                    this.logger.warn(
-                        `Transaction ${verifiedData.transactionId} already successful, skipping update`,
-                    );
+                const order = transaction.order;
+
+                // 2. Check if transaction already successful or order already paid
+                if (transaction.status === TransactionStatusEnum.success || order.paymentStatus === 'paid') {
+                    this.logger.warn(`Transaction ${verifiedData.transactionId} already processed, skipping.`);
                     return;
                 }
 
-                // Update transaction status
+                // 3. Update transaction status
                 await tx.paymentTransaction.update({
                     where: { id: transaction.id },
                     data: {
@@ -216,50 +204,112 @@ export class PaymentService {
                     },
                 });
 
-                // Update order payment status
+                // 4. Update order status based on payment result
                 if (verifiedData.status === TransactionStatus.SUCCESS) {
                     await tx.order.update({
-                        where: { id: verifiedData.orderId },
+                        where: { id: order.id },
                         data: {
                             paymentStatus: PaymentStatusEnum.paid,
                             status: OrderStatusEnum.confirmed,
                             confirmedAt: new Date(),
-                        },
+                            retryCount: 0, 
+                        } as any,
                     });
 
-                    // Create order timeline entry
+                    // 5. Deduct inventory (Confirming the reservation)
+                    // We call the inventory service's deduct method directly here to avoid circular dep with OrderPaymentService
+                    // Or we could trigger an event. For now, manual deduction logic similar to InventoryService.deduct:
+                    const reservations = await tx.inventoryReservation.findMany({
+                        where: { orderId: order.id, status: ReservationStatus.active },
+                    });
+
+                    for (const res of reservations) {
+                        const inventoryItem = await tx.inventoryItem.findFirst({
+                            where: { productVariantId: res.variantId, warehouseId: res.warehouseId },
+                        });
+
+                        if (inventoryItem) {
+                            await tx.inventoryItem.update({
+                                where: { id: inventoryItem.id },
+                                data: {
+                                    quantity: { decrement: res.quantity },
+                                    reservedQuantity: { decrement: res.quantity },
+                                },
+                            });
+
+                            await tx.inventoryReservation.update({
+                                where: { id: res.id },
+                                data: { status: ReservationStatus.confirmed },
+                            });
+
+                            await tx.inventoryLog.create({
+                                data: {
+                                    inventoryItemId: inventoryItem.id,
+                                    productVariantId: res.variantId,
+                                    warehouseId: res.warehouseId,
+                                    actionType: ActionType.SALE,
+                                    quantityChange: -res.quantity,
+                                    beforeQuantity: inventoryItem.quantity,
+                                    afterQuantity: inventoryItem.quantity - res.quantity,
+                                    referenceId: order.id,
+                                    referenceType: 'ORDER',
+                                    note: `Auto-deducted via payment webhook for ${paymentMethod}`,
+                                },
+                            });
+                        }
+                    }
+
                     await tx.orderTimeline.create({
                         data: {
-                            orderId: verifiedData.orderId,
+                            orderId: order.id,
                             action: 'PAYMENT_CONFIRMED',
                             toStatus: 'confirmed',
-                            description: `Payment confirmed via ${paymentMethod}`,
+                            description: `Payment success via ${paymentMethod}. Order confirmed and stock deducted.`,
                             actorType: 'system',
-                            metadata: {
-                                transactionId: verifiedData.transactionId,
-                                paymentMethod,
-                            },
+                            metadata: { transactionId: verifiedData.transactionId },
                         },
                     });
-                } else if (verifiedData.status === TransactionStatus.FAILED) {
+                } else {
+                    // Payment failed or cancelled
+                    const isMaxRetries = order.retryCount >= 5;
+                    const nextStatus = isMaxRetries ? OrderStatusEnum.cancelled : OrderStatusEnum.pending_payment;
+
                     await tx.order.update({
-                        where: { id: verifiedData.orderId },
+                        where: { id: order.id },
                         data: {
-                            paymentStatus: PaymentStatusEnum.unpaid,
-                        },
+                            status: nextStatus,
+                            retryCount: { increment: 1 },
+                        } as any,
                     });
 
-                    // Create order timeline entry
+                    if (isMaxRetries) {
+                        // Release inventory if max retries reached or payment cancelled permanently
+                        // Similar to InventoryService.release
+                        const reservations = await tx.inventoryReservation.findMany({
+                            where: { orderId: order.id, status: ReservationStatus.active },
+                        });
+
+                        for (const res of reservations) {
+                            await tx.inventoryItem.updateMany({
+                                where: { productVariantId: res.variantId, warehouseId: res.warehouseId },
+                                data: { reservedQuantity: { decrement: res.quantity } },
+                            });
+
+                            await tx.inventoryReservation.update({
+                                where: { id: res.id },
+                                data: { status: ReservationStatus.released },
+                            });
+                        }
+                    }
+
                     await tx.orderTimeline.create({
                         data: {
-                            orderId: verifiedData.orderId,
+                            orderId: order.id,
                             action: 'PAYMENT_FAILED',
-                            description: `Payment failed via ${paymentMethod}`,
+                            toStatus: nextStatus,
+                            description: `Payment failed via ${paymentMethod}. ${isMaxRetries ? 'Max retries reached, order cancelled.' : 'Waiting for retry.'}`,
                             actorType: 'system',
-                            metadata: {
-                                transactionId: verifiedData.transactionId,
-                                paymentMethod,
-                            },
+                            metadata: { transactionId: verifiedData.transactionId, retryCount: order.retryCount + 1 },
                         },
                     });
                 }

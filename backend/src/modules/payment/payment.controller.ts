@@ -86,15 +86,7 @@ export class PaymentController {
                 query,
             );
 
-            // NEW: Confirm or cancel order based on payment result
-            if (callbackData.status === 'success') {
-                await this.orderPaymentService.confirmOrder(callbackData.orderId);
-            } else {
-                await this.orderPaymentService.cancelOrder(
-                    callbackData.orderId,
-                    'Payment failed',
-                );
-            }
+            // Redirect to frontend with result
 
             // Redirect to frontend with result
             const redirectUrl = new URL(
@@ -131,28 +123,18 @@ export class PaymentController {
     })
     async capturePayPalPayment(@Param('paypalOrderId') paypalOrderId: string) {
         const paypalProvider = this.paymentService.getPayPalProvider();
-        const callbackData = await paypalProvider.capturePayment(paypalOrderId);
+        const capturedData = await paypalProvider.capturePayment(paypalOrderId);
 
-        // Update order status
-        await this.paymentService.processCallback(
+        // Update order status (Includes inventory and retry logic)
+        const result = await this.paymentService.processCallback(
             PaymentMethodEnum.PAYPAL,
-            callbackData,
+            capturedData,
         );
 
-        // NEW: Confirm or cancel order based on payment result
-        if (callbackData.status === 'success') {
-            await this.orderPaymentService.confirmOrder(callbackData.orderId);
-        } else {
-            await this.orderPaymentService.cancelOrder(
-                callbackData.orderId,
-                'Payment failed',
-            );
-        }
-
         return {
-            orderId: callbackData.orderId,
-            status: callbackData.status,
-            transactionId: callbackData.transactionId,
+            orderId: result.orderId || capturedData.orderId,
+            status: result.status || capturedData.status,
+            transactionId: result.transactionId || capturedData.transactionId,
             message: 'Payment captured successfully',
         };
     }

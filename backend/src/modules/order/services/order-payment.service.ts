@@ -14,24 +14,17 @@ import {
 } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { PaymentService } from '@modules/payment/payment.service';
-import { Prisma } from 'src/generated/prisma/client';
+import { Prisma, PaymentMethodEnum, OrderStatusEnum, PaymentStatusEnum } from 'src/generated/prisma/client';
 import { InventoryService } from '../../inventory/inventory.service';
 import { InventoryAllocatorService } from '../../inventory/inventory-allocator.service';
-import { randomBytes } from 'node:crypto';
-import { OrderStatusEnum } from 'src/generated/prisma/client';
+import { randomBytes, createHash } from 'node:crypto';
 import { OrderStatusValidator } from '../utils/order-status.validator';
+import { CheckoutTokenService } from './checkout-token.service';
 
 /**
  * OrderPaymentService
  * 
  * Core orchestrator for Order-Payment integration flow.
- * Handles:
- * - Order creation with payment
- * - Inventory reservation
- * - Payment initiation
- * - Order confirmation/cancellation
- * 
- * Design: UseCase/Orchestrator pattern with compensating transactions
  */
 @Injectable()
 export class OrderPaymentService {
@@ -45,48 +38,24 @@ export class OrderPaymentService {
         private readonly paymentService: PaymentService,
         private readonly inventoryService: InventoryService,
         private readonly inventoryAllocator: InventoryAllocatorService,
+        private readonly checkoutTokenService: CheckoutTokenService,
     ) { }
 
     /**
-     * Main entry point: Create order with payment integration
-     * 
-     * Flow:
-     * 1. Validate cart
-     * 2. Reserve inventory (soft lock)
-     * 3. Create order (pending_payment or confirmed)
-     * 4. Create payment transaction
-     * 5. For online payment: generate payment URL
-     * 6. For VIETQR: user should scan QR and wait for confirmation
-     * 
-     * @throws BadRequestException - Empty cart, invalid data
-     * @throws ConflictException - Insufficient stock
+     * Step 1: Validate cart and reserve inventory (snapshot)
      */
-    async createOrderWithPayment(
-        dto: CreateOrderWithPaymentDto,
+    async validateCheckout(
         userId?: string,
         sessionId?: string,
-    ): Promise<OrderPaymentResponseDto> {
-        // Validate user context
-        if (!userId && !sessionId) {
-            throw new BadRequestException('User or session required');
-        }
+    ): Promise<{ checkoutToken: string; snapshot: { items: any[]; totals: any }; expiresAt: Date }> {
+        this.logger.log(`Validating checkout for userId=${userId}, sessionId=${sessionId}`);
 
-        if (!userId && !dto.guestEmail) {
-            throw new BadRequestException('Guest email is required for guest checkout');
-        }
-
-        this.logger.log(
-            `Creating order with payment: method=${dto.paymentMethod}, userId=${userId}, sessionId=${sessionId}`,
-        );
-
-        // Step 1: Fetch and validate cart
         const { cart, variants } = await this.getCartAndVariants(userId, sessionId);
 
         if (!cart || cart.items.length === 0) {
             throw new BadRequestException('Cart is empty');
         }
 
-        // Step 2: Allocate inventory
         const allocations = await this.inventoryAllocator.allocate(
             cart.items.map((item) => ({
                 variantId: item.productVariantId,
@@ -94,17 +63,70 @@ export class OrderPaymentService {
             }))
         );
 
-        // Step 3: Calculate totals
-        const { orderItemsData, subTotal, totalAmount } = this.calculateOrderTotals(
-            cart.items,
-            variants,
-            dto.shippingMethodId,
+        const { totals } = this.calculateOrderTotals(cart.items, variants);
+        const expiresAt = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+        const cartHash = this.generateCartHash(cart.items);
+
+        const checkoutToken = await this.checkoutTokenService.generateToken({
+            cartHash,
+            userId,
+            sessionId,
+        });
+
+        return {
+            checkoutToken,
+            snapshot: {
+                items: cart.items.map(item => ({
+                    variantId: item.productVariantId,
+                    quantity: item.quantity,
+                    price: Number(variants.find(v => v.id === item.productVariantId)?.price || 0),
+                })),
+                totals,
+            },
+            expiresAt,
+        };
+    }
+
+    /**
+     * Step 2: Create order with payment integration
+     */
+    async createOrderWithPayment(
+        dto: CreateOrderWithPaymentDto,
+        userId?: string,
+        sessionId?: string,
+    ): Promise<OrderPaymentResponseDto> {
+        this.logger.log(`Creating order: method=${dto.paymentMethod}, userId=${userId}`);
+
+        // 1. Verify checkout token
+        const tokenPayload = await this.checkoutTokenService.verifyToken(dto.checkoutToken);
+        
+        // Safety check: token ownership
+        if (tokenPayload.userId !== userId || tokenPayload.sessionId !== sessionId) {
+            throw new BadRequestException('Checkout token ownership mismatch');
+        }
+
+        // 2. Fetch cart and variants
+        const { cart, variants } = await this.getCartAndVariants(userId, sessionId);
+
+        if (!cart || cart.items.length === 0) {
+            throw new BadRequestException('Cart is empty');
+        }
+
+        // 3. Verify cart state hasn't changed since token generation
+        const currentCartHash = this.generateCartHash(cart.items);
+        if (currentCartHash !== tokenPayload.cartHash) {
+            throw new ConflictException('Cart content has changed. Please re-validate checkout.');
+        }
+
+        // 4. Allocate inventory
+        const allocations = await this.inventoryAllocator.allocate(
+            cart.items.map((item) => ({
+                variantId: item.productVariantId,
+                quantity: item.quantity,
+            }))
         );
 
-        // Step 4: Execute order creation in transaction
-        const isVietQR = dto.paymentMethod === 'VIETQR';
-        // Note: For VietQR (manual), we keep it as pending_payment until staff confirms
-        const orderStatus = 'pending_payment'; 
+        const { orderItemsData, totals } = this.calculateOrderTotals(cart.items, variants, dto.shippingMethodId);
         const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
 
         try {
@@ -112,121 +134,79 @@ export class OrderPaymentService {
                 // 4a. Create order
                 const order = await this.createOrder(tx, {
                     userId,
-                    sessionId: userId ? null : sessionId as any,
+                    sessionId: userId ? null : sessionId,
                     dto,
                     orderItemsData,
-                    subTotal,
-                    totalAmount,
-                    status: orderStatus as any,
+                    subTotal: totals.subtotal,
+                    totalAmount: totals.total,
+                    status: 'pending_payment',
                     paymentDeadline,
                 });
 
-                // 4b. Reserve inventory (always reserve for VietQR/Online)
+                // 4b. Reserve inventory with ownership tracking
                 await this.inventoryService.reserve(
                     order.id,
                     allocations,
                     paymentDeadline,
                     tx,
+                    userId,
+                    sessionId,
                 );
 
                 // 4c. Create payment transaction
                 const payment = await this.createPaymentTransaction(tx, {
                     orderId: order.id,
-                    amount: totalAmount,
+                    amount: totals.total,
                     provider: dto.paymentMethod,
                     status: 'pending',
                 });
 
                 // 4d. Clear cart
-                await tx.cartItem.deleteMany({
-                    where: { cartId: cart.id },
-                });
+                await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
                 return { order, payment };
             });
 
-            // Step 5: Generate payment URL (outside transaction)
+            // Step 5: Generate payment URL
             let paymentUrl: string | null = null;
-            if (!isVietQR) {
+            if (dto.paymentMethod !== 'VIETQR') {
                 try {
                     paymentUrl = await this.paymentService.generatePaymentUrl(
                         result.order.id,
                         result.order.code,
-                        totalAmount,
+                        totals.total,
                         dto.paymentMethod,
                         dto.returnUrl,
                         dto.cancelUrl,
                     );
                 } catch (error) {
-                    // Compensating transaction: cancel order if payment URL generation fails
-                    this.logger.error(
-                        `Failed to generate payment URL for order ${result.order.code}`,
-                        error,
-                    );
-                    await this.cancelOrderAndReleaseInventory(result.order.id);
+                    await this.cancelOrderAndReleaseInventory(result.order.id, 'Payment initiation failed');
                     throw new BadRequestException('Failed to initiate payment');
                 }
             }
 
-            // Step 6: Build response
-            return this.buildOrderPaymentResponse(
-                result.order,
-                result.payment,
-                paymentUrl,
-                isVietQR,
-            );
+            return this.buildOrderPaymentResponse(result.order, result.payment, paymentUrl, dto.paymentMethod === 'VIETQR');
         } catch (error) {
             this.logger.error('Failed to create order with payment', error);
             throw error;
         }
     }
 
-    /**
-     * Confirm order after successful payment
-     * Called by payment callback handler
-     * 
-     * Idempotent: Can be called multiple times safely
-     */
     async confirmOrder(orderId: string): Promise<void> {
         this.logger.log(`Confirming order: ${orderId}`);
 
         await this.prisma.$transaction(async (tx) => {
-            // Fetch order with items
             const order = await tx.order.findUnique({
                 where: { id: orderId },
                 include: { items: true },
             });
 
-            if (!order) {
-                throw new NotFoundException(`Order ${orderId} not found`);
-            }
+            if (!order || order.status === 'confirmed') return;
 
-            // Idempotency: Skip if already confirmed
-            if (order.status === 'confirmed') {
-                this.logger.log(`Order ${orderId} already confirmed, skipping`);
-                return;
-            }
-
-            // Validate transition
             OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.confirmed);
 
-            if (order.status !== 'pending_payment' && order.status !== 'pending') {
-                throw new BadRequestException(
-                    `Cannot confirm order in status: ${order.status}`,
-                );
-            }
-
-            // Fetch variants for inventory deduction
-            const variantIds = order.items.map((item) => item.productVariantId).filter((id): id is string => id !== null);
-            const variants = await tx.productVariant.findMany({
-                where: { id: { in: variantIds } },
-                include: { inventoryItems: true },
-            });
-
-            // Deduct inventory
             await this.inventoryService.deduct(orderId, tx);
 
-            // Update order status
             await tx.order.update({
                 where: { id: orderId },
                 data: {
@@ -236,248 +216,110 @@ export class OrderPaymentService {
                 },
             });
 
-            // Create timeline entry
             await tx.orderTimeline.create({
                 data: {
                     orderId,
                     action: 'order_confirmed',
-                    fromStatus: 'pending_payment',
+                    fromStatus: order.status,
                     toStatus: 'confirmed',
                     description: 'Order confirmed after successful payment',
                     actorType: 'system',
                 },
             });
         });
-
-        this.logger.log(`Order ${orderId} confirmed successfully`);
     }
 
-    /**
-     * Cancel order after payment failure
-     * Called by payment callback handler
-     * 
-     * Idempotent: Can be called multiple times safely
-     */
     async cancelOrder(orderId: string, reason: string): Promise<void> {
-        this.logger.log(`Cancelling order: ${orderId}, reason: ${reason}`);
-
         await this.cancelOrderAndReleaseInventory(orderId, reason);
     }
 
-    /**
-     * Cancel pending order (user-initiated)
-     * 
-     * Rules:
-     * - Only pending_payment orders can be cancelled
-     * - Guest orders require sessionId verification
-     */
-    async cancelPendingOrder(
-        orderId: string,
-        sessionId?: string,
-        reason?: string,
-    ): Promise<void> {
-        const order = await this.prisma.order.findUnique({
-            where: { id: orderId },
-        });
-
-        if (!order) {
-            throw new NotFoundException(`Order ${orderId} not found`);
-        }
-
-        // Verify session ownership for guest orders
-        if (!order.userId && order.sessionId !== sessionId) {
-            throw new BadRequestException('Invalid session');
-        }
-
-        // Only pending_payment orders can be cancelled by user
-        if (order.status !== 'pending_payment') {
-            throw new BadRequestException(
-                `Cannot cancel order in status: ${order.status}`,
-            );
-        }
-
-        await this.cancelOrderAndReleaseInventory(
-            orderId,
-            reason || 'Cancelled by user',
-        );
-    }
-
-    // ============================================
-    // PRIVATE HELPER METHODS
-    // ============================================
-
-    /**
-     * Fetch cart and product variants
-     */
     private async getCartAndVariants(userId?: string, sessionId?: string) {
         const cart = await this.prisma.cart.findFirst({
             where: userId ? { userId } : { sessionId },
             include: { items: true },
         });
 
-        if (!cart || cart.items.length === 0) {
-            return { cart: null, variants: [] };
-        }
+        if (!cart || cart.items.length === 0) return { cart: null, variants: [] };
 
         const variantIds = cart.items.map((item) => item.productVariantId);
         const variants = await this.prisma.productVariant.findMany({
             where: { id: { in: variantIds } },
             include: {
-                inventoryItems: true,
-                product: {
-                    select: { name: true },
-                },
+                product: { select: { name: true } },
             },
         });
 
         return { cart, variants };
     }
 
-    /**
-     * Calculate order totals
-     */
-    private calculateOrderTotals(
-        cartItems: any[],
-        variants: any[],
-        shippingMethodId?: string,
-    ) {
-        const orderItemsData = cartItems.map((item) => {
+    private calculateOrderTotals(items: any[], variants: any[], shippingMethodId?: string) {
+        const orderItemsData = items.map((item) => {
             const variant = variants.find((v) => v.id === item.productVariantId);
             const price = Number(variant.price);
-            const totalLine = price * item.quantity;
-
             return {
                 productVariantId: variant.id,
-                productName: variant.product.name,
+                productName: typeof variant.product.name === 'string' 
+                    ? variant.product.name 
+                    : (variant.product.name.en || variant.product.name.vi || 'Product'),
                 sku: variant.sku,
                 variantTitle: variant.variantTitle || {},
                 quantity: item.quantity,
                 price,
-                totalLine,
+                totalLine: price * item.quantity,
             };
         });
 
-        const subTotal = orderItemsData.reduce(
-            (sum, item) => sum + item.totalLine,
-            0,
-        );
-        const shippingFee = this.SHIPPING_FEE;
-        const totalAmount = subTotal + shippingFee;
+        const subtotal = orderItemsData.reduce((sum, item) => sum + item.totalLine, 0);
+        const total = subtotal + this.SHIPPING_FEE;
 
-        return { orderItemsData, subTotal, totalAmount };
+        return { orderItemsData, totals: { subtotal, total, shipping: this.SHIPPING_FEE } };
     }
 
-    /**
-     * Create order record
-     */
-    private async createOrder(
-        tx: Prisma.TransactionClient,
-        params: {
-            userId?: string;
-            sessionId?: string;
-            dto: CreateOrderWithPaymentDto;
-            orderItemsData: any[];
-            subTotal: number;
-            totalAmount: number;
-            status: string;
-            paymentDeadline: Date | null;
-        },
-    ) {
+    private async createOrder(tx: Prisma.TransactionClient, params: any) {
         const orderCode = this.generateOrderCode();
-
-        const order = await tx.order.create({
+        return tx.order.create({
             data: {
                 code: orderCode,
                 userId: params.userId,
                 sessionId: params.sessionId,
-                status: params.status as any,
+                status: params.status,
                 paymentStatus: 'unpaid',
-                paymentMethod: params.dto.paymentMethod as any,
+                paymentMethod: params.dto.paymentMethod as PaymentMethodEnum,
                 paymentDeadline: params.paymentDeadline,
-                shippingAddress: params.dto.shippingAddress as any,
-                billingAddress: (params.dto.billingAddress || params.dto.shippingAddress) as any,
+                shippingAddress: params.dto.shippingAddress,
+                billingAddress: params.dto.billingAddress || params.dto.shippingAddress,
                 shippingMethodId: params.dto.shippingMethodId,
                 currency: 'VND',
                 subTotal: params.subTotal,
                 shippingFee: this.SHIPPING_FEE,
                 totalAmount: params.totalAmount,
                 note: params.dto.note,
-                items: {
-                    create: params.orderItemsData,
-                },
+                items: { create: params.orderItemsData },
             },
             include: { items: true },
         });
-
-        // Create timeline entry
-        await tx.orderTimeline.create({
-            data: {
-                orderId: order.id,
-                action: 'order_created',
-                toStatus: params.status as any,
-                description: `Order created with payment method: ${params.dto.paymentMethod}`,
-                actorType: 'system',
-            },
-        });
-
-        return order;
     }
 
-    /**
-     * Create payment transaction record
-     */
-    private async createPaymentTransaction(
-        tx: Prisma.TransactionClient,
-        params: {
-            orderId: string;
-            amount: number;
-            provider: string;
-            status: string;
-        },
-    ) {
-        const transactionCode = this.generateTransactionCode();
-
+    private async createPaymentTransaction(tx: Prisma.TransactionClient, params: any) {
         return tx.paymentTransaction.create({
             data: {
                 orderId: params.orderId,
                 amount: params.amount,
                 currency: 'VND',
                 type: 'payment',
-                status: params.status as any,
+                status: params.status,
                 provider: params.provider,
-                transactionCode,
+                transactionCode: this.generateTransactionCode(),
             },
         });
     }
 
-    /**
-     * Cancel order and release inventory
-     * Idempotent operation
-     */
-    private async cancelOrderAndReleaseInventory(
-        orderId: string,
-        reason?: string,
-    ): Promise<void> {
+    private async cancelOrderAndReleaseInventory(orderId: string, reason?: string) {
         await this.prisma.$transaction(async (tx) => {
-            const order = await tx.order.findUnique({
-                where: { id: orderId },
-                include: { items: true },
-            });
+            const order = await tx.order.findUnique({ where: { id: orderId } });
+            if (!order || order.status === 'cancelled') return;
 
-            if (!order) {
-                throw new NotFoundException(`Order ${orderId} not found`);
-            }
-
-            // Idempotency: Skip if already cancelled
-            if (order.status === 'cancelled') {
-                this.logger.log(`Order ${orderId} already cancelled, skipping`);
-                return;
-            }
-
-            // Release inventory
             await this.inventoryService.release(orderId, tx);
-
-            // Update order status
             await tx.order.update({
                 where: { id: orderId },
                 data: {
@@ -486,90 +328,43 @@ export class OrderPaymentService {
                     cancelledAt: new Date(),
                 },
             });
-
-            // Update payment status
             await tx.paymentTransaction.updateMany({
                 where: { orderId },
                 data: { status: 'failed' },
             });
-
-            // Create timeline entry
-            await tx.orderTimeline.create({
-                data: {
-                    orderId,
-                    action: 'order_cancelled',
-                    fromStatus: order.status,
-                    toStatus: 'cancelled',
-                    description: reason || 'Order cancelled',
-                    actorType: 'system',
-                },
-            });
         });
-
-        this.logger.log(`Order ${orderId} cancelled and inventory released`);
     }
 
-    /**
-     * Build response DTO
-     */
-    private buildOrderPaymentResponse(
-        order: any,
-        payment: any,
-        paymentUrl: string | null,
-        isVietQR: boolean,
-    ): OrderPaymentResponseDto {
-        const orderSummary: OrderSummaryDto = {
-            id: order.id,
-            code: order.code,
-            status: order.status,
-            paymentStatus: order.paymentStatus,
-            paymentDeadline: order.paymentDeadline,
-            totalAmount: Number(order.totalAmount),
-            currency: order.currency,
-            createdAt: order.createdAt,
-        };
+    private generateCartHash(items: any[]): string {
+        const sortedItems = [...items].sort((a, b) => a.productVariantId.localeCompare(b.productVariantId));
+        const content = sortedItems.map(i => `${i.productVariantId}:${i.quantity}`).join('|');
+        return createHash('sha256').update(content).digest('hex');
+    }
 
-        const paymentDetails: PaymentDetailsDto = {
-            id: payment.id,
-            paymentUrl,
-            transactionCode: payment.transactionCode,
-            provider: payment.provider,
-            status: payment.status,
-        };
-
-        const flowStatus: PaymentFlowStatus = isVietQR
-            ? PaymentFlowStatus.PENDING_PAYMENT // For VietQR, it's pending until confirmed
-            : PaymentFlowStatus.PENDING_PAYMENT;
-
-        const message = isVietQR
-            ? 'Order created successfully. Please scan VietQR to complete payment.'
-            : 'Order created successfully. Please complete payment within 15 minutes.';
-
+    private buildOrderPaymentResponse(order: any, payment: any, paymentUrl: string | null, isVietQR: boolean): OrderPaymentResponseDto {
         return {
-            order: orderSummary,
-            payment: paymentDetails,
-            flowStatus,
-            message,
+            order: {
+                id: order.id,
+                code: order.code,
+                status: order.status,
+                paymentStatus: order.paymentStatus,
+                paymentDeadline: order.paymentDeadline,
+                totalAmount: Number(order.totalAmount),
+                currency: order.currency,
+                createdAt: order.createdAt,
+            },
+            payment: {
+                id: payment.id,
+                paymentUrl,
+                transactionCode: payment.transactionCode,
+                provider: payment.provider,
+                status: payment.status,
+            },
+            flowStatus: PaymentFlowStatus.PENDING_PAYMENT,
+            message: 'Order created. Please complete payment.',
         };
     }
 
-    /**
-     * Generate unique order code
-     */
-    private generateOrderCode(): string {
-        const date = new Date();
-        const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-        const suffix = randomBytes(3).toString('hex').toUpperCase();
-        return `${this.ORDER_CODE_PREFIX}-${dateStr}-${suffix}`;
-    }
-
-    /**
-     * Generate unique transaction code
-     */
-    private generateTransactionCode(): string {
-        const date = new Date();
-        const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-        const suffix = randomBytes(3).toString('hex').toUpperCase();
-        return `TXN-${dateStr}-${suffix}`;
-    }
+    private generateOrderCode() { return `${this.ORDER_CODE_PREFIX}-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`; }
+    private generateTransactionCode() { return `TXN-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`; }
 }

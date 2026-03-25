@@ -39,6 +39,25 @@ const DEFAULT_TOTALS: CartTotals = {
     shippingThreshold: 2000000,
 };
 
+// Pricing/Totals Utility
+const calculateTotals = (items: CartItem[]): CartTotals => {
+    const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const SHIPPING_THRESHOLD = 2000000;
+    const SHIPPING_FEE = 35000;
+    const isFreeShipping = subtotal >= SHIPPING_THRESHOLD;
+    const shipping = subtotal === 0 ? 0 : (isFreeShipping ? 0 : SHIPPING_FEE);
+    const total = subtotal + shipping;
+    
+    return {
+        subtotal,
+        shipping,
+        tax: 0,
+        total,
+        isFreeShipping,
+        shippingThreshold: SHIPPING_THRESHOLD,
+    };
+};
+
 export const useCartStore = create<CartState>()(
     persist(
         (set, get) => ({
@@ -62,6 +81,7 @@ export const useCartStore = create<CartState>()(
                     });
                 } catch (err: any) {
                     set({ status: 'error', error: err.message });
+                    toast.error('Could not load your cart. Please try again.');
                 }
             },
 
@@ -99,14 +119,13 @@ export const useCartStore = create<CartState>()(
 
                     // 409 Conflict Handling (Versioning)
                     if (err.response?.status === 409 || err.code === 'CART_VERSION_MISMATCH') {
-                        toast.info("Updating cart to latest state...", {
-                            description: "Your cart was modified in another tab."
-                        });
+                        // Silent reconcile: just fetch the latest state and try to recover
                         await get().fetchCart();
                         return;
                     }
 
                     set({ status: 'error', error: err.message });
+                    toast.error('Failed to update cart. Please try again.');
                     console.error("Cart Sync Failed:", err);
                 } finally {
                     if (activeAbortController?.signal === signal) {
@@ -115,23 +134,6 @@ export const useCartStore = create<CartState>()(
                 }
             },
 
-            _recalculateTotals: (items: CartItem[]) => {
-                const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-                const SHIPPING_THRESHOLD = 2000000;
-                const SHIPPING_FEE = 35000;
-                const isFreeShipping = subtotal >= SHIPPING_THRESHOLD;
-                const shipping = subtotal === 0 ? 0 : (isFreeShipping ? 0 : SHIPPING_FEE);
-                const total = subtotal + shipping;
-                
-                return {
-                    subtotal,
-                    shipping,
-                    tax: 0,
-                    total,
-                    isFreeShipping,
-                    shippingThreshold: SHIPPING_THRESHOLD,
-                };
-            },
 
             addItem: async (variantId, quantity, details) => {
                 const existingItems = get().items;
@@ -163,7 +165,7 @@ export const useCartStore = create<CartState>()(
                 // Optimistic Update
                 set({
                     items: newItems,
-                    totals: (get() as any)._recalculateTotals(newItems),
+                    totals: calculateTotals(newItems),
                     isOpen: true,
                     recentlyAddedId: variantId
                 });
@@ -176,7 +178,7 @@ export const useCartStore = create<CartState>()(
                 const newItems = get().items.filter(i => i.variantId !== variantId);
                 set({ 
                     items: newItems,
-                    totals: (get() as any)._recalculateTotals(newItems)
+                    totals: calculateTotals(newItems)
                 });
                 await get()._syncWithBackend((v, signal) => CartService.removeItem(variantId, v, signal));
             },
@@ -191,13 +193,12 @@ export const useCartStore = create<CartState>()(
                 const newItems = get().items.map(i => i.variantId === variantId ? { ...i, quantity } : i);
                 set({
                     items: newItems,
-                    totals: (get() as any)._recalculateTotals(newItems)
+                    totals: calculateTotals(newItems)
                 });
 
                 // 2. Debounced API Sync (Last-Write-Wins)
-                if (debounceTimer) clearTimeout(debounceTimer);
-                
                 debounceTimer = setTimeout(() => {
+                    // Send version as optional: if it fails with 409, fetchCart() will fix it silenty
                     get()._syncWithBackend((v, signal) => CartService.updateItem(variantId, quantity, v, signal));
                 }, 300);
             },

@@ -12,11 +12,11 @@ export const CartConfidence = () => {
     ];
 
     return (
-        <div className="mt-6 pt-6 border-t border-hairline space-y-3">
+        <div className="space-y-2 mt-2">
             {signals.map((signal, index) => (
-                <div key={index} className="flex items-center gap-3 text-muted-foreground/60">
-                    <signal.icon size={14} strokeWidth={1.2} />
-                    <span className="font-body text-[10px] uppercase tracking-widest">
+                <div key={index} className="flex items-center gap-2 text-muted-foreground/40">
+                    <signal.icon size={12} strokeWidth={1} />
+                    <span className="font-body text-[9px] uppercase tracking-[0.2em]">
                         {signal.text}
                     </span>
                 </div>

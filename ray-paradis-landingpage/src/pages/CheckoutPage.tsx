@@ -83,7 +83,13 @@ export const CheckoutPage: React.FC = () => {
         const cartSessionId = CartService.getSessionId();
 
         try {
+            // STEP 1: VALIDATE CHECKOUT (Secure Snapshot & Token)
+            const validateResponse = await CheckoutService.validateCheckout(cartSessionId);
+            const { checkoutToken } = validateResponse;
+
+            // STEP 2: CREATE ORDER
             const payload = {
+                checkoutToken, // Secure token from Step 1
                 shippingAddress: {
                     fullName: formData.fullName,
                     phone: formData.phone,
@@ -98,10 +104,11 @@ export const CheckoutPage: React.FC = () => {
                 idempotencyKey 
             };
 
-            const response = await CheckoutService.createOrderWithPayment(payload, idempotencyKey, cartSessionId);
+            const orderResponse = await CheckoutService.createOrder(payload, idempotencyKey, cartSessionId);
             
-            if (response.paymentUrl) {
-                window.location.href = response.paymentUrl;
+            if (orderResponse.paymentUrl) {
+                // STEP 3: REDIRECT TO PAYMENT GATEWAY
+                window.location.href = orderResponse.paymentUrl;
             } else {
                 toast.success(t.checkout.validation.success);
                 navigate('/');

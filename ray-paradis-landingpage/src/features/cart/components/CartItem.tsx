@@ -69,22 +69,23 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                 </div>
 
                 {/* Price & Quantity Area */}
-                <div className="mt-auto flex justify-between items-center">
-                    <div className="flex items-center border border-hairline overflow-hidden">
+                <div className="mt-auto flex justify-between items-center pt-2">
+                    <div className="flex items-center border border-hairline overflow-hidden bg-background shadow-sm hover:border-primary/20 transition-colors">
                         <button 
                             onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
-                            className="p-1.5 hover:bg-secondary/20 transition-colors"
+                            className="p-2.5 sm:p-2.5 hover:bg-secondary/10 transition-colors disabled:opacity-30"
+                            disabled={item.quantity <= 1}
                         >
-                            <Minus size={12} strokeWidth={1} />
+                            <Minus size={13} strokeWidth={1} />
                         </button>
-                        <span className="w-8 text-center font-body text-[10px] tabular-nums">
+                        <span className="w-10 sm:w-10 text-center font-body text-[11px] tabular-nums font-medium">
                             {item.quantity}
                         </span>
                         <button 
                             onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                            className="p-1.5 hover:bg-secondary/20 transition-colors"
+                            className="p-2.5 sm:p-2.5 hover:bg-secondary/10 transition-colors"
                         >
-                            <Plus size={12} strokeWidth={1} />
+                            <Plus size={13} strokeWidth={1} />
                         </button>
                     </div>
                     

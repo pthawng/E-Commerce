@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { 
     Sheet, 
     SheetContent, 
@@ -44,10 +45,15 @@ export const CartDrawer = () => {
                 </SheetHeader>
 
                 {/* Body */}
-                <div className="flex-grow flex flex-col overflow-hidden relative">
+                <div className="flex-grow min-h-0 relative">
                     {isSyncing && items.length > 0 && (
-                        <div className="absolute inset-0 bg-background/20 backdrop-blur-[2px] z-10 flex items-center justify-center">
-                            <div className="w-1 h-1 bg-gold rounded-full animate-ping" />
+                        <div className="absolute top-0 left-0 w-full h-[1px] bg-secondary/10 z-20 pointer-events-none overflow-hidden">
+                            <motion.div 
+                                className="h-full bg-gold/30"
+                                animate={{ x: ['-100%', '200%'] }}
+                                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                                style={{ width: '50%' }}
+                            />
                         </div>
                     )}
                     {isEmpty && !isSyncing ? (
@@ -70,7 +76,7 @@ export const CartDrawer = () => {
                             </Button>
                         </div>
                     ) : (
-                        <ScrollArea className="flex-grow px-6">
+                        <ScrollArea className="h-full px-6">
                             <div className="py-2">
                                 {items.map((item) => (
                                     <CartItem key={item.variantId} item={item} layout="drawer" />
@@ -80,45 +86,63 @@ export const CartDrawer = () => {
                     )}
                 </div>
 
-                {/* Footer */}
+                {/* Footer Center - High Aligned Layout */}
                 {!isEmpty && (
-                    <SheetFooter className="mt-auto p-6 border-t border-hairline bg-secondary/5 flex-col space-y-6">
-                        <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="font-body text-muted-foreground uppercase tracking-widest text-[10px]">
-                                    {t.cart.subtotal}
-                                </span>
-                                <span className="font-body font-medium tabular-nums">{formatPrice(subtotal)}</span>
+                    <SheetFooter className="mt-auto p-5 sm:p-7 border-t border-hairline bg-secondary/[0.01] flex-col space-y-0">
+                        <div className="flex items-start justify-between gap-6">
+                            {/* Left: Primary Action & Confidence */}
+                            <div className="flex-[3] space-y-4">
+                                <Button 
+                                    asChild
+                                    className="w-full bg-primary hover:bg-primary/95 text-primary-foreground h-16 rounded-none group shadow-luxury-soft"
+                                    onClick={() => setOpen(false)}
+                                >
+                                    <Link to="/checkout" className="flex items-center justify-center gap-3">
+                                        <span className="font-body text-[11px] uppercase tracking-[0.25em] font-medium truncate">
+                                            {t.cart.checkout}
+                                        </span>
+                                        <ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
+                                    </Link>
+                                </Button>
+                                
+                                <div className="pl-1 opacity-80">
+                                    <CartConfidence />
+                                </div>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="font-body text-muted-foreground uppercase tracking-widest text-[10px]">
-                                    {t.cart.shipping}
-                                </span>
-                                <span className={isFreeShipping ? "text-gold font-body text-[10px] uppercase tracking-widest" : "font-body font-medium tabular-nums"}>
-                                    {isFreeShipping ? t.cart.complimentary : formatPrice(shipping)}
-                                </span>
-                            </div>
-                            <div className="pt-3 border-t border-hairline flex justify-between items-baseline">
-                                <span className="font-display text-lg italic text-primary">{t.cart.total}</span>
-                                <span className="font-body text-xl font-semibold text-primary tabular-nums">
-                                    {formatPrice(total)}
-                                </span>
-                            </div>
-                        </div>
 
-                        <div className="space-y-4">
-                            <Button 
-                                asChild
-                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-14 rounded-none group"
-                                onClick={() => setOpen(false)}
-                            >
-                                <Link to="/checkout" className="flex items-center justify-center gap-2">
-                                    {t.cart.checkout}
-                                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
-                                </Link>
-                            </Button>
-                            
-                            <CartConfidence />
+                            {/* Right: Full Pricing Lifecycle */}
+                            <div className="flex-[2] flex flex-col items-end text-right">
+                                {/* Sub-breakdown */}
+                                <div className="space-y-1 mb-6">
+                                    <div className="flex flex-col items-end">
+                                        <span className="font-body text-muted-foreground uppercase tracking-[0.15em] text-[8px] leading-none mb-1">
+                                            {t.cart.subtotal}
+                                        </span>
+                                        <span className="font-body text-primary tabular-nums text-sm font-medium leading-none">
+                                            {formatPrice(subtotal)}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col items-end pt-2">
+                                        <span className="font-body text-muted-foreground uppercase tracking-[0.15em] text-[8px] leading-none mb-1">
+                                            {t.cart.shipping}
+                                        </span>
+                                        <span className={isFreeShipping ? "text-gold font-body text-[8px] uppercase tracking-[0.1em] font-medium leading-none" : "font-body text-primary tabular-nums text-sm font-medium leading-none"}>
+                                            {isFreeShipping ? t.cart.complimentary : formatPrice(shipping)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Divider Line (Minimal) */}
+                                <div className="w-8 h-px bg-hairline mb-4" />
+
+                                {/* Grand Total */}
+                                <div className="flex flex-col items-end">
+                                    <p className="font-display text-xs italic text-muted-foreground mb-1 leading-none">{t.cart.total}</p>
+                                    <p className="font-body text-3xl font-semibold text-primary tabular-nums tracking-tighter leading-none">
+                                        {formatPrice(total)}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </SheetFooter>
                 )}

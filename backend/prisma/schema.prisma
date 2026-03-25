@@ -1,8 +1,5 @@
 generator client {
   provider       = "prisma-client-js"
-  output         = "../src/generated/prisma"
-  moduleFormat   = "commonjs"
-  engineType     = "client"
 }
 
 datasource db {
@@ -443,6 +440,8 @@ model InventoryReservation {
   orderId         String            @db.Uuid
   variantId       String            @db.Uuid
   warehouseId     String            @db.Uuid
+  userId          String?           @db.Uuid
+  sessionId       String?           @db.VarChar(100)
   quantity        Int
   expiresAt       DateTime
   status          ReservationStatus @default(active)
@@ -450,6 +449,7 @@ model InventoryReservation {
   
   @@index([expiresAt, status], map: "idx_reservation_cleanup")
   @@index([orderId], map: "idx_reservation_order")
+  @@index([userId, sessionId], map: "idx_reservation_owner")
   @@map("inventory_reservations")
 }
 
@@ -544,6 +544,7 @@ model Order {
   completedAt           DateTime?
   cancelledAt           DateTime?
   idempotencyKey        String?           @unique
+  retryCount            Int               @default(0)
 
   user                  User?             @relation(fields: [userId], references: [id])
   shippingMethod        ShippingMethod?   @relation(fields: [shippingMethodId], references: [id])
@@ -585,7 +586,7 @@ model PaymentTransaction {
   status           TransactionStatusEnum @default(pending)
   provider         String
   method           String?
-  transactionCode  String?
+  transactionCode  String?             @unique
   gatewayResponse  Json?
   note             String?
   createdAt        DateTime            @default(now())

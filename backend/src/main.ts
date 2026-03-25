@@ -13,10 +13,15 @@ async function bootstrap() {
   // Do NOT use '*' when requests use credentials (withCredentials: true).
 
   app.enableCors({
-    origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'http://localhost:8080', 'http://localhost:5174'],
+    origin: [
+      process.env.CORS_ORIGIN || 'http://localhost:5173',
+      'http://localhost:8080',
+      'http://localhost:8880',
+      'http://localhost:5174'
+    ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization, Accept, x-client-session-id',
+    allowedHeaders: 'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key',
   });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )
