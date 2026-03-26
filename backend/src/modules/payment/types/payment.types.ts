@@ -61,7 +61,7 @@ export interface CallbackData {
  * Payment Provider Interface
  * All payment providers must implement this interface
  */
-export interface IPaymentProvider {
+export interface IPaymentGatewayProvider {
     /**
      * Create a payment transaction
      * @param orderId - Order ID
@@ -99,6 +99,14 @@ export interface IPaymentProvider {
      * Get payment method identifier
      */
     getPaymentMethod(): PaymentMethodEnum;
+
+    /**
+     * Optional: Verify webhook signature for background processing
+     */
+    verifyWebhookSignature?(
+        headers: Record<string, any>,
+        body: Record<string, any>,
+    ): Promise<boolean>;
 }
 
 /**

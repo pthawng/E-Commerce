@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import {
     CallbackData,
-    IPaymentProvider,
+    IPaymentGatewayProvider,
     PaymentMethodEnum,
     PaymentResult,
     RefundResult,
@@ -12,7 +12,7 @@ import {
  * Abstract class providing common functionality for all payment providers
  * Uses Template Method pattern
  */
-export abstract class BasePaymentProvider implements IPaymentProvider {
+export abstract class BasePaymentProvider implements IPaymentGatewayProvider {
     protected readonly logger: Logger;
 
     constructor(loggerContext: string) {

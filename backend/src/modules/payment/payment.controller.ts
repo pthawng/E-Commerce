@@ -7,22 +7,30 @@ import {
     Query,
     Req,
     Res,
+    UseGuards,
+    Logger,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Public } from '@common/decorators/public.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmVietQRPaymentDto, RefundPaymentDto } from './dto/refund.dto';
 import { PaymentService } from './payment.service';
-import { PaymentMethodEnum } from '@prisma/client';
+import { VietQRMatchingService, BankTransaction } from './services/vietqr-matching.service';
+import { PaymentMethodEnum } from './types/payment.types';
 import { OrderPaymentService } from '@modules/order/services/order-payment.service';
 
 @ApiTags('Payment')
 @Controller('payment')
 export class PaymentController {
+    private readonly logger = new Logger(PaymentController.name);
+
     constructor(
         private readonly paymentService: PaymentService,
-        private readonly orderPaymentService: OrderPaymentService,
+        private readonly vietqrMatchingService: VietQRMatchingService,
+        @InjectQueue('payment_status') private readonly paymentQueue: Queue,
     ) { }
 
     /**
@@ -81,25 +89,33 @@ export class PaymentController {
     })
     async vnpayCallback(@Query() query: any, @Res() res: Response) {
         try {
-            const callbackData = await this.paymentService.processCallback(
-                PaymentMethodEnum.VNPAY,
-                query,
-            );
+            // VNPAY IPN and Return usually use the same endpoint but different behaviors
+            // 1. Add to background queue for Source of Truth update (Reliability)
+            await this.paymentQueue.add('process_callback', {
+                paymentMethod: PaymentMethodEnum.VNPAY,
+                callbackData: query,
+            }, {
+                attempts: 5,
+                backoff: { type: 'exponential', delay: 1000 },
+                removeOnComplete: true,
+            });
 
-            // Redirect to frontend with result
+            // 2. For the user (Browser redirect)
+            // We verify synchronously ONLY for the redirect response, not for the DB update
+            const provider = this.paymentService.getProvider(PaymentMethodEnum.VNPAY);
+            const verifiedData = await provider.verifyCallback(query);
 
-            // Redirect to frontend with result
             const redirectUrl = new URL(
                 process.env.FRONTEND_URL || 'http://localhost:5173',
             );
             redirectUrl.pathname = '/payment/result';
-            redirectUrl.searchParams.set('orderId', callbackData.orderId);
-            redirectUrl.searchParams.set('status', callbackData.status);
-            redirectUrl.searchParams.set('transactionId', callbackData.transactionId);
+            redirectUrl.searchParams.set('orderId', verifiedData.orderId);
+            redirectUrl.searchParams.set('status', verifiedData.status);
+            redirectUrl.searchParams.set('transactionId', verifiedData.transactionId);
 
             return res.redirect(redirectUrl.toString());
         } catch (error) {
-            // Redirect to error page
+            this.logger.error(`VNPAY Callback Error: ${error.message}`);
             const errorUrl = new URL(
                 process.env.FRONTEND_URL || 'http://localhost:5173',
             );
@@ -108,6 +124,30 @@ export class PaymentController {
 
             return res.redirect(errorUrl.toString());
         }
+    }
+
+    /**
+     * VNPAY IPN Handler
+     * Required by VNPAY for server-to-server confirmation
+     */
+    @Get('vnpay/ipn')
+    @Public()
+    @ApiOperation({ summary: 'VNPAY IPN handler' })
+    async vnpayIpn(@Query() query: any) {
+        this.logger.log('Received VNPAY IPN notification');
+        
+        // Add to background queue
+        await this.paymentQueue.add('process_callback', {
+            paymentMethod: PaymentMethodEnum.VNPAY,
+            callbackData: query,
+        }, {
+            attempts: 5,
+            backoff: { type: 'exponential', delay: 1000 },
+            removeOnComplete: true,
+        });
+
+        // VNPAY expects this specific JSON response for IPN
+        return { RspCode: '00', Message: 'Confirm success' };
     }
 
     /**
@@ -150,14 +190,28 @@ export class PaymentController {
         status: 200,
         description: 'Webhook processed successfully',
     })
-    async paypalWebhook(@Body() webhookData: any) {
-        // In production, verify webhook signature here
-        // For now, we'll just process the event
+    async paypalWebhook(@Body() webhookData: any, @Req() req: Request) {
+        this.logger.log('Received PayPal Webhook notification');
+        
+        // Extract required headers for signature verification
+        const headers = {
+            'paypal-auth-algo': req.headers['paypal-auth-algo'],
+            'paypal-cert-url': req.headers['paypal-cert-url'],
+            'paypal-transmission-id': req.headers['paypal-transmission-id'],
+            'paypal-transmission-sig': req.headers['paypal-transmission-sig'],
+            'paypal-transmission-time': req.headers['paypal-transmission-time'],
+        };
 
-        await this.paymentService.processCallback(
-            PaymentMethodEnum.PAYPAL,
-            webhookData,
-        );
+        // Add to background queue
+        await this.paymentQueue.add('process_callback', {
+            paymentMethod: PaymentMethodEnum.PAYPAL,
+            callbackData: webhookData,
+            headers, // Support for signature verification in the processor
+        }, {
+            attempts: 5,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: true,
+        });
 
         return { received: true };
     }
@@ -205,6 +259,15 @@ export class PaymentController {
     /**
      * Confirm VIETQR payment (staff only)
      */
+    @Post('vietqr/webhook')
+    @ApiOperation({ summary: 'VietQR Bank Transfer Webhook (e.g. from SePay/Casso)' })
+    @ApiResponse({ status: 200, description: 'Webhook processed' })
+    async vietqrWebhook(@Body() bankTx: BankTransaction) {
+        this.logger.log(`Received VietQR Bank Webhook: ${bankTx.amount} - ${bankTx.description}`);
+        const matched = await this.vietqrMatchingService.processIncomingTransaction(bankTx);
+        return { success: matched };
+    }
+
     @Post('vietqr/confirm')
     @ApiOperation({ summary: 'Confirm VIETQR payment (staff only)' })
     @ApiResponse({
@@ -262,7 +325,7 @@ export class PaymentController {
         },
     })
     async getPaymentStatus(@Param('orderId') orderId: string) {
-        return await this.paymentService.getPaymentStatus(orderId);
+        return await this.paymentService.getPaymentProcessingStatus(orderId);
     }
 
     /**

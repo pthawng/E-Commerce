@@ -5,16 +5,29 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
-import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, ReservationStatus, Prisma } from '@prisma/client';
+import { 
+    ActionType, 
+    OrderStatusEnum, 
+    PaymentStatusEnum, 
+    PaymentMethodEnum, 
+    TransactionStatusEnum, 
+    TransactionTypeEnum, 
+    ReservationStatus, 
+    Prisma, 
+    PaymentProcessingStatus, 
+    PaymentGatewayProvider 
+} from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
 import { VNPayProvider } from './providers/vnpay/vnpay.provider';
 import { IdempotencyService } from './services/idempotency.service';
+import { PaymentStateMachine } from './services/payment-state.machine';
+import { InventoryService } from '../inventory/inventory.service';
 import {
     CallbackData,
-    IPaymentProvider,
-    PaymentMethodEnum as PaymentProviderMethodEnum,
+    IPaymentGatewayProvider,
+    PaymentMethodEnum as PaymentGatewayProviderMethodEnum,
     PaymentResult,
     RefundResult,
     TransactionStatus,
@@ -27,7 +40,7 @@ import {
 @Injectable()
 export class PaymentService {
     private readonly logger = new Logger(PaymentService.name);
-    private readonly providers: Map<PaymentMethodEnum, IPaymentProvider>;
+    private readonly providers: Map<PaymentMethodEnum, IPaymentGatewayProvider>;
 
     constructor(
         private readonly prisma: PrismaService,
@@ -35,9 +48,11 @@ export class PaymentService {
         private readonly paypalProvider: PayPalProvider,
         private readonly vietqrProvider: VietQRProvider,
         private readonly idempotencyService: IdempotencyService,
+        private readonly stateMachine: PaymentStateMachine,
+        private readonly inventoryService: InventoryService,
     ) {
         // Register payment providers
-        this.providers = new Map<PaymentMethodEnum, IPaymentProvider>([
+        this.providers = new Map<PaymentMethodEnum, IPaymentGatewayProvider>([
             [PaymentMethodEnum.VNPAY, this.vnpayProvider],
             [PaymentMethodEnum.PAYPAL, this.paypalProvider],
             [PaymentMethodEnum.VIETQR, this.vietqrProvider],
@@ -106,18 +121,33 @@ export class PaymentService {
                 metadata,
             );
 
-            // Create transaction record
-            await this.prisma.paymentTransaction.create({
-                data: {
-                    orderId,
-                    amount: order.totalAmount,
-                    type: TransactionTypeEnum.payment,
-                    status: TransactionStatusEnum.pending,
-                    provider: paymentMethod,
-                    method: paymentMethod,
-                    transactionCode: result.transactionId,
-                    gatewayResponse: result.metadata || {},
-                },
+            // 1. Create Payment record (Source of Truth)
+            // Using a transaction to ensure both Payment and PaymentTransaction are created
+            await this.prisma.$transaction(async (tx) => {
+                await tx.payment.create({
+                    data: {
+                        orderId,
+                        provider: paymentMethod as unknown as PaymentGatewayProvider,
+                        providerTransactionId: result.transactionId,
+                        amount: order.totalAmount,
+                        status: PaymentProcessingStatus.INIT,
+                        rawPayload: result.metadata || {},
+                    },
+                });
+
+                // 2. Create transaction record (Audit log/History)
+                await tx.paymentTransaction.create({
+                    data: {
+                        orderId,
+                        amount: order.totalAmount,
+                        type: TransactionTypeEnum.payment,
+                        status: TransactionStatusEnum.pending,
+                        provider: paymentMethod,
+                        method: paymentMethod,
+                        transactionCode: result.transactionId,
+                        gatewayResponse: result.metadata || {},
+                    },
+                });
             });
 
             this.logger.log(
@@ -177,35 +207,70 @@ export class PaymentService {
         try {
             // Update order and transaction in a transaction
             await this.prisma.$transaction(async (tx) => {
-                // 1. Find transaction by transactionCode (Database-level idempotency check)
-                const transaction = await tx.paymentTransaction.findFirst({
-                    where: { transactionCode: verifiedData.transactionId as string },
+                // 1. Find or create Payment record (Database-level idempotency check)
+                let payment = await tx.payment.findUnique({
+                    where: { providerTransactionId: verifiedData.transactionId as string },
                     include: { order: true },
-                }) as any;
+                });
 
-                if (!transaction) {
-                    throw new NotFoundException(`Transaction ${verifiedData.transactionId} not found`);
+                // If payment record doesn't exist (IPN came before createPayment finished), create it
+                if (!payment) {
+                    this.logger.warn(`Payment ${verifiedData.transactionId} not found in DB during callback. Creating as INIT.`);
+                    payment = await tx.payment.create({
+                        data: {
+                            orderId: verifiedData.orderId as string,
+                            provider: paymentMethod as unknown as PaymentGatewayProvider,
+                            providerTransactionId: verifiedData.transactionId as string,
+                            amount: verifiedData.amount,
+                            status: PaymentProcessingStatus.INIT,
+                            rawPayload: verifiedData.gatewayResponse || {},
+                        },
+                        include: { order: true },
+                    });
                 }
 
-                const order = transaction.order;
+                const order = payment.order;
 
-                // 2. Check if transaction already successful or order already paid
-                if (transaction.status === TransactionStatusEnum.success || order.paymentStatus === 'paid') {
-                    this.logger.warn(`Transaction ${verifiedData.transactionId} already processed, skipping.`);
-                    return;
-                }
+                // 2. Validate state transition using State Machine
+                const nextPaymentProcessingStatus = verifiedData.status === TransactionStatus.SUCCESS 
+                    ? PaymentProcessingStatus.SUCCESS 
+                    : PaymentProcessingStatus.FAILED;
 
-                // 3. Update transaction status
-                await tx.paymentTransaction.update({
-                    where: { id: transaction.id },
+                this.stateMachine.validateTransition(payment.id, payment.status, nextPaymentProcessingStatus);
+
+                // 3. Update Payment record (Source of Truth)
+                await tx.payment.update({
+                    where: { id: payment.id },
                     data: {
-                        status: verifiedData.status,
-                        gatewayResponse: verifiedData.gatewayResponse,
+                        status: nextPaymentProcessingStatus,
+                        rawPayload: verifiedData.gatewayResponse,
+                        verifiedAt: new Date(),
                     },
                 });
 
-                // 4. Update order status based on payment result
-                if (verifiedData.status === TransactionStatus.SUCCESS) {
+                // 4. Update existing PaymentTransaction for history
+                const transaction = await tx.paymentTransaction.findFirst({
+                    where: { transactionCode: verifiedData.transactionId as string },
+                });
+
+                if (transaction) {
+                    await tx.paymentTransaction.update({
+                        where: { id: transaction.id },
+                        data: {
+                            status: verifiedData.status,
+                            gatewayResponse: verifiedData.gatewayResponse,
+                        },
+                    });
+                }
+
+                // 5. Update order status based on payment result
+                if (nextPaymentProcessingStatus === PaymentProcessingStatus.SUCCESS) {
+                    // Check if order already paid to avoid double processing (Idempotency)
+                    if (order.paymentStatus === 'paid') {
+                        this.logger.warn(`Order ${order.id} already marked as paid, skipping inventory deduction.`);
+                        return;
+                    }
+
                     await tx.order.update({
                         where: { id: order.id },
                         data: {
@@ -216,48 +281,8 @@ export class PaymentService {
                         } as any,
                     });
 
-                    // 5. Deduct inventory (Confirming the reservation)
-                    // We call the inventory service's deduct method directly here to avoid circular dep with OrderPaymentService
-                    // Or we could trigger an event. For now, manual deduction logic similar to InventoryService.deduct:
-                    const reservations = await tx.inventoryReservation.findMany({
-                        where: { orderId: order.id, status: ReservationStatus.active },
-                    });
-
-                    for (const res of reservations) {
-                        const inventoryItem = await tx.inventoryItem.findFirst({
-                            where: { productVariantId: res.variantId, warehouseId: res.warehouseId },
-                        });
-
-                        if (inventoryItem) {
-                            await tx.inventoryItem.update({
-                                where: { id: inventoryItem.id },
-                                data: {
-                                    quantity: { decrement: res.quantity },
-                                    reservedQuantity: { decrement: res.quantity },
-                                },
-                            });
-
-                            await tx.inventoryReservation.update({
-                                where: { id: res.id },
-                                data: { status: ReservationStatus.confirmed },
-                            });
-
-                            await tx.inventoryLog.create({
-                                data: {
-                                    inventoryItemId: inventoryItem.id,
-                                    productVariantId: res.variantId,
-                                    warehouseId: res.warehouseId,
-                                    actionType: ActionType.SALE,
-                                    quantityChange: -res.quantity,
-                                    beforeQuantity: inventoryItem.quantity,
-                                    afterQuantity: inventoryItem.quantity - res.quantity,
-                                    referenceId: order.id,
-                                    referenceType: 'ORDER',
-                                    note: `Auto-deducted via payment webhook for ${paymentMethod}`,
-                                },
-                            });
-                        }
-                    }
+                    // 6. Deduct inventory (Confirming the reservation)
+                    await this.inventoryService.deduct(order.id, tx);
 
                     await tx.orderTimeline.create({
                         data: {
@@ -284,22 +309,7 @@ export class PaymentService {
 
                     if (isMaxRetries) {
                         // Release inventory if max retries reached or payment cancelled permanently
-                        // Similar to InventoryService.release
-                        const reservations = await tx.inventoryReservation.findMany({
-                            where: { orderId: order.id, status: ReservationStatus.active },
-                        });
-
-                        for (const res of reservations) {
-                            await tx.inventoryItem.updateMany({
-                                where: { productVariantId: res.variantId, warehouseId: res.warehouseId },
-                                data: { reservedQuantity: { decrement: res.quantity } },
-                            });
-
-                            await tx.inventoryReservation.update({
-                                where: { id: res.id },
-                                data: { status: ReservationStatus.released },
-                            });
-                        }
+                        await this.inventoryService.release(order.id, tx);
                     }
 
                     await tx.orderTimeline.create({
@@ -362,7 +372,7 @@ export class PaymentService {
         }
 
         try {
-            return await this.prisma.$transaction(async (tx) => {
+            return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
                 // Find order with transactions
                 const order = await tx.order.findUnique({
                     where: { id: orderId },
@@ -385,13 +395,22 @@ export class PaymentService {
                     throw new BadRequestException('Order already refunded');
                 }
 
-                // Find successful payment transaction
+                // Find successful payment record (Source of Truth)
+                const payment = await tx.payment.findFirst({
+                    where: { orderId, status: PaymentProcessingStatus.SUCCESS },
+                });
+
+                if (!payment) {
+                    throw new BadRequestException('No successful payment record found for order');
+                }
+
+                // Find successful payment transaction (for provider details)
                 const paymentTransaction = order.transactions.find(
                     (t) => t.status === TransactionStatusEnum.success && t.type === TransactionTypeEnum.payment,
                 );
 
                 if (!paymentTransaction) {
-                    throw new BadRequestException('No successful payment found for order');
+                    throw new BadRequestException('No successful payment transaction found for order');
                 }
 
                 // Validate refund amount
@@ -425,6 +444,19 @@ export class PaymentService {
                         transactionCode: refundResult.refundTransactionId,
                         gatewayResponse: refundResult.metadata || {},
                         note: reason,
+                    },
+                });
+
+                // Update Payment record status
+                this.stateMachine.validateTransition(payment.id, payment.status, PaymentProcessingStatus.REFUNDED);
+                await tx.payment.update({
+                    where: { id: payment.id },
+                    data: {
+                        status: PaymentProcessingStatus.REFUNDED,
+                        rawPayload: {
+                            ...(payment.rawPayload as object),
+                            refund: refundResult.metadata,
+                        },
                     },
                 });
 
@@ -492,27 +524,51 @@ export class PaymentService {
                 throw new NotFoundException(`Order ${orderId} not found`);
             }
 
-            // Find pending VIETQR transaction
-            const vietqrTransaction = order.transactions.find(
-                (t) => t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
-            );
+            // Find pending VIETQR Payment record
+            const vietqrPayment = await tx.payment.findFirst({
+                where: { orderId, provider: PaymentGatewayProvider.VIETQR, status: PaymentProcessingStatus.INIT },
+            });
 
-            if (!vietqrTransaction) {
-                throw new BadRequestException('No pending VIETQR transaction found');
+            if (!vietqrPayment) {
+                throw new BadRequestException('No pending VIETQR payment found');
             }
 
-            // Update transaction
-            await tx.paymentTransaction.update({
-                where: { id: vietqrTransaction.id },
+            // Validate transition
+            this.stateMachine.validateTransition(vietqrPayment.id, vietqrPayment.status, PaymentProcessingStatus.SUCCESS);
+
+            // Update Payment
+            await tx.payment.update({
+                where: { id: vietqrPayment.id },
                 data: {
-                    status: TransactionStatusEnum.success,
-                    gatewayResponse: {
+                    status: PaymentProcessingStatus.SUCCESS,
+                    verifiedAt: new Date(),
+                    rawPayload: {
                         confirmedBy,
                         confirmedAt: new Date().toISOString(),
                         note,
                     },
                 },
             });
+
+            // Find pending VIETQR transaction (Audit log)
+            const vietqrTransaction = order.transactions.find(
+                (t) => t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
+            );
+
+            if (vietqrTransaction) {
+                // Update transaction
+                await tx.paymentTransaction.update({
+                    where: { id: vietqrTransaction.id },
+                    data: {
+                        status: TransactionStatusEnum.success,
+                        gatewayResponse: {
+                            confirmedBy,
+                            confirmedAt: new Date().toISOString(),
+                            note,
+                        },
+                    },
+                });
+            }
 
             // Update order
             await tx.order.update({
@@ -544,7 +600,7 @@ export class PaymentService {
     /**
      * Get payment status for an order
      */
-    async getPaymentStatus(orderId: string) {
+    async getPaymentProcessingStatus(orderId: string) {
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
             include: {
@@ -633,7 +689,7 @@ export class PaymentService {
     /**
      * Get payment provider by method
      */
-    private getProvider(method: PaymentMethodEnum): IPaymentProvider {
+    public getProvider(method: PaymentMethodEnum): IPaymentGatewayProvider {
         const provider = this.providers.get(method);
         if (!provider) {
             throw new BadRequestException(`Unsupported payment method: ${method}`);

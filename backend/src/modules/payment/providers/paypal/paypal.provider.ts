@@ -162,6 +162,47 @@ export class PayPalProvider extends BasePaymentProvider {
     }
 
     /**
+     * Verify PayPal webhook signature
+     * Calls PayPal API to verify that the webhook actually came from them
+     */
+    async verifyWebhookSignature(
+        headers: Record<string, any>,
+        webhookEvent: Record<string, any>,
+    ): Promise<boolean> {
+        const webhookId = this.configService.get<string>('PAYPAL_WEBHOOK_ID');
+        if (!webhookId) {
+            this.logger.warn('PAYPAL_WEBHOOK_ID not configured. Skipping signature verification.');
+            return true; // Fallback to true if not configured (not recommended for production)
+        }
+
+        // We use a raw request because the SDK doesn't have a built-in class for this specific endpoint
+        const request = {
+            path: '/v1/notifications/verify-webhook-signature',
+            verb: 'POST',
+            body: {
+                auth_algo: headers['paypal-auth-algo'],
+                cert_url: headers['paypal-cert-url'],
+                transmission_id: headers['paypal-transmission-id'],
+                transmission_sig: headers['paypal-transmission-sig'],
+                transmission_time: headers['paypal-transmission-time'],
+                webhook_id: webhookId,
+                webhook_event: webhookEvent,
+            },
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        };
+
+        try {
+            const response = await this.client.execute(request as any);
+            return response.result.verification_status === 'SUCCESS';
+        } catch (error) {
+            this.logger.error(`PayPal webhook signature verification failed: ${error.message}`);
+            return false;
+        }
+    }
+
+    /**
      * Verify PayPal webhook
      * For webhook events from PayPal
      */

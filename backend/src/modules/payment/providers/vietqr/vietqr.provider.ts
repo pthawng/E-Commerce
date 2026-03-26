@@ -28,15 +28,19 @@ export class VietQRProvider extends BasePaymentProvider {
         metadata?: Record<string, any>,
     ): Promise<PaymentResult> {
         const transactionId = this.generateTransactionRef(orderId);
+        // Generate a short, unique code for the customer to put in the transfer description
+        // RP + last 6 chars of orderId + random string
+        const transferCode = `RP${orderId.slice(-6).toUpperCase()}`;
 
         return {
             success: true,
             transactionId,
-            message: 'VietQR payment created. Please scan the QR code to finish your transfer.',
+            message: `VietQR payment created. Please scan the QR code and ensure the transfer description is: ${transferCode}`,
             metadata: {
                 paymentMethod: 'VIETQR',
                 amount,
-                note: 'Customer will pay via VietQR transfer',
+                transferCode,
+                note: `Customer must use description: ${transferCode}`,
             },
         };
     }

@@ -1,6 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
+  output          = "../src/generated/client"
 }
 
 datasource db {
@@ -419,6 +420,7 @@ model Order {
   items               OrderItem[]
   timelines           OrderTimeline[]
   transactions        PaymentTransaction[]
+  payments            Payment[]
   reviews             Review[]
   reservations        InventoryReservation[]
 
@@ -649,6 +651,42 @@ enum PaymentMethodEnum {
   VIETQR
   VNPAY
   PAYPAL
+  COD
+}
+
+enum PaymentGatewayProvider {
+  VNPAY
+  PAYPAL
+  VIETQR
+  COD
+}
+
+enum PaymentProcessingStatus {
+  INIT
+  PROCESSING
+  SUCCESS
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+model Payment {
+  id                    String          @id @default(uuid()) @db.Uuid
+  orderId               String          @db.Uuid
+  provider              PaymentGatewayProvider
+  providerTransactionId String          @unique // Deep Idempotency: source of truth from gateway
+  amount                Decimal         @db.Decimal(19, 2)
+  currency              String          @default("VND")
+  status                PaymentProcessingStatus   @default(INIT)
+  rawPayload            Json?           // Full webhook/IPN response for audit
+  verifiedAt            DateTime?
+  errorLog              String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  order                 Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([providerTransactionId])
 }
 
 enum ReservationStatus {
