@@ -82,7 +82,7 @@ export class VNPayProvider extends BasePaymentProvider {
             vnp_OrderType: VNPAY_ORDER_TYPE.OTHER,
             vnp_Locale: VNPAY_LOCALE.VN,
             vnp_ReturnUrl: this.returnUrl,
-            vnp_IpAddr: metadata?.ipAddr || '13.160.92.202',
+            vnp_IpAddr: ipAddr,
             vnp_CreateDate: createDate,
         };
 
@@ -97,14 +97,6 @@ export class VNPayProvider extends BasePaymentProvider {
 
         // Build payment URL
         const paymentUrl = buildVNPayUrl(this.vnpUrl, vnpParams);
-
-        // DEBUG LOGS
-        console.log('--- VNPAY DEBUG ---');
-        console.log('TMN CODE (from config):', this.tmnCode);
-        console.log('HASH SECRET length:', this.hashSecret.length);
-        console.log('VNP URL:', this.vnpUrl);
-        console.log('FINAL PAYMENT URL:', paymentUrl);
-        console.log('-------------------');
 
         return {
             success: true,
@@ -143,8 +135,12 @@ export class VNPayProvider extends BasePaymentProvider {
         const orderId = txnRef.split('_')[0];
 
         // Determine transaction status
+        const transactionStatus = callbackData.vnp_TransactionStatus;
+
+        // VNPAY 2.1.0: vnp_ResponseCode '00' is request success, 
+        // vnp_TransactionStatus '00' is payment success
         let status: TransactionStatus;
-        if (responseCode === VNPAY_RESPONSE_CODE.SUCCESS) {
+        if (responseCode === VNPAY_RESPONSE_CODE.SUCCESS && transactionStatus === '00') {
             status = TransactionStatus.SUCCESS;
         } else {
             status = TransactionStatus.FAILED;

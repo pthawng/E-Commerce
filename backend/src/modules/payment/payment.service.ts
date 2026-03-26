@@ -209,26 +209,16 @@ export class PaymentService {
         try {
             // Update order and transaction in a transaction
             await this.prisma.$transaction(async (tx) => {
-                // 1. Find or create Payment record (Database-level idempotency check)
-                let payment = await tx.payment.findUnique({
+                // 1. Find Payment record (Database-level idempotency check)
+                const payment = await tx.payment.findUnique({
                     where: { providerTransactionId: verifiedData.transactionId as string },
                     include: { order: true },
                 });
 
-                // If payment record doesn't exist (IPN came before createPayment finished), create it
+                // If payment record doesn't exist, we fail (Rule: must create before redirect)
                 if (!payment) {
-                    this.logger.warn(`Payment ${verifiedData.transactionId} not found in DB during callback. Creating as INIT.`);
-                    payment = await tx.payment.create({
-                        data: {
-                            orderId: verifiedData.orderId as string,
-                            provider: paymentMethod as unknown as PaymentGatewayProvider,
-                            providerTransactionId: verifiedData.transactionId as string,
-                            amount: verifiedData.amount,
-                            status: PaymentProcessingStatus.INIT,
-                            rawPayload: verifiedData.gatewayResponse || {},
-                        },
-                        include: { order: true },
-                    });
+                    this.logger.error(`Payment ${verifiedData.transactionId} not found in DB during callback.`);
+                    throw new NotFoundException(`Payment not found for transaction ${verifiedData.transactionId}`);
                 }
 
                 const order = payment.order;
@@ -878,10 +868,10 @@ export class PaymentService {
                 throw new BadRequestException(`Unsupported payment provider: ${provider}`);
             }
 
-            const paymentProvider = this.getProvider(paymentMethod);
-            const result = await paymentProvider.createPayment(
+            // Use createPayment to ensure record exists before redirect (Source of Truth)
+            const result = await this.createPayment(
                 orderId,
-                amount,
+                paymentMethod,
                 metadata,
             );
 

@@ -9,6 +9,9 @@ import {
     Res,
     UseGuards,
     Logger,
+    NotFoundException,
+    ConflictException,
+    BadRequestException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -82,31 +85,23 @@ export class PaymentController {
      */
     @Get('vnpay/callback')
     @Public()
-    @ApiOperation({ summary: 'VNPAY payment callback (IPN)' })
+    @ApiOperation({ summary: 'VNPAY payment callback (Browser Redirect)' })
     @ApiResponse({
         status: 200,
         description: 'Callback processed successfully',
     })
     async vnpayCallback(@Query() query: any, @Res() res: Response) {
         try {
-            // VNPAY IPN and Return usually use the same endpoint but different behaviors
-            // 1. Add to background queue for Source of Truth update (Reliability)
-            await this.paymentQueue.add('process_callback', {
-                paymentMethod: PaymentMethodEnum.VNPAY,
-                callbackData: query,
-            }, {
-                attempts: 5,
-                backoff: { type: 'exponential', delay: 1000 },
-                removeOnComplete: true,
-            });
-
-            // 2. For the user (Browser redirect)
+            // VNPAY Return URL is for UX redirect only. NO DB WRITES.
+            // DB is updated via the synchronous IPN call (/vnpay/ipn)
+            
+            // 1. For the user (Browser redirect)
             // We verify synchronously ONLY for the redirect response, not for the DB update
             const provider = this.paymentService.getProvider(PaymentMethodEnum.VNPAY);
             const verifiedData = await provider.verifyCallback(query);
 
             const redirectUrl = new URL(
-                process.env.FRONTEND_URL || 'http://localhost:5173',
+                process.env.FRONTEND_URL || 'http://localhost:8080',
             );
             redirectUrl.pathname = '/payment/result';
             redirectUrl.searchParams.set('orderId', verifiedData.orderId);
@@ -117,7 +112,7 @@ export class PaymentController {
         } catch (error) {
             this.logger.error(`VNPAY Callback Error: ${error.message}`);
             const errorUrl = new URL(
-                process.env.FRONTEND_URL || 'http://localhost:5173',
+                process.env.FRONTEND_URL || 'http://localhost:8080',
             );
             errorUrl.pathname = '/payment/error';
             errorUrl.searchParams.set('message', error.message);
@@ -126,28 +121,47 @@ export class PaymentController {
         }
     }
 
-    /**
-     * VNPAY IPN Handler
-     * Required by VNPAY for server-to-server confirmation
-     */
     @Get('vnpay/ipn')
     @Public()
     @ApiOperation({ summary: 'VNPAY IPN handler' })
     async vnpayIpn(@Query() query: any) {
         this.logger.log('Received VNPAY IPN notification');
-        
-        // Add to background queue
-        await this.paymentQueue.add('process_callback', {
-            paymentMethod: PaymentMethodEnum.VNPAY,
-            callbackData: query,
-        }, {
-            attempts: 5,
-            backoff: { type: 'exponential', delay: 1000 },
-            removeOnComplete: true,
-        });
 
-        // VNPAY expects this specific JSON response for IPN
-        return { RspCode: '00', Message: 'Confirm success' };
+        try {
+            // Process callback synchronously and atomically (Source of Truth)
+            // This is required by VNPAY to ensure reliability before returning RspCode: 00
+            await this.paymentService.processCallback(PaymentMethodEnum.VNPAY, query);
+
+            // VNPAY expects this specific JSON response for IPN success
+            return { RspCode: '00', Message: 'Confirm success' };
+        } catch (error) {
+            this.logger.error(`VNPAY IPN Error: ${error.message}`);
+
+            // Specific Error Mapping for VNPay IPN Spec
+            // 97: Invalid signature
+            if (error.message === 'Invalid VNPAY signature') {
+                return { RspCode: '97', Message: 'Invalid signature' };
+            }
+
+            // 01: Order not found
+            if (error instanceof NotFoundException) {
+                return { RspCode: '01', Message: 'Order not found' };
+            }
+
+            // 02: Order already confirmed
+            if (error instanceof ConflictException || 
+               (error instanceof BadRequestException && error.message.includes('transition'))) {
+                return { RspCode: '02', Message: 'Order already confirmed' };
+            }
+
+            // 04: Invalid amount
+            if (error instanceof BadRequestException && error.message.includes('Amount mismatch')) {
+                return { RspCode: '04', Message: 'Invalid amount' };
+            }
+
+            // 99: Other errors (System error)
+            return { RspCode: '99', Message: 'Input data invalid' };
+        }
     }
 
     /**
