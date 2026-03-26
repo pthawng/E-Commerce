@@ -32,14 +32,32 @@ export function generateVNPayHash(
     // Sort parameters
     const sortedData = sortObject(signData);
 
-    // Create query string
-    const signDataString = querystring.stringify(sortedData);
+    // Create raw query string (Truly raw for v2.1.0)
+    const signDataString = Object.entries(sortedData)
+        .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('&');
 
     // Generate HMAC SHA512
     const hmac = crypto.createHmac('sha512', secretKey);
     const hash = hmac.update(Buffer.from(signDataString, 'utf-8')).digest('hex');
 
     return hash;
+}
+
+/**
+ * Generate VNPAY API hash (HMAC SHA512 of piped string)
+ * Used for QueryDR and Refund APIs
+ * @param signData - Piped string of data
+ * @param secretKey - VNPAY hash secret
+ * @returns Secure hash string
+ */
+export function generateVNPayApiHash(
+    signData: string,
+    secretKey: string,
+): string {
+    const hmac = crypto.createHmac('sha512', secretKey);
+    return hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 }
 
 /**

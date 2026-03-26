@@ -96,6 +96,17 @@ export interface IPaymentGatewayProvider {
     ): Promise<RefundResult>;
 
     /**
+     * Query transaction status from gateway
+     * @param transactionId - Original transaction ID
+     * @param metadata - Optional metadata (createDate, etc.)
+     * @returns Processed CallbackData or null if not found
+     */
+    queryTransaction(
+        transactionId: string,
+        metadata?: Record<string, any>,
+    ): Promise<CallbackData | null>;
+
+    /**
      * Get payment method identifier
      */
     getPaymentMethod(): PaymentMethodEnum;

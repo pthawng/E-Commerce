@@ -130,6 +130,8 @@ export class PaymentService {
                         provider: paymentMethod as unknown as PaymentGatewayProvider,
                         providerTransactionId: result.transactionId,
                         amount: order.totalAmount,
+                        amountUsd: result.metadata?.amountUsd ? new Prisma.Decimal(result.metadata.amountUsd) : null,
+                        exchangeRate: result.metadata?.exchangeRate ? new Prisma.Decimal(result.metadata.exchangeRate) : null,
                         status: PaymentProcessingStatus.INIT,
                         rawPayload: result.metadata || {},
                     },
@@ -231,7 +233,16 @@ export class PaymentService {
 
                 const order = payment.order;
 
-                // 2. Validate state transition using State Machine
+                // 2. Check for amount mismatch (Security)
+                // Use a small epsilon for floating point comparison if necessary, but here we expect VND/exact amounts
+                if (Math.abs(Number(payment.amount) - verifiedData.amount) > 0.01) {
+                    this.logger.error(
+                        `Amount mismatch for payment ${payment.id}. Expected: ${payment.amount}, Received: ${verifiedData.amount}. Potential fraud!`,
+                    );
+                    throw new BadRequestException('Amount mismatch detected. Potential fraud.');
+                }
+
+                // 3. Validate state transition using State Machine
                 const nextPaymentProcessingStatus = verifiedData.status === TransactionStatus.SUCCESS 
                     ? PaymentProcessingStatus.SUCCESS 
                     : PaymentProcessingStatus.FAILED;
@@ -244,6 +255,7 @@ export class PaymentService {
                     data: {
                         status: nextPaymentProcessingStatus,
                         rawPayload: verifiedData.gatewayResponse,
+                        captureId: verifiedData.gatewayResponse?.captureId || null,
                         verifiedAt: new Date(),
                     },
                 });
@@ -337,6 +349,101 @@ export class PaymentService {
             // Always release lock
             await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
         }
+    }
+
+    /**
+     * Synchronize payment status with gateway
+     * Used by reconciliation service to check status of stale payments
+     */
+    async syncPaymentStatus(paymentId: string): Promise<boolean> {
+        this.logger.log(`Synchronizing status for payment ${paymentId}`);
+
+        const payment = await this.prisma.payment.findUnique({
+            where: { id: paymentId },
+            include: { order: true },
+        });
+
+        if (!payment || payment.status !== PaymentProcessingStatus.INIT) {
+            return false;
+        }
+
+        const provider = this.getProvider(payment.provider as unknown as PaymentMethodEnum);
+        const verifiedData = await provider.queryTransaction(
+            payment.providerTransactionId,
+            payment.rawPayload as Record<string, any>,
+        );
+
+        if (!verifiedData) {
+            return false;
+        }
+
+        // If status is still PENDING/INIT, do nothing
+        if (verifiedData.status === TransactionStatus.PENDING) {
+            return false;
+        }
+
+        // Process the result as if it were a callback
+        // We can reuse processCallback logic by creating a mock callback or extracting the core logic
+        // For simplicity and safety, we'll manually trigger the update logic here or refactor processCallback
+        
+        if (verifiedData.status === TransactionStatus.SUCCESS) {
+            this.logger.log(`Payment ${paymentId} confirmed via QueryDR. Processing success.`);
+            
+            // Re-use logic for success (this should ideally be refactored into a shared method)
+            await this.prisma.$transaction(async (tx) => {
+                // Double check status inside transaction
+                const p = await tx.payment.findUnique({ where: { id: paymentId } });
+                if (!p || p.status !== PaymentProcessingStatus.INIT) return;
+
+                // Update payment
+                await tx.payment.update({
+                    where: { id: paymentId },
+                    data: {
+                        status: PaymentProcessingStatus.SUCCESS,
+                        rawPayload: verifiedData.gatewayResponse,
+                        verifiedAt: new Date(),
+                    },
+                });
+
+                // Update order
+                await tx.order.update({
+                    where: { id: payment.orderId },
+                    data: {
+                        paymentStatus: PaymentStatusEnum.paid,
+                        status: OrderStatusEnum.confirmed,
+                        confirmedAt: new Date(),
+                    } as any,
+                });
+
+                // Deduct inventory
+                await this.inventoryService.deduct(payment.orderId, tx);
+
+                // Add timeline
+                await tx.orderTimeline.create({
+                    data: {
+                        orderId: payment.orderId,
+                        action: 'PAYMENT_CONFIRMED',
+                        toStatus: 'confirmed',
+                        description: `Payment confirmed via reconciliation query (${payment.provider}).`,
+                        actorType: 'system',
+                        metadata: { transactionId: payment.providerTransactionId },
+                    },
+                });
+            });
+            return true;
+        } else if (verifiedData.status === TransactionStatus.FAILED) {
+            this.logger.log(`Payment ${paymentId} failed via QueryDR. Processing failure.`);
+            await this.prisma.payment.update({
+                where: { id: paymentId },
+                data: {
+                    status: PaymentProcessingStatus.FAILED,
+                    rawPayload: verifiedData.gatewayResponse,
+                },
+            });
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -599,10 +706,12 @@ export class PaymentService {
 
     /**
      * Get payment status for an order
+     * Supports lookup by Order ID or Provider Transaction ID (e.g. PayPal Token)
      */
-    async getPaymentProcessingStatus(orderId: string) {
-        const order = await this.prisma.order.findUnique({
-            where: { id: orderId },
+    async getPaymentProcessingStatus(orderIdOrToken: string) {
+        // 1. Try to find by Order ID
+        let order = await this.prisma.order.findUnique({
+            where: { id: orderIdOrToken },
             include: {
                 transactions: {
                     orderBy: { createdAt: 'desc' },
@@ -610,14 +719,35 @@ export class PaymentService {
             },
         });
 
+        // 2. If not found, try to find by Payment Provider Transaction ID (e.g. PayPal Token)
         if (!order) {
-            throw new NotFoundException(`Order ${orderId} not found`);
+            const payment = await this.prisma.payment.findUnique({
+                where: { providerTransactionId: orderIdOrToken },
+                include: {
+                    order: {
+                        include: {
+                            transactions: {
+                                orderBy: { createdAt: 'desc' },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (payment) {
+                order = payment.order as any;
+            }
+        }
+
+        if (!order) {
+            throw new NotFoundException(`Order or Payment Token ${orderIdOrToken} not found`);
         }
 
         return {
             orderId: order.id,
             orderCode: order.code,
             paymentStatus: order.paymentStatus,
+            status: order.status,
             totalAmount: order.totalAmount,
             transactions: order.transactions,
         };
@@ -726,11 +856,14 @@ export class PaymentService {
             return null;
         }
 
+        // Get frontend URL and ensure no trailing slash for clean concatenation
+        const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/$/, '');
+        
         const metadata = {
             orderId,
             orderCode,
-            returnUrl: returnUrl || process.env.FRONTEND_URL + '/order/success' || '',
-            cancelUrl: cancelUrl || process.env.FRONTEND_URL + '/order/cancel' || '',
+            returnUrl: returnUrl || `${frontendUrl}/payment-result`,
+            cancelUrl: cancelUrl || `${frontendUrl}/payment-result?status=failed`,
         };
 
         try {

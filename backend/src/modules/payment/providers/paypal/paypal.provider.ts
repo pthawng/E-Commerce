@@ -18,6 +18,7 @@ import {
 export class PayPalProvider extends BasePaymentProvider {
     private client: paypal.core.PayPalHttpClient;
     private readonly mode: 'sandbox' | 'production';
+    private readonly EXCHANGE_RATE = 25000; // 1 USD = 25,000 VND
 
     constructor(private readonly configService: ConfigService) {
         super('PayPalProvider');
@@ -57,9 +58,12 @@ export class PayPalProvider extends BasePaymentProvider {
         amount: number,
         metadata?: Record<string, any>,
     ): Promise<PaymentResult> {
-        const currency = metadata?.currency || 'USD';
-        const returnUrl = metadata?.returnUrl || 'http://localhost:5173/payment/success';
-        const cancelUrl = metadata?.cancelUrl || 'http://localhost:5173/payment/cancel';
+        const currency = 'USD'; // PayPal standard for this integration
+        const returnUrl = metadata?.returnUrl || 'http://localhost:8080/payment-result';
+        const cancelUrl = metadata?.cancelUrl || 'http://localhost:8080/payment-result?status=failed';
+
+        // Currency conversion: VND -> USD
+        const amountUsd = parseFloat((amount / this.EXCHANGE_RATE).toFixed(2));
 
         // Create PayPal order request
         const request = new paypal.orders.OrdersCreateRequest();
@@ -79,7 +83,7 @@ export class PayPalProvider extends BasePaymentProvider {
                     description: `Payment for order ${orderId}`,
                     amount: {
                         currency_code: currency,
-                        value: this.formatAmount(amount).toFixed(2),
+                        value: amountUsd.toString(),
                     },
                 },
             ],
@@ -106,6 +110,8 @@ export class PayPalProvider extends BasePaymentProvider {
                 metadata: {
                     paypalOrderId: paypalOrder.id,
                     status: paypalOrder.status,
+                    amountUsd: amountUsd,
+                    exchangeRate: this.EXCHANGE_RATE,
                 },
             };
         } catch (error) {
@@ -119,6 +125,7 @@ export class PayPalProvider extends BasePaymentProvider {
      * Called after user approves payment
      */
     async capturePayment(paypalOrderId: string): Promise<CallbackData> {
+        this.logger.log(`Capturing PayPal payment for order ${paypalOrderId}`);
         const request = new paypal.orders.OrdersCaptureRequest(paypalOrderId);
         request.requestBody({});
 
@@ -126,11 +133,13 @@ export class PayPalProvider extends BasePaymentProvider {
             const response = await this.client.execute(request);
             const capturedOrder = response.result;
 
+            this.logger.log(`PayPal capture result for order ${paypalOrderId}: ${capturedOrder.status}`);
+
             // Extract order details
             const purchaseUnit = capturedOrder.purchase_units[0];
             const orderId = purchaseUnit.reference_id;
-            const amount = parseFloat(purchaseUnit.amount.value);
             const capture = purchaseUnit.payments.captures[0];
+            const captureId = capture.id;
 
             // Determine status
             let status: TransactionStatus;
@@ -145,14 +154,15 @@ export class PayPalProvider extends BasePaymentProvider {
             return {
                 orderId,
                 transactionId: paypalOrderId,
-                amount,
+                amount: 0, // Not used for status update source of truth if we use DB amount
                 status,
                 paymentMethod: PaymentMethodEnum.PAYPAL,
                 gatewayResponse: {
-                    captureId: capture.id,
+                    captureId: captureId,
                     captureStatus: capture.status,
                     payerId: capturedOrder.payer?.payer_id,
                     payerEmail: capturedOrder.payer?.email_address,
+                    raw: capturedOrder,
                 },
             };
         } catch (error) {
@@ -207,22 +217,45 @@ export class PayPalProvider extends BasePaymentProvider {
      * For webhook events from PayPal
      */
     protected async doVerifyCallback(
-        callbackData: Record<string, any>,
+        webhookData: Record<string, any>,
     ): Promise<CallbackData> {
-        // For PayPal, we use the capture method instead
-        // This method is for webhook verification
-        const eventType = callbackData.event_type;
+        const eventType = webhookData.event_type;
+        const resource = webhookData.resource;
+
+        this.logger.log(`Processing PayPal webhook: ${eventType}`);
+
+        if (eventType === 'CHECKOUT.ORDER.APPROVED') {
+            // This is where we trigger CAPTURE
+            const paypalOrderId = resource.id;
+            return this.capturePayment(paypalOrderId);
+        }
 
         if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
-            const resource = callbackData.resource;
-            const orderId = resource.custom_id || resource.invoice_id;
-            const amount = parseFloat(resource.amount.value);
+            const captureId = resource.id;
+            const paypalOrderId = resource.supplementary_data?.related_ids?.order_id || resource.parent_payment; // Fallback
+            const orderId = resource.custom_id || resource.invoice_id; // metadata reference
 
             return {
                 orderId,
-                transactionId: resource.id,
-                amount,
+                transactionId: paypalOrderId,
+                amount: parseFloat(resource.amount.value),
                 status: TransactionStatus.SUCCESS,
+                paymentMethod: PaymentMethodEnum.PAYPAL,
+                gatewayResponse: {
+                    captureId,
+                    status: resource.status,
+                    raw: resource,
+                },
+            };
+        }
+
+        if (eventType === 'PAYMENT.CAPTURE.DENIED' || eventType === 'PAYMENT.CAPTURE.DECLINED') {
+            const paypalOrderId = resource.supplementary_data?.related_ids?.order_id || resource.parent_payment;
+            return {
+                orderId: resource.custom_id,
+                transactionId: paypalOrderId,
+                amount: parseFloat(resource.amount.value),
+                status: TransactionStatus.FAILED,
                 paymentMethod: PaymentMethodEnum.PAYPAL,
                 gatewayResponse: resource,
             };

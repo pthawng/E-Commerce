@@ -1,9 +1,0 @@
-[
-  "quantity",
-  "productVariantId",
-  "warehouseId",
-  "id",
-  "reservedQuantity",
-  "updatedAt",
-  "shelfLocation"
-]

@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { ChevronLeft, Lock } from 'lucide-react';
+import { VietQRPaymentModal } from '@/components/payment/VietQRPaymentModal';
 import { CartService } from '@/features/cart/services/CartService';
 import { Layout } from '@/components/layout/Layout';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -28,6 +29,17 @@ export const CheckoutPage: React.FC = () => {
     const { items, totals, fetchCart } = useCartStore();
     const [idempotencyKey] = useState(() => crypto.randomUUID());
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [vietQRInfo, setVietQRInfo] = useState<{
+        orderId: string;
+        orderCode: string;
+        amount: number;
+        transferCode: string;
+        qrUrl: string;
+        accountNo: string;
+        accountName: string;
+        note: string;
+        expiresAt: string;
+    } | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -101,14 +113,32 @@ export const CheckoutPage: React.FC = () => {
                 paymentMethod,
                 guestEmail: formData.email,
                 confirmPriceChange: true, 
-                idempotencyKey 
+                idempotencyKey,
+                returnUrl: `${window.location.origin}/payment-result`,
+                cancelUrl: `${window.location.origin}/payment-result?status=failed`
             };
 
             const orderResponse = await CheckoutService.createOrder(payload, idempotencyKey, cartSessionId);
             
-            if (orderResponse.paymentUrl) {
-                // STEP 3: REDIRECT TO PAYMENT GATEWAY
-                window.location.href = orderResponse.paymentUrl;
+            const paymentUrl = orderResponse.payment?.paymentUrl;
+            const paymentMeta = orderResponse.payment?.metadata;
+
+            if (paymentUrl) {
+                // STEP 3a: REDIRECT TO PAYMENT GATEWAY (VNPAY / PayPal)
+                window.location.href = paymentUrl;
+            } else if (paymentMethod === 'VIETQR' && paymentMeta?.transferCode) {
+                // STEP 3b: SHOW VietQR MODAL (no redirect)
+                setVietQRInfo({
+                    orderId: orderResponse.orderId || orderResponse.order?.id || '',
+                    orderCode: orderResponse.orderCode || orderResponse.order?.orderCode || '',
+                    amount: totals.total,
+                    transferCode: paymentMeta.transferCode,
+                    qrUrl: paymentMeta.qrUrl || '',
+                    accountNo: paymentMeta.accountNo || '',
+                    accountName: paymentMeta.accountName || '',
+                    note: paymentMeta.note || paymentMeta.transferCode,
+                    expiresAt: paymentMeta.expiresAt || new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+                });
             } else {
                 toast.success(t.checkout.validation.success);
                 navigate('/');
@@ -131,6 +161,7 @@ export const CheckoutPage: React.FC = () => {
     if (items.length === 0) return null;
 
     return (
+    <>  
         <Layout forceHeaderOpaque={true}>
             <div className="bg-background/95 pt-32 sm:pt-40 pb-20">
             <div className="container max-w-7xl mx-auto px-4 md:px-8">
@@ -370,7 +401,17 @@ export const CheckoutPage: React.FC = () => {
             </div>
         </div>
     </Layout>
-);
+
+    {/* VietQR Payment Modal */}
+    {vietQRInfo && (
+        <VietQRPaymentModal
+            info={vietQRInfo}
+            formatPrice={formatPrice}
+            onClose={() => setVietQRInfo(null)}
+        />
+    )}
+</>
+    );
 };
 
 export default CheckoutPage;

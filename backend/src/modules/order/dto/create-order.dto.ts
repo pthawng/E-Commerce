@@ -7,7 +7,6 @@ import {
     IsNotEmpty,
     IsObject,
     IsOptional,
-    IsPhoneNumber,
     IsString,
     IsUUID,
     ValidateNested,
@@ -20,8 +19,9 @@ export class AddressDto {
     fullName: string;
 
     @ApiProperty()
-    @IsPhoneNumber('VN')
-    phone: string;
+    @IsString()
+    @IsNotEmpty()
+    phone: string; // Accept any string (0901234567, +84901234567, etc.)
 
     @ApiProperty()
     @IsString()
@@ -31,20 +31,20 @@ export class AddressDto {
     @IsNotEmpty()
     addressLine: string; // Street address
 
-    @ApiProperty()
+    @ApiPropertyOptional()
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    ward: string;
+    ward?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    district: string;
+    district?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    province: string;
+    province?: string;
 }
 
 export class CreateOrderDto {

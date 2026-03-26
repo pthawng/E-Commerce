@@ -26,7 +26,7 @@ export class CreateOrderWithPaymentDto extends CreateOrderDto {
     })
     @IsOptional()
     @IsString()
-    @IsUrl()
+    @IsUrl({ require_tld: false })
     returnUrl?: string;
 
     @ApiProperty({
@@ -36,6 +36,6 @@ export class CreateOrderWithPaymentDto extends CreateOrderDto {
     })
     @IsOptional()
     @IsString()
-    @IsUrl()
+    @IsUrl({ require_tld: false })
     cancelUrl?: string;
 }

@@ -4,6 +4,8 @@ import { PaymentProcessingStatus, OrderStatusEnum, ReservationStatus } from '@pr
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaymentStateMachine } from './payment-state.machine';
 
+import { PaymentService } from '../payment.service';
+
 /**
  * Payment Reconciliation Service
  * Periodically checks for stale or expired payments and cleans them up
@@ -15,6 +17,7 @@ export class PaymentReconciliationService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly stateMachine: PaymentStateMachine,
+        private readonly paymentService: PaymentService,
     ) {}
 
     /**
@@ -65,9 +68,17 @@ export class PaymentReconciliationService {
         this.logger.log(`Reconciling stale payment ${payment.id} for order ${payment.orderId}`);
 
         try {
+            // 1. Try to sync status with gateway first (QueryDR)
+            // This checks if the payment was actually successful but we missed the IPN
+            const isSynced = await this.paymentService.syncPaymentStatus(payment.id);
+            if (isSynced) {
+                this.logger.log(`Payment ${payment.id} was successfully synced with gateway. Skipping cancellation.`);
+                return;
+            }
+
+            // 2. If not synced (or failed), proceed with cancellation
             await this.prisma.$transaction(async (tx) => {
-                // 1. Update Payment status to FAILED (or EXPIRED if we had that state)
-                // We'll use FAILED as the terminal state for items that never paid
+                // Update Payment status to FAILED
                 this.stateMachine.validateTransition(payment.id, payment.status, PaymentProcessingStatus.FAILED);
                 
                 await tx.payment.update({

@@ -674,8 +674,11 @@ model Payment {
   id                    String          @id @default(uuid()) @db.Uuid
   orderId               String          @db.Uuid
   provider              PaymentGatewayProvider
-  providerTransactionId String          @unique // Deep Idempotency: source of truth from gateway
+  providerTransactionId String          @unique // Deep Idempotency: source of truth from gateway (e.g. PayPal Order ID)
+  captureId             String?         @unique // PayPal Capture ID for refund/audit
   amount                Decimal         @db.Decimal(19, 2)
+  amountUsd             Decimal?        @db.Decimal(19, 2) // Locked USD amount for PayPal
+  exchangeRate          Decimal?        @db.Decimal(19, 2) // Locked exchange rate (VND to USD)
   currency              String          @default("VND")
   status                PaymentProcessingStatus   @default(INIT)
   rawPayload            Json?           // Full webhook/IPN response for audit
@@ -687,6 +690,7 @@ model Payment {
 
   @@index([orderId])
   @@index([providerTransactionId])
+  @@index([captureId])
 }
 
 enum ReservationStatus {

@@ -133,4 +133,26 @@ export abstract class BasePaymentProvider implements IPaymentGatewayProvider {
         const timestamp = Date.now();
         return `${orderId}-${timestamp}`;
     }
+
+    /**
+     * Query transaction status from gateway
+     * @param transactionId - Original transaction ID
+     */
+    async queryTransaction(
+        transactionId: string,
+        metadata?: Record<string, any>,
+    ): Promise<CallbackData | null> {
+        this.logger.warn(`${this.constructor.name} does not support queryTransaction`);
+        return null;
+    }
+
+    /**
+     * Optional: Verify webhook signature for background processing
+     */
+    async verifyWebhookSignature?(
+        headers: Record<string, any>,
+        body: Record<string, any>,
+    ): Promise<boolean> {
+        return true;
+    }
 }

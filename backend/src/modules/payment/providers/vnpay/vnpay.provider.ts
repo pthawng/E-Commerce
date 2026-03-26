@@ -14,11 +14,13 @@ import {
     VNPAY_LOCALE,
     VNPAY_ORDER_TYPE,
     VNPAY_RESPONSE_CODE,
+    VNPAY_TRANSACTION_TYPE,
     VNPAY_VERSION,
 } from './vnpay.constants';
 import {
     buildVNPayUrl,
     formatVNPayDate,
+    generateVNPayApiHash,
     generateVNPayHash,
     generateVNPayTxnRef,
     verifyVNPaySignature,
@@ -39,18 +41,18 @@ export class VNPayProvider extends BasePaymentProvider {
     constructor(private readonly configService: ConfigService) {
         super('VNPayProvider');
 
-        // Load configuration with fallback values
+        // Load configuration from environment
         this.tmnCode = this.configService.get<string>('VNPAY_TMN_CODE') || '';
         this.hashSecret = this.configService.get<string>('VNPAY_HASH_SECRET') || '';
         this.vnpUrl = this.configService.get<string>('VNPAY_URL') || '';
         this.returnUrl = this.configService.get<string>('VNPAY_RETURN_URL') || '';
         this.apiUrl = this.configService.get<string>('VNPAY_API_URL') || '';
 
-        // Validate configuration - only warn instead of throw
+        // Registration check and logging
+        this.logger.log(`VNPayProvider initialized for Merchant: ${this.tmnCode}`);
+        
         if (!this.tmnCode || !this.hashSecret || !this.vnpUrl) {
-            this.logger.warn(
-                'VNPAY configuration is incomplete. VNPAY payments will not work.',
-            );
+            this.logger.error('VNPay configuration is incomplete! Check your .env file.');
         }
     }
 
@@ -66,21 +68,21 @@ export class VNPayProvider extends BasePaymentProvider {
         const txnRef = generateVNPayTxnRef(orderId);
         const createDate = formatVNPayDate();
         const ipAddr = metadata?.ipAddr || '127.0.0.1';
-        const orderInfo = metadata?.orderInfo || `Payment for order ${orderId}`;
+        const orderInfo = `Thanh_toan_don_hang_${orderId.slice(-8)}`;
 
         // Build VNPAY parameters
         const vnpParams: Record<string, any> = {
             vnp_Version: VNPAY_VERSION,
             vnp_Command: VNPAY_COMMAND.PAY,
             vnp_TmnCode: this.tmnCode,
-            vnp_Amount: this.formatAmount(amount) * 100, // VNPAY requires amount in smallest unit (VND * 100)
+            vnp_Amount: Math.round(amount * 100),
             vnp_CurrCode: VNPAY_CURRENCY_CODE,
             vnp_TxnRef: txnRef,
             vnp_OrderInfo: orderInfo,
             vnp_OrderType: VNPAY_ORDER_TYPE.OTHER,
             vnp_Locale: VNPAY_LOCALE.VN,
             vnp_ReturnUrl: this.returnUrl,
-            vnp_IpAddr: ipAddr,
+            vnp_IpAddr: metadata?.ipAddr || '13.160.92.202',
             vnp_CreateDate: createDate,
         };
 
@@ -96,6 +98,14 @@ export class VNPayProvider extends BasePaymentProvider {
         // Build payment URL
         const paymentUrl = buildVNPayUrl(this.vnpUrl, vnpParams);
 
+        // DEBUG LOGS
+        console.log('--- VNPAY DEBUG ---');
+        console.log('TMN CODE (from config):', this.tmnCode);
+        console.log('HASH SECRET length:', this.hashSecret.length);
+        console.log('VNP URL:', this.vnpUrl);
+        console.log('FINAL PAYMENT URL:', paymentUrl);
+        console.log('-------------------');
+
         return {
             success: true,
             transactionId: txnRef,
@@ -104,6 +114,7 @@ export class VNPayProvider extends BasePaymentProvider {
             metadata: {
                 txnRef,
                 amount: vnpParams.vnp_Amount,
+                vnp_CreateDate: createDate,
             },
         };
     }
@@ -156,40 +167,160 @@ export class VNPayProvider extends BasePaymentProvider {
     }
 
     /**
+     * Query transaction status from VNPay (QueryDR)
+     */
+    async queryTransaction(
+        transactionId: string,
+        metadata?: Record<string, any>,
+    ): Promise<CallbackData | null> {
+        this.logger.log(`Querying transaction status for ${transactionId}`);
+
+        const requestId = Date.now().toString();
+        const createDate = formatVNPayDate();
+        const ipAddr = '127.0.0.1';
+
+        // Use original create date from metadata if available
+        const transactionDate = metadata?.vnp_CreateDate || createDate;
+
+        const data = {
+            vnp_RequestId: requestId,
+            vnp_Version: VNPAY_VERSION,
+            vnp_Command: VNPAY_COMMAND.QUERY_DR,
+            vnp_TmnCode: this.tmnCode,
+            vnp_TxnRef: transactionId,
+            vnp_OrderInfo: `Query transaction ${transactionId}`,
+            vnp_TransactionDate: transactionDate,
+            vnp_CreateDate: createDate,
+            vnp_IpAddr: ipAddr,
+        };
+
+        // Generate HMAC SHA512 of piped string
+        // Format: vnp_RequestId|vnp_Version|vnp_Command|vnp_TmnCode|vnp_TxnRef|vnp_TransactionDate|vnp_CreateDate|vnp_IpAddr|vnp_OrderInfo
+        const signData = [
+            data.vnp_RequestId,
+            data.vnp_Version,
+            data.vnp_Command,
+            data.vnp_TmnCode,
+            data.vnp_TxnRef,
+            data.vnp_TransactionDate,
+            data.vnp_CreateDate,
+            data.vnp_IpAddr,
+            data.vnp_OrderInfo,
+        ].join('|');
+
+        const secureHash = generateVNPayApiHash(signData, this.hashSecret);
+
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, vnp_SecureHash: secureHash }),
+            });
+
+            const result = await response.json() as any;
+
+            if (result.vnp_ResponseCode === VNPAY_RESPONSE_CODE.SUCCESS) {
+                // Determine status based on vnp_TransactionStatus
+                let status: TransactionStatus;
+                // 00: Success, 01: Incomplete, 02: Error, 04: Refunded, 05: Processing refund
+                if (result.vnp_TransactionStatus === '00') {
+                    status = TransactionStatus.SUCCESS;
+                } else if (result.vnp_TransactionStatus === '01') {
+                    status = TransactionStatus.PENDING;
+                } else {
+                    status = TransactionStatus.FAILED;
+                }
+
+                return {
+                    orderId: transactionId.split('_')[0],
+                    transactionId: transactionId,
+                    amount: parseInt(result.vnp_Amount) / 100,
+                    status,
+                    paymentMethod: PaymentMethodEnum.VNPAY,
+                    gatewayResponse: result,
+                };
+            }
+
+            this.logger.warn(`VNPAY QueryDR failed for ${transactionId}: ${result.vnp_Message}`);
+            return null;
+        } catch (error) {
+            this.logger.error(`Error querying VNPAY transaction: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
      * Process VNPAY refund
-     * Note: VNPAY refund requires API integration with merchant credentials
      */
     protected async doProcessRefund(
         transactionId: string,
         amount: number,
         reason?: string,
     ): Promise<RefundResult> {
-        // For production, this would call VNPAY refund API
-        // For now, we'll create a refund record in our system
-        // VNPAY refund API requires additional merchant authentication
+        this.logger.log(`Processing VNPAY refund for ${transactionId}, amount: ${amount}`);
 
-        const refundTxnRef = `REFUND_${transactionId}_${Date.now()}`;
+        const requestId = Date.now().toString();
+        const createDate = formatVNPayDate();
+        const ipAddr = '127.0.0.1';
 
-        this.logger.warn(
-            `VNPAY refund API not fully implemented. Creating refund record: ${refundTxnRef}`,
-        );
-
-        // In production, you would:
-        // 1. Call VNPAY refund API with proper authentication
-        // 2. Verify refund response
-        // 3. Return actual refund result
-
-        return {
-            success: true,
-            refundTransactionId: refundTxnRef,
-            amount,
-            message: 'Refund request created. Manual processing may be required.',
-            metadata: {
-                originalTransactionId: transactionId,
-                reason,
-                note: 'VNPAY refunds may require manual approval',
-            },
+        const data: Record<string, any> = {
+            vnp_RequestId: requestId,
+            vnp_Version: VNPAY_VERSION,
+            vnp_Command: VNPAY_COMMAND.REFUND,
+            vnp_TmnCode: this.tmnCode,
+            vnp_TransactionType: VNPAY_TRANSACTION_TYPE.FULL_REFUND,
+            vnp_TxnRef: transactionId,
+            vnp_Amount: this.formatAmount(amount) * 100,
+            vnp_OrderInfo: reason || `Refund for transaction ${transactionId}`,
+            vnp_TransactionDate: createDate, // This should ideally be the original create date
+            vnp_CreateBy: 'system',
+            vnp_CreateDate: createDate,
+            vnp_IpAddr: ipAddr,
         };
+
+        // Hash: vnp_RequestId|vnp_Version|vnp_Command|vnp_TmnCode|vnp_TransactionType|vnp_TxnRef|vnp_Amount|vnp_TransactionNo|vnp_TransactionDate|vnp_CreateBy|vnp_CreateDate|vnp_IpAddr|vnp_OrderInfo
+        const signData = [
+            data.vnp_RequestId,
+            data.vnp_Version,
+            data.vnp_Command,
+            data.vnp_TmnCode,
+            data.vnp_TransactionType,
+            data.vnp_TxnRef,
+            data.vnp_Amount,
+            '', // vnp_TransactionNo (optional)
+            data.vnp_TransactionDate,
+            data.vnp_CreateBy,
+            data.vnp_CreateDate,
+            data.vnp_IpAddr,
+            data.vnp_OrderInfo,
+        ].join('|');
+
+        const secureHash = generateVNPayApiHash(signData, this.hashSecret);
+
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...data, vnp_SecureHash: secureHash }),
+            });
+
+            const result = await response.json() as any;
+
+            if (result.vnp_ResponseCode === VNPAY_RESPONSE_CODE.SUCCESS) {
+                return {
+                    success: true,
+                    refundTransactionId: result.vnp_ResponseId || `REFUND_${transactionId}`,
+                    amount,
+                    message: 'Refund processed successfully',
+                    metadata: result,
+                };
+            }
+
+            throw new Error(`VNPAY refund failed: ${result.vnp_Message || result.vnp_ResponseCode}`);
+        } catch (error) {
+            this.logger.error(`Error processing VNPAY refund: ${error.message}`);
+            throw error;
+        }
     }
 
     getPaymentMethod(): PaymentMethodEnum {

@@ -41,9 +41,9 @@ export const VNPAY_TRANSACTION_TYPE = {
  * VNPAY Order Types
  */
 export const VNPAY_ORDER_TYPE = {
-    TOPUP: 'topup',
-    BILL_PAYMENT: 'billpayment',
-    OTHER: 'other',
+    TOPUP: '100000',
+    BILL_PAYMENT: '110000',
+    OTHER: '190000',
 } as const;
 
 /**

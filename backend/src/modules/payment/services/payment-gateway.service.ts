@@ -47,11 +47,13 @@ export class PaymentGatewayService {
             return null;
         }
 
+        const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/$/, '');
+        
         const metadata = {
             orderId,
             orderCode,
-            returnUrl: returnUrl || process.env.FRONTEND_URL + '/order/success',
-            cancelUrl: cancelUrl || process.env.FRONTEND_URL + '/order/cancel',
+            returnUrl: returnUrl || `${frontendUrl}/payment-result`,
+            cancelUrl: cancelUrl || `${frontendUrl}/payment-result?status=failed`,
         };
 
         try {

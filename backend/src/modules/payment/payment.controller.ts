@@ -18,7 +18,7 @@ import { Public } from '@common/decorators/public.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmVietQRPaymentDto, RefundPaymentDto } from './dto/refund.dto';
 import { PaymentService } from './payment.service';
-import { VietQRMatchingService, BankTransaction } from './services/vietqr-matching.service';
+import { VietQRMatchingService, CassoWebhookPayload } from './services/vietqr-matching.service';
 import { PaymentMethodEnum } from './types/payment.types';
 import { OrderPaymentService } from '@modules/order/services/order-payment.service';
 
@@ -151,37 +151,8 @@ export class PaymentController {
     }
 
     /**
-     * PayPal Payment Capture
-     * Called after user approves payment on PayPal
-     */
-    @Post('paypal/capture/:paypalOrderId')
-    @Public()
-    @ApiOperation({ summary: 'Capture PayPal payment after approval' })
-    @ApiResponse({
-        status: 200,
-        description: 'Payment captured successfully',
-    })
-    async capturePayPalPayment(@Param('paypalOrderId') paypalOrderId: string) {
-        const paypalProvider = this.paymentService.getPayPalProvider();
-        const capturedData = await paypalProvider.capturePayment(paypalOrderId);
-
-        // Update order status (Includes inventory and retry logic)
-        const result = await this.paymentService.processCallback(
-            PaymentMethodEnum.PAYPAL,
-            capturedData,
-        );
-
-        return {
-            orderId: result.orderId || capturedData.orderId,
-            status: result.status || capturedData.status,
-            transactionId: result.transactionId || capturedData.transactionId,
-            message: 'Payment captured successfully',
-        };
-    }
-
-    /**
      * PayPal Webhook Handler
-     * Receives webhook events from PayPal
+     * Receives webhook events from PayPal (Source of Truth)
      */
     @Post('paypal/webhook')
     @Public()
@@ -191,7 +162,7 @@ export class PaymentController {
         description: 'Webhook processed successfully',
     })
     async paypalWebhook(@Body() webhookData: any, @Req() req: Request) {
-        this.logger.log('Received PayPal Webhook notification');
+        this.logger.log(`Received PayPal Webhook: ${webhookData.event_type}`);
         
         // Extract required headers for signature verification
         const headers = {
@@ -202,11 +173,11 @@ export class PaymentController {
             'paypal-transmission-time': req.headers['paypal-transmission-time'],
         };
 
-        // Add to background queue
+        // Add to background queue for reliable processing
         await this.paymentQueue.add('process_callback', {
             paymentMethod: PaymentMethodEnum.PAYPAL,
             callbackData: webhookData,
-            headers, // Support for signature verification in the processor
+            headers,
         }, {
             attempts: 5,
             backoff: { type: 'exponential', delay: 5000 },
@@ -260,12 +231,27 @@ export class PaymentController {
      * Confirm VIETQR payment (staff only)
      */
     @Post('vietqr/webhook')
-    @ApiOperation({ summary: 'VietQR Bank Transfer Webhook (e.g. from SePay/Casso)' })
+    @Public()
+    @ApiOperation({ summary: 'VietQR Bank Transfer Webhook (Casso / SePay)' })
     @ApiResponse({ status: 200, description: 'Webhook processed' })
-    async vietqrWebhook(@Body() bankTx: BankTransaction) {
-        this.logger.log(`Received VietQR Bank Webhook: ${bankTx.amount} - ${bankTx.description}`);
-        const matched = await this.vietqrMatchingService.processIncomingTransaction(bankTx);
-        return { success: matched };
+    async vietqrWebhook(
+        @Body() payload: CassoWebhookPayload,
+        @Req() req: Request,
+    ) {
+        // ─── Security ──────────────────────────────────────────────────────
+        const apiKey = (req.headers['x-api-key'] as string) || '';
+        const sourceIp =
+            (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+            req.socket.remoteAddress ||
+            '';
+
+        this.vietqrMatchingService.verifyWebhookRequest(apiKey, sourceIp);
+        // ─────────────────────────────────────────────────────────────────
+
+        this.logger.log(`VietQR webhook received from IP=${sourceIp}, transactions=${payload?.data?.length ?? 0}`);
+
+        const result = await this.vietqrMatchingService.processCassoWebhook(payload);
+        return { success: true, ...result };
     }
 
     @Post('vietqr/confirm')
