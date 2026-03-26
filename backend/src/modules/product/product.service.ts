@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PaginationDto, PaginationService, type PaginatedResult } from 'src/common/pagination';
 import { slugify } from 'src/common/utils/string.helper';
-import type { Prisma } from 'src/generated/prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto, CreateProductVariantInputDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';

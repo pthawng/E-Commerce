@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from 'src/generated/prisma/client';
+import type { Prisma } from '@prisma/client';
 import { StoragePath } from 'src/modules/storage/storage-path.helper';
 import { StorageService } from 'src/modules/storage/storage.service';
 import { PrismaService } from 'src/prisma/prisma.service';

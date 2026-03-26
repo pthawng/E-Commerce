@@ -5,7 +5,7 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
-import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, ReservationStatus, Prisma } from 'src/generated/prisma/client';
+import { ActionType, OrderStatusEnum, PaymentStatusEnum, PaymentMethodEnum, TransactionStatusEnum, TransactionTypeEnum, ReservationStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { PayPalProvider } from './providers/paypal/paypal.provider';

@@ -14,7 +14,7 @@ import { Public } from '@common/decorators/public.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmVietQRPaymentDto, RefundPaymentDto } from './dto/refund.dto';
 import { PaymentService } from './payment.service';
-import { PaymentMethodEnum } from './types/payment.types';
+import { PaymentMethodEnum } from '@prisma/client';
 import { OrderPaymentService } from '@modules/order/services/order-payment.service';
 
 @ApiTags('Payment')

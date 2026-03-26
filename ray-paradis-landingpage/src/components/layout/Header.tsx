@@ -27,9 +27,15 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
   const { theme, language } = useStore();
   const user = useAuthStore((s) => s.user);
   const { t } = useTranslation();
-  const { setOpen, items } = useCartStore();
-  
+  const { setOpen, items, fetchCart } = useCartStore();
   const cartItemCount = (items || []).reduce((sum, item) => sum + item.quantity, 0);
+  
+  // Initial cart sync for authenticated users
+  useEffect(() => {
+    if (user) {
+      fetchCart();
+    }
+  }, [user, fetchCart]);
 
   useEffect(() => {
     const tolerance = 10;

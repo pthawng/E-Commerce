@@ -8,7 +8,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { AttributeInputType } from 'src/generated/prisma/client';
+import { AttributeInputType } from '@prisma/client';
 import { CreateAttributeValueDto } from './create-attribute-value.dto';
 
 export class CreateAttributeDto {

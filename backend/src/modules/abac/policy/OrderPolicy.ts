@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BasePolicy } from '../base/base-policy';
 import type { PolicyContext, PolicyResult } from '../types/policy.types';
 import { PolicyAction } from '../types/policy.types';
-import { Order } from '../../../generated/prisma/client';
+import { Order } from '@prisma/client';
 
 @Injectable()
 export class OrderPolicy extends BasePolicy<Order> {

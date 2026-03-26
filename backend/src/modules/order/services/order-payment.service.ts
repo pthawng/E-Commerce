@@ -14,7 +14,7 @@ import {
 } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { PaymentService } from '@modules/payment/payment.service';
-import { Prisma, PaymentMethodEnum, OrderStatusEnum, PaymentStatusEnum } from 'src/generated/prisma/client';
+import { Prisma, PaymentMethodEnum, OrderStatusEnum, PaymentStatusEnum } from '@prisma/client';
 import { InventoryService } from '../../inventory/inventory.service';
 import { InventoryAllocatorService } from '../../inventory/inventory-allocator.service';
 import { randomBytes, createHash } from 'node:crypto';

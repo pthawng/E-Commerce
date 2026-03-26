@@ -25,8 +25,11 @@ export const useAuthStore = create<AuthState>()(
       },
       setUser: (user) => set({ user }),
       setTokens: (tokens) => set({ tokens, isAuthenticated: !!tokens }),
-      clearAuth: () => {
+      clearAuth: async () => {
         set({ user: null, tokens: null, isAuthenticated: false });
+        // Clear cart on logout
+        const { useCartStore } = await import('@/features/cart/store/useCartStore');
+        useCartStore.getState().clearCart();
       },
       getAccessToken: () => {
         return get().tokens?.accessToken || null;

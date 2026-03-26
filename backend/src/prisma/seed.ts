@@ -1,5 +1,4 @@
-import { PrismaClient } from '../generated/prisma/client';
-import { MediaType } from '../generated/prisma/enums';
+import { PrismaClient, MediaType } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as dotenv from 'dotenv';
 import * as path from 'path';

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, UseGuards, Req, Headers } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentSession } from 'src/common/decorators/current-session.decorator';
 import { OptionalJwtAuthGuard } from 'src/common/guards/optional-jwt.guard';
@@ -8,18 +8,16 @@ import { OrderPaymentService } from '../services/order-payment.service';
 @ApiTags('Checkout')
 @Controller('checkout')
 export class CheckoutController {
-    constructor(
-        private readonly orderPaymentService: OrderPaymentService,
-    ) { }
+    constructor(private readonly orderPaymentService: OrderPaymentService) {}
 
     @Post('validate')
     @UseGuards(OptionalJwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ 
-        summary: 'Step 1: Validate cart and generate checkout token',
-        description: 'Binds the current cart state and ownership to a secure token.' 
+        summary: 'Validate cart and reserve stock before order creation',
+        description: 'Step 1: Returns a checkoutToken and a snapshot of items/totals.' 
     })
-    @ApiResponse({ status: 200, description: 'Checkout validated' })
+    @ApiResponse({ status: 200, description: 'Success returns checkoutToken and snapshot' })
     async validateCheckout(
         @Req() req: { user?: RequestUserPayload },
         @CurrentSession() sessionId?: string,

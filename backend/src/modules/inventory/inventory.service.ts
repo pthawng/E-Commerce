@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma, ActionType, ReservationStatus } from 'src/generated/prisma/client';
+import { Prisma, ActionType, ReservationStatus } from '@prisma/client';
 
 /**
  * Allocation item — result from InventoryAllocatorService
@@ -117,7 +117,7 @@ export class InventoryService {
             status: ReservationStatus.active,
             userId,
             sessionId,
-          } as any,
+          },
         });
 
         reservationIds.push(reservation.id);

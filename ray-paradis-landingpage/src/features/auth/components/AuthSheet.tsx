@@ -147,6 +147,10 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
           };
 
           useAuthStore.getState().setAuth(normalizedUser, authData.tokens);
+          // Sync cart after login
+          const { useCartStore } = await import('@/features/cart/store/useCartStore');
+          useCartStore.getState().mergeOnLogin();
+
           toast.success(t.auth.loginSuccess);
           onOpenChange(false);
           resetForm();
@@ -180,6 +184,10 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
             updatedAt: new Date().toISOString(),
           };
           useAuthStore.getState().setAuth(normalizedUser, data.tokens);
+          // Sync cart after registration
+          const { useCartStore } = await import('@/features/cart/store/useCartStore');
+          useCartStore.getState().mergeOnLogin();
+
           toast.success(t.auth.registerSuccess);
           onOpenChange(false);
           resetForm();

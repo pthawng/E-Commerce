@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { OrderStatusEnum } from 'src/generated/prisma/client';
+import { OrderStatusEnum } from '@prisma/client';
 
 export class OrderStatusValidator {
   private static readonly VALID_TRANSITIONS: Record<OrderStatusEnum, OrderStatusEnum[]> = {
