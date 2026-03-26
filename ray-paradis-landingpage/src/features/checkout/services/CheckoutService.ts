@@ -1,4 +1,4 @@
-import { apiPost } from '@/services/apiClient';
+import { apiPost, apiGet } from '@/services/apiClient';
 import { API_ENDPOINTS } from '@shared';
 
 export interface CheckoutSnapshot {
@@ -17,6 +17,15 @@ export const CheckoutService = {
             headers: { 'x-client-session-id': sessionId }
         });
         return response.data as { checkoutToken: string; snapshot: CheckoutSnapshot; expiresAt: string };
+    },
+
+    /**
+     * Step 2.1: Get Payment Status
+     * Returns real payment status from the backend.
+     */
+    getPaymentStatus: async (orderId: string): Promise<any> => {
+        const response = await apiGet(`/payment/status/${orderId}`);
+        return response.data;
     },
 
     /**
