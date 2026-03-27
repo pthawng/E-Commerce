@@ -161,8 +161,8 @@ export class OrderPaymentService {
                     status: 'pending',
                 });
 
-                // 4d. Clear cart
-                await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+                // 4d. Note: Cart is NO LONGER cleared here. 
+                // Production Pattern: Clear only on successful payment confirmation.
 
                 return { order, payment };
             });

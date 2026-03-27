@@ -633,6 +633,14 @@ declare const API_ENDPOINTS: {
         readonly BY_ID: (id: string) => string;
         readonly BY_PRODUCT: (productId: string) => string;
     };
+    readonly PAYMENTS: {
+        readonly BASE: "/api/payment";
+        readonly CREATE: "/api/payment/create";
+        readonly STATUS: (id: string) => string;
+        readonly REFUND: (id: string) => string;
+        readonly VIETQR_WEBHOOK: "/api/payment/vietqr/webhook";
+        readonly VIETQR_CONFIRM: "/api/payment/vietqr/confirm";
+    };
 };
 /**
  * Build full API URL

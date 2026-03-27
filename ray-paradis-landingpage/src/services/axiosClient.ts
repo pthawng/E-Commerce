@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestHeaders, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { buildApiUrl } from '@shared';
+import { buildApiUrl, API_ENDPOINTS } from '@shared';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
+
 
 type FailedRequest = {
   resolve: (value?: unknown) => void;
@@ -71,9 +72,16 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const resp = await axios.post(buildApiUrl('/auth/refresh'), { refreshToken });
-        const newTokens = resp.data.tokens;
+        const resp = await axios.post(buildApiUrl(API_ENDPOINTS.AUTH.REFRESH), { refreshToken });
+        // The backend wraps responses in an ApiResponse structure: { success, data, ... }
+        const newTokens = resp.data.data?.tokens;
+        
+        if (!newTokens) {
+          throw new Error('Refresh failed: No tokens returned in response');
+        }
+
         useAuthStore.getState().setTokens(newTokens);
+
         // Trigger background user sync safely
         useAuthStore.getState().fetchUser().catch(err => {
           console.error('[Axios] Background user sync failed after refresh', err);

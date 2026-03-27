@@ -284,7 +284,45 @@ export class PaymentService {
                     });
 
                     // 6. Deduct inventory (Confirming the reservation)
-                    await this.inventoryService.deduct(order.id, tx);
+                    // We wrap this in a sub-try-catch to ensure that even if stock deduction fails
+                    // (e.g. stock ran out or reservation expired), the payment is still recorded as SUCCESS.
+                    try {
+                        await this.inventoryService.deduct(order.id, tx);
+                    } catch (stockError) {
+                        this.logger.error(
+                            `CRITICAL: Payment successful for Order ${order.id} but stock deduction failed! ` +
+                            `Reason: ${stockError.message}. Manual intervention required.`,
+                        );
+                        
+                        // Add a specific timeline entry for the stock error
+                        await tx.orderTimeline.create({
+                            data: {
+                                orderId: order.id,
+                                action: 'STOCK_DEDUCTION_FAILED',
+                                description: `Payment was successful but stock could not be deducted: ${stockError.message}`,
+                                actorType: 'system',
+                                metadata: { error: stockError.message },
+                            },
+                        });
+                        
+                        // Optionally: Change order status to something that requires attention (e.g. 'processing' with a flag)
+                        // In this system, we'll keep it as 'confirmed' but the timeline will signal the error.
+                    }
+
+                    // 7. Clear cart (Production Pattern: Clear only on success)
+                    // This ensures the cart is preserved during the payment flow and only cleared once payment is 100% confirmed.
+                    try {
+                        const cartWhere = order.userId ? { userId: order.userId } : { sessionId: order.sessionId };
+                        await tx.cartItem.deleteMany({
+                            where: {
+                                cart: cartWhere
+                            }
+                        });
+                        this.logger.log(`Cart cleared for ${order.userId ? 'user ' + order.userId : 'session ' + order.sessionId} after successful payment.`);
+                    } catch (cartError) {
+                        // We don't want to fail the whole payment transaction if cart clearing fails (edge case)
+                        this.logger.warn(`Failed to clear cart after payment: ${cartError.message}`);
+                    }
 
                     await tx.orderTimeline.create({
                         data: {
@@ -358,10 +396,37 @@ export class PaymentService {
         }
 
         const provider = this.getProvider(payment.provider as unknown as PaymentMethodEnum);
-        const verifiedData = await provider.queryTransaction(
-            payment.providerTransactionId,
-            payment.rawPayload as Record<string, any>,
-        );
+        let verifiedData;
+        try {
+            verifiedData = await provider.queryTransaction(
+                payment.providerTransactionId,
+                payment.rawPayload as Record<string, any>,
+            );
+        } catch (error) {
+            this.logger.error(`Sync failed for payment ${paymentId}: ${error.message}`);
+            
+            // Mark as FAILED if synchronization failed due to provider error (e.g. account locked)
+            await this.prisma.$transaction(async (tx) => {
+                 await tx.payment.update({
+                    where: { id: paymentId },
+                    data: {
+                        status: PaymentProcessingStatus.FAILED,
+                        errorLog: error.message,
+                    },
+                });
+
+                await tx.orderTimeline.create({
+                    data: {
+                        orderId: payment.orderId,
+                        action: 'PAYMENT_SYNC_FAILED',
+                        toStatus: 'pending_payment',
+                        description: `Sync with ${payment.provider} failed: ${error.message}`,
+                        actorType: 'system',
+                    },
+                });
+            });
+            return true; // Return true as we successfully "synced" the failure state
+        }
 
         if (!verifiedData) {
             return false;
@@ -699,17 +764,23 @@ export class PaymentService {
      * Supports lookup by Order ID or Provider Transaction ID (e.g. PayPal Token)
      */
     async getPaymentProcessingStatus(orderIdOrToken: string) {
-        // 1. Try to find by Order ID
-        let order = await this.prisma.order.findUnique({
-            where: { id: orderIdOrToken },
-            include: {
-                transactions: {
-                    orderBy: { createdAt: 'desc' },
-                },
-            },
-        });
+        let order: any = null;
 
-        // 2. If not found, try to find by Payment Provider Transaction ID (e.g. PayPal Token)
+        // 1. Try to find by Order ID (ONLY if it's a valid UUID to avoid Prisma error)
+        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orderIdOrToken);
+
+        if (isUuid) {
+            order = await this.prisma.order.findUnique({
+                where: { id: orderIdOrToken },
+                include: {
+                    transactions: {
+                        orderBy: { createdAt: 'desc' },
+                    },
+                },
+            });
+        }
+
+        // 2. If not found (or not a UUID), try to find by Payment Provider Transaction ID (e.g. PayPal Token)
         if (!order) {
             const payment = await this.prisma.payment.findUnique({
                 where: { providerTransactionId: orderIdOrToken },
@@ -731,6 +802,26 @@ export class PaymentService {
 
         if (!order) {
             throw new NotFoundException(`Order or Payment Token ${orderIdOrToken} not found`);
+        }
+
+        // 3. Proactive Sync: If status is still INIT/pending_payment, try to sync it (Synchronous Reconciliation)
+        // Especially useful for PayPal where webhook might be slow or missing in local dev
+        if (order.status === 'pending_payment' || order.paymentStatus === 'unpaid') {
+            const pendingPayment = await this.prisma.payment.findFirst({
+                where: { orderId: order.id, status: 'INIT' }
+            });
+
+            if (pendingPayment) {
+                this.logger.log(`Proactively syncing payment status for order ${order.id}`);
+                const isSynced = await this.syncPaymentStatus(pendingPayment.id);
+                if (isSynced) {
+                    // Refetch order to get updated status
+                    order = await this.prisma.order.findUnique({
+                        where: { id: order.id },
+                        include: { transactions: { orderBy: { createdAt: 'desc' } } }
+                    });
+                }
+            }
         }
 
         return {

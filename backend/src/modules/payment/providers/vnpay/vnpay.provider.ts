@@ -175,8 +175,13 @@ export class VNPayProvider extends BasePaymentProvider {
         const createDate = formatVNPayDate();
         const ipAddr = '127.0.0.1';
 
-        // Use original create date from metadata if available
-        const transactionDate = metadata?.vnp_CreateDate || createDate;
+        // Use original create date from metadata if available (CRITICAL for VNPay QueryDR)
+        const transactionDate = metadata?.vnp_CreateDate;
+        
+        if (!transactionDate) {
+            this.logger.error(`Missing vnp_CreateDate for transaction ${transactionId}! Reconciliation will likely fail.`);
+            return null;
+        }
 
         const data = {
             vnp_RequestId: requestId,

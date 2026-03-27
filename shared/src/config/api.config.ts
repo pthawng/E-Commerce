@@ -155,6 +155,16 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `/api/reviews/${id}`,
     BY_PRODUCT: (productId: string) => `/api/reviews/product/${productId}`,
   },
+
+  // Payments
+  PAYMENTS: {
+    BASE: '/api/payment',
+    CREATE: '/api/payment/create',
+    STATUS: (id: string) => `/api/payment/status/${id}`,
+    REFUND: (id: string) => `/api/payment/refund/${id}`,
+    VIETQR_WEBHOOK: '/api/payment/vietqr/webhook',
+    VIETQR_CONFIRM: '/api/payment/vietqr/confirm',
+  },
 } as const;
 
 /**

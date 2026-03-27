@@ -11,6 +11,8 @@ import CheckoutPage from "@/pages/CheckoutPage";
 import { PaymentResultPage } from "@/pages/PaymentResultPage";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
+import AccountPage from "./pages/AccountPage";
+
 
 const queryClient = new QueryClient();
 
@@ -26,8 +28,12 @@ const App = () => (
           <Route path="/product/:slug" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/payment/result" element={<PaymentResultPage />} />
+          <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/account/orders" element={<AccountPage />} />
+          <Route path="/account/saved" element={<AccountPage />} />
+
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

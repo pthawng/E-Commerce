@@ -24,7 +24,7 @@ export const CheckoutService = {
      * Returns real payment status from the backend.
      */
     getPaymentStatus: async (orderId: string): Promise<any> => {
-        const response = await apiGet(`/payment/status/${orderId}`);
+        const response = await apiGet(API_ENDPOINTS.PAYMENTS.STATUS(orderId));
         return response.data;
     },
 

@@ -32,10 +32,14 @@ export function generateVNPayHash(
     // Sort parameters
     const sortedData = sortObject(signData);
 
-    // Create raw query string (Truly raw for v2.1.0)
+    // Create raw query string (Strictly encode for v2.1.0)
+    // Note: VNPay requires encoding values and then replacing %20 with +
     const signDataString = Object.entries(sortedData)
         .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-        .map(([key, value]) => `${key}=${value}`)
+        .map(([key, value]) => {
+            const encodedValue = encodeURIComponent(String(value)).replace(/%20/g, '+');
+            return `${key}=${encodedValue}`;
+        })
         .join('&');
 
     // Generate HMAC SHA512

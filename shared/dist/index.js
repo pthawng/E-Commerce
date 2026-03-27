@@ -289,6 +289,15 @@ var API_ENDPOINTS = {
     BASE: "/api/reviews",
     BY_ID: (id) => `/api/reviews/${id}`,
     BY_PRODUCT: (productId) => `/api/reviews/product/${productId}`
+  },
+  // Payments
+  PAYMENTS: {
+    BASE: "/api/payment",
+    CREATE: "/api/payment/create",
+    STATUS: (id) => `/api/payment/status/${id}`,
+    REFUND: (id) => `/api/payment/refund/${id}`,
+    VIETQR_WEBHOOK: "/api/payment/vietqr/webhook",
+    VIETQR_CONFIRM: "/api/payment/vietqr/confirm"
   }
 };
 function buildApiUrl(path) {

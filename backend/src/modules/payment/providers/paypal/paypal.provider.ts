@@ -267,6 +267,77 @@ export class PayPalProvider extends BasePaymentProvider {
     /**
      * Process PayPal refund
      */
+    /**
+     * Query PayPal order status
+     * If status is APPROVED, trigger capture synchronously
+     */
+    async queryTransaction(
+        paypalOrderId: string,
+    ): Promise<CallbackData | null> {
+        this.logger.log(`Querying PayPal order status: ${paypalOrderId}`);
+        const request = new paypal.orders.OrdersGetRequest(paypalOrderId);
+
+        try {
+            const response = await this.client.execute(request);
+            const paypalOrder = response.result;
+            const status = paypalOrder.status;
+
+            this.logger.log(`PayPal order ${paypalOrderId} status: ${status}`);
+
+            if (status === 'APPROVED') {
+                // Trigger capture synchronously
+                return this.capturePayment(paypalOrderId);
+            }
+
+            if (status === 'COMPLETED') {
+                const purchaseUnit = paypalOrder.purchase_units[0];
+                const orderId = purchaseUnit.reference_id;
+                
+                return {
+                    orderId,
+                    transactionId: paypalOrderId,
+                    amount: 0,
+                    status: TransactionStatus.SUCCESS,
+                    paymentMethod: PaymentMethodEnum.PAYPAL,
+                    gatewayResponse: paypalOrder,
+                };
+            }
+
+            if (status === 'CREATED' || status === 'PAYER_ACTION_REQUIRED') {
+                const purchaseUnit = paypalOrder.purchase_units[0];
+                const orderId = purchaseUnit.reference_id;
+
+                return {
+                    orderId,
+                    transactionId: paypalOrderId,
+                    amount: 0,
+                    status: TransactionStatus.PENDING,
+                    paymentMethod: PaymentMethodEnum.PAYPAL,
+                    gatewayResponse: paypalOrder,
+                };
+            }
+
+            if (status === 'VOIDED' || status === 'EXPIRED') {
+                const purchaseUnit = paypalOrder.purchase_units[0];
+                const orderId = purchaseUnit.reference_id;
+
+                return {
+                    orderId,
+                    transactionId: paypalOrderId,
+                    amount: 0,
+                    status: TransactionStatus.FAILED,
+                    paymentMethod: PaymentMethodEnum.PAYPAL,
+                    gatewayResponse: paypalOrder,
+                };
+            }
+
+            return null;
+        } catch (error) {
+            this.logger.error(`PayPal status query failed: ${error.message}`);
+            return null;
+        }
+    }
+
     protected async doProcessRefund(
         transactionId: string,
         amount: number,
