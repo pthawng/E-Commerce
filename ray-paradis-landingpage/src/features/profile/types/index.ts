@@ -28,3 +28,61 @@ export const changePasswordSchema = z.object({
 });
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export interface OrderItem {
+  id: string;
+  productName: string;
+  sku: string;
+  variantTitle?: any;
+  thumbnailUrl?: string | null;
+  quantity: number;
+  price: number;
+  totalLine: number;
+}
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipping' | 'delivered' | 'completed' | 'cancelled' | 'failed' | 'pending_payment' | 'returned' | 'refunded';
+
+export type PaymentStatus = 'unpaid' | 'paid' | 'partially_paid' | 'refunded';
+
+export interface OrderTimeline {
+  id: string;
+  action: string;
+  fromStatus?: OrderStatus | null;
+  toStatus?: OrderStatus | null;
+  description?: string | null;
+  createdAt: string;
+  actorType: 'system' | 'admin' | 'customer';
+}
+
+export interface PaymentTransaction {
+  id: string;
+  amount: number;
+  status: 'pending' | 'success' | 'failed' | 'reversed';
+  provider: string;
+  method?: string | null;
+  transactionCode?: string | null;
+  createdAt: string;
+}
+
+export interface Order {
+  id: string;
+  code: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  subTotal: number;
+  shippingFee: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  items: OrderItem[];
+  timelines: OrderTimeline[];
+  transactions: PaymentTransaction[];
+  shippingAddress: any;
+  paymentMethod?: string | null;
+  paymentDeadline?: string | null;
+  cancelReason?: string | null;
+}
+
+

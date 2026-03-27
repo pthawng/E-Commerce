@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 
 export const ProfileFeature: React.FC = () => {
-  const { data: user, isLoading, error } = useProfile();
+  const { data: user, isLoading, error, refetch } = useProfile();
   const authUser = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
@@ -21,44 +21,43 @@ export const ProfileFeature: React.FC = () => {
   }, [authUser, isLoading, navigate]);
 
   if (isLoading) {
-    return (
-      <ProfileLayout>
-        <ProfileSkeleton />
-      </ProfileLayout>
-    );
+    return <ProfileSkeleton />;
   }
 
   const profileData = user?.data;
 
   if (error || !profileData) {
     return (
-      <ProfileLayout>
-        <div className="bg-surface-container-lowest p-20 text-center shadow-luxury">
-          <h2 className="text-2xl font-display italic text-destructive mb-4">Unavailable</h2>
-          <p className="text-muted-foreground font-body max-w-md mx-auto mb-8">
-            We are unable to retrieve your profile information at this moment. Please try again later.
-          </p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="text-[10px] tracking-ultra uppercase text-primary border-b border-primary/20 pb-1 hover:border-primary transition-all"
-          >
-            Retry Connection
-          </button>
-        </div>
-      </ProfileLayout>
+      <div className="bg-surface-container-lowest py-32 px-10 text-center shadow-luxury flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="w-16 h-px bg-destructive/30 mb-8" />
+        <h2 className="text-3xl font-display italic text-primary/80 mb-6">Connection Error</h2>
+        <p className="text-muted-foreground font-body text-sm max-w-sm mx-auto mb-12 leading-relaxed">
+          Our atelier is currently unreachable. We are unable to synchronize your profile at this moment.
+        </p>
+        <button 
+          onClick={() => refetch()}
+          className="group relative px-8 py-3 overflow-hidden"
+        >
+          <span className="relative z-10 text-[10px] tracking-ultra uppercase text-primary group-hover:text-gold transition-colors duration-500">
+            Retry Protocol
+          </span>
+          <div className="absolute bottom-0 left-0 w-full h-[1px] bg-primary/20 group-hover:bg-gold transition-all duration-500" />
+          <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-gold group-hover:w-full transition-all duration-700 ease-in-out" />
+        </button>
+      </div>
     );
   }
 
+
   return (
-    <ProfileLayout>
-      <div className="space-y-8">
-        <ProfileInfoCard user={profileData} />
-        <SecuritySection />
-        <AccountMeta user={profileData} />
-      </div>
-    </ProfileLayout>
+    <div className="space-y-8">
+      <ProfileInfoCard user={profileData} />
+      <SecuritySection />
+      <AccountMeta user={profileData} />
+    </div>
   );
 };
+
 
 
 export default ProfileFeature;

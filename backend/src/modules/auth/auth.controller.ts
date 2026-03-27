@@ -15,7 +15,8 @@ import { PermissionCacheService } from '@modules/rbac/cache/permission-cache.ser
 import { LogoutDto } from '@modules/auth/dto/logout.dto';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards, Query, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards, Query, BadRequestException, Patch } from '@nestjs/common';
+
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
@@ -53,6 +54,15 @@ export class AuthController {
   async getMe(@CurrentUserId() userId: string) {
     return this.authService.getMe(userId);
   }
+
+  @UseGuards(JwtAccessGuard)
+  @Patch('me')
+  @ApiOperation({ summary: 'Cập nhật thông tin cá nhân' })
+  @ApiOkResponse({ description: 'Cập nhật thành công' })
+  async updateMe(@CurrentUserId() userId: string, @Body() dto: import('@modules/auth/dto/update-me.dto').UpdateMeDto) {
+    return this.authService.updateMe(userId, dto);
+  }
+
 
   @Public()
   @UseGuards(ThrottlerGuard)

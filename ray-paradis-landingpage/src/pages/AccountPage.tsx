@@ -1,6 +1,7 @@
 import React from 'react';
-import ProfileFeature from '@/features/profile';
 import { Layout } from '@/components/layout/Layout';
+import { ProfileLayout } from '@/features/profile/components/ProfileLayout';
+import { Outlet } from 'react-router-dom';
 
 /**
  * Account Page
@@ -9,8 +10,10 @@ import { Layout } from '@/components/layout/Layout';
  */
 const AccountPage: React.FC = () => {
   return (
-    <Layout forceHeaderOpaque={true}>
-      <ProfileFeature />
+    <Layout>
+      <ProfileLayout>
+        <Outlet />
+      </ProfileLayout>
     </Layout>
   );
 };

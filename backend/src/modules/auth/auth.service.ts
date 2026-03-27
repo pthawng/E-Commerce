@@ -131,7 +131,7 @@ export class AuthService {
   // ---------------------------
   // PROFILE / ME
   // ---------------------------
-  async getMe(userId: string): Promise<Pick<User, 'id' | 'email' | 'phone' | 'fullName' | 'isActive' | 'isEmailVerified'>> {
+  async getMe(userId: string): Promise<any> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
     });
@@ -142,6 +142,37 @@ export class AuthService {
 
     return sanitizeUser(user);
   }
+
+  async updateMe(userId: string, dto: import('@modules/auth/dto/update-me.dto').UpdateMeDto): Promise<any> {
+
+    const user = await this.prismaService.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('User not found');
+
+    // Check unique email if changed
+    if (dto.email && dto.email !== user.email) {
+      const exists = await this.prismaService.user.findUnique({ where: { email: dto.email } });
+      if (exists) throw new BadRequestException('Email already in use');
+    }
+
+    // Check unique phone if changed
+    if (dto.phone && dto.phone !== user.phone) {
+      const exists = await this.prismaService.user.findUnique({ where: { phone: dto.phone } });
+      if (exists) throw new BadRequestException('Phone number already in use');
+    }
+
+    const updated = await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        fullName: dto.fullName ?? user.fullName,
+        phone: dto.phone ?? user.phone,
+        email: dto.email ?? user.email,
+        updatedAt: new Date(),
+      },
+    });
+
+    return sanitizeUser(updated);
+  }
+
 
   // ---------------------------
   // REFRESH TOKEN

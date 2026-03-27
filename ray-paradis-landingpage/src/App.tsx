@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import { CollectionsPage } from "./pages/CollectionsPage";
+import { ProfileFeature } from './features/profile';
+import { OrderHistory } from './features/profile/components/OrderHistory';
+import { OrderDetail } from './features/profile/components/OrderDetail';
 import { ProductDetailPage } from "./pages/ProductDetailPage";
 import { CartPage } from "./pages/CartPage";
 import CheckoutPage from "@/pages/CheckoutPage";
@@ -12,7 +15,6 @@ import { PaymentResultPage } from "@/pages/PaymentResultPage";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import AccountPage from "./pages/AccountPage";
-
 
 const queryClient = new QueryClient();
 
@@ -30,9 +32,12 @@ const App = () => (
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="/account/orders" element={<AccountPage />} />
-          <Route path="/account/saved" element={<AccountPage />} />
+          <Route path="/account" element={<AccountPage />}>
+            <Route index element={<ProfileFeature />} />
+            <Route path="orders" element={<OrderHistory />} />
+            <Route path="orders/:id" element={<OrderDetail />} />
+            <Route path="saved" element={<div className="font-display italic text-2xl py-20 text-center text-primary/40">Saved Items Coming Soon</div>} />
+          </Route>
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
@@ -43,3 +48,4 @@ const App = () => (
 );
 
 export default App;
+

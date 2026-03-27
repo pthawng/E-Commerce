@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Lock, ShieldCheck } from 'lucide-react';
+import { Lock, ShieldCheck, X } from 'lucide-react';
 import { changePasswordSchema, ChangePasswordInput } from '../types';
 import { useChangePassword } from '../hooks/useProfile';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const SecuritySection: React.FC = () => {
   const [isChanging, setIsChanging] = useState(false);
   const { mutate: changePassword, isPending } = useChangePassword();
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const {
     register,
@@ -31,83 +34,141 @@ export const SecuritySection: React.FC = () => {
     });
   };
 
+  const PasswordInput = ({ 
+    label, 
+    id, 
+    show, 
+    toggle, 
+    error, 
+    registerProps 
+  }: { 
+    label: string, 
+    id: string, 
+    show: boolean, 
+    toggle: () => void, 
+    error?: string,
+    registerProps: any
+  }) => (
+    <div className="space-y-4">
+      <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground/60">{label}</Label>
+      <div className="relative group">
+        <Input
+          id={id}
+          type={show ? 'text' : 'password'}
+          {...registerProps}
+          className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-700 font-body text-lg h-10 pr-10"
+        />
+        <button
+          type="button"
+          onClick={toggle}
+          className="absolute right-0 top-1/2 -translate-y-1/2 text-primary/30 hover:text-primary transition-colors p-2"
+        >
+          {show ? (
+            <X className="w-4 h-4 stroke-[1.2]" /> // Symbolic close eye
+          ) : (
+            <Lock className="w-4 h-4 stroke-[1.2]" />
+          )}
+        </button>
+      </div>
+      <AnimatePresence>
+        {error && (
+          <motion.p 
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="text-[9px] text-destructive uppercase tracking-widest"
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
   return (
-    <section className="bg-surface-container-lowest p-10 shadow-luxury mt-8">
-      <div className="flex items-center gap-4 mb-10">
-        <h2 className="text-3xl font-display italic text-primary leading-none">
-          Security
-        </h2>
-        <ShieldCheck className="w-5 h-5 text-primary/40 stroke-[1.2]" />
+    <section className="bg-surface-container-lowest p-8 sm:p-12 shadow-luxury mt-8 border border-primary/5">
+      <div className="flex items-center gap-4 mb-12">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-display italic text-primary leading-tight">
+            Security & Access
+          </h2>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Manage your authentication credentials</p>
+        </div>
+        <ShieldCheck className="w-5 h-5 text-primary/20 stroke-[1.2] ml-auto" />
       </div>
 
       <div className="space-y-8">
         {!isChanging ? (
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 py-6 border-t border-primary/5">
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground">Password</Label>
-              <p className="text-xl font-body text-primary/90 tracking-[0.3em]">••••••••</p>
+              <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground/60">Current Password</Label>
+              <p className="text-xl font-body text-primary/90 tracking-[0.5em]">••••••••</p>
             </div>
-            <Button
-              variant="outline"
+            <button
               onClick={() => setIsChanging(true)}
-              className="rounded-none border-primary/20 hover:bg-primary/5 tracking-widest uppercase text-[10px] h-10 px-6"
+              className="text-[10px] tracking-ultra uppercase text-primary border-b border-primary/20 pb-1 hover:border-primary transition-all duration-500"
             >
-              Change Password
-            </Button>
+              Update Credentials
+            </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid grid-cols-1 gap-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground">Current Password</Label>
-                <Input
-                  type="password"
-                  {...register('currentPassword')}
-                  className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-500 font-body"
-                />
-                {errors.currentPassword && <p className="text-[10px] text-destructive uppercase tracking-widest">{errors.currentPassword.message}</p>}
-              </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="md:col-span-2 border-t border-primary/5 pt-10" />
+              
+              <PasswordInput 
+                label="Current Password"
+                id="currentPassword"
+                show={showCurrent}
+                toggle={() => setShowCurrent(!showCurrent)}
+                error={errors.currentPassword?.message}
+                registerProps={register('currentPassword')}
+              />
 
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground">New Password</Label>
-                <Input
-                  type="password"
-                  {...register('newPassword')}
-                  className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-500 font-body"
-                />
-                {errors.newPassword && <p className="text-[10px] text-destructive uppercase tracking-widest">{errors.newPassword.message}</p>}
-              </div>
+              <div className="hidden md:block" />
 
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground">Confirm New Password</Label>
-                <Input
-                  type="password"
-                  {...register('confirmPassword')}
-                  className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-500 font-body"
-                />
-                {errors.confirmPassword && <p className="text-[10px] text-destructive uppercase tracking-widest">{errors.confirmPassword.message}</p>}
-              </div>
+              <PasswordInput 
+                label="New Password"
+                id="newPassword"
+                show={showNew}
+                toggle={() => setShowNew(!showNew)}
+                error={errors.newPassword?.message}
+                registerProps={register('newPassword')}
+              />
+
+              <PasswordInput 
+                label="Confirm New Identity"
+                id="confirmPassword"
+                show={showConfirm}
+                toggle={() => setShowConfirm(!showConfirm)}
+                error={errors.confirmPassword?.message}
+                registerProps={register('confirmPassword')}
+              />
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <Button
+            <div className="flex flex-wrap items-center gap-8 pt-8 border-t border-primary/5">
+              <button
                 type="submit"
                 disabled={isPending}
-                className="bg-primary text-on-primary hover:bg-primary/90 rounded-none h-12 px-8 tracking-widest uppercase text-xs"
+                className="relative group px-10 py-3 bg-primary text-primary-foreground overflow-hidden transition-all duration-500"
               >
-                {isPending ? 'Updating...' : 'Update Password'}
-              </Button>
-              <Button
+
+                <span className="relative z-10 text-[10px] tracking-ultra uppercase">
+                  {isPending ? 'Processing' : 'Commit New Password'}
+                </span>
+                <div className="absolute inset-0 bg-gold translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+              </button>
+              
+              <button
                 type="button"
-                variant="ghost"
                 onClick={() => {
                   setIsChanging(false);
                   reset();
                 }}
-                className="rounded-none h-12 px-8 tracking-widest uppercase text-xs hover:bg-primary/5"
+                className="text-[10px] tracking-ultra uppercase text-primary/40 hover:text-primary transition-colors duration-500 border-b border-transparent hover:border-primary/20 pb-1"
               >
-                Cancel
-              </Button>
+                Maintain Current
+              </button>
             </div>
           </form>
         )}
@@ -115,3 +176,4 @@ export const SecuritySection: React.FC = () => {
     </section>
   );
 };
+

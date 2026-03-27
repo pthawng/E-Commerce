@@ -43,97 +43,145 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({ user }) => {
   };
 
   return (
-    <section className="bg-surface-container-lowest p-10 shadow-luxury overflow-hidden">
+    <section className="bg-surface-container-lowest p-8 sm:p-12 shadow-luxury overflow-hidden border border-primary/5">
       <div className="flex justify-between items-start mb-12">
-        <h2 className="text-3xl font-display italic text-primary leading-none">
-          Personal Information
-        </h2>
+        <div className="space-y-1">
+          <h2 className="text-3xl font-display italic text-primary leading-tight">
+            Personal Information
+          </h2>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Manage your account credentials</p>
+        </div>
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="text-primary/60 hover:text-primary transition-colors p-2"
+            className="group flex items-center gap-2 text-primary/40 hover:text-primary transition-all duration-500 py-2 px-4 border border-transparent hover:border-primary/10"
             aria-label="Edit Profile"
           >
-            <Edit3 className="w-5 h-5 stroke-[1.2]" />
+            <span className="text-[9px] uppercase tracking-ultra opacity-0 group-hover:opacity-100 transition-opacity duration-500">Edit</span>
+            <Edit3 className="w-4 h-4 stroke-[1.2]" />
           </button>
         )}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-        <div className="grid grid-cols-1 gap-10">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Full Name */}
           <div className="space-y-4">
-            <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground">Full Name</Label>
-            {isEditing ? (
-              <div className="space-y-1">
-                <Input
-                  {...register('fullName')}
-                  className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-500 font-body text-lg"
-                />
-                {errors.fullName && <p className="text-[10px] text-destructive uppercase tracking-widest">{errors.fullName.message}</p>}
-              </div>
-            ) : (
-              <p className="text-xl font-body text-primary/90">{user.fullName}</p>
-            )}
+            <Label className="text-[9px] uppercase tracking-ultra text-muted-foreground/60">Full Name</Label>
+            <div className="min-h-[40px] flex items-center">
+              {isEditing ? (
+                <div className="w-full space-y-2">
+                  <Input
+                    {...register('fullName')}
+                    className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-700 font-body text-lg h-10"
+                    autoFocus
+                  />
+                  <AnimatePresence>
+                    {errors.fullName && (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="text-[9px] text-destructive uppercase tracking-widest"
+                      >
+                        {errors.fullName.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <p className="text-lg font-body text-primary/90 animate-in fade-in duration-700">{user.fullName}</p>
+              )}
+            </div>
           </div>
 
           {/* Email */}
           <div className="space-y-4">
-            <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground">Email Address</Label>
-            {isEditing ? (
-              <div className="space-y-1">
-                <Input
-                  {...register('email')}
-                  className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-500 font-body text-lg"
-                />
-                {errors.email && <p className="text-[10px] text-destructive uppercase tracking-widest">{errors.email.message}</p>}
-              </div>
-            ) : (
-              <p className="text-xl font-body text-primary/90">{user.email}</p>
-            )}
+            <Label className="text-[9px] uppercase tracking-ultra text-muted-foreground/60">Email Address</Label>
+            <div className="min-h-[40px] flex items-center">
+              {isEditing ? (
+                <div className="w-full space-y-2">
+                  <Input
+                    {...register('email')}
+                    className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-700 font-body text-lg h-10"
+                  />
+                  <AnimatePresence>
+                    {errors.email && (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="text-[9px] text-destructive uppercase tracking-widest"
+                      >
+                        {errors.email.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <p className="text-lg font-body text-primary/90 animate-in fade-in duration-700">{user.email}</p>
+              )}
+            </div>
           </div>
 
           {/* Phone */}
           <div className="space-y-4">
-            <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground">Phone Number</Label>
-            {isEditing ? (
-              <div className="space-y-1">
-                <Input
-                  {...register('phone')}
-                  className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-500 font-body text-lg"
-                  placeholder="+33 1 23 45 67 89"
-                />
-                {errors.phone && <p className="text-[10px] text-destructive uppercase tracking-widest">{errors.phone.message}</p>}
-              </div>
-            ) : (
-              <p className="text-xl font-body text-primary/90">{user.phone || 'Not provided'}</p>
-            )}
+            <Label className="text-[9px] uppercase tracking-ultra text-muted-foreground/60">Phone Number</Label>
+            <div className="min-h-[40px] flex items-center">
+              {isEditing ? (
+                <div className="w-full space-y-2">
+                  <Input
+                    {...register('phone')}
+                    className="bg-transparent border-t-0 border-x-0 border-b border-primary/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary transition-all duration-700 font-body text-lg h-10"
+                    placeholder="+1 234 567 890"
+                  />
+                  <AnimatePresence>
+                    {errors.phone && (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="text-[9px] text-destructive uppercase tracking-widest"
+                      >
+                        {errors.phone.message}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <p className="text-lg font-body text-primary/90 animate-in fade-in duration-700">{user.phone || '—'}</p>
+              )}
+            </div>
           </div>
         </div>
 
         <AnimatePresence>
           {isEditing && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex gap-4 pt-6"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="flex items-center gap-8 pt-6 border-t border-primary/5"
             >
-              <Button
+              <button
                 type="submit"
                 disabled={isPending}
-                className="bg-primary text-on-primary hover:bg-primary/90 rounded-none h-12 px-8 tracking-widest uppercase text-xs"
+                className="relative group px-10 py-3 bg-primary text-primary-foreground overflow-hidden transition-all duration-500"
               >
-                {isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-              <Button
+
+                <span className="relative z-10 text-[10px] tracking-ultra uppercase">
+                  {isPending ? 'Processing' : 'Commit Changes'}
+                </span>
+                <div className="absolute inset-0 bg-gold translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+              </button>
+              
+              <button
                 type="button"
-                variant="ghost"
                 onClick={handleCancel}
-                className="rounded-none h-12 px-8 tracking-widest uppercase text-xs hover:bg-primary/5"
+                className="text-[10px] tracking-ultra uppercase text-primary/40 hover:text-primary transition-colors duration-500 border-b border-transparent hover:border-primary/20 pb-1"
               >
-                Cancel
-              </Button>
+                Discard
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -141,3 +189,4 @@ export const ProfileInfoCard: React.FC<ProfileInfoCardProps> = ({ user }) => {
     </section>
   );
 };
+
