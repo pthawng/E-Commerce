@@ -1,9 +1,12 @@
 # --- Stage 1: Build Shared Package ---
 FROM node:20-alpine AS shared-builder
 WORKDIR /app/shared
+# Copy only package files first to cache dependencies
 COPY shared/package*.json ./
 RUN npm install
+# Now copy the source code (will be filtered by root .dockerignore)
 COPY shared/ ./
+# If tsup still fails, try running it with npx
 RUN npm run build
 
 # --- Stage 2: Build Backend ---

@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.git
+*/node_modules
+*/dist
+backend/dist
+shared/dist
+ray-paradis-landingpage/dist
+npm-debug.log
