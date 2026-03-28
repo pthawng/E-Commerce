@@ -38,12 +38,6 @@
       ],
       "@shared/*": [
         "../shared/dist/*"
-      ],
-      "@prisma/client": [
-        "src/generated/client"
-      ],
-      "@prisma/client/*": [
-        "src/generated/client/*"
       ]
     }
   },
