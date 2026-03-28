@@ -21,8 +21,8 @@ COPY backend/package*.json ./
 RUN npm install
 COPY backend/ ./
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Generate Prisma Client (Set dummy DATABASE_URL to pass validation during build)
+RUN DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy npx prisma generate
 
 # Build NestJS App
 RUN npm run build
