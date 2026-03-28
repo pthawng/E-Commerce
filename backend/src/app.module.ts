@@ -121,22 +121,23 @@ import { AppService } from './app.service';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const logger = new Logger('RedisConfig');
-        const url = configService.get<string>('REDIS_URL');
+        // Ưu tiên đọc trực tiếp từ process.env để tránh lỗi ConfigService trên Render
+        const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
         
         if (url && url.trim() !== '') {
-          logger.log('Connecting to Redis via REDIS_URL');
+          logger.log(`Connecting to Redis via URL (Length: ${url.length})`);
           return { redis: url };
         }
         
-        const host = configService.get('REDIS_HOST') || 'localhost';
-        const port = configService.get('REDIS_PORT') || 6379;
+        const host = process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost';
+        const port = Number(process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379);
         logger.log(`Connecting to Redis via Host: ${host}, Port: ${port}`);
         
         return {
           redis: {
             host,
             port,
-            password: configService.get('REDIS_PASSWORD'),
+            password: process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD'),
           },
         };
       },
@@ -145,10 +146,10 @@ import { AppService } from './app.service';
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const url = configService.get<string>('REDIS_URL');
-        const host = configService.get('REDIS_HOST') || 'localhost';
-        const port = configService.get('REDIS_PORT') || 6379;
-        const password = configService.get('REDIS_PASSWORD');
+        const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
+        const host = process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost';
+        const port = process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379;
+        const password = process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD');
 
         const redisUrl = (url && url.trim() !== '') 
           ? url 
