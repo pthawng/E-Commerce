@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.vscode
+test
+src/**/*.spec.ts

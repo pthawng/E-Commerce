@@ -119,13 +119,18 @@ import { AppService } from './app.service';
     InventoryModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST'),
-          port: configService.get('REDIS_PORT'),
-          password: configService.get('REDIS_PASSWORD'),
-        },
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const url = configService.get('REDIS_URL');
+        if (url) return { redis: url };
+        
+        return {
+          redis: {
+            host: configService.get('REDIS_HOST'),
+            port: configService.get('REDIS_PORT'),
+            password: configService.get('REDIS_PASSWORD'),
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     CacheModule.registerAsync({
