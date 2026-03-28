@@ -39,6 +39,7 @@ COPY --from=backend-builder /app/backend/node_modules ./node_modules
 COPY --from=backend-builder /app/backend/package*.json ./
 COPY --from=backend-builder /app/backend/prisma ./prisma
 COPY --from=backend-builder /app/backend/prisma.config.ts ./
+COPY --from=backend-builder /app/backend/src ./src
 
 # Copy shared for runtime resolution
 COPY --from=shared-builder /app/shared/dist ../shared/dist
