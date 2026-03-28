@@ -13,7 +13,7 @@ import { PaymentModule } from '@modules/payment/payment.module';
 import { InventoryModule } from '@modules/inventory/inventory.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bull';
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -120,13 +120,22 @@ import { AppService } from './app.service';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
+        const logger = new Logger('RedisConfig');
         const url = configService.get<string>('REDIS_URL');
-        if (url && url.trim() !== '') return { redis: url };
+        
+        if (url && url.trim() !== '') {
+          logger.log('Connecting to Redis via REDIS_URL');
+          return { redis: url };
+        }
+        
+        const host = configService.get('REDIS_HOST') || 'localhost';
+        const port = configService.get('REDIS_PORT') || 6379;
+        logger.log(`Connecting to Redis via Host: ${host}, Port: ${port}`);
         
         return {
           redis: {
-            host: configService.get('REDIS_HOST') || 'localhost',
-            port: configService.get('REDIS_PORT') || 6379,
+            host,
+            port,
             password: configService.get('REDIS_PASSWORD'),
           },
         };
