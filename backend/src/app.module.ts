@@ -120,13 +120,13 @@ import { AppService } from './app.service';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const url = configService.get('REDIS_URL');
-        if (url) return { redis: url };
+        const url = configService.get<string>('REDIS_URL');
+        if (url && url.trim() !== '') return { redis: url };
         
         return {
           redis: {
-            host: configService.get('REDIS_HOST'),
-            port: configService.get('REDIS_PORT'),
+            host: configService.get('REDIS_HOST') || 'localhost',
+            port: configService.get('REDIS_PORT') || 6379,
             password: configService.get('REDIS_PASSWORD'),
           },
         };
@@ -136,14 +136,18 @@ import { AppService } from './app.service';
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const url = configService.get('REDIS_URL');
-        const host = configService.get('REDIS_HOST');
-        const port = configService.get('REDIS_PORT');
+        const url = configService.get<string>('REDIS_URL');
+        const host = configService.get('REDIS_HOST') || 'localhost';
+        const port = configService.get('REDIS_PORT') || 6379;
         const password = configService.get('REDIS_PASSWORD');
+
+        const redisUrl = (url && url.trim() !== '') 
+          ? url 
+          : `redis://:${password}@${host}:${port}`;
 
         return {
           store: await redisStore({
-            url: url || `redis://:${password}@${host}:${port}`,
+            url: redisUrl,
           }),
         };
       },
