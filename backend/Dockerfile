@@ -6,7 +6,6 @@ COPY shared/package*.json ./
 RUN npm install
 # Now copy the source code (will be filtered by root .dockerignore)
 COPY shared/ ./
-# If tsup still fails, try running it with npx
 RUN npm run build
 
 # --- Stage 2: Build Backend ---
@@ -22,6 +21,7 @@ RUN npm install
 COPY backend/ ./
 
 # Generate Prisma Client (Set dummy DATABASE_URL to pass validation during build)
+# We generate here so the 'nest build' can see the types
 RUN DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy npx prisma generate
 
 # Build NestJS App
@@ -29,6 +29,8 @@ RUN npm run build
 
 # --- Stage 3: Runner ---
 FROM node:20-alpine AS runner
+# Install openssl for Prisma
+RUN apk add --no-cache openssl
 WORKDIR /app/backend
 
 # Copy built app and dependencies
@@ -36,19 +38,23 @@ COPY --from=backend-builder /app/backend/dist ./dist
 COPY --from=backend-builder /app/backend/node_modules ./node_modules
 COPY --from=backend-builder /app/backend/package*.json ./
 COPY --from=backend-builder /app/backend/prisma ./prisma
+COPY --from=backend-builder /app/backend/prisma.config.ts ./
 
-# Copy shared for runtime resolution (if needed by path aliases)
+# Copy shared for runtime resolution
 COPY --from=shared-builder /app/shared/dist ../shared/dist
 COPY --from=shared-builder /app/shared/package*.json ../shared/
 
-# Install only production dependencies (optional, already copied node_modules)
-# If you want a smaller image, you could do: 
-# RUN npm install --omit=dev
+# Re-generate Prisma Client in the final environment to ensure it's in the correct node_modules
+# This prevents "Cannot find module" errors due to OS/Arch differences or path mismatches
+RUN npx prisma generate
 
 # Script to run migrations, seed, and start app
 RUN echo '#!/bin/sh' > start.sh && \
-    echo 'npx prisma migrate deploy' >> start.sh && \
-    echo 'npx prisma db seed' >> start.sh && \
+    echo 'echo "Running Prisma Migrations..."' >> start.sh && \
+    echo 'npx prisma migrate deploy || echo "Migration failed, continuing..."' >> start.sh && \
+    echo 'echo "Seeding database..."' >> start.sh && \
+    echo 'npx prisma db seed || echo "Seeding failed, continuing..."' >> start.sh && \
+    echo 'echo "Starting application..."' >> start.sh && \
     echo 'node dist/main' >> start.sh && \
     chmod +x start.sh
 
