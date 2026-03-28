@@ -20,7 +20,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { redisStore } from 'cache-manager-redis-yet';
 import * as Joi from 'joi';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { PrismaModule } from './prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 

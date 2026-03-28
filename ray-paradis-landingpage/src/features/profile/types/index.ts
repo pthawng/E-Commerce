@@ -31,10 +31,14 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export interface OrderItem {
   id: string;
+  productVariantId: string;
   productName: string;
   sku: string;
-  variantTitle?: any;
-  thumbnailUrl?: string | null;
+  variantTitle: any;
+  thumbnailUrl: string | null;
+  productVariant?: {
+    thumbnailUrl: string | null;
+  };
   quantity: number;
   price: number;
   totalLine: number;

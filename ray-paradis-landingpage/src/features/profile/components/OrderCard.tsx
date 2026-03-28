@@ -11,7 +11,16 @@ interface OrderCardProps {
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
+  const resolveImageUrl = (url?: string | null) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const baseUrl = backendUrl.split('/api')[0];
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const statusColors: Record<string, string> = {
+
     pending: 'text-gold-light border-gold-light/20 bg-gold-shimmer/10',
     confirmed: 'text-gold border-gold/20 bg-gold-shimmer/20',
     shipping: 'text-blue-500 border-blue-500/20 bg-blue-500/5',
@@ -59,28 +68,32 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
 
         {/* Item Thumbnails (Preview) */}
         <div className="flex items-center gap-4 py-2 overflow-x-auto no-scrollbar max-w-xs min-h-[80px]">
-          {items.slice(0, 3).map((item) => (
-
-            <div key={item.id} className="relative w-16 h-20 bg-background border border-primary/5 overflow-hidden flex-shrink-0">
-              {item.thumbnailUrl ? (
-                <img 
-                  src={item.thumbnailUrl} 
-                  alt={item.productName} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-primary/10">
-                  <Package className="w-6 h-6 stroke-[1]" />
-                </div>
-              )}
-            </div>
-          ))}
-          {order.items.length > 3 && (
+          {items.slice(0, 3).map((item) => {
+            const displayThumbnail = item.thumbnailUrl || item.productVariant?.thumbnailUrl;
+            
+            return (
+              <div key={item.id} className="relative w-16 h-20 bg-background border border-primary/5 overflow-hidden flex-shrink-0">
+                {displayThumbnail ? (
+                  <img 
+                    src={resolveImageUrl(displayThumbnail) || ''} 
+                    alt={item.productName} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-primary/10">
+                    <Package className="w-6 h-6 stroke-[1]" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {items.length > 3 && (
             <div className="w-16 h-20 bg-primary/5 flex items-center justify-center text-[10px] text-primary/60 uppercase tracking-widest font-body border border-primary/5">
-              +{order.items.length - 3}
+              +{items.length - 3}
             </div>
           )}
         </div>
+
 
         {/* Total & Action */}
         <div className="flex flex-col justify-between items-end gap-6 md:min-w-[180px]">

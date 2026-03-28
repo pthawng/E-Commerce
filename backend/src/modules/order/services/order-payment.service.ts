@@ -263,11 +263,13 @@ export class OrderPaymentService {
                     : (variant.product.name.en || variant.product.name.vi || 'Product'),
                 sku: variant.sku,
                 variantTitle: variant.variantTitle || {},
+                thumbnailUrl: variant.thumbnailUrl, // ADD THIS
                 quantity: item.quantity,
                 price,
                 totalLine: price * item.quantity,
             };
         });
+
 
         const subtotal = orderItemsData.reduce((sum, item) => sum + item.totalLine, 0);
         const total = subtotal + this.SHIPPING_FEE;
