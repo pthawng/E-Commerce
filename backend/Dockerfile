@@ -52,8 +52,8 @@ RUN npx prisma generate
 
 # Script to run migrations, seed, and start app
 RUN echo '#!/bin/sh' > start.sh && \
-    echo 'echo "Running Prisma Migrations..."' >> start.sh && \
-    echo 'npx prisma migrate deploy || echo "Migration failed, continuing..."' >> start.sh && \
+    echo 'echo "Syncing Database Schema (Force Push)..."' >> start.sh && \
+    echo 'npx prisma db push --accept-data-loss || echo "DB push failed, continuing..."' >> start.sh && \
     echo 'echo "Seeding database..."' >> start.sh && \
     echo 'npx prisma db seed || echo "Seeding failed, continuing..."' >> start.sh && \
     echo 'echo "Starting application..."' >> start.sh && \

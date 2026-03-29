@@ -121,31 +121,61 @@ import { AppService } from './app.service';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const logger = new Logger('RedisConfig');
-        // Ưu tiên đọc trực tiếp từ process.env để tránh lỗi ConfigService trên Render
         const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
         
+        let redisOptions: any;
+
         if (url && url.trim() !== '') {
-          logger.log(`Connecting to Redis via URL (Length: ${url.length})`);
-          return { redis: url };
+          logger.log(`[Bull] Connecting via URL (length: ${url.length})`);
+          try {
+            // Basic manual parsing to handle redis://:pass@host:port
+            const match = url.match(/redis:\/\/:(.*)@(.*):(\d+)/) || url.match(/redis:\/\/(.*):(\d+)/);
+            if (match && match.length >= 3) {
+              if (match.length === 4) {
+                redisOptions = {
+                  password: match[1],
+                  host: match[2],
+                  port: parseInt(match[3], 10),
+                };
+              } else {
+                redisOptions = {
+                  host: match[1],
+                  port: parseInt(match[2], 10),
+                };
+              }
+            } else {
+              // Fallback to direct URL if parsing fails, but ioredis might still need maxRetriesPerRequest
+              return { redis: url }; 
+            }
+          } catch (e) {
+            return { redis: url };
+          }
+        } else {
+          redisOptions = {
+            host: process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost',
+            port: Number(process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379),
+            password: process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD'),
+          };
         }
         
-        const host = process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost';
-        const port = Number(process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379);
-        logger.log(`Connecting to Redis via Host: ${host}, Port: ${port}`);
-        
-        return {
-          redis: {
-            host,
-            port,
-            password: process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD'),
-          },
-        };
+        if (redisOptions) {
+          logger.log(`[Bull] Connecting via Host: ${redisOptions.host}, Port: ${redisOptions.port}`);
+          return {
+            redis: {
+              ...redisOptions,
+              maxRetriesPerRequest: null, // Critical for Bull compatibility
+            },
+          };
+        }
+
+        return { redis: url || 'localhost:6379' };
       },
       inject: [ConfigService],
     }),
     CacheModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
+        const logger = new Logger('CacheConfig');
         const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
         const host = process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost';
         const port = process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379;
@@ -153,11 +183,16 @@ import { AppService } from './app.service';
 
         const redisUrl = (url && url.trim() !== '') 
           ? url 
-          : `redis://:${password}@${host}:${port}`;
+          : password 
+            ? `redis://:${password}@${host}:${port}`
+            : `redis://${host}:${port}`;
+
+        logger.log(`[Cache] Using Redis at ${redisUrl.split('@')[1] || redisUrl.split('//')[1] || 'localhost'}`);
 
         return {
           store: await redisStore({
             url: redisUrl,
+            ttl: configService.get('REDIS_TTL') || 600, // 10 minutes default
           }),
         };
       },
