@@ -7,18 +7,45 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
+
+# Environment Variables (Bảo mật - QUAN TRỌNG)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+!.env.template
+
+# TypeScript Cache
+*.tsbuildinfo
+
+# ESLint Cache
+.eslintcache
+
+# Testing coverage
+coverage/
+.nyc_output/
+
+# Cloud Deployments (Vercel, Netlify)
+.vercel/
+.netlify/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
