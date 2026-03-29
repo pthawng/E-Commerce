@@ -23,6 +23,7 @@ import * as Joi from 'joi';
 import { PrismaModule } from './prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
 
 @Module({
   imports: [
@@ -119,93 +120,12 @@ import { AppService } from './app.service';
     InventoryModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        const logger = new Logger('RedisConfig');
-        const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
-        
-        let redisOptions: any;
-
-        if (url && url.trim() !== '') {
-          logger.log(`[Bull] Connecting via URL (length: ${url.length})`);
-          const isTls = url.startsWith('rediss://');
-          
-          try {
-            // Basic manual parsing to handle redis://:pass@host:port
-            const match = url.match(/rediss?:\/\/:(.*)@(.*):(\d+)/) || url.match(/rediss?:\/\/(.*):(\d+)/);
-            if (match && match.length >= 3) {
-              if (match.length === 4) {
-                redisOptions = {
-                  password: match[1],
-                  host: match[2],
-                  port: parseInt(match[3], 10),
-                  tls: isTls ? {} : undefined,
-                };
-              } else {
-                redisOptions = {
-                  host: match[1],
-                  port: parseInt(match[2], 10),
-                  tls: isTls ? {} : undefined,
-                };
-              }
-            } else {
-              // Fallback to direct URL if parsing fails
-              return { 
-                redis: url,
-                redisOptions: { tls: isTls ? {} : undefined }
-              }; 
-            }
-          } catch (e) {
-            return { redis: url };
-          }
-        } else {
-          redisOptions = {
-            host: process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost',
-            port: Number(process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379),
-            password: process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD'),
-          };
-        }
-        
-        if (redisOptions) {
-          logger.log(`[Bull] Connecting via Host: ${redisOptions.host}, Port: ${redisOptions.port} (TLS: ${!!redisOptions.tls})`);
-          return {
-            redis: {
-              ...redisOptions,
-              maxRetriesPerRequest: null,
-            },
-          };
-        }
-
-        return { redis: url || 'localhost:6379' };
-      },
+      useFactory: bullConfigFactory,
       inject: [ConfigService],
     }),
     CacheModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        const logger = new Logger('CacheConfig');
-        const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
-        const host = process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost';
-        const port = process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379;
-        const password = process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD');
-
-        const redisUrl = (url && url.trim() !== '') 
-          ? url 
-          : password 
-            ? `redis://:${password}@${host}:${port}`
-            : `redis://${host}:${port}`;
-
-        const isTls = redisUrl.startsWith('rediss://');
-        logger.log(`[Cache] Using Redis at ${redisUrl.split('@')[1] || redisUrl.split('//')[1] || 'localhost'} (TLS: ${isTls})`);
-
-        return {
-          store: await redisStore({
-            url: redisUrl,
-            ttl: configService.get('REDIS_TTL') || 600,
-            // Pass TLS options if needed
-            ...(isTls ? { tls: {} } : {}),
-          }),
-        };
-      },
+      useFactory: cacheConfigFactory,
       inject: [ConfigService],
     }),
   ],

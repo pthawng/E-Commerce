@@ -520,18 +520,7 @@ cd Web\ -\ E\ Commerce
 
 **2. Install Dependencies**
 ```bash
-# Install root dependencies (if using workspaces)
-npm install
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../back-office
-npm install
-
-cd ../ray-paradis-landingpage
+# This project uses npm workspaces. A single install at the root sets up all applications (backend, storefront, admin).
 npm install
 ```
 
