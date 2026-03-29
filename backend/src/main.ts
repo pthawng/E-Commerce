@@ -11,13 +11,16 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   // Enable CORS for the frontend origin and allow credentials (cookies).
   // Do NOT use '*' when requests use credentials (withCredentials: true).
+  const configuredOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : ['http://localhost:5173', 'http://localhost:5174'];
 
   app.enableCors({
     origin: [
-      process.env.CORS_ORIGIN || 'http://localhost:5173',
+      ...configuredOrigins,
       'http://localhost:8080',
       'http://localhost:8880',
-      'http://localhost:5174'
+      'https://ray-paradis.vercel.app', // Direct fallback for production landing page
     ],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
