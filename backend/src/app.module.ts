@@ -127,25 +127,32 @@ import { AppService } from './app.service';
 
         if (url && url.trim() !== '') {
           logger.log(`[Bull] Connecting via URL (length: ${url.length})`);
+          const isTls = url.startsWith('rediss://');
+          
           try {
             // Basic manual parsing to handle redis://:pass@host:port
-            const match = url.match(/redis:\/\/:(.*)@(.*):(\d+)/) || url.match(/redis:\/\/(.*):(\d+)/);
+            const match = url.match(/rediss?:\/\/:(.*)@(.*):(\d+)/) || url.match(/rediss?:\/\/(.*):(\d+)/);
             if (match && match.length >= 3) {
               if (match.length === 4) {
                 redisOptions = {
                   password: match[1],
                   host: match[2],
                   port: parseInt(match[3], 10),
+                  tls: isTls ? {} : undefined,
                 };
               } else {
                 redisOptions = {
                   host: match[1],
                   port: parseInt(match[2], 10),
+                  tls: isTls ? {} : undefined,
                 };
               }
             } else {
-              // Fallback to direct URL if parsing fails, but ioredis might still need maxRetriesPerRequest
-              return { redis: url }; 
+              // Fallback to direct URL if parsing fails
+              return { 
+                redis: url,
+                redisOptions: { tls: isTls ? {} : undefined }
+              }; 
             }
           } catch (e) {
             return { redis: url };
@@ -159,11 +166,11 @@ import { AppService } from './app.service';
         }
         
         if (redisOptions) {
-          logger.log(`[Bull] Connecting via Host: ${redisOptions.host}, Port: ${redisOptions.port}`);
+          logger.log(`[Bull] Connecting via Host: ${redisOptions.host}, Port: ${redisOptions.port} (TLS: ${!!redisOptions.tls})`);
           return {
             redis: {
               ...redisOptions,
-              maxRetriesPerRequest: null, // Critical for Bull compatibility
+              maxRetriesPerRequest: null,
             },
           };
         }
@@ -187,12 +194,15 @@ import { AppService } from './app.service';
             ? `redis://:${password}@${host}:${port}`
             : `redis://${host}:${port}`;
 
-        logger.log(`[Cache] Using Redis at ${redisUrl.split('@')[1] || redisUrl.split('//')[1] || 'localhost'}`);
+        const isTls = redisUrl.startsWith('rediss://');
+        logger.log(`[Cache] Using Redis at ${redisUrl.split('@')[1] || redisUrl.split('//')[1] || 'localhost'} (TLS: ${isTls})`);
 
         return {
           store: await redisStore({
             url: redisUrl,
-            ttl: configService.get('REDIS_TTL') || 600, // 10 minutes default
+            ttl: configService.get('REDIS_TTL') || 600,
+            // Pass TLS options if needed
+            ...(isTls ? { tls: {} } : {}),
           }),
         };
       },

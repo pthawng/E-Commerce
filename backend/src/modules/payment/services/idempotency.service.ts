@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -13,19 +13,47 @@ export class IdempotencyService {
     private readonly resultTTL = 86400; // 24 hours
 
     constructor(private readonly configService: ConfigService) {
-        const redisHost = this.configService.get<string>('REDIS_HOST') || 'localhost';
-        const redisPort = this.configService.get<number>('REDIS_PORT') || 6379;
-        const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
+        const logger = new Logger('IdempotencyRedis');
+        const redisUrl = this.configService.get<string>('REDIS_URL') || process.env.REDIS_URL;
+        
+        if (redisUrl && redisUrl.trim() !== '') {
+            logger.log(`Connecting via URL (length: ${redisUrl.length})`);
+            const isTls = redisUrl.startsWith('rediss://');
+            
+            this.redis = new Redis(redisUrl, {
+                maxRetriesPerRequest: null,
+                tls: isTls ? {} : undefined,
+                retryStrategy: (times) => {
+                    const delay = Math.min(times * 100, 3000);
+                    return delay;
+                },
+            });
+        } else {
+            const redisHost = this.configService.get<string>('REDIS_HOST') || 'localhost';
+            const redisPort = this.configService.get<number>('REDIS_PORT') || 6379;
+            const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
+            
+            logger.log(`Connecting via Host: ${redisHost}, Port: ${redisPort}`);
+            
+            this.redis = new Redis({
+                host: redisHost,
+                port: redisPort,
+                password: redisPassword,
+                maxRetriesPerRequest: null,
+                retryStrategy: (times) => {
+                    const delay = Math.min(times * 100, 3000);
+                    return delay;
+                },
+            });
+        }
 
-        this.redis = new Redis({
-            host: redisHost,
-            port: redisPort,
-            password: redisPassword,
-            retryStrategy: (times) => {
-                // Retry connection with exponential backoff
-                const delay = Math.min(times * 50, 2000);
-                return delay;
-            },
+        // Handle error events to prevent "Unhandled error event" crashes
+        this.redis.on('error', (err) => {
+            logger.error(`Redis connection error: ${err.message}`);
+        });
+
+        this.redis.on('connect', () => {
+            logger.log('Successfully connected to Redis');
         });
     }
 
