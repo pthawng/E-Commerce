@@ -10,7 +10,7 @@ import { Outlet } from 'react-router-dom';
  */
 const AccountPage: React.FC = () => {
   return (
-    <Layout>
+    <Layout forceHeaderOpaque={true}>
       <ProfileLayout>
         <Outlet />
       </ProfileLayout>
