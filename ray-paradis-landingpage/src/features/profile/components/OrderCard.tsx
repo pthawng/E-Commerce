@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { Package, ChevronRight, MapPin, User, ShoppingBag, Heart, LogOut } from 'lucide-react';
+import { getApiBaseUrl } from '@shared';
 import { Order } from '../types';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -14,7 +15,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
   const resolveImageUrl = (url?: string | null) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const backendUrl = getApiBaseUrl();
     const baseUrl = backendUrl.split('/api')[0];
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };

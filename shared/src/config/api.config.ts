@@ -1,7 +1,14 @@
 /**
  * API Configuration
- * Cấu hình API dùng chung giữa Frontend và Back Office
+ * Refactored for universal compatibility across Vite, Browser, and Node environments.
  */
+
+// Extend global types for Vite environment variable support
+declare global {
+  interface ImportMeta {
+    readonly env: Record<string, string | undefined>;
+  }
+}
 
 /**
  * API base URL runtime configuration
@@ -24,6 +31,48 @@ function normalizeUrl(value?: string | null): string | undefined {
   return trimmed.replace(/\/$/, '');
 }
 
+/**
+ * Senior Environment Resolver
+ * Safely resolves environment variables across different runtimes without triggering 
+ * syntax errors in CommonJS or browser environments.
+ */
+function getEnvVar(key: string): string | undefined {
+  // 1. Try Node.js process.env
+  if (typeof process !== 'undefined' && process.env?.[key]) {
+    return process.env[key];
+  }
+
+  // 2. Try globalThis (Browser/Cloudflare/etc)
+  if (typeof globalThis !== 'undefined') {
+    const globalObj = globalThis as Record<string, any>;
+    
+    // Check direct global properties
+    if (globalObj[key]) return globalObj[key];
+
+    // Check common environment container names
+    if (globalObj.process?.env?.[key]) return globalObj.process.env[key];
+
+    // 3. Try Vite/ESM import.meta.env
+    // We use dynamic property access to bypass TypeScript/Compiler syntax checks
+    // intended for CommonJS modules.
+    try {
+      // Cast to any to avoid strict syntax checking of import.meta
+      const meta = (globalThis as any).import?.meta ?? (globalThis as any).meta;
+      if (meta?.env?.[key]) return meta.env[key];
+      
+      // Fallback to direct import.meta access with @ts-ignore if previous attempt failed
+      // This allows Vite/Webpack to perform literal substitution if they are the bundler.
+      // @ts-ignore - Parser might complain in CJS, but it is safe at runtime in ESM
+      const metaEnv = (import.meta as any)?.env;
+      if (metaEnv?.[key]) return metaEnv[key];
+    } catch {
+      // Ignore resolution errors
+    }
+  }
+
+  return undefined;
+}
+
 function resolveGlobalApiBaseUrl(): string | undefined {
   if (typeof globalThis === 'undefined') return undefined;
   const globalObj = globalThis as Record<string, any>;
@@ -37,18 +86,8 @@ function resolveGlobalApiBaseUrl(): string | undefined {
   );
 }
 
-function resolveProcessEnvApiUrl(): string | undefined {
-  if (typeof process === 'undefined') return undefined;
-  return normalizeUrl(
-    process.env?.NEXT_PUBLIC_API_URL ??
-    process.env?.VITE_API_URL ??
-    process.env?.API_URL ??
-    process.env?.BACKEND_URL,
-  );
-}
-
 /**
- * Configure API base URL at runtime (e.g., from Vite or Next env)
+ * Configure API base URL at runtime (e.g., from Vite or Next entry point)
  */
 export function configureApiBaseUrl(url?: string | null) {
   runtimeApiBaseUrl = normalizeUrl(url);
@@ -67,13 +106,17 @@ export function getApiBaseUrl(): string {
   return (
     runtimeApiBaseUrl ??
     resolveGlobalApiBaseUrl() ??
-    resolveProcessEnvApiUrl() ??
+    normalizeUrl(getEnvVar('VITE_API_BASE_URL')) ??
+    normalizeUrl(getEnvVar('VITE_API_URL')) ??
+    normalizeUrl(getEnvVar('NEXT_PUBLIC_API_URL')) ??
+    normalizeUrl(getEnvVar('API_URL')) ??
+    normalizeUrl(getEnvVar('BACKEND_URL')) ??
     DEFAULT_API_BASE_URL
   );
 }
 
 /**
- * API Base URL snapshot (kept for backwards compatibility)
+ * API Base URL snapshot (maintained for backward compatibility)
  */
 export let API_BASE_URL = getApiBaseUrl();
 

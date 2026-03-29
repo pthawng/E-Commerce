@@ -1,6 +1,10 @@
+import { configureApiBaseUrl } from "@shared";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+
+// Initialize API configuration
+configureApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 createRoot(document.getElementById("root")!).render(<App />);
 

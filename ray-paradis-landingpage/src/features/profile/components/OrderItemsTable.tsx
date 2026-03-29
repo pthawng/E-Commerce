@@ -1,4 +1,4 @@
-import React from 'react';
+import { getApiBaseUrl } from '@shared';
 import { OrderItem } from '../types';
 import { Package } from 'lucide-react';
 
@@ -14,7 +14,7 @@ export const OrderItemsTable: React.FC<OrderItemsTableProps> = ({ items }) => {
   const resolveImageUrl = (url?: string | null) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const backendUrl = getApiBaseUrl();
     const baseUrl = backendUrl.split('/api')[0];
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };
