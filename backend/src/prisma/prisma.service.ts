@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, OnModuleDestroy, OnModuleInit 
 import { PrismaPg } from '@prisma/adapter-pg';
 import { parse } from 'pg-connection-string';
 import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
 import { SystemContextStore } from '@common/context/system-context.store';
 
 @Injectable()
@@ -12,7 +13,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   constructor() {
     const connStr = process.env.DATABASE_URL || '';
-    const adapter = new PrismaPg({ connectionString: connStr });
+    const pool = new Pool({ connectionString: connStr });
+    const adapter = new PrismaPg(pool);
     super({ adapter });
 
     const parsed = parse(connStr);
