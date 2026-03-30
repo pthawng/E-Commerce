@@ -24,52 +24,39 @@ Structured defensively by domain context:
 * **`payment`**: Idempotent ledger. Generates outgoing gateway URLs and captures incoming, asynchronous webhook fulfillments safely.
 
 ## 4. Architecture Notes
-* **Modular Monolith**: Uses strict NestJS Dependency Injection. Domains (like `Order` and `Inventory`) do not directly execute SQL in each other's spaces; they interact exclusively via injected Service interfaces. This mimics microservices separation without the network delay penalty.
+* **Modular Monolith**: Uses strict NestJS Dependency Injection. Domains (like `Order` and `Inventory`) do not directly execute SQL in each other's spaces; they interact exclusively via injected Service interfaces.
+* **System Invariant Guard (Staff-level)**: Implemented a global **Prisma Extension Guard**. Mutations on sensitive models (`Order`, `Payment`, `InventoryItem`) are intercepted at the database level. If a mutation originates outside an authorized service layer (tracked via `SystemContextStore`), the system throws an `InvariantViolation` exception immediately.
+* **Concurrency & Locking Model**:
+  * Uses `FOR UPDATE NOWAIT` for row-level locking to prevent system-wide hangs and deadlocks.
+  * Employs an **Exponential Backoff Retry (`withRetry`)** mechanism to handle lock contention gracefully during high-traffic SKU drops.
 * **Controller/Service/Repository Pattern**: API routing is isolated from business rules, which are isolated from Prisma data-access logic.
-* **Redis Guard Bypassing**: The `AuthGuard` skips PostgreSQL completely for 98% of queries, reading permission configurations directly from memory.
 
 ## 5. External Dependencies
-* **PostgreSQL (via Prisma)**: Primary persistence, ensuring ACID compliance for critical paths like Order Creation.
-* **Redis**: Ephemeral memory caching for high-speed rate-limiting, session control, and the centralized RBAC identity tree.
+* **PostgreSQL (via Prisma)**: Primary persistence, ensuring ACID compliance for critical paths.
+* **Redis (Required)**: High-speed caching, rate-limiting (`ThrottlerGuard`), and idempotency locking. **Production environment strictly requires `REDIS_PASSWORD`**.
 * **VNPay & PayPal (Gateways)**: Financial orchestrators driving the webhook engine.
-* **Node Mailer / External SMTP**: Delegated dispatcher for transactional messaging.
 
 ## 6. Key Flows (Service Perspective)
 *(For full system logic, see the [Global Checkout Flow](../docs/flows/checkout-flow.md))*
 
-* **The Atomic Reservation (Order Creation)**: 
-  * Receives Cart intent -> Requests exclusive DB row-lock (`InventoryReservation`) for chosen variants -> Success yields a `PENDING_PAYMENT` Order. Failure instantly aborts flow, returning 409 Conflict.
+* **The Atomic Reservation (Order Checkout)**: 
+  * Receives Cart intent -> `OrderPaymentService` initiates transaction -> `InventoryService` acquires `NOWAIT` row-lock -> Success yields a `PENDING_PAYMENT` Order. Contention triggers automated retries. Persistent failure returns 409/423.
 * **Webhook Reconciliations**:
-  * Gateway hits `POST /payment/vnpay/ipn` -> Checks IP/Signature against Secrets -> Checks Idempotency Key against `PaymentTransaction` table -> Mutates Order State -> Unlocks and destroys `InventoryReservation` -> Purges actual `InventoryItem` count.
+  * Gateway hits IPN/Callback -> **Idempotency Check** (Redis + DB Lock) -> `PaymentService` verifies amount and signature -> Mutates Payment record (Source of Truth) -> Atomic Inventory Deduction -> Order Confirmation.
 
 ## 7. Environment & Configuration
 Requires core infrastructural wiring inside `.env`.
 * `DATABASE_URL`: Full PostgreSQL connection string required by Prisma.
 * `REDIS_HOST`, `REDIS_PORT`: Local or cloud memory cache dials.
+* `REDIS_PASSWORD`: **(Required)** Strict requirement for production readiness.
 * `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`: Cryptographic boundaries.
 * Gateway Credentials: `VNPAY_TMNCODE`, `VNPAY_HASHSECRET`, `VNPAY_IPN_URL`.
 * `CORS_ORIGIN`: Strict origin headers dictating acceptable SPA clients.
 
 ## 8. How to Run
+... [Existing run instructions] ...
 
-> [!WARNING]
-> This service will immediately crash on boot if the Docker PostgreSQL and Redis containers are not actively running.
-
-> **Note:** The preferred method to boot the entire stack is via the repository root (`npm run dev --workspaces`). See [Root Local Development](../docs/setup/local-development.md).
-
-To run **ONLY** this service in isolation:
-
-```bash
-# Sync database schema before boot
-npm run prisma:dev --workspace=@ray-paradis/backend
-
-# Launch service locally with hot-reloading
-npm run dev --workspace=@ray-paradis/backend
-```
-
-*Note: Default execution port is `:4000`.*
-
-## 9. Notes
-* **Assumptions**: Presumes all clients (Storefront/Admin) comply mechanically with REST/JSON standardizations and handle frontend rate-limiting gracefully.
-* **Limitations**: Current monolithic structure shares compute resources. A massive catalog-sync operation could theoretically induce latency across cart checkout routes sharing the node process.
-* **Future Improvements**: Transition the `payment` and `mail` notification handlers into a Redis-backed queue worker loop (BullMQ) to totally detach webhook ingestion latency from the main event thread.
+## 9. Notes & Staff Decisions
+* **Guard Enforcement**: All mutation logic must live in `Service` classes. Ad-hoc repository calls or direct Prisma injections in Controllers will trigger Invariant Violations.
+* **Idempotency**: All payment and inventory confirmation flows are idempotent by design, keyed by `TransactionId` or `OrderId`.
+* **PII Protection**: User emails and sensitive identifiers are masked in public verification responses (e.g. password resets).

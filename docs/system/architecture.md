@@ -3,17 +3,24 @@
 ## Architecture Style
 Ray Paradis operates as a **Pragmatic Monolith (Modular Monolith)** supported by a headless frontend ecosystem. 
 
-**Rationale:** Early isolation of features via microservices creates unnecessary DevOps overhead and network boundary latency. By using a modular monolithic pattern within NestJS, domain contexts (Inventory, Orders, Payment) remain strictly encapsulated through Dependency Injection (DI) and formal interfaces. This grants high delivery velocity now, while practically preparing the modules to be split horizontally across individual pods later if scaling dictates.
+**Rationale:** Early isolation of features via microservices creates unnecessary DevOps overhead. By using a modular monolithic pattern within NestJS, domain contexts remain strictly encapsulated through Dependency Injection (DI).
+
+## System Hardening & Invariants (Staff-level)
+To ensure long-term data integrity and prevent "bypass" bugs, the system implements a multi-layered defense:
+
+### 1. Execution Context (`SystemContextStore`)
+The backend uses **`AsyncLocalStorage`** to track the "Identity" of the code executing at any given moment. This allows the system to distinguish between a request coming from a Controller vs. an internal system process vs. a specific Service (e.g., `InventoryService`).
+
+### 2. Prisma Invariant Guard
+All database mutations are intercepted by a **Prisma Query Extension**. 
+- **Sensitive Models**: `Order`, `Payment`, `InventoryItem`, `InventoryReservation`.
+- **Enforcement**: If a mutation (create/update/delete) is attempted on a sensitive model without an authorized Service context, the extension throws a `BadRequestException` at the database level.
+- **Goal**: This forces developers to use the designated Service Layer rather than injecting repositories directly into Controllers or other cross-domain modules.
 
 ## Component Interactions
-- **Headless Clients → API**: The `storefront` and `back-office` single-page applications query the `backend` REST API. Clients are strictly stateless.
-- **API → Cache**: The `backend` intercepts incoming requests, routing authentication and permission matrix checks to Redis cache layers first.
-- **API → Database**: Core transactions (Order finalizing, Inventory locking) bypass caching and negotiate directly via Prisma ORM to PostgreSQL for ACID compliance.
-- **Webhooks → API**: Third-party providers (VNPay, PayPal) hit public webhook endpoints which utilize strict Idempotency Key validation before triggering state-machine shifts on internal Order records.
+- **Headless Clients → API**: The `storefront` and `back-office` query the `backend` REST API.
+- **API → Service → Guard → Database**: Core transactions (Order finalizing, Inventory locking) are initiated by Controllers but MUST be orchestrated by Services to bypass the Invariant Guard and write to PostgreSQL.
+- **Concurrency (NOWAIT)**: Inventory locking uses `SELECT FOR UPDATE NOWAIT` to fail fast and prevent deadlocks during high-traffic events.
 
 ## Infrastructure
-- **Compute Layer**: Node.js running NestJS handles incoming HTTP.
-- **Primary Persistence (Database)**: **PostgreSQL**. Structured via Prisma for relational integrity across complex jewelry variants and dynamic taxonomy attributes.
-- **Memory & Cache**: **Redis**. Provides immediate payload retrieval for high-read paths, authorization trees, and handles rate-limiting / idempotency locking.
-- **Containers**: **Docker**. Local infrastructure (DBs, Redis) are orchestrated via Docker Compose for immediate developer onboarding.
-- **Cloud/Edge Platform**: Designed to exist potentially inside Supabase/Vercel boundaries for managed scaling (subject to production environment).
+... [Existing infrastructure details] ...

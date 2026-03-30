@@ -3,17 +3,19 @@
 The checkout process manages volatile cart states and high-stakes inventory atomic locks.
 
 ## 1. Cart Compilation
-* **Local State**: Storefront user adds jewelry variants to Cart (`features/cart`). State is driven primarily client-side for "peppy" UI interactions.
-* **Syncing**: Anonymous or authenticated state is synced with the DB via `POST/PATCH /cart`. Attributes, shipping metrics, and pricing formulas are continuously validated backend-side to prevent tampering.
-* **Discounts Calculation**: Submits `PromoCode`s, triggering `Discount` relation checks for date-validity and availability.
+* **Syncing**: Anonymous or authenticated state is synced via `/cart`. All attributes and pricing are validated on the server to prevent tampering.
 
-## 2. Atomic Inventory Negotiation (Pre-Checkout)
-* **Initiation**: User clicks "Proceed to Checkout". The system must guarantee stock exactly exists.
-* **Lock Execution**: Backend initiates `InventoryReservation` creation. A transaction locks the exact `ProductVariant` across specific `Warehouse` entities.
-* **Failure State**: If competing users lock variant X microseconds apart resulting in $n-1$ stock, later transactions fail cleanly, UI updates cart immediately.
-* **TTL**: The reservation sits active (e.g., 15 minutes). If payment flow (Flow 3) isn't hit, scheduled CRON/Redis-Event clears lock automatically.
+## 2. High-Concurrency Stock Reservation (Staff-level)
+* **Initiation**: User clicks "Proceed to Checkout". The system must guarantee exactly that the stock exists.
+* **NOWAIT Locking**: Backend executes `SELECT FOR UPDATE NOWAIT` on the specific product variant row. 
+  * If the row is already locked by another process, the database fails-fast instead of queuing/hanging.
+* **Exponential Backoff**: The internal `withRetry` utility handles lock contention by retrying up to 5 times with increasing delays.
+* **State Machine Lifecycle**:
+  * **ACTIVE**: A reservation record is created. Stock is "held" but not yet deducted.
+  * **CONFIRMED**: Once payment is verified, the reservation is confirmed and the stock is permanently deducted.
+  * **RELEASED**: If payment fails or time expires (TTL), the lock is released and stock remains available.
 
-## 3. Order Finalization & State Machine Hand-off
-* **Creation**: Shipping info and variant locks commit into a single final `Order` graph model (with `OrderItem` records).
-* **Status Shift**: Order begins via the State-Machine in `PENDING_PAYMENT` state. An immutable `OrderTimeline` event is permanently recorded.
-* **Redirect**: UI pushes user to external gateway generation.
+## 3. Order Finalization & Orchestration
+* **Centralized Pipeline**: All checkouts MUST go through `OrderPaymentService` to bypass the Invariant Guard.
+* **Idempotency**: The `OrderId` acts as the master key. Multiple attempts to pay for the same order are blocked by the `PaymentService` state-machine.
+* **Status Shift**: Order moves from `PENDING_PAYMENT` to `CONFIRMED` only after Gateway Callback + Stock Confirmation.
