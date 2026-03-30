@@ -1,77 +1,64 @@
-# Ray Paradis — Landing Page
+# Storefront Service (`@ray-paradis/storefront`)
 
-Author: Lê Phước Thắng
+## 1. Overview
+The `@ray-paradis/storefront` service is the primary consumer-facing application for the luxury e-commerce platform. Built as a React SPA on Vite, it is designed strictly around the "Quiet Atelier" aesthetic, prioritizing 60fps micro-interactions, immediate responsiveness (via TanStack Query caching), and rendering complex multi-variant product configurations. It acts as the visual and interaction layer bounding the `backend` API.
 
-This repository contains the Ray Paradis landing page — a refined, accessible, and performance-minded site built with modern web tooling. It implements a motion system, reusable UI primitives, and editorial copy to deliver a quiet-luxury experience.
+## 2. Responsibilities
+* **Owns:**
+  * The entirety of the consumer User Interface and User Experience.
+  * *Client State* management (e.g., active cart modals, multi-step checkout wizard progression) using Zustand.
+  * In-browser caching and Background Syncing of *Server State* (e.g., live product pricing) using TanStack Query.
+  * UI routing and the immediate visual handling of external Gateway redirects (VNPay/PayPal).
+* **Does NOT Own:**
+  * Financial truth or strict order summation (it always yields to backend calculations).
+  * Direct interaction with PGSQL or Redis.
+  * Private webhook validations or cryptographic signatures.
 
-## Quick start (local)
+## 3. Key Modules / Features
+Built upon a **Feature-Sliced** project structure grouping code by user domain:
+* **`products`**: The Catalog. Heavily handles nested variant selections (Size + Material combinations) and renders HD visual assets. Optimization target for Largest Contentful Paint (LCP).
+* **`cart`**: Local-first shopping bag. Aggregates selected variants and syncs anonymous or authenticated selections to the backend seamlessly.
+* **`checkout`**: A specialized, highly-controlled UI wizard. Manages the sensitive handoff where users confirm intent, trigger backend atomic locks, and dispatch to VNPay/PayPal.
+* **`auth` / `profile`**: Customer identity portals mapping to backend JWT sessions, displaying historical Orders and saved shipping entities.
 
-Prerequisites:
-- Node.js (recommended via nvm)
-- npm or pnpm
+## 4. Architecture Notes
+* **Feature-Sliced Design**: Avoids the anti-pattern of mega `src/components` or `src/hooks` folders. Code belonging to Checkout (checkout hooks, checkout UI, checkout types) stays in `src/features/checkout`.
+* **Decoupled Server vs Client State**: Zustand is strictly restricted to ephemeral local UI phenomena (e.g., `isCartDrawerOpen`). TanStack Query inherently manages all persistent domain states fetched from the backend, guaranteeing minimal prop-drilling and automatic cache invalidation.
+* **Shared Types Syncing**: Structurally imports all DTOs and Payload specifications directly from the `@ray-paradis/shared` workspace, ensuring TS compiler failures if the backend API contract shifts.
 
-Commands:
+## 5. External Dependencies
+* **Backend API (`@ray-paradis/backend`)**: The sole source of truth via REST.
+* **External Gateways**: VNPay and PayPal portals (redirect targets).
+* **CDN Providers**: For fetching luxury 3D models or 4k ring media specified by backend payload pointers.
 
-```sh
-# 1. Clone
-git clone <YOUR_GIT_URL>
-cd <YOUR_PROJECT_NAME>
+## 6. Key Flows (Service Perspective)
+* **The Catalog Discovery Flow**:
+  * User loads route -> `TanStack Query` checks its cache -> Cache Miss triggers an API GET -> React suspends/shows skeleton -> UI paints the `Product`. Subsequent visits immediately paint from memory while background-re-validating.
+* **The Checkout Sequence**:
+  * User submits Shipping Address (Local State) -> Dispatches `POST /order` -> Backend responds with *Gateway Redirect URL* & *Order ID* -> Storefront mutates `window.location.href`, abandoning the current local runtime to execute the financial handshake externally.
+* **Payment Return**:
+  * Gateway returns User to `storefront/checkout/vnpay/callback`. **Crucially**, the Storefront completely distrusts the URL parameters (which can be spoofed), and instead fires a polling request to `GET /payment/status/:orderId` to fetch the deterministic backend validation state before rendering a "Success" or "Failed" UI.
 
-# 2. Install
-npm install
+## 7. Environment & Configuration
+Requires core `.env` pointing to the execution environments.
 
-# 3. Dev server (Vite)
-npm run dev
+```bash
+# Target REST API
+VITE_API_BASE_URL=http://localhost:4000/api
 
-# 4. Build for production
-npm run build
-
-# 5. Lint
-npm run lint
+# Standard app ports defined for Vite
+VITE_PORT=5173 
 ```
 
-## Project structure
+## 8. How to Run
+Trigger this service specifically via the workspace root:
 
-- `public/` — static assets (favicon, manifest, images). Served from site root.
-- `src/`
-  - `components/` — React components split by purpose (layout, sections, ui, effects).
-  - `hooks/` — small reusable hooks (`useOverlapInView`, etc.).
-  - `assets/` — images and visual assets used in the UI.
-  - `lib/` — small utilities.
-  - `pages/` — route pages (index).
-  - `main.tsx`, `index.css`, `tailwind.config.ts` — app bootstrap and styling.
-- `package.json` — scripts and dependencies.
+```bash
+npm run dev --workspace=@ray-paradis/storefront
+```
+*Note: Ensure the backend is concurrently running, or Storefront will fail all TanStack queries.*
 
-## Architecture notes
-
-- Motion tokens are centralized (`src/components/effects/motionTokens.ts`) so timing and easing are consistent across the site.
-- Section reveal behavior is driven by `useOverlapInView` (IntersectionObserver) to create subtle overlap reveals and respect `prefers-reduced-motion`.
-- Visual styles use Tailwind with a small set of custom utilities in `src/index.css` for site-wide rhythm.
-- Components follow a “content-first” approach so the page remains usable without JavaScript.
-
-## How to contribute
-
-1. Create a branch from `main` named `feat/your-topic`.
-2. Run `npm install` and `npm run dev`.
-3. Implement changes; keep UI changes minimal and aligned with the site’s editorial tone.
-4. Run `npm run lint` before committing.
-5. Open a PR with a clear description and screenshots (if UI).
-
-## Recommended next steps for production readiness
-
-- Add a CI workflow that runs `npm ci`, `npm run lint`, `tsc --noEmit`, and `npm run build`.
-- Add unit tests (Vitest + React Testing Library) for critical components.
-- Add Storybook for a component catalog and visual review.
-- Integrate accessibility checks (axe) in CI.
-
-## Deployment
-
-This project is deployable to any static hosting that supports Vite builds (Netlify, Vercel, GitHub Pages, etc.). The output directory is `dist/` after `npm run build`.
-
-## Contact
-
-Author: **Lê Phước Thắng**
-Email: lephuocthang207@gmail.com
-
---- 
-This README is tailored to the current repository; expand sections above as the project matures (tests, CI, deployment specifics).
+## 9. Notes
+* **Assumptions**: Presumes all structural payloads conform entirely to `@ray-paradis/shared`. Assumes browser environments support modern JS modules (ES Modules).
+* **Limitations**: Current SPA (Single Page Application) nature limits native SEO purely to client-side renders. If heavy SEO on Catalog URLs becomes mandatory, this service may need to shift architectural paradigms toward Next.js (SSR).
+* **Future Improvements**: Implementation of generic Request Response interceptor inside Axios to uniformly handle `401 Unauthorized` token-refreshing cycles without duplicating logic per feature slice.

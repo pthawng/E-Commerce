@@ -1,98 +1,67 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend Service (`@ray-paradis/backend`)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## 1. Overview
+The `@ray-paradis/backend` service operates as the core API, commerce engine, and master source of truth for the Ray Paradis platform. Built on NestJS, it serves as the primary boundary guarding business logic, executing transactional state shifts (orders/payments), and managing intricate role-based permissions for both the storefront and the back-office administrative portals. 
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 2. Responsibilities
+* **Owns:**
+  * Master relational database schemas and Prisma ORM migrations.
+  * Fast-path active authorization (RBAC/ABAC matrices) cached in Redis.
+  * Atomic inventory holding mechanisms to prevent hyper-concurrency overselling.
+  * Ingress for third-party asynchronous webhooks (VNPay, PayPal).
+  * Transactional Order state-machines (Draft, Pending, Paid, Shipped).
+* **Does NOT Own:**
+  * UI state management or rendering logic.
+  * Raw static asset hosting (delegated to CDNs/Storage APIs).
+  * Direct payment processing card loops (delegated entirely to VNPay/PayPal gateway redirects).
 
-## Description
+## 3. Key Modules / Features
+Structured defensively by domain context:
+* **`auth`, `rbac`, `abac`, `user`**: Identity layer. Hands out JWT tokens and dynamically resolves granular permission trees down to the specific resource.
+* **`product`, `category`, `attribute`**: Catalog definitions. Resolves multidimensional SKU configurations (e.g., Size + Material + Gem Cut = 1 Unique Variant).
+* **`inventory`, `warehouse`**: Operations boundary. Exclusively handles atomic variants locks (`InventoryReservation`) and ledger append-only logs (`InventoryLog`).
+* **`cart`, `order`**: Commerce timeline. Turns localized cart payloads into firm financial order snapshots.
+* **`payment`**: Idempotent ledger. Generates outgoing gateway URLs and captures incoming, asynchronous webhook fulfillments safely.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 4. Architecture Notes
+* **Modular Monolith**: Uses strict NestJS Dependency Injection. Domains (like `Order` and `Inventory`) do not directly execute SQL in each other's spaces; they interact exclusively via injected Service interfaces. This mimics microservices separation without the network delay penalty.
+* **Controller/Service/Repository Pattern**: API routing is isolated from business rules, which are isolated from Prisma data-access logic.
+* **Redis Guard Bypassing**: The `AuthGuard` skips PostgreSQL completely for 98% of queries, reading permission configurations directly from memory.
 
-## Project setup
+## 5. External Dependencies
+* **PostgreSQL (via Prisma)**: Primary persistence, ensuring ACID compliance for critical paths like Order Creation.
+* **Redis**: Ephemeral memory caching for high-speed rate-limiting, session control, and the centralized RBAC identity tree.
+* **VNPay & PayPal (Gateways)**: Financial orchestrators driving the webhook engine.
+* **Node Mailer / External SMTP**: Delegated dispatcher for transactional messaging.
 
-```bash
-$ npm install
-```
+## 6. Key Flows (Service Perspective)
+* **The Atomic Reservation (Order Creation)**: 
+  * Receives Cart intent -> Requests exclusive DB row-lock (`InventoryReservation`) for chosen variants -> Success yields a `PENDING_PAYMENT` Order. Failure instantly aborts flow, returning 409 Conflict.
+* **Webhook Reconciliations**:
+  * Gateway hits `POST /payment/vnpay/ipn` -> Checks IP/Signature against Secrets -> Checks Idempotency Key against `PaymentTransaction` table -> Mutates Order State -> Unlocks and destroys `InventoryReservation` -> Purges actual `InventoryItem` count.
 
-## Compile and run the project
+## 7. Environment & Configuration
+Requires core infrastructural wiring inside `.env`.
+* `DATABASE_URL`: Full PostgreSQL connection string required by Prisma.
+* `REDIS_HOST`, `REDIS_PORT`: Local or cloud memory cache dials.
+* `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`: Cryptographic boundaries.
+* Gateway Credentials: `VNPAY_TMNCODE`, `VNPAY_HASHSECRET`, `VNPAY_IPN_URL`.
+* `CORS_ORIGIN`: Strict origin headers dictating acceptable SPA clients.
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## 8. How to Run
+Trigger this service specifically via the workspace root:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Sync database schema before boot
+npm run prisma:dev --workspace=@ray-paradis/backend
+
+# Launch service locally with hot-reloading
+npm run dev --workspace=@ray-paradis/backend
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+*Note: Default execution port is `:4000`.*
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 9. Notes
+* **Assumptions**: Presumes all clients (Storefront/Admin) comply mechanically with REST/JSON standardizations and handle frontend rate-limiting gracefully.
+* **Limitations**: Current monolithic structure shares compute resources. A massive catalog-sync operation could theoretically induce latency across cart checkout routes sharing the node process.
+* **Future Improvements**: Transition the `payment` and `mail` notification handlers into a Redis-backed queue worker loop (BullMQ) to totally detach webhook ingestion latency from the main event thread.
