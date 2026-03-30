@@ -10,7 +10,8 @@ The `@ray-paradis/storefront` service is the primary consumer-facing application
   * In-browser caching and Background Syncing of *Server State* (e.g., live product pricing) using TanStack Query.
   * UI routing and the immediate visual handling of external Gateway redirects (VNPay/PayPal).
 * **Does NOT Own:**
-  * Financial truth or strict order summation (it always yields to backend calculations).
+  * Financial truth, pricing, or order sum calculations (yielding fully to backend snapshots).
+  * Storage of Access/Refresh Tokens (delegated entirely to secure `HttpOnly` cookies, preventing XSS).
   * Direct interaction with PGSQL or Redis.
   * Private webhook validations or cryptographic signatures.
 
@@ -24,6 +25,7 @@ Built upon a **Feature-Sliced** project structure grouping code by user domain:
 ## 4. Architecture Notes
 * **Feature-Sliced Design**: Avoids the anti-pattern of mega `src/components` or `src/hooks` folders. Code belonging to Checkout (checkout hooks, checkout UI, checkout types) stays in `src/features/checkout`.
 * **Decoupled Server vs Client State**: Zustand is strictly restricted to ephemeral local UI phenomena (e.g., `isCartDrawerOpen`). TanStack Query inherently manages all persistent domain states fetched from the backend, guaranteeing minimal prop-drilling and automatic cache invalidation.
+* **Zero-Trust Networking**: Enforces the Double Submit Cookie Pattern via Axios interceptors, injecting CSRF tokens into APIs and robustly queuing redundant 401s during silent refresh cycles.
 * **Shared Types Syncing**: Structurally imports all DTOs and Payload specifications directly from the `@ray-paradis/shared` workspace, ensuring TS compiler failures if the backend API contract shifts.
 
 ## 5. External Dependencies
@@ -63,7 +65,7 @@ npm run dev --workspace=@ray-paradis/storefront
 ```
 *Note: Ensure the backend is concurrently running, or Storefront will fail all TanStack queries.*
 
-## 9. Notes
-* **Assumptions**: Presumes all structural payloads conform entirely to `@ray-paradis/shared`. Assumes browser environments support modern JS modules (ES Modules).
+## 9. Notes & Security
+* **Assumptions**: Presumes all structural payloads conform entirely to `@ray-paradis/shared`.
+* **Zero-Trust Focus**: See [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md) for architectural guidelines regarding session hijacking prevention, CSRF, and data authority.
 * **Limitations**: Current SPA (Single Page Application) nature limits native SEO purely to client-side renders. If heavy SEO on Catalog URLs becomes mandatory, this service may need to shift architectural paradigms toward Next.js (SSR).
-* **Future Improvements**: Implementation of generic Request Response interceptor inside Axios to uniformly handle `401 Unauthorized` token-refreshing cycles without duplicating logic per feature slice.

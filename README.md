@@ -57,7 +57,7 @@ npm run dev --workspaces
 
 ## 🧭 Interviewer's Guide
 Key Code Paths:
-1. **Frontend Architecture**: `back-office/ARCHITECTURE_CONTRACT.md`
-2. **Atomic Guarantees**: `backend/src/modules/order` (Transactional safety nets)
-3. **Idempotency**: `backend/src/modules/payment/services/idempotency.service.ts` (Webhook retry governance)
+1. **Frontend Architecture & Security**: `back-office/ARCHITECTURE_CONTRACT.md` and `storefront/FRONTEND_SECURITY.md` (Zero-Trust enforcement).
+2. **Atomic Guarantees**: `backend/src/modules/order` (Transactional safety nets and JTI Idempotency logic).
+3. **Idempotency**: `backend/src/modules/payment/services/idempotency.service.ts` (Webhook retry governance).
 4. **Client State Machine**: `storefront/src/features/checkout`

@@ -1,13 +1,15 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 /**
- * Get Session ID from `x-client-session-id` header
- * Used for Guest Cart
+ * Get Session ID from Headers or Cookies
+ * Hybrid Support:
+ * 1. x-client-session-id (Header)
+ * 2. sessionId (Cookie)
  */
 export const CurrentSession = createParamDecorator(
     (data: unknown, ctx: ExecutionContext) => {
         const request = ctx.switchToHttp().getRequest();
-        // NodeJS headers are typically lowercase
-        return request.headers['x-client-session-id'];
+        // Check Header (legacy) then Cookie (new)
+        return request.headers['x-client-session-id'] || request.cookies?.['sessionId'];
     },
 );

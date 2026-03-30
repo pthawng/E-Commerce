@@ -17,5 +17,5 @@ The checkout process manages volatile cart states and high-stakes inventory atom
 
 ## 3. Order Finalization & Orchestration
 * **Centralized Pipeline**: All checkouts MUST go through `OrderPaymentService` to bypass the Invariant Guard.
-* **Idempotency**: The `OrderId` acts as the master key. Multiple attempts to pay for the same order are blocked by the `PaymentService` state-machine.
+* **Idempotency (Zero-Trust)**: Uses a backend-issued JWT (`checkoutToken`). The unique `jti` (JWT ID) within the token acts as the definitive, spoof-proof idempotency key to prevent order duplication or replay attacks.
 * **Status Shift**: Order moves from `PENDING_PAYMENT` to `CONFIRMED` only after Gateway Callback + Stock Confirmation.

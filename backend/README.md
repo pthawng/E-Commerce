@@ -6,7 +6,9 @@ The `@ray-paradis/backend` service operates as the core API, commerce engine, an
 ## 2. Responsibilities
 * **Owns:**
   * Master relational database schemas and Prisma ORM migrations.
-  * Fast-path active authorization (RBAC/ABAC matrices) cached in Redis.
+  * Fast-path active authorization (RBAC/ABAC) cached in Redis.
+  * **Session Security**: Issues `HttpOnly`, `SameSite=Lax` cookies for JWTs and enforces the Double Submit Cookie pattern for CSRF protection.
+  * **System Authority**: Strictly enforces pricing, discounting, and cart validation. The frontend is treated as completely untrusted (Zero-Trust Model).
   * Atomic inventory holding mechanisms to prevent hyper-concurrency overselling.
   * Ingress for third-party asynchronous webhooks (VNPay, PayPal).
   * Transactional Order state-machines (Draft, Pending, Paid, Shipped).
@@ -58,5 +60,5 @@ Requires core infrastructural wiring inside `.env`.
 
 ## 9. Notes & Staff Decisions
 * **Guard Enforcement**: All mutation logic must live in `Service` classes. Ad-hoc repository calls or direct Prisma injections in Controllers will trigger Invariant Violations.
-* **Idempotency**: All payment and inventory confirmation flows are idempotent by design, keyed by `TransactionId` or `OrderId`.
+* **Idempotency**: Pushed deeply into the backend. Checkout flows rely on a backend-signed `checkoutToken` where the JWT ID (`jti`) acts as the definitive idempotency key to prevent order duplication.
 * **PII Protection**: User emails and sensitive identifiers are masked in public verification responses (e.g. password resets).
