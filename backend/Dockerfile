@@ -3,7 +3,7 @@ FROM node:22-bookworm-slim AS shared-builder
 WORKDIR /app/shared
 # Copy only package files first to cache dependencies
 COPY shared/package*.json ./
-RUN npm install
+RUN npm ci
 # Now copy the source code (will be filtered by root .dockerignore)
 COPY shared/ ./
 RUN npm run build
@@ -11,9 +11,6 @@ RUN npm run build
 # --- Stage 2: Build Backend ---
 FROM node:22-bookworm-slim AS backend-builder
 RUN apt-get update && apt-get install -y openssl libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
-# Hardened Prisma Engine Environment
-ENV PRISMA_CLI_QUERY_ENGINE_TYPE=library
-ENV PRISMA_CLIENT_ENGINE_TYPE=library
 WORKDIR /app/backend
 
 # Copy shared build results
@@ -21,11 +18,11 @@ COPY --from=shared-builder /app/shared /app/shared
 
 # Copy backend files
 COPY backend/package*.json ./
-RUN npm install
+RUN npm ci
 COPY backend/ ./
 
 # Generate Prisma Client (Set dummy DATABASE_URL to pass validation during build)
-# Using direct binary path to avoid npx flakiness
+# Explicitly run generate to establish types for the build
 RUN DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy ./node_modules/.bin/prisma generate
 
 # Build NestJS App
@@ -35,9 +32,6 @@ RUN npm run build
 FROM node:22-bookworm-slim AS runner
 # Install openssl for Prisma
 RUN apt-get update && apt-get install -y openssl libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
-# Force Library Engine at Runtime
-ENV PRISMA_CLI_QUERY_ENGINE_TYPE=library
-ENV PRISMA_CLIENT_ENGINE_TYPE=library
 WORKDIR /app/backend
 
 # Copy built app and dependencies
@@ -58,8 +52,8 @@ RUN ./node_modules/.bin/prisma generate
 
 # Script to run migrations, seed, and start app
 RUN echo '#!/bin/sh' > start.sh && \
-    echo 'echo "Syncing Database Schema (Force Push)..."' >> start.sh && \
-    echo 'npx prisma db push --accept-data-loss || echo "DB push failed, continuing..."' >> start.sh && \
+    echo 'echo "Applying Database Migrations (Production Mode)..."' >> start.sh && \
+    echo './node_modules/.bin/prisma migrate deploy || echo "Migration failed, continuing..."' >> start.sh && \
     echo 'echo "Seeding database..."' >> start.sh && \
     echo './node_modules/.bin/prisma db seed || echo "Seeding failed, continuing..."' >> start.sh && \
     echo 'echo "Starting application..."' >> start.sh && \
