@@ -10,6 +10,7 @@ RUN npm run build
 
 # --- Stage 2: Build Backend ---
 FROM node:22-alpine AS backend-builder
+RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app/backend
 
 # Copy shared build results
