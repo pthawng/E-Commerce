@@ -33,17 +33,14 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
     if (!secret) {
       throw new Error('JWT_ACCESS_SECRET is not defined!');
     }
-    /**
-     * Gọi super() để cấu hình Passport JWT Strategy.
-     * jwtFromRequest: Lấy token từ header Authorization: Bearer <token>
-     * secretOrKey: SECRET để giải mã token
-     * ignoreExpiration: false, bắt buộc phải hết hạn
-     */
-    super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: secret,
-      ignoreExpiration: false,
-    });
+    
+        super({
+            jwtFromRequest: (req: any) => {
+                return req?.cookies?.['accessToken'] || null;
+            },
+            ignoreExpiration: false,
+            secretOrKey: configService.get<string>('JWT_ACCESS_SECRET')!,
+        });
   }
 
   /**

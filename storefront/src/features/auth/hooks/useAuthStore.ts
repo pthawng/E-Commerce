@@ -4,13 +4,10 @@ import type { AuthTokens, User } from '@shared';
 
 interface AuthState {
   user: User | null;
-  tokens: AuthTokens | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, tokens: AuthTokens) => void;
+  setAuth: (user: User) => void;
   setUser: (user: User | null) => void;
-  setTokens: (tokens: AuthTokens | null) => void;
   clearAuth: () => void;
-  getAccessToken: () => string | null;
   fetchUser: () => Promise<void>;
 }
 
@@ -18,36 +15,28 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      tokens: null,
       isAuthenticated: false,
-      setAuth: (user, tokens) => {
-        set({ user, tokens, isAuthenticated: true });
+      setAuth: (user) => {
+        set({ user, isAuthenticated: true });
       },
-      setUser: (user) => set({ user }),
-      setTokens: (tokens) => set({ tokens, isAuthenticated: !!tokens }),
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
       clearAuth: async () => {
-        set({ user: null, tokens: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false });
         // Clear cart on logout
         const { useCartStore } = await import('@/features/cart/store/useCartStore');
         useCartStore.getState().clearCart();
       },
-      getAccessToken: () => {
-        return get().tokens?.accessToken || null;
-      },
       fetchUser: async () => {
-        const { tokens } = get();
-        if (!tokens?.accessToken) return;
-
         try {
           const { apiGet } = await import('@/services/apiClient');
-          // Use direct string to avoid circular dependency + stale shared types in complex interceptor flow
+          // No tokens needed in header, axiosClient handles cookies
           const resp = await apiGet<User>('/api/auth/me');
           if (resp.data) {
-            set({ user: resp.data });
+            set({ user: resp.data, isAuthenticated: true });
           }
         } catch (error) {
           console.error('Failed to fetch user profile:', error);
-          // Don't clear auth here unless it's a 401, but interceptor handles that
+          set({ isAuthenticated: false });
         }
       },
     }),
@@ -55,7 +44,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'ray-paradis-auth',
       partialize: (state) => ({
         user: state.user,
-        tokens: state.tokens,
         isAuthenticated: state.isAuthenticated,
       }),
     },

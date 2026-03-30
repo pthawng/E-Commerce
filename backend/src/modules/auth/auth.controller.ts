@@ -14,8 +14,9 @@ import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.ser
 import { PermissionCacheService } from '@modules/rbac/cache/permission-cache.service';
 import { LogoutDto } from '@modules/auth/dto/logout.dto';
 import { ThrottlerGuard } from '@nestjs/throttler';
-
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards, Query, BadRequestException, Patch } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards, Query, BadRequestException, Patch, Res, Req } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 import {
   ApiBadRequestResponse,
@@ -35,6 +36,56 @@ export class AuthController {
     private readonly permissionCacheService: PermissionCacheService,
   ) { }
 
+  private setAuthCookies(req: any, res: Response, tokens: { accessToken: string; refreshToken: string }) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Rotating CSRF Token: Generate new one on each auth event
+    const csrfToken = randomUUID();
+
+    const cookieOptions = {
+        secure: isProduction,
+        sameSite: 'lax' as const,
+        path: '/',
+    };
+
+    // 1. Access Token (HttpOnly)
+    res.cookie('accessToken', tokens.accessToken, {
+      ...cookieOptions,
+      httpOnly: true,
+      maxAge: 15 * 60 * 1000, // 15 mins
+    });
+
+    // 2. Refresh Token (HttpOnly)
+    res.cookie('refreshToken', tokens.refreshToken, {
+      ...cookieOptions,
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // 3. CSRF Token (Double Submit Pattern)
+    res.cookie('csrfToken', csrfToken, {
+      ...cookieOptions,
+      httpOnly: false, // Must be accessible to frontend JS to send as header
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // 4. UA Binding for soft validation
+    const ua = req.headers['user-agent'] || 'unknown';
+    res.cookie('ua_binding', ua, {
+      ...cookieOptions,
+      httpOnly: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return csrfToken;
+  }
+
+  private clearAuthCookies(res: Response) {
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    res.clearCookie('csrfToken');
+  }
+
   @Public()
   @UseGuards(ThrottlerGuard)
   @Post('register')
@@ -42,8 +93,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Đăng ký tài khoản mới' })
   @ApiCreatedResponse({ description: 'Đăng ký thành công' })
   @ApiBadRequestResponse({ description: 'Email đã tồn tại hoặc dữ liệu không hợp lệ' })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  async register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.register(dto);
+    this.setAuthCookies(req, res, result.tokens);
+    return result;
   }
 
   @UseGuards(JwtAccessGuard)
@@ -72,8 +125,10 @@ export class AuthController {
   @ApiOkResponse({ description: 'Đăng nhập thành công' })
   @ApiUnauthorizedResponse({ description: 'Thông tin đăng nhập không đúng' })
   @ApiBadRequestResponse({ description: 'Dữ liệu không hợp lệ' })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.login(dto);
+    this.setAuthCookies(req, res, result.tokens);
+    return result;
   }
 
   @Public()
@@ -118,8 +173,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Làm mới access token' })
   @ApiOkResponse({ description: 'Làm mới token thành công' })
   @ApiUnauthorizedResponse({ description: 'Refresh token không hợp lệ hoặc đã hết hạn' })
-  async refreshToken(@Body() dto: RefreshTokenDto) {
-    return this.authService.refreshToken(dto);
+  async refreshToken(@Body() dto: RefreshTokenDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.refreshToken(dto);
+    this.setAuthCookies(req, res, result.tokens);
+    return result;
   }
 
   @Public()
@@ -127,7 +184,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng xuất (Thu hồi refresh token)' })
   @ApiOkResponse({ description: 'Đăng xuất thành công' })
-  async logout(@Body() dto: LogoutDto) {
+  async logout(@Body() dto: LogoutDto, @Res({ passthrough: true }) res: Response) {
+    this.clearAuthCookies(res);
     return this.authService.logout(dto);
   }
 

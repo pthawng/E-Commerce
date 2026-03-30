@@ -1,12 +1,29 @@
+import { register } from 'tsconfig-paths';
+import { join } from 'path';
+
+// Dynamically register paths to resolve either `dist/` (runtime) or `src/` (ts-node runtime)
+register({
+  baseUrl: __dirname,
+  paths: {
+    '@modules/*': ['modules/*'],
+    '@common/*': ['common/*'],
+    '@config/*': ['config/*'],
+    '@database/*': ['database/*'],
+  },
+});
+
+import cookieParser from 'cookie-parser';
 import { AllExceptionFilter } from '@common/filters/all-exception.filter';
 import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
-import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
 
   app.setGlobalPrefix('api');
   // Enable CORS for the frontend origin and allow credentials (cookies).
