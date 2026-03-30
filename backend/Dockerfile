@@ -1,5 +1,5 @@
 # --- Stage 1: Build Shared Package ---
-FROM node:20-alpine AS shared-builder
+FROM node:22-alpine AS shared-builder
 WORKDIR /app/shared
 # Copy only package files first to cache dependencies
 COPY shared/package*.json ./
@@ -9,7 +9,7 @@ COPY shared/ ./
 RUN npm run build
 
 # --- Stage 2: Build Backend ---
-FROM node:20-alpine AS backend-builder
+FROM node:22-alpine AS backend-builder
 WORKDIR /app/backend
 
 # Copy shared build results
@@ -28,7 +28,7 @@ RUN DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy npx prisma generate
 RUN npm run build
 
 # --- Stage 3: Runner ---
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 # Install openssl for Prisma
 RUN apk add --no-cache openssl
 WORKDIR /app/backend
