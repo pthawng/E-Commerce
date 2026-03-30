@@ -29,3 +29,9 @@ Welcome to the internal engineering documentation for **Ray Paradis**, a headles
 * **Product Guide**
     * [Features](./product/features.md) - Highlighted user-facing capabilities
     * [User Journey](./product/user-journey.md) - Standard operational paths from browse to payment
+
+* **Service Implementations**
+    * [Backend API Core](../backend/README.md)
+    * [Storefront UI](../storefront/README.md)
+    * [Shared Ecosystem Contracts](../shared/README.md)
+    * [Admin Portal](../back-office/README.md)

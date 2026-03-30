@@ -18,7 +18,7 @@ A Feature-Sliced architecture, separating code structurally by user-centric doma
 * **Cart Operations (`features/cart`)**: Local-first or sync-heavy shopping bag state.
 * **Checkout & Payment (`features/checkout`)**: The specialized wizard UI containing state-machines for shipping, verification, and payment redirect lifecycles.
 
-## Back Office Domains (`@ray-paradis/admin`)
+## Admin Portal (`@ray-paradis/admin`)
 An administrative terminal.
 * **Catalog Management**: Creation flows for dynamic attributes and heavily nested product variants.
 * **Order Fulfillment**: Table grids and detail hubs displaying user orders and allowing state progression (e.g., Shipping, Delivered).

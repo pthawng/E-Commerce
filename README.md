@@ -2,6 +2,13 @@
 *Headless e-commerce architecture engineered for scale and precision.*
 
 ## 🧠 Overview
+
+> [!IMPORTANT]
+> This repository contains a comprehensive internal documentation system. 
+> 👉 **[Start here: Read the Global Architecture & Flows](./docs/README.md)** 
+> Or view specific service implementation details: 
+> [Backend API](./backend/README.md) | [Storefront](./storefront/README.md) | [Shared Contracts](./shared/README.md)
+
 A distributed e-commerce engine built for complex multi-variant jewelry logic. It prioritizes atomic inventory control, heavy data caching, and sub-10ms authorization overhead over traditional monolithic implementations.
 
 ## ✨ Core Capabilities

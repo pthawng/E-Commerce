@@ -35,6 +35,8 @@ Structured defensively by domain context:
 * **Node Mailer / External SMTP**: Delegated dispatcher for transactional messaging.
 
 ## 6. Key Flows (Service Perspective)
+*(For full system logic, see the [Global Checkout Flow](../docs/flows/checkout-flow.md))*
+
 * **The Atomic Reservation (Order Creation)**: 
   * Receives Cart intent -> Requests exclusive DB row-lock (`InventoryReservation`) for chosen variants -> Success yields a `PENDING_PAYMENT` Order. Failure instantly aborts flow, returning 409 Conflict.
 * **Webhook Reconciliations**:
@@ -49,7 +51,13 @@ Requires core infrastructural wiring inside `.env`.
 * `CORS_ORIGIN`: Strict origin headers dictating acceptable SPA clients.
 
 ## 8. How to Run
-Trigger this service specifically via the workspace root:
+
+> [!WARNING]
+> This service will immediately crash on boot if the Docker PostgreSQL and Redis containers are not actively running.
+
+> **Note:** The preferred method to boot the entire stack is via the repository root (`npm run dev --workspaces`). See [Root Local Development](../docs/setup/local-development.md).
+
+To run **ONLY** this service in isolation:
 
 ```bash
 # Sync database schema before boot

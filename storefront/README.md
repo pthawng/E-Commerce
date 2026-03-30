@@ -17,7 +17,7 @@ The `@ray-paradis/storefront` service is the primary consumer-facing application
 ## 3. Key Modules / Features
 Built upon a **Feature-Sliced** project structure grouping code by user domain:
 * **`products`**: The Catalog. Heavily handles nested variant selections (Size + Material combinations) and renders HD visual assets. Optimization target for Largest Contentful Paint (LCP).
-* **`cart`**: Local-first shopping bag. Aggregates selected variants and syncs anonymous or authenticated selections to the backend seamlessly.
+* **`cart`**: Local-first Cart manager. Aggregates selected variants and syncs anonymous or authenticated selections to the backend seamlessly.
 * **`checkout`**: A specialized, highly-controlled UI wizard. Manages the sensitive handoff where users confirm intent, trigger backend atomic locks, and dispatch to VNPay/PayPal.
 * **`auth` / `profile`**: Customer identity portals mapping to backend JWT sessions, displaying historical Orders and saved shipping entities.
 
@@ -32,6 +32,8 @@ Built upon a **Feature-Sliced** project structure grouping code by user domain:
 * **CDN Providers**: For fetching luxury 3D models or 4k ring media specified by backend payload pointers.
 
 ## 6. Key Flows (Service Perspective)
+*(For full system logic, see the [Global Checkout Flow](../docs/flows/checkout-flow.md))*
+
 * **The Catalog Discovery Flow**:
   * User loads route -> `TanStack Query` checks its cache -> Cache Miss triggers an API GET -> React suspends/shows skeleton -> UI paints the `Product`. Subsequent visits immediately paint from memory while background-re-validating.
 * **The Checkout Sequence**:
@@ -51,7 +53,10 @@ VITE_PORT=5173
 ```
 
 ## 8. How to Run
-Trigger this service specifically via the workspace root:
+
+> **Note:** The preferred method to boot the entire stack is via the repository root (`npm run dev --workspaces`). See [Root Local Development](../docs/setup/local-development.md).
+
+To run **ONLY** this service in isolation:
 
 ```bash
 npm run dev --workspace=@ray-paradis/storefront
