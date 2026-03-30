@@ -15,6 +15,7 @@ import { PaymentResultPage } from "@/pages/PaymentResultPage";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import AccountPage from "./pages/AccountPage";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -32,7 +33,14 @@ const App = () => (
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/account" element={<AccountPage />}>
+          <Route 
+            path="/account" 
+            element={
+              <ProtectedRoute>
+                <AccountPage />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<ProfileFeature />} />
             <Route path="orders" element={<OrderHistory />} />
             <Route path="orders/:id" element={<OrderDetail />} />

@@ -24,6 +24,9 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
+import { NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { SessionBindingGuard } from './common/guards/session-binding.guard';
 
 @Module({
   imports: [
@@ -143,6 +146,16 @@ import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: SessionBindingGuard,
+    },
   ],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SecurityMiddleware)
+      .forRoutes('*');
+  }
+}
