@@ -385,9 +385,15 @@ export class AuthService {
       throw new BadRequestException('Người dùng không tồn tại');
     }
 
+    // Security: Mask email (PII) to prevent leakage
+    const [userPart, domainPart] = user.email.split('@');
+    const maskedEmail = userPart.length > 2 
+        ? `${userPart[0]}${'*'.repeat(userPart.length - 2)}${userPart[userPart.length - 1]}@${domainPart}`
+        : `${userPart[0]}***@${domainPart}`;
+
     return {
       valid: true,
-      email: user.email,
+      email: maskedEmail,
       name: user.fullName,
     };
   }

@@ -1,7 +1,8 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { parse } from 'pg-connection-string';
 import { PrismaClient } from '@prisma/client';
+import { SystemContextStore } from '@common/context/system-context.store';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -14,9 +15,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const adapter = new PrismaPg({ connectionString: connStr });
     super({ adapter });
 
-    this.connectionString = connStr;
-
-    // parse connection string ra host/port/db/user
     const parsed = parse(connStr);
     this.dbInfo = {
       host: parsed.host ?? 'unknown',
@@ -28,6 +26,29 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     this.logger.log(
       `PrismaService initialized. DB Info: host=${this.dbInfo.host}, port=${this.dbInfo.port}, database=${this.dbInfo.database}, user=${this.dbInfo.user}`,
     );
+
+    // Modern Prisma Extension for Invariant Guard (Replaces deprecated $use)
+    return this.$extends({
+      query: {
+        $allModels: {
+          async $allOperations({ model, operation, args, query }) {
+            const sensitiveModels = ['InventoryItem', 'Order', 'Payment', 'InventoryReservation'];
+            const mutationActions = ['create', 'update', 'upsert', 'delete', 'updateMany', 'deleteMany'];
+
+            if (model && sensitiveModels.includes(model) && mutationActions.includes(operation)) {
+              if (!SystemContextStore.isInternalService) {
+                Logger.error(`❌ INVARIANT VIOLATION: Unauthorized mutation on ${model}.${operation} outside service layer!`, 'PrismaService');
+                throw new BadRequestException(
+                  `System Invariant Violation: Direct mutation on ${model} is forbidden. Use the designated service layer.`,
+                );
+              }
+            }
+
+            return query(args);
+          }
+        }
+      }
+    }) as any;
   }
 
   async onModuleInit() {
@@ -55,5 +76,3 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
   }
 }
-// 
-

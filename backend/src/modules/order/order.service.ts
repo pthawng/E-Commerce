@@ -26,78 +26,14 @@ export class OrderService {
     // ============================================
 
     /**
-     * Main checkpoint for creating an order.
-     * Orchestrates validation, pricing, and transaction execution.
+     * @deprecated Use OrderPaymentService.createOrderWithPayment instead.
+     * Direct order creation via OrderService is forbidden to maintain system invariants.
      */
     async createOrder(userId: string | undefined, sessionId: string | undefined, dto: CreateOrderDto) {
-        if (!userId && !sessionId) throw new BadRequestException('User or Session required');
-
-        // 0. Idempotency Check
-        if (dto.idempotencyKey) {
-            const existingOrder = await this.prisma.order.findUnique({
-                where: { idempotencyKey: dto.idempotencyKey } as any,
-                include: { items: true, transactions: true },
-            });
-            if (existingOrder) {
-                this.logger.log(`Idempotent request for existing order ${existingOrder.code}`);
-                return existingOrder;
-            }
-        }
-
-        // 1. Fetch Cart & Variants
-        const { cart, variants } = await this.getCartAndVariants(userId, sessionId);
-
-        // 2. Validations (Stock & Price)
-        const priceMismatches = this.validateCartItems(cart.items, variants);
-
-        if (priceMismatches.length > 0 && !dto.confirmPriceChange) {
-            throw new ConflictException({
-                message: 'Product prices have changed. Please review your cart.',
-                code: 'PRICE_CHANGED',
-                details: priceMismatches,
-            });
-        }
-
-        // 3. Execute Transaction
-        return this.prisma.$transaction(async (tx) => {
-            // Calculate final items and totals
-            const { orderItemsData, subTotal } = this.calculateOrderTotals(cart.items, variants);
-            const totalAmount = subTotal + this.SHIPPING_FEE;
-
-            // Create Order Record
-            const order = await tx.order.create({
-                data: {
-                    code: this.generateOrderCode(),
-                    userId: userId || null,
-                    status: OrderStatusEnum.pending,
-                    paymentStatus: PaymentStatusEnum.unpaid,
-                    idempotencyKey: dto.idempotencyKey,
-                    shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
-                    billingAddress: (dto.billingAddress ?? dto.shippingAddress) as unknown as Prisma.InputJsonValue,
-                    subTotal,
-                    shippingFee: this.SHIPPING_FEE,
-                    totalAmount,
-                    items: { create: orderItemsData },
-                    transactions: {
-                        create: {
-                            amount: totalAmount,
-                            type: TransactionTypeEnum.payment,
-                            status: TransactionStatusEnum.pending,
-                            provider: dto.paymentMethod,
-                            method: dto.paymentMethod,
-                        },
-                    },
-                } as any,
-            });
-
-            // Deduct Inventory
-            await this.processInventoryDeduction(tx, cart.items, variants, order.id, order.code);
-
-            // Cleanup Cart
-            await tx.cart.delete({ where: { id: cart.id } });
-
-            return order;
-        });
+        this.logger.error(`❌ Illegal attempt to call deprecated OrderService.createOrder! (UserId: ${userId}, SessionId: ${sessionId})`);
+        throw new BadRequestException(
+            'This method is deprecated. Please use the modern checkout flow via OrderPaymentService.',
+        );
     }
 
     async getMyOrders(userId: string) {

@@ -17,7 +17,7 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { redisStore } from 'cache-manager-redis-yet';
 import * as Joi from 'joi';
 import { PrismaModule } from './prisma/prisma.module';
@@ -38,7 +38,7 @@ import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
         JWT_REFRESH_EXPIRES: Joi.string().default('7d'),
         REDIS_HOST: Joi.string().allow('', null).default('localhost'),
         REDIS_PORT: Joi.number().allow('', null).default(6379),
-        REDIS_PASSWORD: Joi.string().allow('', null).default('redis_secure_pass_123'),
+        REDIS_PASSWORD: Joi.string().required(),
         REDIS_URL: Joi.string().optional().allow('', null),
         REDIS_TTL: Joi.number().default(60000),
         MAIL_PROVIDER: Joi.string().valid('gmail', 'sendgrid').default('gmail'),
@@ -138,6 +138,10 @@ import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
     {
       provide: APP_GUARD,
       useClass: JwtAccessGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })
