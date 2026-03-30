@@ -27,7 +27,6 @@ export const CheckoutPage: React.FC = () => {
     const { t, language } = useTranslation();
     const { formatPrice } = useStore();
     const { items, totals, fetchCart } = useCartStore();
-    const [idempotencyKey] = useState(() => crypto.randomUUID());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [vietQRInfo, setVietQRInfo] = useState<{
         orderId: string;
@@ -92,11 +91,10 @@ export const CheckoutPage: React.FC = () => {
         }
 
         setIsSubmitting(true);
-        const cartSessionId = CartService.getSessionId();
 
         try {
             // STEP 1: VALIDATE CHECKOUT (Secure Snapshot & Token)
-            const validateResponse = await CheckoutService.validateCheckout(cartSessionId);
+            const validateResponse = await CheckoutService.validateCheckout();
             const { checkoutToken } = validateResponse;
 
             // STEP 2: CREATE ORDER
@@ -113,12 +111,11 @@ export const CheckoutPage: React.FC = () => {
                 paymentMethod,
                 guestEmail: formData.email,
                 confirmPriceChange: true, 
-                idempotencyKey,
                 returnUrl: `${window.location.origin}/payment-result`,
                 cancelUrl: `${window.location.origin}/payment-result?status=failed`
             };
 
-            const orderResponse = await CheckoutService.createOrder(payload, idempotencyKey, cartSessionId);
+            const orderResponse = await CheckoutService.createOrder(payload);
             
             const paymentUrl = orderResponse.payment?.paymentUrl;
             const paymentMeta = orderResponse.payment?.metadata;

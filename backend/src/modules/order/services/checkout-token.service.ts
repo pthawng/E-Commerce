@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
 export interface CheckoutTokenPayload {
+    jti: string; // Unique Token ID for Idempotency
     cartHash: string;
     userId?: string;
     sessionId?: string;
@@ -16,12 +17,14 @@ export class CheckoutTokenService {
         private readonly configService: ConfigService,
     ) { }
 
-    async generateToken(payload: Omit<CheckoutTokenPayload, 'expiresAt'>): Promise<string> {
+    async generateToken(payload: Omit<CheckoutTokenPayload, 'expiresAt' | 'jti'>): Promise<string> {
         const expiresIn = this.configService.get<string>('JWT_CHECKOUT_EXPIRES_IN', '15m');
+        const jti = crypto.randomUUID();
         const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
 
         return this.jwtService.sign({
             ...payload,
+            jti,
             expiresAt,
         }, {
             secret: this.configService.get<string>('JWT_CHECKOUT_SECRET'),

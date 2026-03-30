@@ -99,26 +99,27 @@ export class OrderPaymentService {
     ): Promise<OrderPaymentResponseDto> {
         return SystemContextStore.asInternal('OrderPaymentService', async () => {
             this.logger.log(`Creating order: method=${dto.paymentMethod}, userId=${userId}`);
+            
+            // 1. Verify checkout token FIRST to get authoritative jti
+            const tokenPayload = await this.checkoutTokenService.verifyToken(dto.checkoutToken);
+            const idempotencyKey = tokenPayload.jti; // Use JTI from token as definitive key
 
-            // 0. Global Idempotency Check (Deep Guard)
-            if (dto.idempotencyKey) {
-                const existingOrder = await this.prisma.order.findUnique({
-                    where: { idempotencyKey: dto.idempotencyKey },
-                    include: { transactions: true },
-                });
-                if (existingOrder) {
-                    this.logger.warn(`Idempotent request: returning existing order ${existingOrder.code}`);
-                    // Re-calculate payment URL if needed or return existing
-                    return this.buildOrderPaymentResponse(existingOrder, existingOrder.transactions[0], null, false);
-                }
+            // 2. Global Idempotency Check using authoritative JTI
+            const existingOrder = await this.prisma.order.findUnique({
+                where: { idempotencyKey },
+                include: { transactions: true },
+            });
+            if (existingOrder) {
+                this.logger.warn(`Idempotent request for JTI ${idempotencyKey}: returning existing order ${existingOrder.code}`);
+                return this.buildOrderPaymentResponse(existingOrder, existingOrder.transactions[0], null, false);
             }
 
-            // 1. Verify checkout token
-            const tokenPayload = await this.checkoutTokenService.verifyToken(dto.checkoutToken);
-            
             // Safety check: token ownership
-            if (tokenPayload.userId !== userId || tokenPayload.sessionId !== sessionId) {
-                throw new BadRequestException('Checkout token ownership mismatch');
+            if (tokenPayload.userId && tokenPayload.userId !== userId) {
+                throw new BadRequestException('Checkout token ownership mismatch (User)');
+            }
+            if (!tokenPayload.userId && tokenPayload.sessionId !== sessionId) {
+                throw new BadRequestException('Checkout token ownership mismatch (Session)');
             }
 
             // 2. Fetch cart and variants
@@ -157,6 +158,7 @@ export class OrderPaymentService {
                         totalAmount: totals.total,
                         status: OrderStatusEnum.pending_payment,
                         paymentDeadline,
+                        idempotencyKey, // Secure JTI
                     });
 
                     // 4b. Reserve inventory with State: ACTIVE
@@ -183,7 +185,7 @@ export class OrderPaymentService {
                             orderId: order.id,
                             action: 'ORDER_INITIATED',
                             description: `Order created with payment method ${dto.paymentMethod}`,
-                            metadata: { idempotencyKey: dto.idempotencyKey },
+                            metadata: { idempotencyKey },
                         },
                     });
 

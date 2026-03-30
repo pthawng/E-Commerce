@@ -162,12 +162,13 @@ export const useCartStore = create<CartState>()(
                     newItems = [...existingItems, newItem];
                 }
 
-                // Optimistic Update
+                // Optimistic UI for Items only (View Only)
+                // Totals are nullified until backend returns authoritative data
                 set({
                     items: newItems,
-                    totals: calculateTotals(newItems),
                     isOpen: true,
-                    recentlyAddedId: variantId
+                    recentlyAddedId: variantId,
+                    status: 'syncing'
                 });
 
                 await get()._syncWithBackend((v, signal) => CartService.addItem(variantId, quantity, v, signal));
@@ -178,7 +179,7 @@ export const useCartStore = create<CartState>()(
                 const newItems = get().items.filter(i => i.variantId !== variantId);
                 set({ 
                     items: newItems,
-                    totals: calculateTotals(newItems)
+                    status: 'syncing'
                 });
                 await get()._syncWithBackend((v, signal) => CartService.removeItem(variantId, v, signal));
             },
@@ -189,16 +190,15 @@ export const useCartStore = create<CartState>()(
                     return;
                 }
 
-                // 1. Optimistic UI update
+                // 1. Optimistic UI update (Items only)
                 const newItems = get().items.map(i => i.variantId === variantId ? { ...i, quantity } : i);
                 set({
                     items: newItems,
-                    totals: calculateTotals(newItems)
+                    status: 'syncing'
                 });
 
-                // 2. Debounced API Sync (Last-Write-Wins)
+                // 2. Debounced API Sync
                 debounceTimer = setTimeout(() => {
-                    // Send version as optional: if it fails with 409, fetchCart() will fix it silenty
                     get()._syncWithBackend((v, signal) => CartService.updateItem(variantId, quantity, v, signal));
                 }, 300);
             },

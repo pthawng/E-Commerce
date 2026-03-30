@@ -12,10 +12,8 @@ export const CheckoutService = {
      * Step 1: Validate & Snapshot
      * Backend prepares the final pricing, stock check and returns checkoutToken.
      */
-    validateCheckout: async (sessionId?: string): Promise<{ checkoutToken: string; snapshot: CheckoutSnapshot; expiresAt: string }> => {
-        const response = await apiPost(API_ENDPOINTS.ORDERS.VALIDATE_CHECKOUT, {}, {
-            headers: { 'x-client-session-id': sessionId }
-        });
+    validateCheckout: async (): Promise<{ checkoutToken: string; snapshot: CheckoutSnapshot; expiresAt: string }> => {
+        const response = await apiPost(API_ENDPOINTS.ORDERS.VALIDATE_CHECKOUT, {});
         return response.data as { checkoutToken: string; snapshot: CheckoutSnapshot; expiresAt: string };
     },
 
@@ -31,14 +29,10 @@ export const CheckoutService = {
     /**
      * Step 2: Create Order
      * Commits the order using the checkoutToken.
+     * Idempotency is now handled server-side via checkoutToken.
      */
-    createOrder: async (data: any, idempotencyKey: string, sessionId?: string): Promise<any> => {
-        const response = await apiPost(API_ENDPOINTS.ORDERS.BASE, data, {
-            headers: { 
-                'x-client-session-id': sessionId,
-                'x-idempotency-key': idempotencyKey
-            }
-        });
+    createOrder: async (data: any): Promise<any> => {
+        const response = await apiPost(API_ENDPOINTS.ORDERS.BASE, data);
         return response.data;
     },
 
