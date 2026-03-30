@@ -8,7 +8,7 @@ This document outlines the security architecture and defensive measures implemen
 Experimental and production environments are protected by a global rate-limiting guard.
 - **Implementation**: `ThrottlerModule` using Redis as a distributed counting storage.
 - **Policy**: 100 requests per minute from a single IP, or 10 requests per minute for sensitive endpoints (Auth).
-- **Goal**: Prevents DDoS (Distributed Denial of Service) and brute-force attacks on login/password-reset flows.
+- **Security Note**: While the system allows empty Redis passwords for flexibility, **Production environments should always use a strong `REDIS_PASSWORD`** to prevent unauthorized access to the cache layer.
 
 ### 2. Runtime Invariant Enforcement (Staff-level)
 The system employs **Zero-Trust for Database Mutations**. 

@@ -33,7 +33,7 @@ Structured defensively by domain context:
 
 ## 5. External Dependencies
 * **PostgreSQL (via Prisma)**: Primary persistence, ensuring ACID compliance for critical paths.
-* **Redis (Required)**: High-speed caching, rate-limiting (`ThrottlerGuard`), and idempotency locking. **Production environment strictly requires `REDIS_PASSWORD`**.
+* **Redis (Recommended)**: High-speed caching, rate-limiting (`ThrottlerGuard`), and idempotency locking. **Production environment SHOULD use `REDIS_PASSWORD`**.
 * **VNPay & PayPal (Gateways)**: Financial orchestrators driving the webhook engine.
 
 ## 6. Key Flows (Service Perspective)

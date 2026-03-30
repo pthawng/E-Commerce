@@ -38,7 +38,7 @@ import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
         JWT_REFRESH_EXPIRES: Joi.string().default('7d'),
         REDIS_HOST: Joi.string().allow('', null).default('localhost'),
         REDIS_PORT: Joi.number().allow('', null).default(6379),
-        REDIS_PASSWORD: Joi.string().required(),
+        REDIS_PASSWORD: Joi.string().allow('', null).default(''),
         REDIS_URL: Joi.string().optional().allow('', null),
         REDIS_TTL: Joi.number().default(60000),
         MAIL_PROVIDER: Joi.string().valid('gmail', 'sendgrid').default('gmail'),
