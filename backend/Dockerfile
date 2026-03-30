@@ -47,7 +47,7 @@ COPY --from=shared-builder /app/shared/dist ../shared/dist
 COPY --from=shared-builder /app/shared/package*.json ../shared/
 
 # Re-generate Prisma Client in the final environment ensuring correctly linked binaries
-RUN ./node_modules/.bin/prisma generate
+RUN DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy ./node_modules/.bin/prisma generate
 
 # Script to run migrations, seed, and start app
 RUN echo '#!/bin/sh' > start.sh && \
