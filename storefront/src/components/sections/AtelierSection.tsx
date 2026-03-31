@@ -2,9 +2,12 @@ import { motion } from 'framer-motion';
 import { useRef } from 'react';
 import useOverlapInView from '@/hooks/useOverlapInView';
 
+import { useTranslation } from '@/hooks/useTranslation';
+
 export const AtelierSection = () => {
   const ref = useRef(null);
   const isInView = useOverlapInView(ref, 0.17, { once: true });
+  const { t } = useTranslation();
 
   return (
     <section id="atelier" className="relative bg-background section-vertical overflow-hidden">
@@ -35,7 +38,7 @@ export const AtelierSection = () => {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.8, ease: 'easeInOut' }}
           >
-            The Atelier
+            {t('home.atelier.subtitle')}
           </motion.p>
 
           <motion.h2
@@ -44,9 +47,9 @@ export const AtelierSection = () => {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.2, duration: 0.8, ease: 'easeInOut' }}
           >
-            <span className="italic">Handcrafted</span>
+            <span className="italic">{t('home.atelier.title')}</span>
             <br />
-            in Vietnam
+            {t('home.atelier.location')}
           </motion.h2>
 
           <motion.div
@@ -62,8 +65,7 @@ export const AtelierSection = () => {
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.6, duration: 0.8 }}
           >
-            Each piece passes through the hands of our master artisans, 
-            where tradition meets innovation in the pursuit of perfection.
+            {t('home.atelier.description')}
           </motion.p>
         </div>
       </div>
@@ -75,7 +77,7 @@ export const AtelierSection = () => {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.3, duration: 0.9 }}
         >
-          Rooted in a practice.
+          {t('home.atelier.rooted')}
         </motion.p>
       </div>
     </section>

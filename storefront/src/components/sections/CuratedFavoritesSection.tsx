@@ -8,6 +8,7 @@ import { Section } from '@/components/layout/Section';
 import { Container } from '@/components/layout/Container';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { useStore } from '@/store/useStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { mapProductToCardProps } from '@/features/products/utils/productMapper';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -19,6 +20,7 @@ export const CuratedFavoritesSection = () => {
   const [currentPage, setCurrentPage] = useState(0);
 
   const { language, formatPrice } = useStore();
+  const { t } = useTranslation();
 
   // Fetch Featured Products (Real Backend Data)
   const { data: productResponse, isLoading } = useProducts({
@@ -27,8 +29,9 @@ export const CuratedFavoritesSection = () => {
   });
 
   const products = useMemo(() => {
-    return (productResponse?.data || []).map(p => mapProductToCardProps(p, language, formatPrice));
-  }, [productResponse?.data, language, formatPrice]);
+    const allProducts = productResponse?.pages.flatMap(page => page.data) || [];
+    return allProducts.map(p => mapProductToCardProps(p, language, formatPrice));
+  }, [productResponse?.pages, language, formatPrice]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -74,10 +77,10 @@ export const CuratedFavoritesSection = () => {
           transition={{ duration: durations.section, ease: easing }}
         >
           <p className="font-body text-xs uppercase tracking-ultra text-muted-foreground mb-6">
-            Curated Selection
+            {t('home.featured.subtitle')}
           </p>
           <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary tracking-luxury font-normal">
-            <SplitReveal lines={[`<span class="italic text-primary/90">Favorites</span>`]} stagger={0.12} />
+            <SplitReveal lines={[`<span class="italic text-primary/90">${t('home.featured.title')}</span>`]} stagger={0.12} />
           </h2>
         </motion.div>
 
@@ -104,7 +107,7 @@ export const CuratedFavoritesSection = () => {
             ) : products.length === 0 ? (
                <div className="flex-grow py-20 text-center col-span-full">
                   <p className="font-body text-xs uppercase tracking-ultra text-muted-foreground opacity-40">
-                    Discovering treasures...
+                    {t('common.loading')}
                   </p>
                </div>
             ) : (

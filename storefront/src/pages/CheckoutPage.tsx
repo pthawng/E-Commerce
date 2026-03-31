@@ -73,6 +73,10 @@ export const CheckoutPage: React.FC = () => {
     }, [user, setValue]);
 
     useEffect(() => {
+        document.title = t('common.meta.checkout');
+    }, [t]);
+
+    useEffect(() => {
         if (items.length === 0) {
             fetchCart().then(() => {
                 if (useCartStore.getState().items.length === 0) {
@@ -119,16 +123,16 @@ export const CheckoutPage: React.FC = () => {
                     expiresAt: paymentMeta.expiresAt || new Date(Date.now() + 20 * 60 * 1000).toISOString(),
                 });
             } else {
-                toast.success(t.checkout.validation.success);
+                toast.success(t('checkout.messages.success'));
                 navigate('/');
             }
         } catch (err: any) {
             if (err.response?.status === 409) {
-                toast.error(t.checkout.validation.cartChanged);
+                toast.error(t('checkout.messages.cartChanged'));
                 await fetchCart();
                 return;
             }
-            toast.error(err.response?.data?.message || t.checkout.validation.error);
+            toast.error(err.response?.data?.message || t('checkout.messages.error'));
         } finally {
             setIsSubmitting(false);
         }
@@ -162,14 +166,14 @@ export const CheckoutPage: React.FC = () => {
                             className="hover:bg-transparent -ml-4 flex items-center text-muted-foreground hover:text-foreground"
                         >
                             <ChevronLeft className="mr-2 h-4 w-4" />
-                            {t.checkout.backToCart}
+                            {t('common.actions.backToCart')}
                         </Button>
                     </div>
                     
                     <div className="text-center">
-                        <h1 className="text-3xl font-serif text-foreground mb-2">{t.checkout.title}</h1>
+                        <h1 className="text-3xl font-serif text-foreground mb-2">{t('checkout.title')}</h1>
                         <p className="text-muted-foreground text-[10px] flex items-center justify-center tracking-widest uppercase">
-                            <Lock className="h-3 w-3 mr-1 text-gold" /> {t.checkout.secure}
+                            <Lock className="h-3 w-3 mr-1 text-gold" /> {t('checkout.secure')}
                         </p>
                     </div>
                 </div>
@@ -178,22 +182,22 @@ export const CheckoutPage: React.FC = () => {
                     <div className="lg:col-span-8 space-y-8">
                         <Card className="border-none shadow-luxury-soft rounded-none bg-card">
                             <CardHeader className="border-b border-border/10 py-6">
-                                <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t.checkout.shippingInfo}</CardTitle>
+                                <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t('checkout.steps.shipping')}</CardTitle>
                             </CardHeader>
                             <CardContent className="p-8 space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="fullName" className="text-[10px] uppercase tracking-widest">{t.checkout.fullName}</Label>
+                                        <Label htmlFor="fullName" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.fullName')}</Label>
                                         <Input 
                                             {...register('fullName')}
                                             id="fullName" 
-                                            placeholder="Nguyễn Văn A" 
+                                            placeholder={t('auth.placeholders.name')} 
                                             className={cn("rounded-none border-border/50 focus-visible:ring-gold/20", errors.fullName && "border-destructive/50")}
                                         />
                                         <ErrorMessage error={errors.fullName} />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone" className="text-[10px] uppercase tracking-widest">{t.checkout.phone}</Label>
+                                        <Label htmlFor="phone" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.phone')}</Label>
                                         <Input 
                                             {...register('phone')}
                                             id="phone" 
@@ -204,17 +208,17 @@ export const CheckoutPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="email" className="text-[10px] uppercase tracking-widest">{t.checkout.email}</Label>
+                                    <Label htmlFor="email" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.email')}</Label>
                                     <Input 
                                         {...register('email')}
                                         id="email" 
-                                        placeholder="a@gmail.com" 
+                                        placeholder={t('auth.placeholders.email')} 
                                         className={cn("rounded-none border-border/50 focus-visible:ring-gold/20", errors.email && "border-destructive/50")}
                                     />
                                     <ErrorMessage error={errors.email} />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="addressLine" className="text-[10px] uppercase tracking-widest">{t.checkout.address}</Label>
+                                    <Label htmlFor="addressLine" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.address')}</Label>
                                     <Input 
                                         {...register('addressLine')}
                                         id="addressLine" 
@@ -225,7 +229,7 @@ export const CheckoutPage: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="ward" className="text-[10px] uppercase tracking-widest">{t.checkout.ward}</Label>
+                                        <Label htmlFor="ward" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.ward')}</Label>
                                         <Input 
                                             {...register('ward')}
                                             id="ward" 
@@ -234,7 +238,7 @@ export const CheckoutPage: React.FC = () => {
                                         <ErrorMessage error={errors.ward} />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="district" className="text-[10px] uppercase tracking-widest">{t.checkout.district}</Label>
+                                        <Label htmlFor="district" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.district')}</Label>
                                         <Input 
                                             {...register('district')}
                                             id="district" 
@@ -243,7 +247,7 @@ export const CheckoutPage: React.FC = () => {
                                         <ErrorMessage error={errors.district} />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="province" className="text-[10px] uppercase tracking-widest">{t.checkout.province}</Label>
+                                        <Label htmlFor="province" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.province')}</Label>
                                         <Input 
                                             {...register('province')}
                                             id="province" 
@@ -257,7 +261,7 @@ export const CheckoutPage: React.FC = () => {
 
                         <Card className="border-none shadow-luxury-soft rounded-none bg-card">
                             <CardHeader className="border-b border-border/10 py-6">
-                                <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t.checkout.paymentMethod}</CardTitle>
+                                <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t('checkout.steps.payment')}</CardTitle>
                             </CardHeader>
                             <CardContent className="p-8">
                                 <RadioGroup 
@@ -273,10 +277,10 @@ export const CheckoutPage: React.FC = () => {
                                             <RadioGroupItem value={method} id={method.toLowerCase()} />
                                             <Label htmlFor={method.toLowerCase()} className="flex-1 cursor-pointer">
                                                 <span className="font-medium text-foreground uppercase tracking-widest text-[10px]">
-                                                    {t.checkout.payment[method.toLowerCase() as keyof typeof t.checkout.payment]}
+                                                    {t(`checkout.payment.${method.toLowerCase()}`)}
                                                 </span>
                                                 <p className="text-[10px] text-muted-foreground mt-1 font-body">
-                                                    {t.checkout.payment[`${method.toLowerCase()}Desc` as keyof typeof t.checkout.payment]}
+                                                    {t(`checkout.payment.${method.toLowerCase()}Desc`)}
                                                 </p>
                                             </Label>
                                         </div>
@@ -289,7 +293,7 @@ export const CheckoutPage: React.FC = () => {
                     <div className="lg:col-span-4 lg:sticky lg:top-32 h-fit">
                         <Card className="border-none shadow-luxury rounded-none bg-card">
                             <CardHeader className="border-b border-border/10 py-6">
-                                <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t.checkout.orderSummary}</CardTitle>
+                                <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t('checkout.summary.title')}</CardTitle>
                             </CardHeader>
                             <CardContent className="p-8 space-y-6">
                                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-luxury">
@@ -307,7 +311,7 @@ export const CheckoutPage: React.FC = () => {
                                                     {typeof item.name === 'string' ? item.name : (item.name[language] || item.name.en)}
                                                 </p>
                                                 <p className="text-[10px] text-muted-foreground font-body mt-1">
-                                                    {t.cart.quantity}: {item.quantity} × {formatPrice(item.price)}
+                                                    {t('cart.quantity')}: {item.quantity} × {formatPrice(item.price)}
                                                 </p>
                                             </div>
                                             <p className="text-xs font-medium text-foreground">
@@ -321,13 +325,13 @@ export const CheckoutPage: React.FC = () => {
 
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-muted-foreground font-body">{t.checkout.subtotal}</span>
+                                        <span className="text-muted-foreground font-body">{t('checkout.summary.subtotal')}</span>
                                         <span className="text-foreground">{formatPrice(totals.subtotal)}</span>
                                     </div>
                                     <div className="flex justify-between text-xs">
-                                        <span className="text-muted-foreground font-body">{t.checkout.shipping}</span>
+                                        <span className="text-muted-foreground font-body">{t('checkout.summary.shipping')}</span>
                                         <span className="text-gold tracking-widest text-[10px] uppercase">
-                                            {totals.shipping === 0 ? t.checkout.complimentary : formatPrice(totals.shipping)}
+                                            {totals.shipping === 0 ? t('checkout.summary.complimentary') : formatPrice(totals.shipping)}
                                         </span>
                                     </div>
                                 </div>
@@ -335,7 +339,7 @@ export const CheckoutPage: React.FC = () => {
                                 <Separator className="bg-border/10" />
 
                                 <div className="flex justify-between items-end">
-                                    <span className="text-[10px] font-medium text-foreground uppercase tracking-ultra">{t.checkout.total}</span>
+                                    <span className="text-[10px] font-medium text-foreground uppercase tracking-ultra">{t('checkout.summary.total')}</span>
                                     <span className="text-2xl font-serif text-primary italic">
                                         {formatPrice(totals.total)}
                                     </span>
@@ -346,7 +350,7 @@ export const CheckoutPage: React.FC = () => {
                                     className="w-full bg-primary hover:bg-gold hover:text-primary text-primary-foreground py-6 text-[10px] uppercase tracking-ultra h-14 rounded-none transition-all duration-700"
                                     disabled={isSubmitting}
                                 >
-                                    {isSubmitting ? t.checkout.processing : t.checkout.placeOrder}
+                                    {isSubmitting ? t('common.actions.processing') : t('common.actions.placeOrder')}
                                 </Button>
                             </CardContent>
                         </Card>

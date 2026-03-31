@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useRef } from 'react';
 import useOverlapInView from '@/hooks/useOverlapInView';
 import featuredNecklace from '@/assets/featured-necklace.png';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Section } from '@/components/layout/Section';
 import { Container } from '@/components/layout/Container';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 export const RefractionSection = () => {
   const ref = useRef(null);
   const isInView = useOverlapInView(ref, 0.15, { once: true });
+  const { t } = useTranslation();
 
   return (
     <Section id="craftsmanship" padding="lg" withHairline="top" className="bg-background overflow-hidden">
@@ -22,13 +24,13 @@ export const RefractionSection = () => {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           >
             <p className="font-body text-xs uppercase tracking-ultra text-muted-foreground mb-6">
-              The Craft
+              {t('home.craft.subtitle')}
             </p>
             
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary tracking-luxury font-normal leading-tight mb-8">
-              The Art of
+              {t('home.craft.title')}
               <br />
-              <span className="italic">Refraction</span>
+              <span className="italic">{t('home.craft.refraction')}</span>
             </h2>
 
             <motion.div
@@ -41,19 +43,15 @@ export const RefractionSection = () => {
 
             <div className="space-y-8 max-w-lg">
               <p className="font-body text-base text-muted-foreground leading-relaxed">
-                Every facet is calculated to capture light at its purest form, 
-                creating an ethereal dance of brilliance that defines the essence 
-                of true luxury.
+                {t('home.craft.description1')}
               </p>
               
               <p className="font-body text-base text-muted-foreground leading-relaxed">
-                Our master gemologists spend countless hours perfecting each cut, 
-                ensuring that every piece becomes a vessel for light itself—transforming 
-                natural beauty into wearable poetry.
+                {t('home.craft.description2')}
               </p>
 
               <p className="font-display text-xl text-primary/80 italic leading-relaxed">
-                "Light is not captured. It is liberated."
+                {t('home.craft.quote')}
               </p>
             </div>
 
@@ -61,7 +59,7 @@ export const RefractionSection = () => {
             <div className="mt-12">
               <Button variant="outline" size="lg" asChild>
                 <a href="#collection">
-                  Discover More
+                  {t('home.craft.cta')}
                 </a>
               </Button>
             </div>

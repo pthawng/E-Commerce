@@ -20,7 +20,8 @@ export const CartPage = () => {
 
     React.useEffect(() => {
         fetchCart();
-    }, [fetchCart]);
+        document.title = t('common.meta.cart');
+    }, [fetchCart, t]);
 
     const isEmpty = items.length === 0;
 
@@ -34,10 +35,10 @@ export const CartPage = () => {
                             <div className="space-y-4">
                                 <Link to="/collections" className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors group">
                                     <ArrowLeft size={12} className="transition-transform group-hover:-translate-x-1" />
-                                    {t.cart.continueShopping}
+                                    {t('common.actions.continueShopping')}
                                 </Link>
                                 <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary italic font-normal tracking-luxury">
-                                    {t.cart.title}
+                                    {t('cart.title')}
                                 </h1>
                             </div>
                             {!isEmpty && (
@@ -47,7 +48,7 @@ export const CartPage = () => {
                                     className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-destructive flex items-center gap-2"
                                 >
                                     <Trash2 size={12} strokeWidth={1.5} />
-                                    {t.cart.clearAll || "Clear Collection"}
+                                    {t('common.actions.clearAll')}
                                 </Button>
                             )}
                         </div>
@@ -62,11 +63,11 @@ export const CartPage = () => {
                                     <ShoppingBag className="text-muted-foreground/20" size={40} strokeWidth={1} />
                                 </div>
                                 <p className="font-display text-2xl text-primary/60 mb-8 italic">
-                                    {t.cart.empty}
+                                    {t('cart.empty')}
                                 </p>
                                 <Link to="/collections">
                                     <Button variant="luxury" className="px-12 h-14">
-                                        {t.cart.exploreCollection || "Explore the Collection"}
+                                        {t('common.actions.addToCollection')}
                                     </Button>
                                 </Link>
                             </motion.div>
@@ -87,34 +88,34 @@ export const CartPage = () => {
                                 <div className="lg:col-span-12 xl:col-span-5 xl:col-start-8 mt-12 lg:mt-0">
                                     <div className="sticky top-32 bg-secondary/5 border border-hairline p-8 sm:p-10 space-y-8 shadow-luxury-soft">
                                         <h2 className="font-display text-2xl text-primary italic border-b border-hairline pb-6">
-                                            {t.cart.orderSummary || "Order Summary"}
+                                            {t('cart.summary')}
                                         </h2>
                                         
                                         <div className="space-y-4">
                                             <div className="flex justify-between">
                                                 <span className="font-body text-[11px] uppercase tracking-widest text-muted-foreground">
-                                                    {t.cart.subtotal}
+                                                    {t('cart.subtotal')}
                                                 </span>
                                                 <span className="font-body tabular-nums text-primary">{formatPrice(subtotal)}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="font-body text-[11px] uppercase tracking-widest text-muted-foreground">
-                                                    {t.cart.shipping}
+                                                    {t('cart.shipping')}
                                                 </span>
                                                 <span className={isFreeShipping ? "text-gold font-body text-[11px] uppercase tracking-widest" : "font-body tabular-nums text-primary"}>
-                                                    {isFreeShipping ? t.cart.complimentary : formatPrice(shipping)}
+                                                    {isFreeShipping ? t('cart.complimentary') : formatPrice(shipping)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="font-body text-[11px] uppercase tracking-widest text-muted-foreground">
-                                                    {t.cart.tax}
+                                                    {t('cart.tax')}
                                                 </span>
                                                 <span className="font-body tabular-nums text-primary">{formatPrice(0)}</span>
                                             </div>
                                         </div>
 
                                         <div className="pt-6 border-t border-hairline flex justify-between items-baseline">
-                                            <span className="font-display text-2xl italic text-primary">{t.cart.total}</span>
+                                            <span className="font-display text-2xl italic text-primary">{t('cart.total')}</span>
                                             <span className="font-body text-3xl font-medium text-primary tabular-nums tracking-tight">
                                                 {formatPrice(total)}
                                             </span>
@@ -125,7 +126,7 @@ export const CartPage = () => {
                                                 <Button 
                                                     className="w-full bg-neutral-900 hover:bg-neutral-800 text-white h-16 rounded-none group text-xs uppercase tracking-widest"
                                                 >
-                                                    {t.cart.checkout}
+                                                    {t('common.actions.checkout')}
                                                     <ArrowRight size={16} className="ml-2 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
                                                 </Button>
                                             </Link>

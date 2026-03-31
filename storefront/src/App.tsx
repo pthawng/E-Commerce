@@ -16,12 +16,14 @@ import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import AccountPage from "./pages/AccountPage";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ZodLocalizer } from "./components/i18n/ZodLocalizer";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <ZodLocalizer />
       <Toaster />
       <Sonner />
       <BrowserRouter>

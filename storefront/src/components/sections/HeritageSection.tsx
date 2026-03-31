@@ -32,7 +32,7 @@ export const HeritageSection = () => {
               animate={isInView ? { opacity: 1 } : {}}
               transition={{ delay: 0.2, duration: 0.8 }}
             >
-              {t.heritage.subtitle}
+              {t('home.heritage.subtitle')}
             </motion.p>
             <motion.h2
               className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary tracking-luxury font-normal leading-tight"
@@ -40,7 +40,7 @@ export const HeritageSection = () => {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.3, duration: 0.8 }}
             >
-              {t.heritage.title}
+              {t('home.heritage.title')}
             </motion.h2>
             <motion.div
               className="h-px bg-gold/30 mx-auto mt-10"
@@ -58,7 +58,7 @@ export const HeritageSection = () => {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.4, duration: 0.8 }}
             >
-              {t.heritage.paragraph1}
+              {t('home.heritage.paragraphs.p1')}
             </motion.p>
 
             <motion.p
@@ -67,7 +67,7 @@ export const HeritageSection = () => {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.5, duration: 0.8 }}
             >
-              {t.heritage.paragraph2}
+              {t('home.heritage.paragraphs.p2')}
             </motion.p>
 
             <motion.p
@@ -76,7 +76,7 @@ export const HeritageSection = () => {
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.6, duration: 0.8 }}
             >
-              {t.heritage.paragraph3}
+              {t('home.heritage.paragraphs.p3')}
             </motion.p>
           </div>
 
@@ -88,10 +88,10 @@ export const HeritageSection = () => {
             transition={{ delay: 0.8, duration: 0.8 }}
           >
             <p className="font-display text-3xl text-primary italic mb-4 font-normal">
-              {t.heritage.signature}
+              {t('home.heritage.signature')}
             </p>
             <p className="font-body text-xs uppercase tracking-ultra text-muted-foreground">
-              {t.heritage.founder}
+              {t('home.heritage.founder')}
             </p>
           </motion.div>
         </div>

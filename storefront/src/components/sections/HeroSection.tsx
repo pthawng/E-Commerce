@@ -67,8 +67,8 @@ export const HeroSection = () => {
           <motion.h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-primary-foreground dark:text-foreground leading-[1.2] tracking-luxury font-normal mb-8 px-4">
             <SplitReveal
               lines={[
-                '<span><span class="italic">Timeless</span> Jewelry</span>',
-                '<span class="gold-shimmer text-[0.85em] mt-2 block opacity-100">Quiet Luxury</span>',
+                `<span><span class="italic">${t('home.hero.timeless')}</span> ${t('home.hero.jewelry')}</span>`,
+                `<span class="gold-shimmer text-[0.85em] mt-2 block opacity-100">${t('home.hero.quietLuxury')}</span>`,
               ]}
               stagger={0.15}
               className="text-center"
@@ -91,7 +91,7 @@ export const HeroSection = () => {
             variants={sectionVariants}
             transition={{ delay: 1.4, duration: durations.section, ease: easing }}
           >
-            {t.hero.description}
+            {t('home.hero.description')}
           </motion.p>
 
           {/* Luxury CTA Button */}
@@ -103,7 +103,7 @@ export const HeroSection = () => {
           >
             <Button variant="luxury" size="lg" asChild>
               <a href="#collection">
-                Explore the Collection
+                {t('home.hero.explore')}
               </a>
             </Button>
           </motion.div>
@@ -137,7 +137,7 @@ export const HeroSection = () => {
         variants={sectionVariants}
         transition={{ delay: 2.5, duration: durations.section, ease: easing }}
       >
-        Crafted to reveal a single idea: timeless presence
+        {t('home.hero.bridge')}
       </motion.p>
     </Section>
   );

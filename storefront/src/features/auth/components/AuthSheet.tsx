@@ -81,7 +81,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
     setErrors((prev) => {
       const next = { ...prev };
       if (password !== confirmPassword) {
-        next.confirmPassword = t.auth.errors.passwordMismatch;
+        next.confirmPassword = t('auth.validation.passwordMismatch');
       } else {
         delete next.confirmPassword;
       }
@@ -94,22 +94,22 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
 
     const sanitizedEmail = sanitizeInput(email);
     if (!emailSchema.safeParse(sanitizedEmail).success) {
-      newErrors.email = t.auth.errors.invalidEmail;
+      newErrors.email = t('auth.validation.invalidEmail');
     }
 
     if (mode !== 'forgot') {
       if (!passwordSchema.safeParse(password).success) {
-        newErrors.password = t.auth.errors.passwordLength;
+        newErrors.password = t('auth.validation.passwordLength');
       }
     }
 
     if (mode === 'register') {
       const sanitizedName = sanitizeInput(name);
       if (!nameSchema.safeParse(sanitizedName).success) {
-        newErrors.name = t.auth.errors.nameRequired;
+        newErrors.name = t('auth.validation.nameRequired');
       }
       if (password !== confirmPassword) {
-        newErrors.confirmPassword = t.auth.errors.passwordMismatch;
+        newErrors.confirmPassword = t('auth.validation.passwordMismatch');
       }
     }
 
@@ -146,12 +146,12 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
             updatedAt: new Date().toISOString(),
           };
 
-          useAuthStore.getState().setAuth(normalizedUser, authData.tokens);
+          useAuthStore.getState().setAuth(normalizedUser);
           // Sync cart after login
           const { useCartStore } = await import('@/features/cart/store/useCartStore');
           useCartStore.getState().mergeOnLogin();
 
-          toast.success(t.auth.loginSuccess);
+          toast.success(t('auth.messages.successLogin'));
           onOpenChange(false);
           resetForm();
         } else {
@@ -183,17 +183,17 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
-          useAuthStore.getState().setAuth(normalizedUser, data.tokens);
+          useAuthStore.getState().setAuth(normalizedUser);
           // Sync cart after registration
           const { useCartStore } = await import('@/features/cart/store/useCartStore');
           useCartStore.getState().mergeOnLogin();
 
-          toast.success(t.auth.registerSuccess);
+          toast.success(t('auth.messages.successRegister'));
           onOpenChange(false);
           resetForm();
         } else {
           // Backend might just return success message without auth
-          toast.success(t.auth.registerSuccess);
+          toast.success(t('auth.messages.successRegister'));
           switchMode('login');
         }
       } catch (err: unknown) {
@@ -204,7 +204,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
       try {
         const sanitizedEmail = sanitizeInput(email);
         await apiPost(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, { email: sanitizedEmail });
-        toast.success(t.auth.resetEmailSent);
+        toast.success(t('auth.messages.successReset'));
         switchMode('login');
       } catch (err: unknown) {
         const message = (err as { message?: string })?.message || 'Failed to send reset email';
@@ -263,7 +263,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.6 }}
           >
-            Where Dreams Become Masterpieces
+            {t('auth.messages.welcome')}
           </motion.p>
         </div>
 
@@ -281,14 +281,14 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
               {/* Title */}
               <div className="mb-10">
                 <h3 className="font-display text-2xl text-foreground tracking-wide font-normal">
-                  {mode === 'login' && t.auth.login}
-                  {mode === 'register' && t.auth.register}
-                  {mode === 'forgot' && t.auth.forgotPassword}
+                  {mode === 'login' && t('auth.title.login')}
+                  {mode === 'register' && t('auth.title.register')}
+                  {mode === 'forgot' && t('auth.title.forgot')}
                 </h3>
                 <p className="text-muted-foreground font-body text-xs mt-3 leading-relaxed tracking-wide">
-                  {mode === 'login' && t.auth.loginSubtitle}
-                  {mode === 'register' && t.auth.registerSubtitle}
-                  {mode === 'forgot' && t.auth.forgotSubtitle}
+                  {mode === 'login' && t('auth.subtitle.login')}
+                  {mode === 'register' && t('auth.subtitle.register')}
+                  {mode === 'forgot' && t('auth.subtitle.forgot')}
                 </p>
               </div>
 
@@ -305,14 +305,14 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                       transition={{ duration: 0.3 }}
                     >
                       <Label htmlFor="name" className="text-muted-foreground text-2xs font-body tracking-ultra uppercase">
-                        {t.auth.fullName}
+                        {t('auth.fields.fullName')}
                       </Label>
                       <Input
                         id="name"
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder={t.auth.namePlaceholder}
+                        placeholder={t('auth.placeholders.name')}
                         className="input-luxury h-10 text-sm font-body placeholder:text-muted-foreground/40"
                       />
                       {errors.name && (
@@ -331,14 +331,14 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                 {/* Email */}
                 <div className="space-y-3">
                   <Label htmlFor="email" className="text-muted-foreground text-2xs font-body tracking-ultra uppercase">
-                    {t.auth.email}
+                    {t('auth.fields.email')}
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t.auth.emailPlaceholder}
+                    placeholder={t('auth.placeholders.email')}
                     className="input-luxury h-10 text-sm font-body placeholder:text-muted-foreground/40"
                   />
                   {errors.email && (
@@ -363,7 +363,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                       transition={{ duration: 0.3 }}
                     >
                       <Label htmlFor="password" className="text-muted-foreground text-2xs font-body tracking-ultra uppercase">
-                        {t.auth.password}
+                        {t('auth.fields.password')}
                       </Label>
                       <div className="relative">
                         <Input
@@ -371,7 +371,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                           type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          placeholder={t.auth.passwordPlaceholder}
+                          placeholder={t('auth.placeholders.password')}
                           className="input-luxury h-10 text-sm font-body placeholder:text-muted-foreground/40 pr-10"
                         />
                         <button
@@ -406,14 +406,14 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                       transition={{ duration: 0.3 }}
                     >
                       <Label htmlFor="confirmPassword" className="text-muted-foreground text-2xs font-body tracking-ultra uppercase">
-                        {t.auth.confirmPassword}
+                        {t('auth.fields.confirmPassword')}
                       </Label>
                       <Input
                         id="confirmPassword"
                         type={showPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder={t.auth.confirmPasswordPlaceholder}
+                        placeholder={t('auth.placeholders.confirm')}
                         className="input-luxury h-10 text-sm font-body placeholder:text-muted-foreground/40"
                       />
                       {errors.confirmPassword && (
@@ -437,7 +437,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                       onClick={() => switchMode('forgot')}
                       className="text-2xs text-muted-foreground hover:text-foreground transition-colors duration-500 font-body tracking-wide"
                     >
-                      {t.auth.forgotPasswordLink}
+                      {t('auth.links.forgotPassword')}
                     </button>
                   </div>
                 )}
@@ -454,13 +454,13 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
                       {isLoading ? (
                         <span className="flex items-center gap-3">
                           <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.2} />
-                          {t.auth.loading}
+                          {t('common.loading')}
                         </span>
                       ) : (
                         <>
-                          {mode === 'login' && t.auth.loginButton}
-                          {mode === 'register' && t.auth.registerButton}
-                          {mode === 'forgot' && t.auth.resetButton}
+                          {mode === 'login' && t('auth.links.login')}
+                          {mode === 'register' && t('auth.links.register')}
+                          {mode === 'forgot' && t('common.actions.tryAgain')}
                         </>
                       )}
                     </span>
@@ -478,14 +478,14 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
           <div className="hairline mb-3" />
           <div className="text-center">
             <span className="text-2xs text-muted-foreground font-body tracking-wide">
-              {mode === 'login' ? t.auth.noAccount : mode === 'register' ? t.auth.hasAccount : t.auth.rememberPassword}
+              {mode === 'login' ? t('auth.links.noAccount') : mode === 'register' ? t('auth.links.hasAccount') : t('auth.links.rememberPassword')}
             </span>
             <button
               type="button"
               onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
               className="ml-2 text-2xs text-foreground hover:text-primary transition-colors duration-500 font-body tracking-wide inline-flex items-center gap-1 group"
             >
-              {mode === 'login' ? t.auth.registerLink : t.auth.loginLink}
+              {mode === 'login' ? t('auth.links.register') : t('auth.links.login')}
               <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={1.2} />
             </button>
           </div>
@@ -495,7 +495,7 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
         <div className="px-10 py-6">
           <div className="hairline mb-6" />
           <p className="text-center text-2xs text-muted-foreground/50 font-body tracking-wide">
-            © 2025 Ray Paradis
+            {t('common.footer.copyright')}
           </p>
         </div>
       </SheetContent>

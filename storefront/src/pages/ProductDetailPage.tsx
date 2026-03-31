@@ -48,11 +48,12 @@ export const ProductDetailPage = () => {
     const { data: recommendationsRes } = useProducts(recommendationsParams);
 
     const recommendations = useMemo(() => {
-        return (recommendationsRes?.data || [])
+        const allProducts = recommendationsRes?.pages?.flatMap(page => page.data) || [];
+        return allProducts
             .filter(p => p.id !== product?.id)
             .slice(0, 4)
             .map(p => mapProductToCardProps(p, language, formatPrice));
-    }, [recommendationsRes?.data, product?.id, language, formatPrice]);
+    }, [recommendationsRes?.pages, product?.id, language, formatPrice]);
 
     // --- Senior Variant Selection Logic ---
 
@@ -148,7 +149,7 @@ export const ProductDetailPage = () => {
     useEffect(() => {
         if (product) {
             const name = getLocalized(product.name, language);
-            document.title = `${name} | Ray Paradis Heritage`;
+            document.title = `${name} | Ray Paradis`;
 
             let metaDesc = document.querySelector('meta[name="description"]');
             if (!metaDesc) {
@@ -196,16 +197,18 @@ export const ProductDetailPage = () => {
                     <Container>
                         <Alert className="max-w-md mx-auto border-destructive/20 bg-destructive/5 py-12 shadow-luxury">
                             <ShoppingBag className="w-12 h-12 text-destructive/20 mx-auto mb-6" />
-                            <AlertTitle className="text-destructive font-display text-2xl mb-4 italic">Lost Treasure</AlertTitle>
+                            <AlertTitle className="text-destructive font-display text-2xl mb-4 italic">
+                                {t('shop.pdp.notFound.title')}
+                            </AlertTitle>
                             <AlertDescription className="text-destructive/80 font-body text-sm mb-8">
-                                We couldn't find the specific masterpiece you're looking for. It may have been curated away.
+                                {t('shop.pdp.notFound.description')}
                             </AlertDescription>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <Button variant="outline" onClick={() => refetch()} className="border-destructive/20">
-                                    <RefreshCw className="mr-2 h-4 w-4" /> Retry
+                                    <RefreshCw className="mr-2 h-4 w-4" /> {t('shop.pdp.notFound.retry')}
                                 </Button>
                                 <Link to="/collections">
-                                    <Button variant="luxury">Discover Collection</Button>
+                                    <Button variant="luxury">{t('shop.pdp.notFound.discover')}</Button>
                                 </Link>
                             </div>
                         </Alert>
@@ -232,7 +235,7 @@ export const ProductDetailPage = () => {
                         <div className="mb-8">
                             <Link to="/collections" className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors group">
                                 <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
-                                Back to Collection
+                                {t('shop.pdp.backToCollection')}
                             </Link>
                         </div>
 
@@ -329,7 +332,7 @@ export const ProductDetailPage = () => {
                                             className="w-full h-14 group"
                                             onClick={handleAddToCart}
                                         >
-                                            <span className="mr-2">{t.pdp.addToCollection}</span>
+                                            <span className="mr-2">{t('shop.pdp.addToCollection')}</span>
                                             <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                                         </Button>
                                         <p className="text-center font-body text-[10px] text-muted-foreground tracking-wide">
@@ -342,20 +345,20 @@ export const ProductDetailPage = () => {
                                         {[
                                             { 
                                                 id: "craftsmanship", 
-                                                label: t.pdp.craftsmanship, 
-                                                content: "Each masterpiece is meticulously hand-assembled by our master artisans, requiring over 40 hours of focused dedication to perfect every facet and link.", 
+                                                label: t('shop.pdp.craftsmanship'), 
+                                                content: t('shop.pdp.content.craftsmanship'), 
                                                 icon: ShieldCheck 
                                             },
                                             { 
                                                 id: "shipping", 
-                                                label: t.pdp.delivery, 
-                                                content: "Complimentary worldwide white-glove delivery. Insured and handled with the utmost care. Returns accepted within 14 days in original condition.", 
+                                                label: t('shop.pdp.delivery'), 
+                                                content: t('shop.pdp.content.delivery'), 
                                                 icon: Truck 
                                             },
                                             { 
                                                 id: "care", 
-                                                label: t.pdp.careGuide, 
-                                                content: "Clean gently with a soft cloth. We offer professional polishing and inspection services at our boutique to maintain the eternal radiance of your jewel.", 
+                                                label: t('shop.pdp.careGuide'), 
+                                                content: t('shop.pdp.content.careGuide'), 
                                                 icon: RotateCcw 
                                             },
                                         ].map((tab) => (
@@ -402,7 +405,7 @@ export const ProductDetailPage = () => {
                                         Digital Atelier
                                     </p>
                                     <h2 className="font-display text-3xl sm:text-4xl italic font-normal tracking-luxury text-primary">
-                                        {t.pdp.completeLook}
+                                        {t('shop.pdp.completeLook')}
                                     </h2>
                                 </div>
                             </div>

@@ -5,8 +5,16 @@ import { AtelierSection } from "@/components/sections/AtelierSection";
 import { CuratedFavoritesSection } from "@/components/sections/CuratedFavoritesSection";
 import { HeritageSection } from "@/components/sections/HeritageSection";
 import { NewsletterSection } from "@/components/sections/NewsletterSection";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useEffect } from "react";
 
 const Index = () => {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    document.title = t('common.meta.home');
+  }, [t]);
+
   return (
     <Layout>
       {/* Section 1: Hero with Particles (Attract) */}

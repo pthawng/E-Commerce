@@ -75,9 +75,9 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
   }, [forceOpaque]);
 
   const navItems = [
-    { label: t.nav.collections, href: '/collections' },
-    { label: t.nav.heritage, href: '/#heritage' },
-    { label: t.nav.craftsmanship, href: '/#atelier' },
+    { label: t('common.nav.collections'), href: '/collections' },
+    { label: t('common.nav.heritage'), href: '/#heritage' },
+    { label: t('common.nav.craftsmanship'), href: '/#atelier' },
   ];
   
   const shouldUsePrimaryColor = !!forceOpaque || (isScrolled && theme === 'light');
@@ -147,7 +147,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                         <LanguageToggle isOpaque={true} />
                       </div>
                       <p className="font-body text-xs text-muted-foreground/60 tracking-[0.2em] uppercase">
-                        Mastery in motion.
+                        {t('shop.pdp.mastery')}
                       </p>
                     </div>
                   </div>

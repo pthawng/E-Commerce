@@ -40,7 +40,7 @@ export const CartDrawer = () => {
                 {/* Header */}
                 <SheetHeader className="p-6 border-b border-hairline">
                     <SheetTitle className="font-display text-2xl italic font-normal tracking-wide text-primary">
-                        {t.cart.title}
+                        {t('cart.title')}
                     </SheetTitle>
                 </SheetHeader>
 
@@ -62,7 +62,7 @@ export const CartDrawer = () => {
                                 <ShoppingBag className="text-muted-foreground/40" size={32} strokeWidth={1} />
                             </div>
                             <h3 className="font-display text-xl text-primary/80 mb-2 italic">
-                                {t.cart.empty}
+                                {t('cart.empty')}
                             </h3>
                             <Button 
                                 asChild
@@ -71,7 +71,7 @@ export const CartDrawer = () => {
                                 onClick={() => setOpen(false)}
                             >
                                 <Link to="/collections">
-                                    {t.cart.continueShopping}
+                                    {t('common.actions.continueShopping')}
                                 </Link>
                             </Button>
                         </div>
@@ -99,7 +99,7 @@ export const CartDrawer = () => {
                                 >
                                     <Link to="/checkout" className="flex items-center justify-center gap-3">
                                         <span className="font-body text-[11px] uppercase tracking-[0.25em] font-medium truncate">
-                                            {t.cart.checkout}
+                                            {t('common.actions.checkout')}
                                         </span>
                                         <ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
                                     </Link>
@@ -116,7 +116,7 @@ export const CartDrawer = () => {
                                 <div className="space-y-1 mb-6">
                                     <div className="flex flex-col items-end">
                                         <span className="font-body text-muted-foreground uppercase tracking-[0.15em] text-[8px] leading-none mb-1">
-                                            {t.cart.subtotal}
+                                            {t('cart.subtotal')}
                                         </span>
                                         <span className="font-body text-primary tabular-nums text-sm font-medium leading-none">
                                             {formatPrice(subtotal)}
@@ -124,10 +124,10 @@ export const CartDrawer = () => {
                                     </div>
                                     <div className="flex flex-col items-end pt-2">
                                         <span className="font-body text-muted-foreground uppercase tracking-[0.15em] text-[8px] leading-none mb-1">
-                                            {t.cart.shipping}
+                                            {t('cart.shipping')}
                                         </span>
                                         <span className={isFreeShipping ? "text-gold font-body text-[8px] uppercase tracking-[0.1em] font-medium leading-none" : "font-body text-primary tabular-nums text-sm font-medium leading-none"}>
-                                            {isFreeShipping ? t.cart.complimentary : formatPrice(shipping)}
+                                            {isFreeShipping ? t('cart.complimentary') : formatPrice(shipping)}
                                         </span>
                                     </div>
                                 </div>
@@ -137,7 +137,7 @@ export const CartDrawer = () => {
 
                                 {/* Grand Total */}
                                 <div className="flex flex-col items-end">
-                                    <p className="font-display text-xs italic text-muted-foreground mb-1 leading-none">{t.cart.total}</p>
+                                    <p className="font-display text-xs italic text-muted-foreground mb-1 leading-none">{t('cart.total')}</p>
                                     <p className="font-body text-3xl font-semibold text-primary tabular-nums tracking-tighter leading-none">
                                         {formatPrice(total)}
                                     </p>

@@ -8,25 +8,25 @@ export const Footer = () => {
 
   const footerLinks = {
     collections: [
-      { label: t.footer.rings, href: '#' },
-      { label: t.footer.necklaces, href: '#' },
-      { label: t.footer.bracelets, href: '#' },
-      { label: t.footer.earrings, href: '#' },
+      { label: t('common.footer.links.rings'), href: '#' },
+      { label: t('common.footer.links.necklaces'), href: '#' },
+      { label: t('common.footer.links.bracelets'), href: '#' },
+      { label: t('common.footer.links.earrings'), href: '#' },
     ],
     about: [
-      { label: t.footer.story, href: '#heritage' },
-      { label: t.footer.craftsmanship, href: '#' },
-      { label: t.footer.boutiques, href: '#' },
-      { label: t.footer.careers, href: '#' },
+      { label: t('common.footer.links.story'), href: '#heritage' },
+      { label: t('common.footer.links.craftsmanship'), href: '#' },
+      { label: t('common.footer.links.boutiques'), href: '#' },
+      { label: t('common.footer.links.careers'), href: '#' },
     ],
     contact: [
-      { label: t.footer.customerCare, href: '#' },
-      { label: t.footer.bookAppointment, href: '#' },
-      { label: t.footer.sizeGuide, href: '#' },
+      { label: t('common.footer.links.customerCare'), href: '#' },
+      { label: t('common.footer.links.bookAppointment'), href: '#' },
+      { label: t('common.footer.links.sizeGuide'), href: '#' },
     ],
     legal: [
-      { label: t.footer.privacy, href: '#' },
-      { label: t.footer.terms, href: '#' },
+      { label: t('common.footer.links.privacy'), href: '#' },
+      { label: t('common.footer.links.terms'), href: '#' },
     ],
   };
 
@@ -46,14 +46,14 @@ export const Footer = () => {
               RAY PARADIS
             </motion.h3>
             <p className="font-body text-sm text-muted-foreground leading-relaxed max-w-xs">
-              {t.footer.tagline}
+              {t('common.footer.tagline')}
             </p>
           </div>
 
           {/* Links Columns */}
           <div>
             <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
-              {t.footer.collections}
+              {t('common.footer.sections.collections')}
             </h4>
             <ul className="space-y-4">
               {footerLinks.collections.map((link) => (
@@ -71,7 +71,7 @@ export const Footer = () => {
 
           <div>
             <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
-              {t.footer.about}
+              {t('common.footer.sections.about')}
             </h4>
             <ul className="space-y-4">
               {footerLinks.about.map((link) => (
@@ -89,7 +89,7 @@ export const Footer = () => {
 
           <div>
             <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
-              {t.footer.contact}
+              {t('common.footer.sections.contact')}
             </h4>
             <ul className="space-y-4">
               {footerLinks.contact.map((link) => (
@@ -107,7 +107,7 @@ export const Footer = () => {
 
           <div>
             <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
-              {t.footer.legal}
+              {t('common.footer.sections.legal')}
             </h4>
             <ul className="space-y-4">
               {footerLinks.legal.map((link) => (
@@ -127,7 +127,7 @@ export const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40">
-            {t.footer.copyright}
+            {t('common.footer.copyright')}
           </p>
           <div className="flex gap-8">
             <span className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 italic">

@@ -6,6 +6,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 
 import { useCartStore } from "@/features/cart/store/useCartStore";
+import { useTranslation } from "@/hooks/useTranslation";
+import { useStore } from "@/store/useStore";
 
 interface ProductCardProps {
   id: string;
@@ -35,6 +37,8 @@ export const ProductCard = React.memo(({
   className,
 }: ProductCardProps) => {
   const addItem = useCartStore((state) => state.addItem);
+  const { t } = useTranslation();
+  const { language } = useStore();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -43,7 +47,7 @@ export const ProductCard = React.memo(({
     if (idToUse) {
       addItem(idToUse, 1, {
         productId: id,
-        name: { en: name }, 
+        name: { [language]: name }, 
         price: rawPrice || 0,
         image: image,
         slug: slug
@@ -56,7 +60,7 @@ export const ProductCard = React.memo(({
       <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/10">
         {isNew && (
           <Badge className="absolute top-4 left-4 z-20 bg-gold text-primary hover:bg-gold/90 border-none rounded-full px-3 py-1 text-[10px] uppercase tracking-widest pointer-events-none">
-            New
+            {t('common.badge.new')}
           </Badge>
         )}
         <motion.img
@@ -94,14 +98,14 @@ export const ProductCard = React.memo(({
             to={`/product/${slug}`}
             className="font-body text-[10px] uppercase tracking-ultra text-primary/60 border-b border-primary/20 hover:text-gold hover:border-gold transition-all duration-500 pb-1"
           >
-            Quick View
+            {t('common.actions.quickView')}
           </Link>
           <div className="w-px h-3 bg-primary/10" />
           <button 
             onClick={handleAddToCart}
             className="font-body text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center gap-2"
           >
-            Add to Cart
+            {t('common.actions.addToCollection')}
           </button>
         </div>
       </CardFooter>

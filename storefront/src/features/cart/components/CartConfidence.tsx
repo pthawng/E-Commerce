@@ -6,9 +6,9 @@ export const CartConfidence = () => {
     const { t } = useTranslation();
 
     const signals = [
-        { icon: ShieldCheck, text: 'Authenticity Guaranteed' },
-        { icon: RotateCcw, text: '30-Day Returns' },
-        { icon: Ruler, text: 'Complimentary Resizing' },
+        { icon: ShieldCheck, text: t('cart.confidence.authenticity') },
+        { icon: RotateCcw, text: t('cart.confidence.returns') },
+        { icon: Ruler, text: t('cart.confidence.resizing') },
     ];
 
     return (

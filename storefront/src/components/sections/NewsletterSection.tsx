@@ -25,14 +25,14 @@ export const NewsletterSection = () => {
     const result = emailSchema.safeParse(email);
     
     if (!result.success) {
-      toast.error(t.newsletter.error);
+      toast.error(t('common.newsletter.error'));
       return;
     }
 
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     
-    toast.success(t.newsletter.success);
+    toast.success(t('common.newsletter.success'));
     setEmail('');
     setIsLoading(false);
   };
@@ -59,7 +59,7 @@ export const NewsletterSection = () => {
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
-            Join the Circle
+            {t('common.newsletter.subtitle')}
           </motion.p>
           
           <motion.h2
@@ -68,7 +68,7 @@ export const NewsletterSection = () => {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.3, duration: 0.8 }}
           >
-            <span className="italic">{t.newsletter.title}</span>
+            <span className="italic">{t('common.newsletter.title')}</span>
           </motion.h2>
 
           <motion.p
@@ -77,7 +77,7 @@ export const NewsletterSection = () => {
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.4, duration: 0.8 }}
           >
-            {t.newsletter.description}
+            {t('common.newsletter.description')}
           </motion.p>
 
           {/* SaaS-ready Form */}
@@ -93,7 +93,7 @@ export const NewsletterSection = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={t.newsletter.placeholder}
+                placeholder={t('common.newsletter.placeholder')}
                 className="text-center sm:text-left h-14"
                 required
                 maxLength={255}
@@ -107,7 +107,7 @@ export const NewsletterSection = () => {
               size="lg"
               className="w-full sm:w-auto min-w-[160px]"
             >
-              {isLoading ? '...' : t.newsletter.button}
+              {isLoading ? t('common.actions.processing') : t('common.newsletter.action')}
             </Button>
           </motion.form>
 
@@ -118,7 +118,7 @@ export const NewsletterSection = () => {
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.8, duration: 0.8 }}
           >
-            Limited invitations. Endless resonance.
+            {t('common.newsletter.microcopy')}
           </motion.p>
         </motion.div>
       </Container>
