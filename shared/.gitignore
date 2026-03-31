@@ -1,5 +1,3 @@
-# [Product Best Practice] Gitignore for Shared Package
-# ------------------------------------------------------------------
 
 # Build & Compilation
 /dist
