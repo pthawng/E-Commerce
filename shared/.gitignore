@@ -1,0 +1,64 @@
+# [Product Best Practice] Gitignore for Shared Package
+# ------------------------------------------------------------------
+
+# Build & Compilation
+/dist
+/build
+/out
+*.tsbuildinfo
+*.map
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Discovery & Logs
+/logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Testing & Coverage
+/coverage
+/.nyc_output
+.jest/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS & Filesystem
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs & Editor Configuration
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# Infrastructure & Diagnostics
+.terraform/
+.vagrant/
+.docker-compose.override.yml
+dump.rdb
+
+# Temporary Files
+.tmp/
+.temp/
