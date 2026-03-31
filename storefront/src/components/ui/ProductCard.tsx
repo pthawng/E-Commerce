@@ -21,7 +21,7 @@ interface ProductCardProps {
   className?: string;
 }
 
-export const ProductCard = ({
+export const ProductCard = React.memo(({
   id,
   variantId,
   name,
@@ -53,7 +53,6 @@ export const ProductCard = ({
 
   return (
     <Card className={cn("group flex flex-col h-full overflow-hidden border-none transition-all duration-700 bg-background shadow-luxury-soft hover:shadow-luxury", className)}>
-      {/* ... previous content ... */}
       <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/10">
         {isNew && (
           <Badge className="absolute top-4 left-4 z-20 bg-gold text-primary hover:bg-gold/90 border-none rounded-full px-3 py-1 text-[10px] uppercase tracking-widest pointer-events-none">
@@ -108,4 +107,6 @@ export const ProductCard = ({
       </CardFooter>
     </Card>
   );
-};
+});
+
+ProductCard.displayName = "ProductCard";

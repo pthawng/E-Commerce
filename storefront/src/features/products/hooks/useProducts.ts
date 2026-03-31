@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { productApi } from '../services/api';
 import { ProductParams } from '../types';
 
@@ -10,21 +10,44 @@ export const productKeys = {
     detail: (slug: string) => [...productKeys.details(), slug] as const,
 };
 
+/**
+ * useProducts (Infinite Query Edition)
+ * Standardizes the "Reveal More" experience with stable cursors
+ */
 export function useProducts(params?: ProductParams) {
-    return useQuery({
-        // Senior fix: stringify params as part of the key to ensure stability even if a new object is passed
-        queryKey: [...productKeys.lists(), JSON.stringify(params || {})],
-        queryFn: () => productApi.getAll(params),
-        staleTime: 1000 * 60 * 5, // 5 minutes
+    const { search, limit = 12, ...rest } = params || {};
+    
+    return useInfiniteQuery({
+        // Stable key including all filters
+        queryKey: [...productKeys.lists(), JSON.stringify({ search, limit, ...rest })],
+        
+        queryFn: ({ pageParam, signal }) => {
+            return productApi.getAll({ 
+                ...params, 
+                cursor: pageParam as string | undefined,
+                limit 
+            }, signal);
+        },
+        
+        initialPageParam: undefined,
+        
+        getNextPageParam: (lastPage) => {
+            // Extract the next cursor from backend metadata
+            return lastPage.meta.nextCursor ?? undefined;
+        },
+        
+        staleTime: 1000 * 60 * 5, // 5 minutes cache
     });
 }
 
+/**
+ * useProduct (Detail View)
+ */
 export function useProduct(slug: string) {
     return useQuery({
-        // Senior fix: ensure key is perfectly stable
         queryKey: [...productKeys.detail(slug || 'none')],
-        queryFn: () => productApi.getBySlug(slug),
+        queryFn: ({ signal }) => productApi.getBySlug(slug, signal),
         enabled: !!slug,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 60 * 5,
     });
 }

@@ -12,6 +12,7 @@ export class AllExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal Server Error';
     let errors: any = null;
+    let code: string | null = null;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -21,19 +22,24 @@ export class AllExceptionFilter implements ExceptionFilter {
       } else if (typeof res === 'object') {
         const r: any = res;
         message = r.message || r.error || 'Error';
+        code = r.code || null; // Extract business code if present
         if (Array.isArray(r.message)) {
           errors = r.message;
           message = 'Validation failed';
         }
       }
     } else {
-      // Log non-HttpExceptions for easier debugging (e.g. Prisma errors, TypeErrors)
-      this.logger.error(`Unhandled Exception at ${request.method} ${request.url}:`, exception instanceof Error ? exception.stack : exception);
+      // ... handled below ...
+    }
+
+    if (!code && status === HttpStatus.INTERNAL_SERVER_ERROR) {
+       code = 'INTERNAL_SERVER_ERROR';
     }
 
     response.status(status).json({
       success: false,
       statusCode: status,
+      code: code || undefined, // Business code for FE mapping
       message,
       path: request.url,
       timestamp: new Date().toISOString(),
@@ -41,5 +47,6 @@ export class AllExceptionFilter implements ExceptionFilter {
       meta: null,
       data: null,
     });
+
   }
 }

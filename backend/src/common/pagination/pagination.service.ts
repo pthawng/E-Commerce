@@ -4,6 +4,8 @@ import {
   buildPagination,
   buildPaginationLinks,
   buildPaginationMeta,
+  decodeCursor,
+  encodeCursor,
   parseSort,
   type PaginatedResult,
 } from './pagination.util';
@@ -11,17 +13,18 @@ import {
 /**
  * Options for pagination operation
  */
-export interface PaginationOptions<TItem = unknown, TWhere = unknown> {
+export interface PaginationOptions<TItem = any, TWhere = any> {
   /**
    * Function to execute findMany query
    */
   findMany: (args: {
     where?: TWhere;
-    orderBy?: Record<string, 'asc' | 'desc'>;
-    skip: number;
+    orderBy?: any[];
+    skip?: number;
     take: number;
-    include?: unknown;
-    select?: unknown;
+    cursor?: any;
+    include?: any;
+    select?: any;
   }) => Promise<TItem[]>;
 
   /**
@@ -42,12 +45,12 @@ export interface PaginationOptions<TItem = unknown, TWhere = unknown> {
   /**
    * Include relations
    */
-  include?: unknown;
+  include?: any;
 
   /**
    * Select specific fields
    */
-  select?: unknown;
+  select?: any;
 
   /**
    * Allowed fields for sorting (whitelist)
@@ -60,7 +63,7 @@ export interface PaginationOptions<TItem = unknown, TWhere = unknown> {
   defaultSort?: { field: string; order: 'asc' | 'desc' };
 
   /**
-   * Base path for pagination links (e.g., '/users', '/products')
+   * Base path for pagination links
    */
   basePath: string;
 
@@ -70,40 +73,13 @@ export interface PaginationOptions<TItem = unknown, TWhere = unknown> {
   extraQuery?: Record<string, string | number | boolean | undefined>;
 }
 
-/**
- * Base Pagination Service
- *
- * Provides reusable pagination logic for all modules.
- * Handles:
- * - Query validation (via DTO)
- * - Skip/take calculation
- * - Sort parsing with whitelist
- * - Parallel count + findMany execution
- * - Meta and links generation
- *
- * @example
- * ```ts
- * const result = await this.paginationService.paginate({
- *   findMany: (args) => this.prisma.user.findMany(args),
- *   count: (args) => this.prisma.user.count(args),
- *   dto,
- *   where: { deletedAt: null },
- *   allowedSortFields: ['createdAt', 'email', 'fullName'],
- *   defaultSort: { field: 'createdAt', order: 'desc' },
- *   basePath: '/users',
- *   extraQuery: { search: dto.search },
- * });
- * ```
- */
 @Injectable()
 export class PaginationService {
   /**
-   * Execute pagination query
-   *
-   * @param options - Pagination configuration
-   * @returns Paginated result with items, meta, and links
+   * Execute hybrid pagination query (Cursor + Offset)
+   * Enforces deterministic ordering using id as tie-breaker.
    */
-  async paginate<TItem = unknown>(
+  async paginate<TItem = any>(
     options: PaginationOptions<TItem>,
   ): Promise<PaginatedResult<TItem>> {
     const {
@@ -119,16 +95,89 @@ export class PaginationService {
       extraQuery,
     } = options;
 
-    // Parse and validate sort
-    const { field, order } = parseSort(dto.sort, allowedSortFields, defaultSort);
+    // 1. Determine Sort Order (Stable/Deterministic)
+    const { field, order } = parseSort(dto.sort as string, allowedSortFields, defaultSort);
+    const orderBy: any[] = [{ [field]: order }];
+    if (field !== 'id') {
+      orderBy.push({ id: order });
+    }
 
-    // Calculate skip/take
-    const { skip, take } = buildPagination({ page: dto.page, limit: dto.limit });
+    // 2. Execute Hybrid Logic
+    if (dto.cursor) {
+      return this.paginateCursor(options, { field, order, orderBy });
+    }
 
-    // Build orderBy object for Prisma
-    const orderBy: Record<string, 'asc' | 'desc'> = { [field]: order };
+    return this.paginateOffset(options, { field, order, orderBy });
+  }
 
-    // Execute count and findMany in parallel for better performance
+  /**
+   * Cursor-based pagination (Infinite Scroll Friendly)
+   */
+  private async paginateCursor<TItem = any>(
+    options: PaginationOptions<TItem>,
+    sort: { field: string; order: 'asc' | 'desc'; orderBy: any[] },
+  ): Promise<PaginatedResult<TItem>> {
+    const { findMany, dto, where, include, select, basePath, extraQuery } = options;
+    const { field, order, orderBy } = sort;
+
+    const decoded = decodeCursor(dto.cursor as string);
+    const take = dto.limit + 1; // Fetch one extra to check for next page
+
+    const queryArgs: any = {
+      where,
+      orderBy,
+      take,
+      include,
+      select,
+    };
+
+    // Apply cursor condition if decoded successfully
+    if (decoded && decoded[field] !== undefined) {
+      queryArgs.cursor = { id: decoded.id };
+      queryArgs.skip = 1; // Skip the cursor element itself
+    }
+
+    const itemsRaw = await findMany(queryArgs);
+    const hasNext = itemsRaw.length > dto.limit;
+    const items = hasNext ? itemsRaw.slice(0, dto.limit) : itemsRaw;
+
+    let nextCursor: string | null = null;
+    if (hasNext && items.length > 0) {
+      const lastItem = items[items.length - 1] as any;
+      nextCursor = encodeCursor({
+        [field]: lastItem[field],
+        id: lastItem.id,
+      });
+    }
+
+    const meta = buildPaginationMeta({
+      limit: dto.limit,
+      hasNext,
+      nextCursor,
+    });
+
+    const links = buildPaginationLinks({
+      basePath,
+      limit: dto.limit,
+      nextCursor,
+      extraQuery,
+    });
+
+    return { items, meta, links };
+  }
+
+  /**
+   * Standard Offset-based pagination (Backward Compatible)
+   */
+  private async paginateOffset<TItem = any>(
+    options: PaginationOptions<TItem>,
+    sort: { field: string; order: 'asc' | 'desc'; orderBy: any[] },
+  ): Promise<PaginatedResult<TItem>> {
+    const { findMany, count, dto, where, include, select, basePath, extraQuery } = options;
+    const { orderBy } = sort;
+
+    const { skip, take } = buildPagination({ page: dto.page as number, limit: dto.limit });
+
     const [items, totalItems] = await Promise.all([
       findMany({
         where,
@@ -141,26 +190,20 @@ export class PaginationService {
       count({ where }),
     ]);
 
-    // Build pagination meta
     const meta = buildPaginationMeta({
       totalItems,
-      page: dto.page,
+      page: dto.page as number,
       limit: dto.limit,
     });
 
-    // Build pagination links
     const links = buildPaginationLinks({
       basePath,
-      page: dto.page,
+      page: dto.page as number,
       limit: dto.limit,
       totalPages: meta.totalPages,
       extraQuery,
     });
 
-    return {
-      items,
-      meta,
-      links,
-    };
+    return { items, meta, links };
   }
 }

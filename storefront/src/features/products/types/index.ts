@@ -75,4 +75,5 @@ export interface ProductParams {
     sort?: string; // format: field:direction
     categoryId?: string;
     isFeatured?: boolean;
+    cursor?: string; // NEW: Base64 cursor
 }

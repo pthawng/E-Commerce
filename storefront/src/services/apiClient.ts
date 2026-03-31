@@ -2,6 +2,7 @@
  * API Client (axios)
  * Centralized axios instance with automatic refresh-token handling.
  */
+import axios from 'axios';
 import type { ApiResponse, ApiError } from '@shared';
 import { buildApiUrl } from '@shared';
 import axiosInstance from './axiosClient';
@@ -27,6 +28,12 @@ async function handleAxiosResponse<T>(promise: Promise<any>): Promise<ApiRespons
     }
     return res.data as ApiResponse<T>;
   } catch (err: any) {
+    // Silent handling for cancelled requests (Elite UX)
+    if (axios.isCancel(err)) {
+        // Return a promise that never resolves/rejects to stop the chain
+        return new Promise(() => {});
+    }
+
     if (err instanceof ApiClientError) throw err;
     
     const status = err?.response?.status || 500;

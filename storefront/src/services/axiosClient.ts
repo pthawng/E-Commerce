@@ -94,9 +94,15 @@ axiosInstance.interceptors.response.use(
       }
     }
 
+    // Surface business error codes for UI mapping
+    if (error.response?.data?.code) {
+      error.code = error.response.data.code;
+    }
+
     return Promise.reject(error);
   },
 );
+
 
 export default axiosInstance;
 

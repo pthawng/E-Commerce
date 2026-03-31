@@ -1,10 +1,11 @@
 export interface PaginationMeta {
-  page: number;
+  page?: number;
   limit: number;
-  totalItems: number;
-  totalPages: number;
+  totalItems?: number;
+  totalPages?: number;
   hasNext: boolean;
   hasPrev: boolean;
+  nextCursor?: string | null;
 }
 
 export interface PaginatedResult<T> {
@@ -19,6 +20,25 @@ export interface PaginationLinks {
   prev: string | null;
 }
 
+/**
+ * Encode an object to a Base64 string
+ */
+export function encodeCursor(value: Record<string, any>): string {
+  return Buffer.from(JSON.stringify(value)).toString('base64');
+}
+
+/**
+ * Decode a Base64 string to an object
+ */
+export function decodeCursor<T = Record<string, any>>(cursor: string): T | null {
+  try {
+    const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
+    return JSON.parse(decoded) as T;
+  } catch (e) {
+    return null;
+  }
+}
+
 export function buildPagination({ page, limit }: { page: number; limit: number }) {
   return {
     skip: (page - 1) * limit,
@@ -30,20 +50,25 @@ export function buildPaginationMeta({
   totalItems,
   page,
   limit,
+  hasNext,
+  nextCursor,
 }: {
-  totalItems: number;
-  page: number;
+  totalItems?: number;
+  page?: number;
   limit: number;
+  hasNext?: boolean;
+  nextCursor?: string | null;
 }): PaginationMeta {
-  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const totalPages = totalItems ? Math.max(1, Math.ceil(totalItems / limit)) : undefined;
 
   return {
     page,
     limit,
     totalItems,
     totalPages,
-    hasNext: page < totalPages,
-    hasPrev: page > 1,
+    hasNext: hasNext ?? (page !== undefined && totalPages !== undefined ? page < totalPages : false),
+    hasPrev: page !== undefined ? page > 1 : false,
+    nextCursor,
   };
 }
 
@@ -52,17 +77,20 @@ export function buildPaginationLinks({
   page,
   limit,
   totalPages,
+  nextCursor,
   extraQuery,
 }: {
   basePath: string;
-  page: number;
+  page?: number;
   limit: number;
-  totalPages: number;
+  totalPages?: number;
+  nextCursor?: string | null;
   extraQuery?: Record<string, string | number | boolean | undefined>;
 }): PaginationLinks {
-  const buildUrl = (targetPage: number) => {
+  const buildUrl = (targetPage?: number, targetCursor?: string | null) => {
     const params = new URLSearchParams();
-    params.set('page', String(targetPage));
+    if (targetPage) params.set('page', String(targetPage));
+    if (targetCursor) params.set('cursor', targetCursor);
     params.set('limit', String(limit));
 
     if (extraQuery) {
@@ -78,9 +106,9 @@ export function buildPaginationLinks({
   };
 
   return {
-    self: buildUrl(page),
-    next: page < totalPages ? buildUrl(page + 1) : null,
-    prev: page > 1 ? buildUrl(page - 1) : null,
+    self: buildUrl(page, null), // TODO: improve self link for cursor
+    next: nextCursor ? buildUrl(undefined, nextCursor) : (page !== undefined && totalPages !== undefined && page < totalPages ? buildUrl(page + 1) : null),
+    prev: page !== undefined && page > 1 ? buildUrl(page - 1) : null,
   };
 }
 

@@ -19,14 +19,16 @@ export interface ApiResponse<T = any> {
 
 /**
  * Pagination Meta
+ * Supports hybrid Offset (page) and Cursor (nextCursor) modes
  */
 export interface PaginationMeta {
-  page: number;
+  page?: number;
   limit: number;
-  totalItems: number;
-  totalPages: number;
+  totalItems?: number;
+  totalPages?: number;
   hasNext: boolean;
   hasPrev: boolean;
+  nextCursor?: string | null;
 }
 
 /**
@@ -63,5 +65,5 @@ export interface PaginationQuery {
   sort?: string;
   order?: 'asc' | 'desc';
   search?: string;
+  cursor?: string;
 }
-

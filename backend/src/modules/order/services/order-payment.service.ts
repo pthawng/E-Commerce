@@ -132,8 +132,12 @@ export class OrderPaymentService {
             // 3. Verify cart state hasn't changed since token generation
             const currentCartHash = this.generateCartHash(cart.items);
             if (currentCartHash !== tokenPayload.cartHash) {
-                throw new ConflictException('Cart content has changed. Please re-validate checkout.');
+                throw new ConflictException({
+                    code: 'CART_HASH_MISMATCH',
+                    message: 'Cart content has changed. Please re-validate checkout.'
+                });
             }
+
 
             // 4. Allocate inventory
             const allocations = await this.inventoryAllocator.allocate(

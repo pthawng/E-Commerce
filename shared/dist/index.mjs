@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 // src/enums/order.enum.ts
 var OrderStatus = /* @__PURE__ */ ((OrderStatus2) => {
   OrderStatus2["PENDING"] = "pending";
@@ -198,17 +200,29 @@ function normalizeUrl(value) {
   if (!trimmed) return void 0;
   return trimmed.replace(/\/$/, "");
 }
+function getEnvVar(key) {
+  if (typeof process !== "undefined" && process.env?.[key]) {
+    return process.env[key];
+  }
+  if (typeof globalThis !== "undefined") {
+    const globalObj = globalThis;
+    if (globalObj[key]) return globalObj[key];
+    if (globalObj.process?.env?.[key]) return globalObj.process.env[key];
+    try {
+      const meta = globalThis.import?.meta ?? globalThis.meta;
+      if (meta?.env?.[key]) return meta.env[key];
+      const metaEnv = import.meta?.env;
+      if (metaEnv?.[key]) return metaEnv[key];
+    } catch {
+    }
+  }
+  return void 0;
+}
 function resolveGlobalApiBaseUrl() {
   if (typeof globalThis === "undefined") return void 0;
   const globalObj = globalThis;
   return normalizeUrl(
     runtimeApiBaseUrl ?? globalObj[GLOBAL_API_BASE_URL_KEY] ?? globalObj.__APP_API_BASE_URL__ ?? globalObj.__VITE_API_URL__ ?? globalObj.__NEXT_PUBLIC_API_URL__ ?? globalObj.API_BASE_URL
-  );
-}
-function resolveProcessEnvApiUrl() {
-  if (typeof process === "undefined") return void 0;
-  return normalizeUrl(
-    process.env?.NEXT_PUBLIC_API_URL ?? process.env?.VITE_API_URL ?? process.env?.API_URL ?? process.env?.BACKEND_URL
   );
 }
 function configureApiBaseUrl(url) {
@@ -219,7 +233,7 @@ function configureApiBaseUrl(url) {
   API_BASE_URL = getApiBaseUrl();
 }
 function getApiBaseUrl() {
-  return runtimeApiBaseUrl ?? resolveGlobalApiBaseUrl() ?? resolveProcessEnvApiUrl() ?? DEFAULT_API_BASE_URL;
+  return runtimeApiBaseUrl ?? resolveGlobalApiBaseUrl() ?? normalizeUrl(getEnvVar("VITE_API_BASE_URL")) ?? normalizeUrl(getEnvVar("VITE_API_URL")) ?? normalizeUrl(getEnvVar("NEXT_PUBLIC_API_URL")) ?? normalizeUrl(getEnvVar("API_URL")) ?? normalizeUrl(getEnvVar("BACKEND_URL")) ?? DEFAULT_API_BASE_URL;
 }
 var API_BASE_URL = getApiBaseUrl();
 var API_ENDPOINTS = {
@@ -335,7 +349,35 @@ var SESSION = {
   REFRESH_TOKEN_KEY: "refresh_token",
   USER_KEY: "user"
 };
+var PaginationSchemaV1 = z.object({
+  page: z.preprocess((val) => Number(val), z.number().int().min(1).default(1)),
+  limit: z.preprocess((val) => Number(val), z.number().int().min(1).max(100).default(20)),
+  cursor: z.string().optional(),
+  sort: z.string().regex(/^[a-zA-Z0-9_]+:(asc|desc)$/).optional()
+});
+var ProductQuerySchemaV1 = PaginationSchemaV1.extend({
+  search: z.string().trim().min(1, "Search term too short").max(100, "Search term too long").optional(),
+  categoryId: z.string().uuid("Invalid category ID format").optional(),
+  isFeatured: z.preprocess((val) => val === "true" || val === true, z.boolean()).optional(),
+  isActive: z.preprocess((val) => val === "true" || val === true, z.boolean()).optional()
+});
+var CheckoutShippingSchemaV1 = z.object({
+  fullName: z.string().trim().min(2, "Name too short").max(100, "Name too long"),
+  phone: z.string().trim().regex(/^[0-9+]{8,15}$/, "Invalid phone number format"),
+  email: z.string().trim().email("Invalid email address").max(150),
+  addressLine: z.string().trim().min(5, "Address too short").max(200),
+  ward: z.string().trim().min(1, "Ward required").max(100),
+  district: z.string().trim().min(1, "District required").max(100),
+  province: z.string().trim().min(1, "Province required").max(100)
+});
+var CreateOrderSchemaV1 = z.object({
+  checkoutToken: z.string().min(1, "Checkout token required"),
+  shippingAddress: CheckoutShippingSchemaV1,
+  paymentMethod: z.enum(["VIETQR", "VNPAY", "PAYPAL"]),
+  guestEmail: z.string().email().optional(),
+  confirmPriceChange: z.boolean().default(true)
+});
 
-export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, MAX_LIMIT, MediaType, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, OrderStatus, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, PaymentStatus, PermissionAction, PermissionModule, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
+export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, CheckoutShippingSchemaV1, CreateOrderSchemaV1, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, MAX_LIMIT, MediaType, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, OrderStatus, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, PaginationSchemaV1, PaymentStatus, PermissionAction, PermissionModule, ProductQuerySchemaV1, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

@@ -6,18 +6,19 @@ import { defineConfig } from 'tsup';
  */
 export default defineConfig({
   entry: ['src/index.ts'],
-  format: ['cjs', 'esm'], // Build cả CommonJS và ESM
-  dts: true, // Generate .d.ts files
+  format: ['cjs', 'esm'], 
+  dts: true, 
   splitting: false,
   sourcemap: true,
   clean: true,
   outDir: 'dist',
   treeshake: true,
-  minify: false, // Không minify để dễ debug
+  minify: false, 
   target: 'es2023',
+  external: ['zod'], // Tránh lỗi instance mismatch khi dùng Zod trong monorepo
   outExtension({ format }) {
     return {
-      js: format === 'cjs' ? '.js' : '.mjs', // .js cho CJS, .mjs cho ESM
+      js: format === 'cjs' ? '.js' : '.mjs', 
     };
   },
 });

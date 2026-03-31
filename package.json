@@ -8,5 +8,9 @@
     "build:frontend": "npm run build:shared && cd ray-paradis-landingpage && npm install && npm run build",
     "prisma:generate": "cd backend && npx prisma generate",
     "prisma:migrate": "cd backend && npx prisma migrate deploy"
+  },
+  "prisma": {
+    "seed": "ts-node backend/src/prisma/seed.ts"
   }
 }
+

@@ -77,9 +77,10 @@ export class ProductService {
               },
             },
           },
-          orderBy: args.orderBy as Prisma.ProductOrderByWithRelationInput,
+          orderBy: args.orderBy as any,
           skip: args.skip,
           take: args.take,
+          cursor: args.cursor,
         });
       },
       count: (args) => {

@@ -99,11 +99,13 @@ export class InventoryService {
           const available = inventoryItem.quantity - inventoryItem.reservedQuantity;
 
           if (available < alloc.quantity) {
-            throw new ConflictException(
-              `Insufficient stock: available=${available}, requested=${alloc.quantity} ` +
-                `(variant=${alloc.variantId}, warehouse=${alloc.warehouseId})`,
-            );
+            throw new ConflictException({
+              code: 'STOCK_INSUFFICIENT',
+              message: `Insufficient stock: available=${available}, requested=${alloc.quantity} ` +
+                `(variant=${alloc.variantId}, warehouse=${alloc.warehouseId})`
+            });
           }
+
 
           const beforeQuantity = inventoryItem.quantity;
           

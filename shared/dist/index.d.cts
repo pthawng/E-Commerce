@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Order Status Enum
  * Trạng thái đơn hàng
@@ -107,14 +109,16 @@ interface ApiResponse<T = any> {
 }
 /**
  * Pagination Meta
+ * Supports hybrid Offset (page) and Cursor (nextCursor) modes
  */
 interface PaginationMeta {
-    page: number;
+    page?: number;
     limit: number;
-    totalItems: number;
-    totalPages: number;
+    totalItems?: number;
+    totalPages?: number;
     hasNext: boolean;
     hasPrev: boolean;
+    nextCursor?: string | null;
 }
 /**
  * Paginated Response
@@ -148,6 +152,7 @@ interface PaginationQuery {
     sort?: string;
     order?: 'asc' | 'desc';
     search?: string;
+    cursor?: string;
 }
 
 /**
@@ -554,14 +559,19 @@ type AttributeInputType = (typeof ATTRIBUTE_INPUT_TYPES)[number];
 
 /**
  * API Configuration
- * Cấu hình API dùng chung giữa Frontend và Back Office
+ * Refactored for universal compatibility across Vite, Browser, and Node environments.
  */
+declare global {
+    interface ImportMeta {
+        readonly env: Record<string, string | undefined>;
+    }
+}
 /**
  * Default API Base URL
  */
 declare const DEFAULT_API_BASE_URL = "http://localhost:4000";
 /**
- * Configure API base URL at runtime (e.g., from Vite or Next env)
+ * Configure API base URL at runtime (e.g., from Vite or Next entry point)
  */
 declare function configureApiBaseUrl(url?: string | null): void;
 /**
@@ -569,7 +579,7 @@ declare function configureApiBaseUrl(url?: string | null): void;
  */
 declare function getApiBaseUrl(): string;
 /**
- * API Base URL snapshot (kept for backwards compatibility)
+ * API Base URL snapshot (maintained for backward compatibility)
  */
 declare let API_BASE_URL: string;
 /**
@@ -713,4 +723,67 @@ declare const SESSION: {
     readonly USER_KEY: "user";
 };
 
-export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, type ApiError, type ApiResponse, type AttributeInputType, type AuthResponse, type AuthTokens, type Category, type ChangePasswordPayload, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, type ForgotPasswordPayload, type LoginPayload, MAX_LIMIT, MediaType, type Multilingual, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, type Order, type OrderItem, OrderStatus, type OrderSummary, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaginatedResponse, type PaginationMeta, type PaginationQuery, PaymentStatus, type Permission, PermissionAction, PermissionModule, type Product, type ProductMedia, type ProductSummary, type ProductVariant, type RefreshTokenPayload, type RegisterPayload, type ResetPasswordPayload, type Role, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, type User, type UserSummary, type UserWithRoles, type VerifyEmailPayload, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
+/**
+ * Pagination Schema V1
+ * Supports both Offset and Cursor based pagination
+ */
+declare const PaginationSchemaV1: z.ZodObject<{
+    page: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodDefault<z.ZodNumber>>;
+    limit: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodDefault<z.ZodNumber>>;
+    cursor: z.ZodOptional<z.ZodString>;
+    sort: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+type PaginationParamsV1 = z.infer<typeof PaginationSchemaV1>;
+
+/**
+ * Product Query Schema V1
+ * Includes search and category filtering with strict safety
+ */
+declare const ProductQuerySchemaV1: z.ZodObject<{
+    page: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodDefault<z.ZodNumber>>;
+    limit: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodDefault<z.ZodNumber>>;
+    cursor: z.ZodOptional<z.ZodString>;
+    sort: z.ZodOptional<z.ZodString>;
+    search: z.ZodOptional<z.ZodString>;
+    categoryId: z.ZodOptional<z.ZodString>;
+    isFeatured: z.ZodOptional<z.ZodPipe<z.ZodTransform<boolean, unknown>, z.ZodBoolean>>;
+    isActive: z.ZodOptional<z.ZodPipe<z.ZodTransform<boolean, unknown>, z.ZodBoolean>>;
+}, z.core.$strip>;
+type ProductQueryV1 = z.infer<typeof ProductQuerySchemaV1>;
+
+/**
+ * Checkout Shipping Schema V1
+ * Ensures strict address, email, and phone formatting
+ */
+declare const CheckoutShippingSchemaV1: z.ZodObject<{
+    fullName: z.ZodString;
+    phone: z.ZodString;
+    email: z.ZodString;
+    addressLine: z.ZodString;
+    ward: z.ZodString;
+    district: z.ZodString;
+    province: z.ZodString;
+}, z.core.$strip>;
+declare const CreateOrderSchemaV1: z.ZodObject<{
+    checkoutToken: z.ZodString;
+    shippingAddress: z.ZodObject<{
+        fullName: z.ZodString;
+        phone: z.ZodString;
+        email: z.ZodString;
+        addressLine: z.ZodString;
+        ward: z.ZodString;
+        district: z.ZodString;
+        province: z.ZodString;
+    }, z.core.$strip>;
+    paymentMethod: z.ZodEnum<{
+        VIETQR: "VIETQR";
+        VNPAY: "VNPAY";
+        PAYPAL: "PAYPAL";
+    }>;
+    guestEmail: z.ZodOptional<z.ZodString>;
+    confirmPriceChange: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strip>;
+type CheckoutShippingV1 = z.infer<typeof CheckoutShippingSchemaV1>;
+type CreateOrderV1 = z.infer<typeof CreateOrderSchemaV1>;
+
+export { API_BASE_URL, API_ENDPOINTS, APP_NAME, APP_VERSION, ATTRIBUTE_INPUT_TYPES, ActionType, type ApiError, type ApiResponse, type AttributeInputType, type AuthResponse, type AuthTokens, type Category, type ChangePasswordPayload, CheckoutShippingSchemaV1, type CheckoutShippingV1, CreateOrderSchemaV1, type CreateOrderV1, DATE_FORMATS, DEFAULT_API_BASE_URL, DEFAULT_CURRENCY, DEFAULT_LIMIT, DEFAULT_LOCALE, DEFAULT_PAGE, FILE_UPLOAD, type ForgotPasswordPayload, type LoginPayload, MAX_LIMIT, MediaType, type Multilingual, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, type Order, type OrderItem, OrderStatus, type OrderSummary, PAGINATION, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, type PaginatedResponse, type PaginationMeta, type PaginationParamsV1, type PaginationQuery, PaginationSchemaV1, PaymentStatus, type Permission, PermissionAction, PermissionModule, type Product, type ProductMedia, ProductQuerySchemaV1, type ProductQueryV1, type ProductSummary, type ProductVariant, type RefreshTokenPayload, type RegisterPayload, type ResetPasswordPayload, type Role, SESSION, SUPPORTED_CURRENCIES, SUPPORTED_LOCALES, TransactionStatus, TransactionType, type User, type UserSummary, type UserWithRoles, type VerifyEmailPayload, buildApiUrl, camelToKebab, capitalize, configureApiBaseUrl, formatCurrency, formatDate, formatDateTime, formatNumber, formatRelativeTime, getApiBaseUrl, kebabToCamel, slugify, truncate };
