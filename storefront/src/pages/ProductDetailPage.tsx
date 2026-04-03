@@ -228,7 +228,7 @@ export const ProductDetailPage = () => {
 
     return (
         <Layout forceHeaderOpaque={true}>
-            <div className="pt-24 sm:pt-28">
+            <div className="pt-20 sm:pt-28">
                 <Section padding="none">
                     <Container>
                         {/* Breadcrumb / Back */}
@@ -295,7 +295,7 @@ export const ProductDetailPage = () => {
                                                     <label className="font-body text-[10px] uppercase tracking-widest text-primary/60 block">
                                                         {getLocalized(attr.name, language)}
                                                     </label>
-                                                    <div className="flex flex-wrap gap-3">
+                                                    <div className="flex flex-wrap gap-2 sm:gap-3">
                                                         {attr.values.map((val) => {
                                                             const isSelected = selectedAttributes[attr.code] === val.id;
                                                             return (
@@ -303,7 +303,7 @@ export const ProductDetailPage = () => {
                                                                     key={val.id}
                                                                     onClick={() => setSelectedAttributes(prev => ({ ...prev, [attr.code]: val.id }))}
                                                                     className={cn(
-                                                                        "px-5 h-12 rounded-xl border text-[10px] uppercase tracking-widest transition-all duration-500",
+                                                                        "px-4 sm:px-5 h-10 sm:h-12 rounded-xl border text-[9px] sm:text-[10px] uppercase tracking-widest transition-all duration-500",
                                                                         isSelected
                                                                             ? "border-gold bg-gold/5 text-primary shadow-luxury-soft ring-1 ring-gold/20"
                                                                             : "border-border/10 text-muted-foreground hover:border-border/40 hover:bg-secondary/20"

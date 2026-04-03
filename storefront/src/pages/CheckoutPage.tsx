@@ -184,7 +184,7 @@ export const CheckoutPage: React.FC = () => {
                             <CardHeader className="border-b border-border/10 py-6">
                                 <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t('checkout.steps.shipping')}</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-8 space-y-6">
+                            <CardContent className="p-5 sm:p-8 space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <Label htmlFor="fullName" className="text-[10px] uppercase tracking-widest">{t('checkout.fields.fullName')}</Label>
@@ -263,7 +263,7 @@ export const CheckoutPage: React.FC = () => {
                             <CardHeader className="border-b border-border/10 py-6">
                                 <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t('checkout.steps.payment')}</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-8">
+                            <CardContent className="p-5 sm:p-8">
                                 <RadioGroup 
                                     value={paymentMethod} 
                                     onValueChange={(val: any) => setPaymentMethod(val)}
@@ -295,7 +295,7 @@ export const CheckoutPage: React.FC = () => {
                             <CardHeader className="border-b border-border/10 py-6">
                                 <CardTitle className="text-lg font-medium tracking-tight text-foreground uppercase">{t('checkout.summary.title')}</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-8 space-y-6">
+                            <CardContent className="p-5 sm:p-8 space-y-6">
                                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-luxury">
                                     {items.map((item) => (
                                         <div key={item.variantId} className="flex gap-4">

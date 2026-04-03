@@ -86,7 +86,7 @@ export const CartPage = () => {
 
                                 {/* Order Summary (Two column flow on large desktop) */}
                                 <div className="lg:col-span-12 xl:col-span-5 xl:col-start-8 mt-12 lg:mt-0">
-                                    <div className="sticky top-32 bg-secondary/5 border border-hairline p-8 sm:p-10 space-y-8 shadow-luxury-soft">
+                                    <div className="sticky top-32 bg-secondary/5 border border-hairline p-6 sm:p-10 space-y-8 shadow-luxury-soft">
                                         <h2 className="font-display text-2xl text-primary italic border-b border-hairline pb-6">
                                             {t('cart.summary')}
                                         </h2>

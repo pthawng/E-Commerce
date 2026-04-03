@@ -79,15 +79,15 @@ export const ProductCard = React.memo(({
       </CardHeader>
       
       <CardContent className="flex flex-col flex-grow p-6 text-center">
-        <p className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-4">
+        <p className="font-body text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-4">
           {category}
         </p>
-        <div className="min-h-[4rem] flex flex-col justify-center mb-4">
-          <CardTitle className="font-display text-xl sm:text-2xl font-normal italic tracking-wide group-hover:text-primary transition-colors duration-500 line-clamp-2">
+        <div className="min-h-[3.5rem] sm:min-h-[4rem] flex flex-col justify-center mb-4">
+          <CardTitle className="font-display text-lg sm:text-2xl font-normal italic tracking-wide group-hover:text-primary transition-colors duration-500 line-clamp-2">
             {name}
           </CardTitle>
         </div>
-        <p className="mt-auto font-body text-sm text-primary/80 font-medium tracking-wide">
+        <p className="mt-auto font-body text-xs sm:text-sm text-primary/80 font-medium tracking-wide">
           {price}
         </p>
       </CardContent>

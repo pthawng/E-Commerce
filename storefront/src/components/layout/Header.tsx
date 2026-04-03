@@ -177,7 +177,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                 className="inline-block"
               >
                 <ShimmerText
-                  className={`font-display text-2xl sm:text-3xl lg:text-4xl tracking-luxury whitespace-nowrap font-normal ${shouldUsePrimaryColor ? 'text-primary' : 'text-white'}`}
+                  className={`font-display text-xl sm:text-3xl lg:text-4xl tracking-luxury whitespace-nowrap font-normal ${shouldUsePrimaryColor ? 'text-primary' : 'text-white'}`}
                   interval={6000}
                 >
                   Ray Paradis
@@ -185,7 +185,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
               </motion.span>
             </a>
 
-            <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end">
+            <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-end">
               {user ? (
                 <UserMenu isOpaque={shouldUsePrimaryColor} />
               ) : (
@@ -213,8 +213,10 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                 )}
               </button>
               
-              <LanguageToggle isOpaque={shouldUsePrimaryColor} />
-              <ThemeToggle />
+              <div className="hidden sm:flex items-center gap-2 sm:gap-4">
+                <LanguageToggle isOpaque={shouldUsePrimaryColor} />
+                <ThemeToggle />
+              </div>
             </div>
           </div>
         </Container>
