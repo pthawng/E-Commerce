@@ -193,6 +193,19 @@
     }
   }
 
+  .animate-shimmer {
+    animation: shimmer-translate 2s infinite linear;
+  }
+
+  @keyframes shimmer-translate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
   /* Luxury image hover */
   .luxury-image-hover {
     @apply relative overflow-hidden;

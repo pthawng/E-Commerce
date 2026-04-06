@@ -4,7 +4,7 @@ import { z } from 'zod';
  * Checkout Shipping Schema V1
  * Ensures strict address, email, and phone formatting
  */
-export const CheckoutShippingSchemaV1 = z.object({
+export const CheckoutShippingSchemaV1: z.ZodType<CheckoutShippingV1> = z.object({
   fullName: z.string().trim().min(2, 'Name too short').max(100, 'Name too long'),
   phone: z.string().trim().regex(/^[0-9+]{8,15}$/, 'Invalid phone number format'),
   email: z.string().trim().email('Invalid email address').max(150),
@@ -22,5 +22,14 @@ export const CreateOrderSchemaV1 = z.object({
   confirmPriceChange: z.boolean().default(true),
 });
 
-export type CheckoutShippingV1 = z.infer<typeof CheckoutShippingSchemaV1>;
+export interface CheckoutShippingV1 {
+  fullName: string;
+  phone: string;
+  email: string;
+  addressLine: string;
+  ward: string;
+  district: string;
+  province: string;
+}
+
 export type CreateOrderV1 = z.infer<typeof CreateOrderSchemaV1>;

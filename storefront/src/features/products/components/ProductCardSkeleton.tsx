@@ -1,11 +1,17 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
-export const ProductCardSkeleton = () => {
+/**
+ * L7/L8 Standard Skeleton
+ * Uses a GPU-accelerated shimmer effect for smooth loading.
+ */
+export const ProductCardSkeleton = ({ className }: { className?: string }) => {
     return (
-        <Card className="group flex flex-col h-full overflow-hidden border-none bg-background shadow-luxury-soft">
-            <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/10">
-                <Skeleton className="w-full h-full" />
+        <Card className={cn("group flex flex-col h-full overflow-hidden border-none bg-background shadow-luxury-soft animate-pulse", className)}>
+            <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/5">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer" />
+                <Skeleton className="w-full h-full opacity-50" />
             </CardHeader>
 
             <CardContent className="flex flex-col flex-grow p-6 text-center">

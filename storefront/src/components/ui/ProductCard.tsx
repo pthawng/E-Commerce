@@ -20,6 +20,7 @@ interface ProductCardProps {
   slug: string;
   hoverImage?: string;
   isNew?: boolean;
+  index?: number; 
   className?: string;
 }
 
@@ -34,6 +35,7 @@ export const ProductCard = React.memo(({
   slug,
   hoverImage,
   isNew,
+  index = 0,
   className,
 }: ProductCardProps) => {
   const addItem = useCartStore((state) => state.addItem);
@@ -66,13 +68,20 @@ export const ProductCard = React.memo(({
         <motion.img
           src={image}
           alt={name}
-          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+          // L7 Optimization: Prioritize the first row (LCP) and lazy-load the rest
+          loading={index < 4 ? "eager" : "lazy"}
+          decoding="async"
+          // @ts-ignore - fetchpriority is a valid experimental attribute for LCP
+          fetchpriority={index < 4 ? "high" : "low"}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
         {hoverImage && (
           <motion.img
             src={hoverImage}
             alt={`${name} secondary view`}
-            className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-1000 group-hover:opacity-100"
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100"
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />

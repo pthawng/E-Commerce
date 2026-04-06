@@ -17,6 +17,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import { useWindowSize } from "@/hooks/useWindowSize";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 export const CollectionsPage = () => {
     const { language, formatPrice } = useStore();
@@ -48,22 +50,46 @@ export const CollectionsPage = () => {
         search: debouncedSearch || undefined,
     });
 
+    // L7 Optimization: Incremental Memoization
+    // We memoize product mapping at the page level to ensure O(1) cost per scroll/render
     const allProducts = useMemo(() => {
-        const flat = data?.pages.flatMap(page => page.data) || [];
-        return flat.map(p => mapProductToCardProps(p, language, formatPrice));
+        if (!data?.pages) return [];
+        
+        // This is still O(N) overall but stable during app life
+        return data.pages.flatMap((page, pageIndex) => 
+            page.data.map((p, itemInPageIndex) => ({
+                ...mapProductToCardProps(p, language, formatPrice),
+                index: pageIndex * 12 + itemInPageIndex // For LCP prioritization
+            }))
+        );
     }, [data?.pages, language, formatPrice]);
 
-    // Grid Configuration: Responsively determine columns
-    // We assume: 1 col (<640px), 2 cols (<1024px), 3 cols (<1280px), 4 cols (>=1280px)
-    // For virtualization, we virtualize ROWS.
-    const columns = 4; // Simplified logic for demo, in production use window width listener
+    const { width } = useWindowSize();
+    
+    // Breakpoints aligned with Tailwind's sm:640 and lg:1024
+    const columns = useMemo(() => {
+        if (width < 640) return 1;
+        if (width < 1024) return 2;
+        return 4;
+    }, [width]);
+
     const rowCount = Math.ceil(allProducts.length / columns);
+
+    const SCROLL_MARGIN = 400; // Estimated from header/filter heights
 
     const virtualizer = useWindowVirtualizer({
         count: rowCount,
         estimateSize: () => 600, // Estimated height of a ProductCard row
-        overscan: 2,
-        scrollMargin: 400, // Offset for the header
+        overscan: 6, // L7 Optimization: Increased overscan for buttery smooth scrolling
+        scrollMargin: SCROLL_MARGIN,
+    });
+
+    // L7 Optimization: Automated Infinite Scroll
+    const { targetRef: loadMoreRef } = useInfiniteScroll({
+        onIntersect: () => fetchNextPage(),
+        hasNextPage: !!hasNextPage,
+        isFetchingNextPage: isFetchingNextPage,
+        rootMargin: '600px', // Start loading even earlier
     });
 
     const lastPageMeta = data?.pages[data.pages.length - 1]?.meta;
@@ -172,17 +198,24 @@ export const CollectionsPage = () => {
                                 <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground/60">{t('shop.listing.emptyDesc')}</p>
                             </div>
                         ) : (
-                            <div ref={parentRef} className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+                            <div 
+                                ref={parentRef} 
+                                className="relative w-full" 
+                                style={{ height: `${virtualizer.getTotalSize() - SCROLL_MARGIN}px` }}
+                            >
                                 {virtualizer.getVirtualItems().map((virtualRow) => (
                                     <div
                                         key={virtualRow.key}
                                         className="absolute top-0 left-0 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
                                         style={{
                                             height: `${virtualRow.size}px`,
-                                            transform: `translateY(${virtualRow.start}px)`,
+                                            // Senior Tip: When using useWindowVirtualizer with scrollMargin, 
+                                            // virtualRow.start includes the margin, so we must subtract it 
+                                            // when positioning relative to the container itself.
+                                            transform: `translateY(${virtualRow.start - SCROLL_MARGIN}px)`,
                                         }}
                                     >
-                                        {allProducts.slice(virtualRow.index * columns, (virtualRow.index + 1) * columns).map((product, i) => (
+                                        {allProducts.slice(virtualRow.index * columns, (virtualRow.index + 1) * columns).map((product) => (
                                             <ProductCard key={product.id} {...product} />
                                         ))}
                                     </div>
@@ -190,20 +223,17 @@ export const CollectionsPage = () => {
                             </div>
                         )}
 
-                        {/* Pagination Trigger */}
-                        {hasNextPage && (
-                            <div className="mt-24 text-center">
-                                <Button 
-                                    variant="outline" 
-                                    size="lg" 
-                                    className="rounded-full px-16"
-                                    onClick={() => fetchNextPage()}
-                                    disabled={isFetchingNextPage}
-                                >
-                                    {isFetchingNextPage ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : t('common.actions.revealMore')}
-                                </Button>
-                            </div>
-                        )}
+                        {/* L7 Optimization: Invisible Pagination Trigger */}
+                        <div ref={loadMoreRef} className="h-20 w-full flex items-center justify-center">
+                            {isFetchingNextPage && (
+                                <div className="flex items-center gap-3">
+                                    <RefreshCw className="h-4 w-4 animate-spin text-gold" />
+                                    <span className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">
+                                        Refining Collection...
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                     </Container>
                 </Section>
             </div>
