@@ -29,10 +29,30 @@ export const CollectionsPage = () => {
   }, [t]);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [dynamicScrollMargin, setDynamicScrollMargin] = useState(400);
     const parentRef = useRef<HTMLDivElement>(null);
-    
+
     // Elite UX: Debounce search
     const debouncedSearch = useDebounce(searchTerm, 500);
+
+    // L7 Optimization: Dynamic measurement to eliminate Layout Shift (CLS) in virtualization
+    useEffect(() => {
+        const updateMargin = () => {
+            if (parentRef.current) {
+                const rect = parentRef.current.getBoundingClientRect();
+                const absoluteTop = rect.top + window.scrollY;
+                setDynamicScrollMargin(absoluteTop);
+            }
+        };
+
+        // Measure after a short delay to ensure layout has settled (fonts, images, etc.)
+        const timer = setTimeout(updateMargin, 150);
+        window.addEventListener('resize', updateMargin);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', updateMargin);
+        };
+    }, [activeCategory, debouncedSearch]); // Re-measure if content changes might shift layout
 
     const { data: categories } = useCategories();
 
@@ -79,9 +99,9 @@ export const CollectionsPage = () => {
 
     const virtualizer = useWindowVirtualizer({
         count: rowCount,
-        estimateSize: () => 600, // Estimated height of a ProductCard row
-        overscan: 6, // L7 Optimization: Increased overscan for buttery smooth scrolling
-        scrollMargin: SCROLL_MARGIN,
+        estimateSize: () => 600, 
+        overscan: 6,
+        scrollMargin: dynamicScrollMargin,
     });
 
     // L7 Optimization: Automated Infinite Scroll
@@ -120,8 +140,11 @@ export const CollectionsPage = () => {
                     </Container>
                 </Section>
 
-                {/* Filter Bar */}
-                <div className="sticky top-20 sm:top-24 z-30 bg-background/80 backdrop-blur-xl border-y border-border/10">
+                {/* Filter Bar - L7 Sync: Dynamically follows Header visibility */}
+                <div 
+                    className="sticky z-30 bg-background/80 backdrop-blur-xl border-y border-border/10 transition-all duration-500"
+                    style={{ top: 'calc(var(--header-height) + var(--header-offset, 0px))' }}
+                >
                     <Container className="flex items-center justify-between h-16 sm:h-20 gap-4">
                         <div className="flex items-center gap-8 flex-1">
                             <div className="relative w-full max-w-xs group">
@@ -198,21 +221,19 @@ export const CollectionsPage = () => {
                                 <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground/60">{t('shop.listing.emptyDesc')}</p>
                             </div>
                         ) : (
-                            <div 
-                                ref={parentRef} 
-                                className="relative w-full" 
-                                style={{ height: `${virtualizer.getTotalSize() - SCROLL_MARGIN}px` }}
-                            >
+                                <div 
+                                    ref={parentRef} 
+                                    className="relative w-full min-h-[50vh]" 
+                                    style={{ height: `${virtualizer.getTotalSize() - dynamicScrollMargin}px` }}
+                                >
                                 {virtualizer.getVirtualItems().map((virtualRow) => (
                                     <div
                                         key={virtualRow.key}
                                         className="absolute top-0 left-0 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
                                         style={{
                                             height: `${virtualRow.size}px`,
-                                            // Senior Tip: When using useWindowVirtualizer with scrollMargin, 
-                                            // virtualRow.start includes the margin, so we must subtract it 
-                                            // when positioning relative to the container itself.
-                                            transform: `translateY(${virtualRow.start - SCROLL_MARGIN}px)`,
+                                            // Staff Engineer Fix: Use dynamic margin for pixel-perfect positioning
+                                            transform: `translateY(${virtualRow.start - dynamicScrollMargin}px)`,
                                         }}
                                     >
                                         {allProducts.slice(virtualRow.index * columns, (virtualRow.index + 1) * columns).map((product) => (

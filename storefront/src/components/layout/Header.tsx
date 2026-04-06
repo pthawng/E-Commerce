@@ -23,6 +23,22 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
   const [isHidden, setIsHidden] = useState(false);
   const lastScrollY = useRef(0);
   const headerRef = useRef<HTMLElement | null>(null);
+
+  // L7 Optimization: Provide global CSS variables for layout synchronization
+  useEffect(() => {
+    const updateHeaderVars = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        document.documentElement.style.setProperty('--header-height', `${height}px`);
+        document.documentElement.style.setProperty('--header-offset', isHidden ? `-${height}px` : '0px');
+      }
+    };
+
+    updateHeaderVars();
+    window.addEventListener('resize', updateHeaderVars);
+    return () => window.removeEventListener('resize', updateHeaderVars);
+  }, [isHidden]);
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const { theme, language } = useStore();
   const user = useAuthStore((s) => s.user);
