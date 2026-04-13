@@ -21,27 +21,26 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const app = await NestFactory.create(AppModule, {
+    logger: isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose'],
+  });
 
   app.use(cookieParser());
 
   app.setGlobalPrefix('api');
-  // Enable CORS for the frontend origin and allow credentials (cookies).
-  // Do NOT use '*' when requests use credentials (withCredentials: true).
-  const configuredOrigins = process.env.CORS_ORIGIN
+
+  // CORS Configuration
+  const corsOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-    : ['http://localhost:5173', 'http://localhost:5174'];
+    : [];
 
   app.enableCors({
-    origin: [
-      ...configuredOrigins,
-      'http://localhost:8080',
-      'http://localhost:8880',
-      'https://ray-paradis.vercel.app', // Direct fallback for production landing page
-    ],
+    origin: corsOrigins,
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key',
+    allowedHeaders: 'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token',
   });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )

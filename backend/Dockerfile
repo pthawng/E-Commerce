@@ -49,12 +49,10 @@ COPY --from=shared-builder /app/shared/package*.json ../shared/
 # Re-generate Prisma Client in the final environment ensuring correctly linked binaries
 RUN DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy ./node_modules/.bin/prisma generate
 
-# Script to run migrations, seed, and start app
+# Script to run migrations and start app
 RUN echo '#!/bin/sh' > start.sh && \
     echo 'echo "Applying Database Migrations (Production Mode)..."' >> start.sh && \
     echo './node_modules/.bin/prisma migrate deploy || echo "Migration failed, continuing..."' >> start.sh && \
-    echo 'echo "Seeding database..."' >> start.sh && \
-    echo './node_modules/.bin/prisma db seed || echo "Seeding failed, continuing..."' >> start.sh && \
     echo 'echo "Starting application..."' >> start.sh && \
     echo 'node dist/main' >> start.sh && \
     chmod +x start.sh

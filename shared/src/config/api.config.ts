@@ -2,123 +2,59 @@
  * API Configuration
  * Refactored for universal compatibility across Vite, Browser, and Node environments.
  */
-
-// Extend global types for Vite environment variable support
-declare global {
-  interface ImportMeta {
-    readonly env: Record<string, string | undefined>;
-  }
-}
-
-/**
- * API base URL runtime configuration
- */
-const GLOBAL_API_BASE_URL_KEY = '__APP_API_BASE_URL__';
-let runtimeApiBaseUrl: string | undefined;
-
-/**
- * Default API Base URL
- */
-export const DEFAULT_API_BASE_URL = 'http://localhost:4000';
-
-/**
- * Normalize a URL string (trim + remove trailing slash)
- */
-function normalizeUrl(value?: string | null): string | undefined {
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-  return trimmed.replace(/\/$/, '');
-}
+import { AppConfig } from './config.contract';
 
 /**
  * Senior Environment Resolver
- * Safely resolves environment variables across different runtimes without triggering 
- * syntax errors in CommonJS or browser environments.
+ * Safely resolves environment variables across different runtimes.
  */
 function getEnvVar(key: string): string | undefined {
-  // 1. Try Node.js process.env
+  // 1. Try Node.js process.env (Backend)
   if (typeof process !== 'undefined' && process.env?.[key]) {
     return process.env[key];
   }
 
-  // 2. Try globalThis (Browser/Cloudflare/etc)
+  // 2. Try Vite/ESM import.meta.env (Frontend)
+  try {
+    // @ts-ignore
+    const metaEnv = (import.meta as any)?.env;
+    if (metaEnv?.[key]) return metaEnv[key];
+  } catch {
+    // Ignore resolution errors if not in ESM/Vite
+  }
+
+  // 3. Global fallback
   if (typeof globalThis !== 'undefined') {
-    const globalObj = globalThis as Record<string, any>;
-    
-    // Check direct global properties
-    if (globalObj[key]) return globalObj[key];
-
-    // Check common environment container names
-    if (globalObj.process?.env?.[key]) return globalObj.process.env[key];
-
-    // 3. Try Vite/ESM import.meta.env
-    // We use dynamic property access to bypass TypeScript/Compiler syntax checks
-    // intended for CommonJS modules.
-    try {
-      // Cast to any to avoid strict syntax checking of import.meta
-      const meta = (globalThis as any).import?.meta ?? (globalThis as any).meta;
-      if (meta?.env?.[key]) return meta.env[key];
-      
-      // Fallback to direct import.meta access with @ts-ignore if previous attempt failed
-      // This allows Vite/Webpack to perform literal substitution if they are the bundler.
-      // @ts-ignore - Parser might complain in CJS, but it is safe at runtime in ESM
-      const metaEnv = (import.meta as any)?.env;
-      if (metaEnv?.[key]) return metaEnv[key];
-    } catch {
-      // Ignore resolution errors
-    }
+    return (globalThis as any)[key] || (globalThis as any).process?.env?.[key];
   }
 
   return undefined;
 }
 
-function resolveGlobalApiBaseUrl(): string | undefined {
-  if (typeof globalThis === 'undefined') return undefined;
-  const globalObj = globalThis as Record<string, any>;
-  return normalizeUrl(
-    runtimeApiBaseUrl ??
-    globalObj[GLOBAL_API_BASE_URL_KEY] ??
-    globalObj.__APP_API_BASE_URL__ ??
-    globalObj.__VITE_API_URL__ ??
-    globalObj.__NEXT_PUBLIC_API_URL__ ??
-    globalObj.API_BASE_URL,
-  );
+/**
+ * Get the current Environment Configuration based on resolved env vars
+ */
+export function resolveAppConfig(): AppConfig {
+  const nodeEnv = (getEnvVar('NODE_ENV') || getEnvVar('VITE_USER_NODE_ENV') || 'development') as any;
+  
+  return {
+    nodeEnv,
+    apiBaseUrl: 
+      getEnvVar('VITE_API_BASE_URL') || 
+      getEnvVar('API_BASE_URL') || 
+      getEnvVar('BACKEND_URL') || 
+      'http://localhost:4000',
+    client: {
+      url: getEnvVar('VITE_CLIENT_URL') || getEnvVar('FRONTEND_URL') || 'http://localhost:5173',
+    }
+  };
 }
 
-/**
- * Configure API base URL at runtime (e.g., from Vite or Next entry point)
- */
-export function configureApiBaseUrl(url?: string | null) {
-  runtimeApiBaseUrl = normalizeUrl(url);
+// Global snapshot for easy access
+const config = resolveAppConfig();
 
-  if (typeof globalThis !== 'undefined') {
-    (globalThis as Record<string, any>)[GLOBAL_API_BASE_URL_KEY] = runtimeApiBaseUrl;
-  }
-
-  API_BASE_URL = getApiBaseUrl();
-}
-
-/**
- * Get API Base URL from environment/runtime config
- */
-export function getApiBaseUrl(): string {
-  return (
-    runtimeApiBaseUrl ??
-    resolveGlobalApiBaseUrl() ??
-    normalizeUrl(getEnvVar('VITE_API_BASE_URL')) ??
-    normalizeUrl(getEnvVar('VITE_API_URL')) ??
-    normalizeUrl(getEnvVar('NEXT_PUBLIC_API_URL')) ??
-    normalizeUrl(getEnvVar('API_URL')) ??
-    normalizeUrl(getEnvVar('BACKEND_URL')) ??
-    DEFAULT_API_BASE_URL
-  );
-}
-
-/**
- * API Base URL snapshot (maintained for backward compatibility)
- */
-export let API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = config.apiBaseUrl;
+export const NODE_ENV = config.nodeEnv;
 
 /**
  * API Endpoints
@@ -215,7 +151,7 @@ export const API_ENDPOINTS = {
  * @param path - API path (có thể là từ API_ENDPOINTS hoặc custom path)
  */
 export function buildApiUrl(path: string): string {
-  const baseUrl = getApiBaseUrl().replace(/\/$/, ''); // Remove trailing slash
+  const baseUrl = API_BASE_URL.replace(/\/$/, ''); // Remove trailing slash
   const apiPath = path.startsWith('/') ? path : `/${path}`;
   return `${baseUrl}${apiPath}`;
 }

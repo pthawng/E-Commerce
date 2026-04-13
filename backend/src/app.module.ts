@@ -32,15 +32,23 @@ import { SessionBindingGuard } from './common/guards/session-binding.guard';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
         PORT: Joi.number().default(4000),
-        DATABASE_URL: Joi.string().required(),
+        DATABASE_URL: Joi.string().uri().required(),
         JWT_ACCESS_SECRET: Joi.string().required(),
         JWT_REFRESH_SECRET: Joi.string().required(),
         JWT_ACCESS_EXPIRES: Joi.string().default('15m'),
         JWT_REFRESH_EXPIRES: Joi.string().default('7d'),
-        REDIS_HOST: Joi.string().allow('', null).default('localhost'),
-        REDIS_PORT: Joi.number().allow('', null).default(6379),
+        REDIS_HOST: Joi.string().when('NODE_ENV', {
+          is: 'production',
+          then: Joi.required(),
+          otherwise: Joi.string().default('localhost'),
+        }),
+        REDIS_PORT: Joi.number().default(6379),
         REDIS_PASSWORD: Joi.string().allow('', null).default(''),
         REDIS_URL: Joi.string().optional().allow('', null),
         REDIS_TTL: Joi.number().default(60000),
@@ -50,11 +58,7 @@ import { SessionBindingGuard } from './common/guards/session-binding.guard';
           then: Joi.required(),
           otherwise: Joi.string().optional(),
         }),
-        MAIL_FROM: Joi.string().when('MAIL_PROVIDER', {
-          is: 'sendgrid',
-          then: Joi.required(),
-          otherwise: Joi.string().optional(),
-        }),
+        MAIL_FROM: Joi.string().required(),
         COMPANY_NAME: Joi.string().required(),
         GMAIL_CLIENT_ID: Joi.string().when('MAIL_PROVIDER', {
           is: 'gmail',
@@ -76,25 +80,12 @@ import { SessionBindingGuard } from './common/guards/session-binding.guard';
           then: Joi.required(),
           otherwise: Joi.string().optional(),
         }),
-        GMAIL_REDIRECT_URI: Joi.string().optional(),
         SUPABASE_URL: Joi.string().required(),
         SUPABASE_ANON_KEY: Joi.string().required(),
         SUPABASE_SERVICE_ROLE_KEY: Joi.string().required(),
         SUPABASE_BUCKET: Joi.string().required(),
-        // Payment configuration
-        VNPAY_TMN_CODE: Joi.string().optional(),
-        VNPAY_HASH_SECRET: Joi.string().optional(),
-        VNPAY_URL: Joi.string().optional(),
-        VNPAY_RETURN_URL: Joi.string().optional(),
-        VNPAY_API_URL: Joi.string().optional(),
-        PAYPAL_CLIENT_ID: Joi.string().optional(),
-        PAYPAL_CLIENT_SECRET: Joi.string().optional(),
-        PAYPAL_MODE: Joi.string().valid('sandbox', 'production').default('sandbox'),
-        PAYPAL_WEBHOOK_ID: Joi.string().optional(),
-        FRONTEND_URL: Joi.string().default('http://localhost:5173'),
-        PAYMENT_TIMEOUT_MINUTES: Joi.number().default(15),
-        THROTTLE_TTL: Joi.number().default(60000),
-        THROTTLE_LIMIT: Joi.number().default(10),
+        CORS_ORIGIN: Joi.string().required(),
+        FRONTEND_URL: Joi.string().required(),
       }),
     }),
     ScheduleModule.forRoot(), // NEW: Enable cron jobs

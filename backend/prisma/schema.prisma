@@ -722,3 +722,13 @@ enum UserType {
   STAFF
   SUPER_ADMIN
 }
+
+model DataSeedHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  version   String   @unique
+  name      String
+  appliedAt DateTime @default(now())
+  checksum  String?
+
+  @@map("data_seed_history")
+}
