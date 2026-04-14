@@ -2,7 +2,7 @@ export const translations = {
   en: {
     common: {
       nav: {
-        collections: 'Collections',
+        collections: 'Products',
         heritage: 'Heritage',
         craftsmanship: 'Craftsmanship',
         boutiques: 'Boutiques',
@@ -14,7 +14,7 @@ export const translations = {
         tagline: 'Crafting Dreams Since 1987',
         copyright: '© 2025 Ray Paradis. All rights reserved.',
         sections: {
-          collections: 'Collections',
+          collections: 'Products',
           about: 'About',
           contact: 'Contact',
           legal: 'Legal',
@@ -94,7 +94,7 @@ export const translations = {
         bridge: 'Crafted to reveal a single idea: timeless presence',
       },
       featured: {
-        title: 'The Collection',
+        title: 'Products',
         subtitle: 'Exquisite Creations',
         more: 'More Creations',
         atelier: 'Digital Atelier',
@@ -275,7 +275,7 @@ export const translations = {
   vi: {
     common: {
       nav: {
-        collections: 'Bộ Sưu Tập',
+        collections: 'SẢN PHẨM',
         heritage: 'Di Sản',
         craftsmanship: 'Nghệ Thuật',
         boutiques: 'Cửa Hàng',
@@ -287,7 +287,7 @@ export const translations = {
         tagline: 'Tạo Nên Giấc Mơ Từ 1987',
         copyright: '© 2025 Ray Paradis. Bảo lưu mọi quyền.',
         sections: {
-          collections: 'Bộ Sưu Tập',
+          collections: 'SẢN PHẨM',
           about: 'Về Chúng Tôi',
           contact: 'Liên Hệ',
           legal: 'Pháp Lý',
@@ -367,7 +367,7 @@ export const translations = {
         bridge: 'Được tạo ra để tôn vinh một ý niệm: sự hiện diện vĩnh cửu',
       },
       featured: {
-        title: 'Bộ Sưu Tập',
+        title: 'SẢN PHẨM',
         subtitle: 'Tác Phẩm Tinh Xảo',
         more: 'Khám Phá Thêm',
         atelier: 'Xưởng Chế Tác Kỹ Thuật Số',

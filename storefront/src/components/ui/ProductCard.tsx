@@ -59,7 +59,7 @@ export const ProductCard = React.memo(({
 
   return (
     <Card className={cn("group flex flex-col h-full overflow-hidden border-none transition-all duration-700 bg-background shadow-luxury-soft hover:shadow-luxury isolate", className)}>
-      <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/10">
+      <CardHeader className="p-0 relative aspect-square overflow-hidden bg-secondary/10">
         {isNew && (
           <Badge className="absolute top-4 left-4 z-20 bg-gold text-primary hover:bg-gold/90 border-none rounded-full px-3 py-1 text-[10px] uppercase tracking-widest pointer-events-none">
             {t('common.badge.new')}
@@ -87,32 +87,32 @@ export const ProductCard = React.memo(({
         <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
       </CardHeader>
       
-      <CardContent className="flex flex-col flex-grow p-6 text-center">
-        <p className="font-body text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-4">
+      <CardContent className="flex flex-col flex-grow p-2 lg:p-3 text-center">
+        <p className="font-body text-[9px] lg:text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1 lg:mb-2">
           {category}
         </p>
-        <div className="min-h-[3.5rem] sm:min-h-[4rem] flex flex-col justify-center mb-4">
-          <CardTitle className="font-display text-lg sm:text-2xl font-normal italic tracking-wide group-hover:text-primary transition-colors duration-500 line-clamp-2">
+        <div className="flex-grow flex flex-col justify-center mb-1 lg:mb-2 min-h-[2rem] lg:min-h-[2.5rem]">
+          <CardTitle className="font-display text-sm md:text-md lg:text-lg font-normal italic tracking-wide group-hover:text-primary transition-colors duration-500 line-clamp-2">
             {name}
           </CardTitle>
         </div>
-        <p className="mt-auto font-body text-xs sm:text-sm text-primary/80 font-medium tracking-wide">
+        <p className="font-body text-xs lg:text-sm text-primary/80 font-medium tracking-wide">
           {price}
         </p>
       </CardContent>
       
-      <CardFooter className="p-4 pt-0 justify-center h-14">
-        <div className="flex items-center gap-6 opacity-0 group-hover:opacity-100 transition-all duration-700 translate-y-2 group-hover:translate-y-0">
+      <CardFooter className="p-2 pt-0 justify-center h-auto min-h-[2.5rem] lg:min-h-0 lg:h-10">
+        <div className="flex items-center justify-center gap-x-2 gap-y-2 lg:gap-x-6 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all duration-700 translate-y-0 lg:translate-y-2 group-hover:translate-y-0 flex-wrap">
           <Link 
             to={`/product/${slug}`}
-            className="font-body text-[10px] uppercase tracking-ultra text-primary/60 border-b border-primary/20 hover:text-gold hover:border-gold transition-all duration-500 pb-1"
+            className="font-body text-[9px] lg:text-[10px] uppercase tracking-ultra text-primary/60 border-b border-primary/20 hover:text-gold hover:border-gold transition-all duration-500 pb-1 flex-shrink-0"
           >
             {t('common.actions.quickView')}
           </Link>
-          <div className="w-px h-3 bg-primary/10" />
+          <div className="hidden sm:block w-px h-3 bg-primary/10" />
           <button 
             onClick={handleAddToCart}
-            className="font-body text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center gap-2"
+            className="font-body text-[9px] lg:text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center justify-center gap-2 flex-shrink-0"
           >
             {t('common.actions.addToCollection')}
           </button>

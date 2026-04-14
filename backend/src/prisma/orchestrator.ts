@@ -11,8 +11,17 @@ import { SeedHistoryTracker } from './seeds/utils/history';
 import { SYSTEM_REGISTRY } from './seeds/seed-registry';
 import { demoSeeds } from './seeds/demo/index';
 
+import * as fs from 'fs';
+
 const logger = new Logger('MasterSeed');
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+
+// Load environment variables (look for .env or .env.development)
+const envRoot = path.join(__dirname, '../../');
+const envPath = fs.existsSync(path.join(envRoot, '.env'))
+  ? path.join(envRoot, '.env')
+  : path.join(envRoot, '.env.development');
+
+dotenv.config({ path: envPath });
 
 const connStr = process.env.DATABASE_URL || '';
 const pool = new Pool({ connectionString: connStr });

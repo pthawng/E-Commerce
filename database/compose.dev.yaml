@@ -1,3 +1,4 @@
+name: Ray-Paradis
 services:
   ecommerce_db:
     image: postgres:16-alpine

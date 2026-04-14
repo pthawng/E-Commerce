@@ -7,12 +7,21 @@
 /* eslint-disable no-console */
 
 
+const path = require('path');
+const fs = require('fs');
+
+// Try to find .env or .env.development in the backend root
+const envPath = fs.existsSync(path.resolve(__dirname, '../.env'))
+  ? path.resolve(__dirname, '../.env')
+  : path.resolve(__dirname, '../.env.development');
+
+require('dotenv').config({ path: envPath });
 
 const { google } = require('googleapis');
 const readline = require('readline');
 
-const CLIENT_ID = '93719572272-aamp7pl2d12r2qp5m4o5lonba7ms3pti.apps.googleusercontent.com'; 
-const CLIENT_SECRET = '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';
+const CLIENT_ID = process.env.GMAIL_CLIENT_ID;
+const CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GMAIL_REDIRECT_URI || 'http://localhost';
 
 if (!CLIENT_ID || !CLIENT_SECRET) {

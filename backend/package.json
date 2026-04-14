@@ -19,9 +19,14 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "start:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
-    "prisma:migrate:dev": "cross-env NODE_ENV=development prisma migrate dev",
-    "prisma:migrate:prod": "cross-env NODE_ENV=production prisma migrate deploy",
-    "seed": "npx ts-node src/prisma/orchestrator.ts"
+    "prisma:migrate:dev": "dotenv -e .env.development -- npx prisma migrate dev",
+    "prisma:migrate:prod": "dotenv -e .env.production -- npx prisma migrate deploy",
+    "seed": "npx ts-node src/prisma/orchestrator.ts",
+    "db:reset": "npx ts-node src/prisma/reset-db.ts",
+    "get:gmail-token": "node scripts/get-gmail-refresh-token.js",
+    "prisma:migrate:prod:local": "dotenv -e .env.production -- npx prisma migrate deploy",
+    "prisma:studio:prod": "dotenv -e .env.production -- npx prisma studio",
+    "db:reset:prod": "dotenv -e .env.production -- npm run db:reset -- --force-production-reset"
   },
   "dependencies": {
     "@nestjs/bull": "^11.0.4",
@@ -78,6 +83,7 @@
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",

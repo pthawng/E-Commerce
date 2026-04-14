@@ -16,43 +16,20 @@ import { ProductCardSkeleton } from "@/features/products/components/ProductCardS
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useWindowVirtualizer } from "@tanstack/react-virtual";
-import { useWindowSize } from "@/hooks/useWindowSize";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 export const CollectionsPage = () => {
     const { language, formatPrice } = useStore();
     const { t } = useTranslation();
 
-  useEffect(() => {
-    document.title = t('common.meta.collections');
-  }, [t]);
+    useEffect(() => {
+        document.title = t('common.meta.collections');
+    }, [t]);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
-    const [dynamicScrollMargin, setDynamicScrollMargin] = useState(400);
-    const parentRef = useRef<HTMLDivElement>(null);
 
     // Elite UX: Debounce search
     const debouncedSearch = useDebounce(searchTerm, 500);
-
-    // L7 Optimization: Dynamic measurement to eliminate Layout Shift (CLS) in virtualization
-    useEffect(() => {
-        const updateMargin = () => {
-            if (parentRef.current) {
-                const rect = parentRef.current.getBoundingClientRect();
-                const absoluteTop = rect.top + window.scrollY;
-                setDynamicScrollMargin(absoluteTop);
-            }
-        };
-
-        // Measure after a short delay to ensure layout has settled (fonts, images, etc.)
-        const timer = setTimeout(updateMargin, 150);
-        window.addEventListener('resize', updateMargin);
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('resize', updateMargin);
-        };
-    }, [activeCategory, debouncedSearch]); // Re-measure if content changes might shift layout
 
     const { data: categories } = useCategories();
 
@@ -70,39 +47,19 @@ export const CollectionsPage = () => {
         search: debouncedSearch || undefined,
     });
 
-    // L7 Optimization: Incremental Memoization
+    // Optimization: Incremental Memoization
     // We memoize product mapping at the page level to ensure O(1) cost per scroll/render
     const allProducts = useMemo(() => {
         if (!data?.pages) return [];
-        
+
         // This is still O(N) overall but stable during app life
-        return data.pages.flatMap((page, pageIndex) => 
+        return data.pages.flatMap((page, pageIndex) =>
             page.data.map((p, itemInPageIndex) => ({
                 ...mapProductToCardProps(p, language, formatPrice),
                 index: pageIndex * 12 + itemInPageIndex // For LCP prioritization
             }))
         );
     }, [data?.pages, language, formatPrice]);
-
-    const { width } = useWindowSize();
-    
-    // Breakpoints aligned with Tailwind's sm:640 and lg:1024
-    const columns = useMemo(() => {
-        if (width < 640) return 1;
-        if (width < 1024) return 2;
-        return 4;
-    }, [width]);
-
-    const rowCount = Math.ceil(allProducts.length / columns);
-
-    const SCROLL_MARGIN = 400; // Estimated from header/filter heights
-
-    const virtualizer = useWindowVirtualizer({
-        count: rowCount,
-        estimateSize: () => 600, 
-        overscan: 6,
-        scrollMargin: dynamicScrollMargin,
-    });
 
     // L7 Optimization: Automated Infinite Scroll
     const { targetRef: loadMoreRef } = useInfiniteScroll({
@@ -141,7 +98,7 @@ export const CollectionsPage = () => {
                 </Section>
 
                 {/* Filter Bar - L7 Sync: Dynamically follows Header visibility */}
-                <div 
+                <div
                     className="sticky z-30 bg-background/80 backdrop-blur-xl border-y border-border/10 transition-all duration-500"
                     style={{ top: 'calc(var(--header-height) + var(--header-offset, 0px))' }}
                 >
@@ -149,8 +106,8 @@ export const CollectionsPage = () => {
                         <div className="flex items-center gap-8 flex-1">
                             <div className="relative w-full max-w-xs group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-gold transition-colors" />
-                                <Input 
-                                    placeholder={t('shop.listing.search')} 
+                                <Input
+                                    placeholder={t('shop.listing.search')}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="pl-10 h-10 rounded-full border-border/10 bg-secondary/10 focus-visible:ring-gold/20 font-body text-xs"
@@ -196,7 +153,7 @@ export const CollectionsPage = () => {
                 </div>
 
                 {/* Grid Section */}
-                <Section padding="lg">
+                <Section className="pb-12 md:pb-16 pt-8">
                     <Container>
                         {isError ? (
                             <div className="py-20 flex justify-center text-center">
@@ -211,7 +168,7 @@ export const CollectionsPage = () => {
                                 </Alert>
                             </div>
                         ) : isLoading ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
                                 {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
                             </div>
                         ) : allProducts.length === 0 ? (
@@ -221,31 +178,15 @@ export const CollectionsPage = () => {
                                 <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground/60">{t('shop.listing.emptyDesc')}</p>
                             </div>
                         ) : (
-                                <div 
-                                    ref={parentRef} 
-                                    className="relative w-full min-h-[50vh]" 
-                                    style={{ height: `${virtualizer.getTotalSize() - dynamicScrollMargin}px` }}
-                                >
-                                {virtualizer.getVirtualItems().map((virtualRow) => (
-                                    <div
-                                        key={virtualRow.key}
-                                        className="absolute top-0 left-0 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
-                                        style={{
-                                            height: `${virtualRow.size}px`,
-                                            // Staff Engineer Fix: Use dynamic margin for pixel-perfect positioning
-                                            transform: `translateY(${virtualRow.start - dynamicScrollMargin}px)`,
-                                        }}
-                                    >
-                                        {allProducts.slice(virtualRow.index * columns, (virtualRow.index + 1) * columns).map((product) => (
-                                            <ProductCard key={product.id} {...product} />
-                                        ))}
-                                    </div>
+                            <div className="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+                                {allProducts.map((product) => (
+                                    <ProductCard key={product.id} {...product} />
                                 ))}
                             </div>
                         )}
 
                         {/* L7 Optimization: Invisible Pagination Trigger */}
-                        <div ref={loadMoreRef} className="h-20 w-full flex items-center justify-center">
+                        <div ref={loadMoreRef} className="h-8 w-full flex items-center justify-center mt-4">
                             {isFetchingNextPage && (
                                 <div className="flex items-center gap-3">
                                     <RefreshCw className="h-4 w-4 animate-spin text-gold" />
