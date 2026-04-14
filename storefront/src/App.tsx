@@ -15,8 +15,11 @@ import { PaymentResultPage } from "@/pages/PaymentResultPage";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import AccountPage from "./pages/AccountPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
+import { TermsPage } from "./pages/TermsPage";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ZodLocalizer } from "./components/i18n/ZodLocalizer";
+import { ScrollToAnchor } from "@/components/utils/ScrollToAnchor";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +30,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToAnchor />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/collections" element={<CollectionsPage />} />
@@ -48,6 +52,9 @@ const App = () => (
             <Route path="orders/:id" element={<OrderDetail />} />
             <Route path="saved" element={<div className="font-display italic text-2xl py-20 text-center text-primary/40">Saved Items Coming Soon</div>} />
           </Route>
+          
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

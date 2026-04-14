@@ -11,6 +11,9 @@ import { useStore } from '@/store/useStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { mapProductToCardProps } from '@/features/products/utils/productMapper';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { analytics } from '@/lib/analytics';
 
 export const CuratedFavoritesSection = () => {
   const ref = useRef(null);
@@ -84,23 +87,23 @@ export const CuratedFavoritesSection = () => {
           </h2>
         </motion.div>
 
-        {/* Horizontal Scroll Container */}
-        <div className="relative -mx-6 sm:-mx-8 lg:-mx-16">
+        {/* Horizontal Scroll Container - Constrained for "Boutique" feel */}
+        <div className="max-w-6xl mx-auto relative group/carousel">
           <div
             ref={scrollRef}
-            className="flex gap-8 lg:gap-12 overflow-x-auto snap-x snap-mandatory px-6 sm:px-8 lg:px-16 pb-12 scrollbar-hide"
+            className="flex gap-8 lg:gap-12 overflow-x-auto snap-x snap-mandatory pb-12 scrollbar-hide"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-[85%] sm:w-1/2 lg:w-1/3 snap-center">
-                   <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-8 shadow-luxury">
+                <div key={i} className="flex-shrink-0 w-[300px] sm:w-[320px] lg:w-[350px] snap-center">
+                   <div className="relative aspect-square rounded-xl overflow-hidden bg-muted mb-5 shadow-luxury border border-primary/5">
                     <Skeleton className="w-full h-full" />
                   </div>
-                  <div className="text-center space-y-2">
-                    <Skeleton className="mx-auto h-3 w-20" />
-                    <Skeleton className="mx-auto h-8 w-40" />
-                    <Skeleton className="mx-auto h-4 w-15" />
+                  <div className="text-center space-y-1">
+                    <Skeleton className="mx-auto h-2.5 w-16" />
+                    <Skeleton className="mx-auto h-7 w-40" />
+                    <Skeleton className="mx-auto h-3.5 w-12" />
                   </div>
                 </div>
               ))
@@ -115,7 +118,8 @@ export const CuratedFavoritesSection = () => {
                 <Link 
                   key={product.id}
                   to={`/product/${product.slug}`}
-                  className="flex-shrink-0 w-[85%] sm:w-1/2 lg:w-1/3 snap-center group cursor-pointer block"
+                  onClick={() => analytics.track('nav_click', { section: 'Featured Product', name: product.name })}
+                  className="flex-shrink-0 w-[300px] sm:w-[320px] lg:w-[350px] snap-center group cursor-pointer block"
                 >
                   <motion.div
                     initial="hidden"
@@ -123,10 +127,10 @@ export const CuratedFavoritesSection = () => {
                     variants={sectionVariants}
                     transition={{ duration: durations.section, ease: easing, delay: index * tokenStagger.desktop }}
                   >
-                    {/* Image Container with Glow Effect */}
-                    <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-8 shadow-luxury transition-all duration-700 hover:shadow-2xl">
+                    {/* Image Container - Full Bleed Square Symmetry */}
+                    <div className="relative aspect-square rounded-xl overflow-hidden bg-muted mb-5 shadow-luxury transition-all duration-700 hover:shadow-xl group-hover:-translate-y-1 border border-primary/5">
                       <div className="absolute -inset-4 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none z-0">
-                        <div className="absolute inset-0 bg-gradient-radial from-gold/20 via-gold/5 to-transparent blur-3xl" />
+                        <div className="absolute inset-0 bg-gradient-radial from-gold/10 via-gold/5 to-transparent blur-3xl" />
                       </div>
                       
                       <motion.img
@@ -136,18 +140,18 @@ export const CuratedFavoritesSection = () => {
                       />
                       
                       <div className="holo-shimmer" />
-                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-background/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     </div>
   
-                    {/* Product Info */}
+                    {/* Product Info - Tightened Typography */}
                     <div className="text-center">
-                      <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground mb-3">
+                      <p className="font-body text-[9px] uppercase tracking-ultra text-muted-foreground/60 mb-2">
                         {product.category}
                       </p>
-                      <h3 className="font-display text-2xl text-primary mb-2 font-normal italic tracking-wide">
+                      <h3 className="font-display text-xl sm:text-2xl text-primary mb-1.5 font-normal italic tracking-wide">
                         {product.name}
                       </h3>
-                      <p className="font-body text-sm text-primary/70 font-medium">
+                      <p className="font-body text-sm text-primary/60 font-medium">
                         {product.price}
                       </p>
                     </div>
@@ -157,28 +161,37 @@ export const CuratedFavoritesSection = () => {
             )}
           </div>
 
-          <button
-            aria-label="Previous"
-            onClick={() => {
-              const el = scrollRef.current;
-              if (!el) return;
-              el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
-            }}
-            className="hidden md:flex items-center justify-center absolute left-4 top-[40%] -translate-y-1/2 w-12 h-12 bg-background/80 backdrop-blur-md border border-hairline hover:bg-background rounded-full z-30 transition-all shadow-sm"
-          >
-            ‹
-          </button>
-          <button
-            aria-label="Next"
-            onClick={() => {
-              const el = scrollRef.current;
-              if (!el) return;
-              el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
-            }}
-            className="hidden md:flex items-center justify-center absolute right-4 top-[40%] -translate-y-1/2 w-12 h-12 bg-background/80 backdrop-blur-md border border-hairline hover:bg-background rounded-full z-30 transition-all shadow-sm"
-          >
-            ›
-          </button>
+          {/* Navigation Arrows - Precisely Aligned to Image Center */}
+          <div className="hidden lg:block">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Previous"
+              onClick={() => {
+                const el = scrollRef.current;
+                if (!el) return;
+                el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
+                analytics.track('nav_click', { section: 'Featured Carousel', action: 'prev' });
+              }}
+              className="absolute -left-12 top-[160px] sm:top-[175px] -translate-y-1/2 rounded-full bg-background/80 backdrop-blur-md opacity-0 group-hover/carousel:opacity-100 transition-all duration-500 shadow-sm border-hairline hover:bg-background z-30"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Next"
+              onClick={() => {
+                const el = scrollRef.current;
+                if (!el) return;
+                el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
+                analytics.track('nav_click', { section: 'Featured Carousel', action: 'next' });
+              }}
+              className="absolute -right-12 top-[160px] sm:top-[175px] -translate-y-1/2 rounded-full bg-background/80 backdrop-blur-md opacity-0 group-hover/carousel:opacity-100 transition-all duration-500 shadow-sm border-hairline hover:bg-background z-30"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
 
           <div className="flex justify-center gap-3 mt-4">
             {Array.from({ length: pages }).map((_, i) => (
@@ -192,6 +205,21 @@ export const CuratedFavoritesSection = () => {
                 className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${i === currentPage ? 'bg-primary w-6' : 'bg-primary/20'}`}
               />
             ))}
+          </div>
+
+          {/* View All - Synced with Brand Design System */}
+          <div className="mt-20 text-center">
+            <Button 
+              asChild 
+              variant="luxury" 
+              size="lg"
+              className="min-w-[200px]"
+              onClick={() => analytics.track('nav_click', { section: 'Featured Section', action: 'view_all' })}
+            >
+              <Link to="/collections">
+                {t('home.featured.more')}
+              </Link>
+            </Button>
           </div>
         </div>
       </Container>

@@ -10,6 +10,8 @@ import { AuthSheet } from '@/components/auth';
 import UserMenu from '@/features/auth/components/UserMenu';
 import { ShimmerText } from '@/components/effects/ShimmerText';
 import { useCartStore } from '@/features/cart/store/useCartStore';
+import { Link } from 'react-router-dom';
+import { analytics } from '@/lib/analytics';
 import {
   Sheet,
   SheetContent,
@@ -144,16 +146,20 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
 
                     <nav className="flex flex-col gap-10">
                       {navItems.map((item, index) => (
-                        <motion.a
+                        <motion.div
                           key={item.label}
-                          href={item.href}
-                          className="font-display text-4xl sm:text-5xl text-foreground hover:text-primary transition-all duration-500 hover:translate-x-2"
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.1 + 0.08 * index, duration: 0.6 }}
                         >
-                          {item.label}
-                        </motion.a>
+                          <Link
+                            to={item.href}
+                            onClick={() => analytics.track('nav_click', { section: item.label, source: 'mobile_menu' })}
+                            className="font-display text-4xl sm:text-5xl text-foreground hover:text-primary transition-all duration-500 hover:translate-x-2 block"
+                          >
+                            {item.label}
+                          </Link>
+                        </motion.div>
                       ))}
                     </nav>
 
@@ -172,20 +178,22 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
 
               <nav className="hidden lg:flex items-center gap-8">
                 {navItems.slice(0, 2).map((item) => (
-                  <a
+                  <Link
                     key={item.label}
-                    href={item.href}
+                    to={item.href}
+                    onClick={() => analytics.track('nav_click', { section: item.label, source: 'desktop_nav' })}
                     className={`font-body text-xs uppercase tracking-[0.2em] ${shouldUsePrimaryColor ? 'text-primary' : 'text-white dark:text-foreground/80'} hover:text-gold transition-colors duration-500`}
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 ))}
               </nav>
             </div>
 
-            <a
-              href="/"
+            <Link
+              to="/"
               className="absolute left-1/2 -translate-x-1/2"
+              onClick={() => analytics.track('nav_click', { section: 'Logo', source: 'header_center' })}
             >
               <motion.span
                 whileHover={{ scale: 1.02 }}
@@ -199,7 +207,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                   Ray Paradis
                 </ShimmerText>
               </motion.span>
-            </a>
+            </Link>
 
             <div className="flex items-center gap-1 sm:gap-4 flex-1 justify-end">
               {user ? (

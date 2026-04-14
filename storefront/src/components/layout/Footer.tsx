@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Section } from '@/components/layout/Section';
 import { Container } from '@/components/layout/Container';
+import { Link } from 'react-router-dom';
+import { analytics } from '@/lib/analytics';
 
 export const Footer = () => {
   const { t } = useTranslation();
@@ -14,8 +16,8 @@ export const Footer = () => {
       { label: t('common.footer.links.earrings'), href: '#' },
     ],
     about: [
-      { label: t('common.footer.links.story'), href: '#heritage' },
-      { label: t('common.footer.links.craftsmanship'), href: '#' },
+      { label: t('common.footer.links.story'), href: '/#heritage' },
+      { label: t('common.footer.links.craftsmanship'), href: '/#atelier' },
       { label: t('common.footer.links.boutiques'), href: '#' },
       { label: t('common.footer.links.careers'), href: '#' },
     ],
@@ -25,8 +27,8 @@ export const Footer = () => {
       { label: t('common.footer.links.sizeGuide'), href: '#' },
     ],
     legal: [
-      { label: t('common.footer.links.privacy'), href: '#' },
-      { label: t('common.footer.links.terms'), href: '#' },
+      { label: t('common.footer.links.privacy'), href: '/privacy' },
+      { label: t('common.footer.links.terms'), href: '/terms' },
     ],
   };
 
@@ -58,12 +60,12 @@ export const Footer = () => {
             <ul className="space-y-2.5">
               {footerLinks.collections.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <Link
+                    to={link.href}
                     className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -76,12 +78,12 @@ export const Footer = () => {
             <ul className="space-y-2.5">
               {footerLinks.about.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <Link
+                    to={link.href}
                     className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -94,12 +96,12 @@ export const Footer = () => {
             <ul className="space-y-2.5">
               {footerLinks.contact.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <Link
+                    to={link.href}
                     className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -112,12 +114,13 @@ export const Footer = () => {
             <ul className="space-y-2.5">
               {footerLinks.legal.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <Link
+                    to={link.href}
+                    onClick={() => analytics.track('nav_click', { section: link.label, source: 'footer' })}
                     className="font-body text-sm text-muted-foreground hover:text-primary transition-all duration-300"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

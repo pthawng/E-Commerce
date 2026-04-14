@@ -3,7 +3,7 @@ export const translations = {
     common: {
       nav: {
         collections: 'Products',
-        heritage: 'Heritage',
+        heritage: 'Our Story',
         craftsmanship: 'Craftsmanship',
         boutiques: 'Boutiques',
         login: 'Sign In',
@@ -21,6 +21,7 @@ export const translations = {
           customerCare: 'Customer Care',
         },
         links: {
+          customerCare: 'Customer Care',
           rings: 'Rings',
           necklaces: 'Necklaces',
           bracelets: 'Bracelets',
@@ -101,7 +102,7 @@ export const translations = {
       },
       heritage: {
         subtitle: 'Our Story',
-        title: 'The Art of Ray Paradis',
+        title: 'The Ray Paradis Story',
         paragraphs: {
           p1: 'Founded on the principles of exceptional craftsmanship and timeless design, Ray Paradis has been creating extraordinary jewelry since its inception.',
           p2: 'Our master artisans pour their hearts into every creation, transforming the finest materials into wearable works of art.',
@@ -112,7 +113,7 @@ export const translations = {
       },
       atelier: {
         subtitle: 'The Atelier',
-        title: 'Handcrafted',
+        title: 'The Art of Handcraft',
         location: 'in Vietnam',
         description: 'Each piece passes through the hands of our master artisans, where tradition meets innovation in the pursuit of perfection.',
         rooted: 'Rooted in a practice.',
@@ -276,7 +277,7 @@ export const translations = {
     common: {
       nav: {
         collections: 'SẢN PHẨM',
-        heritage: 'Di Sản',
+        heritage: 'Câu Chuyện',
         craftsmanship: 'Nghệ Thuật',
         boutiques: 'Cửa Hàng',
         login: 'Đăng Nhập',
@@ -294,6 +295,7 @@ export const translations = {
           customerCare: 'Chăm Sóc Khách Hàng',
         },
         links: {
+          customerCare: 'Chăm Sóc Khách Hàng',
           rings: 'Nhẫn',
           necklaces: 'Vòng Cổ',
           bracelets: 'Vòng Tay',
@@ -374,7 +376,7 @@ export const translations = {
       },
       heritage: {
         subtitle: 'Câu Chuyện',
-        title: 'Nghệ Thuật Ray Paradis',
+        title: 'Câu Chuyện Di Sản',
         paragraphs: {
           p1: 'Được thành lập dựa trên nguyên tắc nghệ thuật chế tác xuất sắc, Ray Paradis đã tạo ra những trang sức phi thường.',
           p2: 'Các nghệ nhân bậc thầy của chúng tôi dồn hết tâm huyết vào mỗi tác phẩm biến những nguyên liệu tinh túy nhất thành nghệ thuật.',
@@ -385,7 +387,7 @@ export const translations = {
       },
       atelier: {
         subtitle: 'Xưởng Chế Tác',
-        title: 'Chế Tác Thủ Công',
+        title: 'Nghệ Thuật Chế Tác',
         location: 'tại Việt Nam',
         description: 'Mỗi tác phẩm đều đi qua bàn tay của những nghệ nhân bậc thầy của chúng tôi, nơi truyền thống kết hợp với sự đổi mới để theo đuổi sự hoàn hảo.',
         rooted: 'Bắt nguồn từ sự tận tâm.',
