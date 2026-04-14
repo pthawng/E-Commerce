@@ -1,0 +1,56 @@
+{{!-- order-confirmation.hbs --}}
+<div style="font-family: 'Inter', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin-bottom: 8px;">Cảm ơn bạn đã đặt hàng!</h1>
+    <p style="color: #6b7280; font-size: 16px;">Mã đơn hàng: <span style="color: #111827; font-weight: 600;">#{{orderCode}}</span></p>
+  </div>
+
+  <div style="margin-bottom: 30px; padding: 20px; background-color: #f9fafb; border-radius: 8px;">
+    <p style="margin: 0; font-size: 16px;">Chào <strong>{{customerName}}</strong>,</p>
+    <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: #4b5563;">
+      Chúng tôi đã nhận được thanh toán và đang chuẩn bị những món đồ tuyệt vời nhất cho bạn. Bạn sẽ nhận được thông báo tiếp theo khi đơn hàng bắt đầu được vận chuyển.
+    </p>
+  </div>
+
+  <div style="margin-bottom: 30px;">
+    <h2 style="font-size: 18px; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 15px;">Chi tiết đơn hàng</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="text-align: left; color: #6b7280; font-size: 12px; text-transform: uppercase;">
+          <th style="padding: 10px 0;">Sản phẩm</th>
+          <th style="padding: 10px 0; text-align: center;">SL</th>
+          <th style="padding: 10px 0; text-align: right;">Giá</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each items}}
+        <tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 12px 0; font-size: 14px; color: #111827;">{{name}}</td>
+          <td style="padding: 12px 0; font-size: 14px; color: #111827; text-align: center;">{{quantity}}</td>
+          <td style="padding: 12px 0; font-size: 14px; color: #111827; text-align: right;">{{price}} {{currency}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-bottom: 40px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+      <span style="color: #6b7280; font-size: 14px;">Phí vận chuyển:</span>
+      <span style="color: #111827; font-size: 14px; font-weight: 600; text-align: right; display: inline-block; width: 100%;">{{shippingFee}} {{currency}}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; border-top: 2px solid #111827; padding-top: 15px; margin-top: 10px;">
+      <span style="color: #111827; font-size: 18px; font-weight: 700;">Tổng cộng:</span>
+      <span style="color: #111827; font-size: 18px; font-weight: 700; text-align: right; display: inline-block; width: 100%;">{{totalAmount}} {{currency}}</span>
+    </div>
+  </div>
+
+  <div style="text-align: center;">
+    <a href="{{orderUrl}}" style="display: inline-block; background-color: #111827; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 600; font-size: 16px;">Xem đơn hàng của bạn</a>
+  </div>
+
+  <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #f3f4f6; padding-top: 20px;">
+    <p>&copy; 2026 Ray Paradis. All rights reserved.</p>
+    <p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với bộ phận hỗ trợ của chúng tôi.</p>
+  </div>
+</div>

@@ -43,6 +43,7 @@
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@prisma/adapter-pg": "^6.5.0",
     "@prisma/client": "^6.5.0",
+    "@sendgrid/eventwebhook": "^8.0.0",
     "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.86.2",
     "argon2": "^0.44.0",

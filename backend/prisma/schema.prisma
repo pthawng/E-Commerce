@@ -110,6 +110,8 @@ model VerifyEmailToken {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
   token     String   @unique
+  ipAddress String?  @db.VarChar(50)
+  userAgent String?  @db.Text
   expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -731,4 +733,42 @@ model DataSeedHistory {
   checksum  String?
 
   @@map("data_seed_history")
+}
+
+model EmailOutbox {
+  id                String       @id @default(uuid()) @db.Uuid
+  eventType         String       // e.g. 'order.confirmed'
+  recipient         String
+  subject           String
+  templateName      String
+  templateVersion   String       @default("v1")
+  context           Json
+  status            OutboxStatus @default(PENDING)
+  provider          String?      // 'sendgrid' | 'ses'
+  providerMessageId String?      @unique
+  attempts          Int          @default(0)
+  lastError         String?
+  idempotencyKey    String       @unique
+  scheduledAt       DateTime     @default(now())
+  processedAt       DateTime?
+  createdAt         DateTime     @default(now())
+
+  // For Admin Override Retries (Audit Trail)
+  parentOutboxId    String?      @db.Uuid
+  parentOutbox      EmailOutbox? @relation("OutboxOverrides", fields: [parentOutboxId], references: [id])
+  childOutboxes     EmailOutbox[] @relation("OutboxOverrides")
+
+  @@index([status, scheduledAt])
+  @@map("email_outbox")
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  DELIVERED
+  BOUNCED
+  SPAM
+  REJECTED
+  FAILED
 }

@@ -8,6 +8,7 @@ import { RefreshTokenDto } from '@modules/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
 import { ResetPasswordDto } from '@modules/auth/dto/reset-password.dto';
 import { VerifyEmailDto } from '@modules/auth/dto/verify-email.dto';
+import { ResendVerifyEmailDto } from '@modules/auth/dto/resend-verify-email.dto';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
@@ -94,7 +95,9 @@ export class AuthController {
   @ApiCreatedResponse({ description: 'Đăng ký thành công' })
   @ApiBadRequestResponse({ description: 'Email đã tồn tại hoặc dữ liệu không hợp lệ' })
   async register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.register(dto);
+    const ip = req.ip;
+    const ua = req.headers['user-agent'] as string | undefined;
+    const result = await this.authService.register(dto, ip, ua);
     this.setAuthCookies(req, res, result.tokens);
     return result;
   }
@@ -196,8 +199,33 @@ export class AuthController {
   @ApiOperation({ summary: 'Xác minh email' })
   @ApiOkResponse({ description: 'Xác minh email thành công' })
   @ApiBadRequestResponse({ description: 'Token không hợp lệ hoặc đã hết hạn' })
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.verifyEmailService.verifyToken(dto);
+  async verifyEmail(@Body() dto: VerifyEmailDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const ua = req.headers['user-agent'] as string | undefined;
+    const ip = req.ip;
+
+    const result = await this.verifyEmailService.verifyToken(dto, ip, ua);
+
+    // Auto-login security logic applied
+    if (result.auth) {
+      this.setAuthCookies(req, res, result.auth.tokens);
+    }
+
+    return result;
+  }
+
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Post('resend-verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Gửi lại email xác thực' })
+  @ApiOkResponse({ description: 'Đã gửi yêu cầu' })
+  async resendVerifyEmail(@Body() dto: ResendVerifyEmailDto, @Req() req: Request) {
+    const ua = req.headers['user-agent'] as string | undefined;
+    const ip = req.ip;
+
+    await this.verifyEmailService.resendVerification(dto.email, ip, ua);
+    // Security: Luôn trả về success message giống nhau cho dù email tồn tại hay không
+    return { success: true, message: 'Nếu email tồn tại trong hệ thống, link kích hoạt đã được gửi tới hòm thư của bạn.' };
   }
 
   @Post('change-password')

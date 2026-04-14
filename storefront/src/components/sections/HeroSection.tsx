@@ -67,7 +67,7 @@ export const HeroSection = () => {
           <motion.h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-primary-foreground dark:text-foreground leading-[1.2] tracking-luxury font-normal mb-8 px-4">
             <SplitReveal
               lines={[
-                `<span><span class="italic">${t('home.hero.timeless')}</span> ${t('home.hero.jewelry')}</span>`,
+                t('home.hero.headline'),
                 `<span class="gold-shimmer text-[0.85em] mt-2 block opacity-100">${t('home.hero.quietLuxury')}</span>`,
               ]}
               stagger={0.15}

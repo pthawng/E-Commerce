@@ -1,29 +1,33 @@
 {{!-- verify-email.hbs --}}
-<h2 style="margin:0 0 8px 0; font-size:22px;">Xác minh email của bạn</h2>
+<div style="text-align: center; margin-bottom: 32px;">
+  <h2 style="font-size:20px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;">Kích Hoạt Đặc Quyền</h2>
+</div>
 
-<p style="margin:0 0 16px 0;">
-  Chào {{#if name}}{{name}}{{else}}bạn{{/if}},<br/>
-  Cám ơn bạn đã đăng ký với <strong>{{companyName}}</strong>. Vui lòng bấm nút dưới đây để xác minh địa chỉ email của bạn.
+<p style="text-align: center; margin:0 0 24px 0; color: #374151;">
+  Chào {{#if name}}<strong>{{name}}</strong>{{else}}bạn{{/if}},<br/><br/>
+  Cảm ơn bạn đã lựa chọn <strong>{{companyName}}</strong>. Để bắt đầu hành trình khám phá và tận hưởng các đặc quyền riêng biệt, vui lòng xác nhận địa chỉ email của bạn.
 </p>
 
-<p style="text-align:center; margin:20px 0;">
-  <a href="{{verificationUrl}}" class="btn" target="_blank" rel="noopener noreferrer">Xác minh email</a>
-</p>
+<div style="text-align:center; margin:36px 0;">
+  <a href="{{verificationUrl}}" class="btn" target="_blank" rel="noopener noreferrer">Xác Nhận Email</a>
+</div>
 
-<p style="margin:0 0 12px 0;" class="muted">
-  Nếu nút trên không hoạt động, sao chép và dán đường link sau vào trình duyệt của bạn:
-</p>
+<div style="text-align: center;">
+  <p style="margin:0 0 12px 0;" class="muted">
+    Hoặc dán liên kết sau vào trình duyệt của bạn:
+  </p>
 
-<p style="word-break:break-all; font-size:13px; color:#374151; margin:0 0 18px 0;">
-  <a href="{{verificationUrl}}" style="color:#2563eb; text-decoration:underline;" target="_blank" rel="noopener noreferrer">{{verificationUrl}}</a>
-</p>
+  <p style="word-break:break-all; font-size:12px; margin:0 0 24px 0;">
+    <a href="{{verificationUrl}}" style="color:#CFA53E; text-decoration:none;" target="_blank" rel="noopener noreferrer">{{verificationUrl}}</a>
+  </p>
 
-{{#if expiryMinutes}}
-<p class="muted" style="margin:0 0 12px 0;">
-  Lưu ý: liên kết sẽ hết hạn sau <strong>{{expiryMinutes}} phút</strong>.
-</p>
-{{/if}}
+  {{#if expiryMinutes}}
+  <p class="muted" style="margin:0 0 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">
+    * Liên kết sẽ hết hiệu lực sau {{expiryMinutes}} phút.
+  </p>
+  {{/if}}
 
-<p style="margin:0 0 6px 0;">
-  Nếu bạn không yêu cầu xác minh này, hãy bỏ qua email này.
-</p>
+  <p style="margin:0; font-size: 12px; color: #9ca3af;">
+    Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.
+  </p>
+</div>

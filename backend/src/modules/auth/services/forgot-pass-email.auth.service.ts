@@ -45,10 +45,12 @@ export class ForgotPassEmailService {
     const expiryMinutes = Math.ceil((expiresAt.getTime() - Date.now()) / 60000);
 
     try {
-      const isSent = await this.mailService.sendMail({
+      await this.mailService.sendMail({
         to: email,
         subject: 'Reset your password',
-        template: 'forgot-password', // Fixed typo: 'forgot-pasword' -> 'forgot-password'
+        template: 'forgot-password',
+        eventType: 'auth.forgot_password',
+        idempotencyKey: `forgot_pass_${userId}_${token.slice(0, 8)}`,
         context: {
           name: fullName || 'Valued Customer',
           resetUrl: resetUrl.toString(),
@@ -57,20 +59,9 @@ export class ForgotPassEmailService {
           companyName: this.configService.get<string>('COMPANY_NAME') || 'Ray Paradis',
         },
       });
-
-      if (!isSent) {
-        this.logger.warn(`Failed to send password reset email to ${email}`);
-        await this.revokeToken(token);
-        throw new BadRequestException('Unable to send password reset email. Please try again.');
-      }
     } catch (error) {
-      // Ensure token is revoked if any error occurs during the process
-      await this.revokeToken(token);
-      // Re-throw if it's already an HTTP exception, otherwise wrap generic error
-      if (error instanceof BadRequestException) throw error;
-
-      this.logger.error(`Error in sendForgotPasswordEmail: ${error.message}`, error.stack);
-      throw new BadRequestException('An error occurred while processing your request.');
+      this.logger.error(`Error triggering forgot password email: ${error.message}`, error.stack);
+      // Let the persistent queue/Outbox handle reliability. We return success to prevent user enum/frustration.
     }
   }
 

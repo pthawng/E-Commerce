@@ -57,7 +57,7 @@ export class AuthService {
   // PUBLIC API
   // ---------------------------
 
-  async register(dto: RegisterDto): Promise<AuthResponse> {
+  async register(dto: RegisterDto, reqIp?: string, reqUa?: string): Promise<AuthResponse> {
     const exists = await this.prismaService.user.count({ where: { email: dto.email } });
     if (exists > 0) throw new BadRequestException('Email already exists');
 
@@ -76,11 +76,11 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName ?? user.email,
-      });
+      }, reqIp, reqUa);
     } catch (error) {
-      this.logger.error(`Failed to send verify email to ${user.email}`, error);
-      await this.prismaService.user.delete({ where: { id: user.id } });
-      throw new BadRequestException('Unable to send verification email. Please try again.');
+      this.logger.error(`Failed to trigger verify email for ${user.email}`, error);
+      // NOTE: We no longer delete the user here in L8 flow. 
+      // The email is either queued in Outbox or the user can click "Resend".
     }
 
     const { tokens } = await this.issueTokenPair(user.id);
@@ -114,6 +114,11 @@ export class AuthService {
     const isMatch = await this.verifyPassword(user.passwordHash, dto.password);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // L8 Security: Enforce Email Verification
+    if (!user.isEmailVerified) {
+      throw new ForbiddenException('UNVERIFIED_EMAIL');
     }
 
     // Role Validation
@@ -225,7 +230,7 @@ export class AuthService {
   // HELPERS
   // ---------------------------
 
-  private async issueTokenPair(userId: string, audience: 'customer' | 'admin' = 'customer'): Promise<AuthResponse> {
+  public async issueTokenPair(userId: string, audience: 'customer' | 'admin' = 'customer'): Promise<AuthResponse> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
       include: {

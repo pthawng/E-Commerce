@@ -13,6 +13,8 @@ import { CheckoutTokenService } from './services/checkout-token.service';
 import { CleanupExpiredReservationsJob } from './jobs/cleanup-expired-reservations.job';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { OrderRecoveryController } from './controllers/order-recovery.controller';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
     imports: [
@@ -20,6 +22,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         RbacModule,
         CartModule,
         InventoryModule,
+        MailModule,
         forwardRef(() => PaymentModule),
         JwtModule.registerAsync({
             imports: [ConfigModule],
@@ -30,7 +33,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             inject: [ConfigService],
         }),
     ],
-    controllers: [OrderController, AdminOrderController, CheckoutController],
+    controllers: [OrderController, AdminOrderController, CheckoutController, OrderRecoveryController],
     providers: [
         OrderService,
         OrderPaymentService,

@@ -5,6 +5,7 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderWithPaymentDto } from '../dto/create-order-with-payment.dto';
 import {
@@ -19,6 +20,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { OrderStatusValidator } from '../utils/order-status.validator';
 import { CheckoutTokenService } from './checkout-token.service';
 import { SystemContextStore } from '@common/context/system-context.store';
+import { MailService } from '../../mail/mail.service';
 
 /**
  * OrderPaymentService
@@ -39,6 +41,8 @@ export class OrderPaymentService {
         private readonly inventoryService: InventoryService,
         private readonly inventoryAllocator: InventoryAllocatorService,
         private readonly checkoutTokenService: CheckoutTokenService,
+        private readonly mailService: MailService,
+        private readonly configService: ConfigService,
     ) { }
 
     /**
@@ -264,6 +268,48 @@ export class OrderPaymentService {
                 await tx.cart.deleteMany({
                     where: order.userId ? { userId: order.userId } : { sessionId: order.sessionId },
                 });
+
+                // L8 Email Integration: Atomic Outbox Trigger
+                // We fetch the full order with items and user to ensure template context is rich.
+                const fullOrder = await tx.order.findUnique({
+                    where: { id: orderId },
+                    include: { 
+                        items: true,
+                        user: { select: { email: true, fullName: true } }
+                    }
+                });
+
+                if (!fullOrder) {
+                    this.logger.warn(`Order ${orderId} not found for confirmation email trigger`);
+                    return;
+                }
+
+                const recipientEmail = fullOrder?.user?.email || (fullOrder?.shippingAddress as any)?.email;
+                if (recipientEmail) {
+                    await this.mailService.sendMail({
+                        to: recipientEmail,
+                        subject: `Order Confirmation - ${fullOrder.code}`,
+                        template: 'order-confirmation',
+                        eventType: 'order.confirmed',
+                        idempotencyKey: `order_confirm_${fullOrder.id}`,
+                        context: {
+                            orderCode: fullOrder.code,
+                            customerName: fullOrder.user?.fullName || (fullOrder.shippingAddress as any)?.fullName || 'Valued Customer',
+                            items: fullOrder.items.map(item => ({
+                                name: item.productName,
+                                quantity: item.quantity,
+                                price: Number(item.price).toLocaleString('vi-VN'),
+                                total: Number(item.totalLine).toLocaleString('vi-VN'),
+                            })),
+                            totalAmount: Number(fullOrder.totalAmount).toLocaleString('vi-VN'),
+                            shippingFee: Number(fullOrder.shippingFee).toLocaleString('vi-VN'),
+                            currency: 'VND',
+                            orderUrl: `${this.configService.get('FRONTEND_URL')}/me/orders/${fullOrder.id}`
+                        }
+                    }, tx);
+                } else {
+                    this.logger.warn(`No recipient email found for order confirmation ${orderId}`);
+                }
             });
         });
     }

@@ -157,9 +157,20 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
         } else {
           throw new Error('Invalid auth response');
         }
-      } catch (err: unknown) {
-        const message = (err as { message?: string })?.message || 'Login failed';
-        toast.error(message);
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || 'Login failed';
+        if (msg === 'UNVERIFIED_EMAIL') {
+          toast.error(t('auth.messages.unverifiedEmail') || 'Tài khoản chưa xác thực. Đang gửi lại email...');
+          try {
+            await apiPost('/api/auth/resend-verify', { email: sanitizeInput(email) });
+            toast.success('Đã gửi lại link xác thực mới! Vui lòng kiểm tra email của bạn.');
+          } catch (e) {
+            toast.error('Không thể gửi lại email xác thực lúc này, vui lòng thử lại sau.');
+          }
+        } else {
+          const message = typeof msg === 'string' ? msg : 'Đăng nhập thất bại';
+          toast.error(message);
+        }
       }
     } else if (mode === 'register') {
       try {

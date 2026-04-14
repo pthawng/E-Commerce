@@ -15,6 +15,7 @@ import { PaymentResultPage } from "@/pages/PaymentResultPage";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import AccountPage from "./pages/AccountPage";
+import VerifyEmail from "./pages/VerifyEmail";
 import { PrivacyPage } from "./pages/PrivacyPage";
 import { TermsPage } from "./pages/TermsPage";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route 
             path="/account" 
             element={

@@ -7,6 +7,8 @@ import { google } from 'googleapis';
 import * as handlebars from 'handlebars';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
+import { EmailOutboxService } from './services/email-outbox.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class MailService {
@@ -14,7 +16,10 @@ export class MailService {
   private oAuth2Client: any;
   private readonly templatesDir = path.join(process.cwd(), 'src', 'modules', 'mail', 'templates');
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private outboxService: EmailOutboxService,
+  ) {
     this.initializeProviders();
   }
 
@@ -50,18 +55,63 @@ export class MailService {
     this.oAuth2Client.setCredentials({ refresh_token: refreshToken });
   }
 
-  private async compileTemplate(templateName: string, context: any): Promise<string> {
-    const filePath = path.join(this.templatesDir, `${templateName}.hbs`);
+  /**
+   * Primary entry point for sending emails.
+   * If USE_NEW_MAIL_FLOW is enabled, it uses the Outbox Pattern (Async).
+   * Otherwise, it uses the legacy blocking flow (Sync).
+   */
+  async sendMail(options: { 
+    to: string; 
+    subject: string; 
+    template: string; 
+    context: any;
+    eventType?: string;
+    idempotencyKey?: string;
+    templateVersion?: string;
+  }, tx?: Prisma.TransactionClient): Promise<boolean> {
+    const useNewFlow = this.configService.get<string>('USE_NEW_MAIL_FLOW') === 'true';
+
+    if (useNewFlow) {
+      this.logger.debug(`Using New Async Flow for email to ${options.to}`);
+      return this.queueMail(options, tx);
+    }
+
+    return this.sendMailSync(options);
+  }
+
+  /**
+   * Async Flow: Persists to Outbox.
+   */
+  private async queueMail(options: { 
+    to: string; 
+    subject: string; 
+    template: string; 
+    context: any;
+    eventType?: string;
+    idempotencyKey?: string;
+    templateVersion?: string;
+  }, tx?: Prisma.TransactionClient): Promise<boolean> {
     try {
-      const templateSource = await fs.readFile(filePath, 'utf-8');
-      return handlebars.compile(templateSource)(context);
+      await this.outboxService.create({
+        eventType: options.eventType || 'generic.notification',
+        recipient: options.to,
+        subject: options.subject,
+        templateName: options.template,
+        templateVersion: options.templateVersion || 'v1',
+        context: options.context,
+        idempotencyKey: options.idempotencyKey || `mail_${Date.now()}_${options.to}`,
+      }, tx);
+      return true;
     } catch (error) {
-      this.logger.error(`Error reading template ${templateName}:`, error);
-      throw error;
+      this.logger.error(`Failed to queue email to ${options.to}: ${error.message}`, error.stack);
+      return false;
     }
   }
 
-  async sendMail(options: { to: string; subject: string; template: string; context: any }): Promise<boolean> {
+  /**
+   * Legacy Sync Flow: Blocks request lifecycle.
+   */
+  private async sendMailSync(options: { to: string; subject: string; template: string; context: any }): Promise<boolean> {
     try {
       const html = await this.compileTemplate(options.template, options.context);
       const provider = this.configService.get<string>('MAIL_PROVIDER') || 'gmail';
@@ -77,8 +127,19 @@ export class MailService {
       this.logger.warn(`Unknown mail provider: ${provider}`);
       return false;
     } catch (error) {
-      this.logger.error('Error sending mail:', error);
+      this.logger.error('Error sending mail sync:', error);
       return false;
+    }
+  }
+
+  private async compileTemplate(templateName: string, context: any): Promise<string> {
+    const filePath = path.join(this.templatesDir, `${templateName}.hbs`);
+    try {
+      const templateSource = await fs.readFile(filePath, 'utf-8');
+      return handlebars.compile(templateSource)(context);
+    } catch (error) {
+      this.logger.error(`Error reading template ${templateName}:`, error);
+      throw error;
     }
   }
 
