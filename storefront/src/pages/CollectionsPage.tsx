@@ -153,7 +153,7 @@ export const CollectionsPage = () => {
                 </div>
 
                 {/* Grid Section */}
-                <Section className="pb-12 md:pb-16 pt-8">
+                <Section className="pb-8 lg:pb-8 pt-8">
                     <Container>
                         {isError ? (
                             <div className="py-20 flex justify-center text-center">
@@ -186,9 +186,9 @@ export const CollectionsPage = () => {
                         )}
 
                         {/* L7 Optimization: Invisible Pagination Trigger */}
-                        <div ref={loadMoreRef} className="h-8 w-full flex items-center justify-center mt-4">
+                        <div ref={loadMoreRef} className="w-full flex items-center justify-center">
                             {isFetchingNextPage && (
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 py-4">
                                     <RefreshCw className="h-4 w-4 animate-spin text-gold" />
                                     <span className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">
                                         Refining Collection...

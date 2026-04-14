@@ -68,7 +68,7 @@ export const ProductCard = React.memo(({
         <motion.img
           src={image}
           alt={name}
-          // L7 Optimization: Prioritize the first row (LCP) and lazy-load the rest
+          // Optimization: Prioritize the first row (LCP) and lazy-load the rest
           loading={index < 4 ? "eager" : "lazy"}
           decoding="async"
           // @ts-ignore - fetchpriority is a valid experimental attribute for LCP

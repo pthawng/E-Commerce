@@ -31,10 +31,10 @@ export const Footer = () => {
   };
 
   return (
-    <Section as="footer" padding="lg" withHairline="top" className="bg-secondary/20">
+    <Section as="footer" className="bg-secondary/20 py-12 md:py-16" withHairline="top">
       <Container>
         {/* Main Footer Content */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-16 pb-20">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-16 pb-12">
           {/* Brand Column */}
           <div className="col-span-2 lg:col-span-1">
             <motion.h3
@@ -52,10 +52,10 @@ export const Footer = () => {
 
           {/* Links Columns */}
           <div>
-            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-5">
               {t('common.footer.sections.collections')}
             </h4>
-            <ul className="space-y-4">
+            <ul className="space-y-2.5">
               {footerLinks.collections.map((link) => (
                 <li key={link.label}>
                   <a
@@ -70,10 +70,10 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-5">
               {t('common.footer.sections.about')}
             </h4>
-            <ul className="space-y-4">
+            <ul className="space-y-2.5">
               {footerLinks.about.map((link) => (
                 <li key={link.label}>
                   <a
@@ -88,10 +88,10 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-5">
               {t('common.footer.sections.contact')}
             </h4>
-            <ul className="space-y-4">
+            <ul className="space-y-2.5">
               {footerLinks.contact.map((link) => (
                 <li key={link.label}>
                   <a
@@ -106,10 +106,10 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-8">
+            <h4 className="font-body text-[10px] uppercase tracking-[0.2em] text-primary/80 mb-5">
               {t('common.footer.sections.legal')}
             </h4>
-            <ul className="space-y-4">
+            <ul className="space-y-2.5">
               {footerLinks.legal.map((link) => (
                 <li key={link.label}>
                   <a
