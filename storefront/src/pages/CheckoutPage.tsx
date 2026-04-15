@@ -93,11 +93,16 @@ export const CheckoutPage: React.FC = () => {
             const validateResponse = await CheckoutService.validateCheckout();
             const { checkoutToken } = validateResponse;
 
+            // Explicitly map only the fields expected by AddressDto on the backend.
+            // Critically, `email` must NOT be included here; it lives at the top-level
+            // as `guestEmail`. Including it would trigger a 400 from `forbidNonWhitelisted`.
+            const { email, ...addressFields } = formData;
+
             const payload = {
                 checkoutToken,
-                shippingAddress: formData,
+                shippingAddress: addressFields,
                 paymentMethod,
-                guestEmail: formData.email,
+                guestEmail: email,
                 confirmPriceChange: true,
                 returnUrl: `${window.location.origin}/payment-result`,
                 cancelUrl: `${window.location.origin}/payment-result?status=failed`

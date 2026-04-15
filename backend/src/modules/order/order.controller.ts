@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentSession } from 'src/common/decorators/current-session.decorator';
-import { OptionalJwtAuthGuard } from 'src/common/guards/optional-jwt.guard';
+import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
 import { RequestUserPayload } from 'src/common/types/jwt.types';
 import { JwtAccessGuard } from 'src/modules/auth/guard/access-jwt.guard';
 import { CreateOrderWithPaymentDto } from './dto/create-order-with-payment.dto';
@@ -25,13 +25,13 @@ export class OrderController {
   constructor(
     private readonly orderService: OrderService,
     private readonly orderPaymentService: OrderPaymentService,
-  ) {}
+  ) { }
 
   // -------------------------
   // 1. CREATE ORDER (Checkout)
   // -------------------------
   @Post()
-  @UseGuards(OptionalJwtAuthGuard)
+  @OptionalAuth()
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create order with payment integration',
@@ -65,7 +65,7 @@ export class OrderController {
   // 3. GET ORDER DETAIL
   // -------------------------
   @Get(':id')
-  @UseGuards(OptionalJwtAuthGuard)
+  @OptionalAuth()
   @ApiOperation({ summary: 'Chi tiết đơn hàng' })
   getOrder(
     @Param('id', new ParseUUIDPipe()) id: string,

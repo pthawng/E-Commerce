@@ -48,7 +48,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly permissionCacheService: PermissionCacheService,
-  ) {}
+  ) { }
 
   private setAuthCookies(
     req: any,

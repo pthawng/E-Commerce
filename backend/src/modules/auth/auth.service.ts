@@ -51,7 +51,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly forgotPassEmailService: ForgotPassEmailService,
-  ) {}
+  ) { }
 
   // ---------------------------
   // PUBLIC API

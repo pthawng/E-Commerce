@@ -14,8 +14,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentSession } from 'src/common/decorators/current-session.decorator';
+import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
-import { OptionalJwtAuthGuard } from 'src/common/guards/optional-jwt.guard';
 import { RequestUserPayload } from 'src/common/types/jwt.types';
 import { JwtAccessGuard } from 'src/modules/auth/guard/access-jwt.guard';
 import { CartService } from './cart.service';
@@ -29,9 +29,8 @@ export class CartController {
   // -------------------------
   // 1. GET CART (Hybrid)
   // -------------------------
-  @Public()
   @Get()
-  @UseGuards(OptionalJwtAuthGuard)
+  @OptionalAuth()
   @ApiBearerAuth()
   @ApiHeader({ name: 'x-client-session-id', description: 'Session ID for Guest', required: false })
   @ApiOperation({ summary: 'Get cart (Supports both User & Guest)' })
@@ -42,9 +41,8 @@ export class CartController {
   // -------------------------
   // 2. ADD TO CART
   // -------------------------
-  @Public()
   @Post()
-  @UseGuards(OptionalJwtAuthGuard)
+  @OptionalAuth()
   @ApiBearerAuth()
   @ApiHeader({ name: 'x-client-session-id', description: 'Session ID for Guest', required: false })
   @ApiOperation({ summary: 'Add product to cart' })
@@ -59,9 +57,8 @@ export class CartController {
   // -------------------------
   // 3. UPDATE ITEM
   // -------------------------
-  @Public()
   @Patch('items/:variantId')
-  @UseGuards(OptionalJwtAuthGuard)
+  @OptionalAuth()
   @ApiOperation({ summary: 'Update item quantity' })
   updateItem(
     @Param('variantId', new ParseUUIDPipe()) variantId: string,
@@ -75,9 +72,8 @@ export class CartController {
   // -------------------------
   // 4. REMOVE ITEM
   // -------------------------
-  @Public()
   @Delete('items/:variantId')
-  @UseGuards(OptionalJwtAuthGuard)
+  @OptionalAuth()
   @ApiOperation({ summary: 'Remove item from cart' })
   removeItem(
     @Param('variantId', new ParseUUIDPipe()) variantId: string,
@@ -108,9 +104,8 @@ export class CartController {
   // -------------------------
   // 6. REFRESH PRICES
   // -------------------------
-  @Public()
   @Post('refresh')
-  @UseGuards(OptionalJwtAuthGuard)
+  @OptionalAuth()
   @HttpCode(200)
   @ApiOperation({ summary: 'Refresh cart prices (if prices changed)' })
   refreshCart(@Req() req: { user?: RequestUserPayload }, @CurrentSession() sessionId?: string) {
