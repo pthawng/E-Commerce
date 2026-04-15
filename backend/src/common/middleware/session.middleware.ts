@@ -14,20 +14,33 @@ export class SessionMiddleware implements NestMiddleware {
         // 1. Try to get existing session ID
         let sessionId = req.headers['x-client-session-id'] || req.cookies?.['sessionId'];
 
-        // 2. If missing, generate new one
-        if (!sessionId) {
-            sessionId = randomUUID();
+        // 2. If missing, generate new ones
+        if (!sessionId || !req.cookies?.['csrfToken']) {
+            sessionId = sessionId || randomUUID();
+            const csrfToken = randomUUID();
 
-            // Set HttpOnly cookie for persistence
-            // Expires in 30 days (matching Cart TTL)
+            const isProduction = process.env.NODE_ENV === 'production';
+            const cookieOptions = {
+                secure: isProduction,
+                sameSite: 'lax' as const,
+                path: '/',
+            };
+
+            // Session ID (HttpOnly)
             res.cookie('sessionId', sessionId, {
+                ...cookieOptions,
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
                 maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
             });
 
-            // Also inject into headers so downstream decorators can pick it up immediately
+            // CSRF Token (Accessible to JS for Header submission)
+            res.cookie('csrfToken', csrfToken, {
+                ...cookieOptions,
+                httpOnly: false,
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+            });
+
+            // Also inject into headers so downstream decorators/guards can pick them up
             req.headers['x-client-session-id'] = sessionId;
         }
 

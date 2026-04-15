@@ -4,6 +4,8 @@ import { Section } from '@/components/layout/Section';
 import { Container } from '@/components/layout/Container';
 import { Link } from 'react-router-dom';
 import { analytics } from '@/lib/analytics';
+import { LocaleSelector } from '@/components/ui/LocaleSelector';
+import { CurrencySelector } from '@/components/ui/CurrencySelector';
 
 export const Footer = () => {
   const { t } = useTranslation();
@@ -24,11 +26,13 @@ export const Footer = () => {
     contact: [
       { label: t('common.footer.links.customerCare'), href: '#' },
       { label: t('common.footer.links.bookAppointment'), href: '#' },
-      { label: t('common.footer.links.sizeGuide'), href: '#' },
+      { label: t('common.footer.links.artOfGifting'), href: '/art-of-gifting' },
     ],
     legal: [
-      { label: t('common.footer.links.privacy'), href: '/privacy' },
-      { label: t('common.footer.links.terms'), href: '/terms' },
+      { label: t('common.footer.links.privacyPolicy'), href: '/privacy' },
+      { label: t('common.footer.links.termsOfUse'), href: '/terms' },
+      { label: t('common.footer.links.careService'), href: '/care-service' },
+      { label: t('common.footer.links.sizeGuide'), href: '#' },
     ],
   };
 
@@ -128,10 +132,16 @@ export const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-border/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40">
-            {t('common.footer.copyright')}
-          </p>
+        <div className="pt-8 border-t border-border/10 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
+            <p className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40">
+              {t('common.footer.copyright')}
+            </p>
+            <div className="flex items-center gap-4">
+              <LocaleSelector isOpaque={true} />
+              <CurrencySelector isOpaque={true} />
+            </div>
+          </div>
           <div className="flex gap-8">
             <span className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 italic">
               Legacy in every facet.

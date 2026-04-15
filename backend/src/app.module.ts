@@ -15,18 +15,20 @@ import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { CsrfGuard } from './common/guards/csrf.guard';
 import { SessionBindingGuard } from './common/guards/session-binding.guard';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { SessionMiddleware } from './common/middleware/session.middleware';
 import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
 import { PrismaModule } from './prisma/prisma.module';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
 
 @Module({
   imports: [
@@ -141,6 +143,14 @@ import { PrismaModule } from './prisma/prisma.module';
     {
       provide: APP_GUARD,
       useClass: SessionBindingGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLogInterceptor,
     },
   ],
 })

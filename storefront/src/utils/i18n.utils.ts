@@ -1,37 +1,43 @@
 /**
- * Access a nested property from an object using a string path (e.g., 'nav.links.home')
+ * Access a nested property from an object using a string path (e.g., 'common.nav.collections')
+ * Staff Fix: Added better protection and deep reduction.
  */
 const getNestedValue = (obj: any, path: string): string | undefined => {
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  if (!obj || !path) return undefined;
+  const val = path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  return typeof val === 'string' ? val : undefined;
 };
 
 /**
- * Creates a robust translation function with multi-level fallback
- * locale[key] -> defaultLocale[key] -> defaultValue -> key
+ * Creates a Principal-grade translation function with multi-level fallback
+ * and production-standard interpolation {{variable}}
  */
 export const createTranslationFn = (
   currentTranslations: any,
   defaultTranslations: any,
-  language: string
+  language: string,
+  fallbackLng: string = 'en'
 ) => {
   return (key: string, variables?: Record<string, string | number>, defaultValue?: string): string => {
     // 1. Try to find in current translations
     let value = getNestedValue(currentTranslations, key);
 
-    // 2. Fallback to default translations (e.g., 'en')
-    if (!value && currentTranslations !== defaultTranslations) {
+    // 2. Fallback strategy (Critical Fix)
+    // If key missing in current (e.g., zh), fallback to default (en)
+    if (!value && language !== fallbackLng) {
       value = getNestedValue(defaultTranslations, key);
     }
 
-    // 3. Fallback to manual default value or key name itself
+    // 3. Last resort fallback
     if (!value) {
       return defaultValue || key;
     }
 
-    // 4. Handle variable interpolation (e.g., {count} -> 5)
+    // 4. Handle variable interpolation (Industry standard: {{name}})
     if (variables) {
       Object.entries(variables).forEach(([name, val]) => {
-        value = (value as string).replace(`{${name}}`, String(val));
+        // Matches both {var} and {{var}} for backward compatibility
+        value = (value as string).replace(new RegExp(`{?{${name}}?}`, 'g'), String(val));
       });
     }
 

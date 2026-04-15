@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 type Theme = 'light' | 'dark';
-type Language = 'en' | 'vi';
-type Currency = 'USD' | 'VND';
+type Language = 'en' | 'vi' | 'zh';
+type Currency = 'USD' | 'VND' | 'CNY';
 
 // User info moved to useAuthStore for Single Source of Truth
 
@@ -11,7 +11,7 @@ interface CurrencyConfig {
   code: Currency;
   symbol: string;
   locale: string;
-  rate: number; 
+  rate: number;
 }
 
 export const currencyConfigs: Record<Currency, CurrencyConfig> = {
@@ -26,6 +26,12 @@ export const currencyConfigs: Record<Currency, CurrencyConfig> = {
     symbol: '$',
     locale: 'en-US',
     rate: 0.00004,
+  },
+  CNY: {
+    code: 'CNY',
+    symbol: '¥',
+    locale: 'zh-CN',
+    rate: 0.00028,
   },
 };
 
@@ -60,16 +66,16 @@ export const useStore = create<AppState>()(
         });
       },
       setLanguage: (language) => {
-        // Auto-switch currency based on language
-        const currency: Currency = language === 'vi' ? 'VND' : 'USD';
-        set({ language, currency });
+        // Principal Fix: Uncouple language from currency.
+        // Users can now choose their UI language independently of how they pay.
+        set({ language });
       },
       setCurrency: (currency) => set({ currency }),
       formatPrice: (priceInVND: number) => {
         const { currency } = get();
         const config = currencyConfigs[currency];
         const convertedPrice = priceInVND * config.rate;
-        
+
         return new Intl.NumberFormat(config.locale, {
           style: 'currency',
           currency: config.code,

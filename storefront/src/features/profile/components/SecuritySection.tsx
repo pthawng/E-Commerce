@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from '@/hooks/useTranslation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lock, ShieldCheck, X } from 'lucide-react';
 import { changePasswordSchema, ChangePasswordInput } from '../types';
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const SecuritySection: React.FC = () => {
+  const { t } = useTranslation();
   const [isChanging, setIsChanging] = useState(false);
   const { mutate: changePassword, isPending } = useChangePassword();
   const [showCurrent, setShowCurrent] = useState(false);
@@ -34,18 +36,18 @@ export const SecuritySection: React.FC = () => {
     });
   };
 
-  const PasswordInput = ({ 
-    label, 
-    id, 
-    show, 
-    toggle, 
-    error, 
-    registerProps 
-  }: { 
-    label: string, 
-    id: string, 
-    show: boolean, 
-    toggle: () => void, 
+  const PasswordInput = ({
+    label,
+    id,
+    show,
+    toggle,
+    error,
+    registerProps
+  }: {
+    label: string,
+    id: string,
+    show: boolean,
+    toggle: () => void,
     error?: string,
     registerProps: any
   }) => (
@@ -72,7 +74,7 @@ export const SecuritySection: React.FC = () => {
       </div>
       <AnimatePresence>
         {error && (
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
@@ -90,9 +92,9 @@ export const SecuritySection: React.FC = () => {
       <div className="flex items-center gap-4 mb-12">
         <div className="space-y-1">
           <h2 className="text-3xl font-display italic text-primary leading-tight">
-            Security & Access
+            {t('account.sections.security')}
           </h2>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">Manage your authentication credentials</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em]">{t('account.labels.manageAuth')}</p>
         </div>
         <ShieldCheck className="w-5 h-5 text-primary/20 stroke-[1.2] ml-auto" />
       </div>
@@ -101,23 +103,23 @@ export const SecuritySection: React.FC = () => {
         {!isChanging ? (
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 py-6 border-t border-primary/5">
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground/60">Current Password</Label>
+              <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground/60">{t('account.labels.currentPassword')}</Label>
               <p className="text-xl font-body text-primary/90 tracking-[0.5em]">••••••••</p>
             </div>
             <button
               onClick={() => setIsChanging(true)}
               className="text-[10px] tracking-ultra uppercase text-primary border-b border-primary/20 pb-1 hover:border-primary transition-all duration-500"
             >
-              Update Credentials
+              {t('account.actions.update')}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-10 animate-in fade-in slide-in-from-top-4 duration-700">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="md:col-span-2 border-t border-primary/5 pt-10" />
-              
-              <PasswordInput 
-                label="Current Password"
+
+              <PasswordInput
+                label={t('account.labels.currentPassword')}
                 id="currentPassword"
                 show={showCurrent}
                 toggle={() => setShowCurrent(!showCurrent)}
@@ -127,8 +129,8 @@ export const SecuritySection: React.FC = () => {
 
               <div className="hidden md:block" />
 
-              <PasswordInput 
-                label="New Password"
+              <PasswordInput
+                label={t('account.labels.newPassword')}
                 id="newPassword"
                 show={showNew}
                 toggle={() => setShowNew(!showNew)}
@@ -136,8 +138,8 @@ export const SecuritySection: React.FC = () => {
                 registerProps={register('newPassword')}
               />
 
-              <PasswordInput 
-                label="Confirm New Identity"
+              <PasswordInput
+                label={t('account.labels.confirmPassword')}
                 id="confirmPassword"
                 show={showConfirm}
                 toggle={() => setShowConfirm(!showConfirm)}
@@ -154,11 +156,11 @@ export const SecuritySection: React.FC = () => {
               >
 
                 <span className="relative z-10 text-[10px] tracking-ultra uppercase">
-                  {isPending ? 'Processing' : 'Commit New Password'}
+                  {isPending ? t('account.messages.processing') : t('account.actions.commitPassword')}
                 </span>
                 <div className="absolute inset-0 bg-gold translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => {
@@ -167,7 +169,7 @@ export const SecuritySection: React.FC = () => {
                 }}
                 className="text-[10px] tracking-ultra uppercase text-primary/40 hover:text-primary transition-colors duration-500 border-b border-transparent hover:border-primary/20 pb-1"
               >
-                Maintain Current
+                {t('account.actions.maintainCurrent')}
               </button>
             </div>
           </form>

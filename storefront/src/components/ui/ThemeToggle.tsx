@@ -39,24 +39,3 @@ export const ThemeToggle = () => {
     </motion.button>
   );
 };
-
-export const LanguageToggle = () => {
-  const { language, currency, setLanguage } = useStore();
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'vi' : 'en');
-  };
-
-  return (
-    <motion.button
-      onClick={toggleLanguage}
-      className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-body tracking-wider text-muted-foreground hover:text-foreground transition-colors duration-500"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <span className="hidden sm:inline text-muted-foreground/60">({currency})</span>
-      <span className="hidden sm:inline text-muted-foreground/30">-</span>
-      <span>{language.toUpperCase()}</span>
-    </motion.button>
-  );
-};

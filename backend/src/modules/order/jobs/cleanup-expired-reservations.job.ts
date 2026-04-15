@@ -2,83 +2,61 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryService } from '../../inventory/inventory.service';
+import { SystemAction } from '@common/decorators/system-action.decorator';
 
 /**
  * Cleanup Expired Reservations Job
- *
- * Runs every minute to:
- * 1. Find expired pending_payment orders
- * 2. Cancel the orders
- * 3. Release inventory reservations
- *
- * This prevents inventory from being locked indefinitely
- * when users abandon payment
  */
 @Injectable()
 export class CleanupExpiredReservationsJob {
   private readonly logger = new Logger(CleanupExpiredReservationsJob.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventoryService: InventoryService,
-  ) {}
+  ) { }
 
   /**
    * Cron job: Runs every minute
-   *
-   * Query: Find orders where:
-   * - status = 'pending_payment'
-   * - paymentDeadline < NOW()
+   * 
+   * SE L8 Pattern: Use systemic @SystemAction decorator to authorize 
+   * background mutations while maintaining strict audit boundaries.
    */
   @Cron(CronExpression.EVERY_MINUTE)
+  @SystemAction()
   async handleCron() {
     const now = new Date();
-
     try {
-      // Find expired orders
       const expiredOrders = await this.prisma.order.findMany({
         where: {
           status: 'pending_payment',
-          paymentDeadline: {
-            lt: now,
-          },
+          paymentDeadline: { lt: now },
         },
-        include: {
-          items: true,
-        },
+        include: { items: true },
       });
 
-      if (expiredOrders.length === 0) {
-        return; // No expired orders
-      }
+      if (expiredOrders.length === 0) return;
 
-      this.logger.log(`Found ${expiredOrders.length} expired orders to clean up`);
+      this.logger.log(`[SYSTEM_CLEANUP] Found ${expiredOrders.length} expired orders.`);
 
-      // Process each expired order
       for (const order of expiredOrders) {
         try {
           await this.cancelExpiredOrder(order);
         } catch (error) {
-          this.logger.error(`Failed to cancel expired order ${order.code}`, error);
-          // Continue with other orders
+          this.logger.error(`Failed to cancel order ${order.code}: ${error.message}`);
         }
       }
-
-      this.logger.log(`Cleanup completed: ${expiredOrders.length} orders processed`);
     } catch (error) {
-      this.logger.error('Cleanup job failed', error);
+      this.logger.error(`Cleanup handleCron failed: ${error.message}`);
     }
   }
 
-  /**
-   * Cancel a single expired order
-   * Releases inventory and updates order status
-   */
   private async cancelExpiredOrder(order: any): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      // 1. Release inventory reservations
+      // 1. Release inventory
       await this.inventoryService.release(order.id, tx);
 
-      // 2. Update order status
+      // 2. Update order
       await tx.order.update({
         where: { id: order.id },
         data: {
@@ -89,25 +67,25 @@ export class CleanupExpiredReservationsJob {
         },
       });
 
-      // 3. Update payment transaction
+      // 3. Update transactions
       await tx.paymentTransaction.updateMany({
         where: { orderId: order.id },
         data: { status: 'failed' },
       });
 
-      // 4. Create timeline entry
+      // 4. Trace in timeline
       await tx.orderTimeline.create({
         data: {
           orderId: order.id,
           action: 'order_cancelled',
           fromStatus: 'pending_payment',
           toStatus: 'cancelled',
-          description: 'Order cancelled due to payment timeout',
+          description: 'System automatically cancelled order due to payment timeout',
           actorType: 'system',
         },
       });
 
-      this.logger.log(`Cancelled expired order ${order.code} (deadline: ${order.paymentDeadline})`);
+      this.logger.log(`Cancelled expired order ${order.code}`);
     });
   }
 }

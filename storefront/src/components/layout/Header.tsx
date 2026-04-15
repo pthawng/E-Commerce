@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, type RefObject } from 'react';
 import { motion } from 'framer-motion';
 import { Menu, User, ShoppingBag, X } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { LocaleSelector } from '@/components/ui/LocaleSelector';
+import { CurrencySelector } from '@/components/ui/CurrencySelector';
 import { useStore } from '@/store/useStore';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -47,7 +48,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
   const { t } = useTranslation();
   const { setOpen, items, fetchCart } = useCartStore();
   const cartItemCount = (items || []).reduce((sum, item) => sum + item.quantity, 0);
-  
+
   // Initial cart sync for authenticated users
   useEffect(() => {
     if (user) {
@@ -61,11 +62,11 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
 
     const handleScroll = () => {
       if (throttleTimeout) return;
-      
+
       throttleTimeout = setTimeout(() => {
         const currentY = window.scrollY;
         const nextScrolled = currentY > 50 || !!forceOpaque;
-        
+
         setIsScrolled(prev => {
           if (prev !== nextScrolled) return nextScrolled;
           return prev;
@@ -94,10 +95,10 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
 
   const navItems = [
     { label: t('common.nav.collections'), href: '/collections' },
-    { label: t('common.nav.heritage'), href: '/#heritage' },
-    { label: t('common.nav.craftsmanship'), href: '/#atelier' },
+    { label: t('common.nav.our_heritage'), href: '/#heritage' },
+    { label: t('common.nav.high_jewelry'), href: '/#atelier' },
   ];
-  
+
   const shouldUsePrimaryColor = !!forceOpaque || (isScrolled && theme === 'light');
 
   return (
@@ -107,11 +108,10 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
         initial={{ y: -100 }}
         animate={{ y: isHidden ? -120 : 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 pointer-events-auto ${
-          isScrolled || !!forceOpaque
-            ? 'bg-background shadow-sm border-b border-border/10'
-            : 'bg-transparent'
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-700 pointer-events-auto ${isScrolled || !!forceOpaque
+          ? 'bg-background shadow-sm border-b border-border/10'
+          : 'bg-transparent'
+          }`}
       >
         <div className={`absolute bottom-0 left-0 right-0 h-px transition-opacity duration-500 ${isScrolled ? 'opacity-100' : 'opacity-0'}`}>
           <div className="h-full bg-border/20" />
@@ -164,9 +164,12 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                     </nav>
 
                     <div className="mt-auto pt-16 border-t border-border/10 flex flex-col gap-6">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
                         <ThemeToggle />
-                        <LanguageToggle isOpaque={true} />
+                        <div className="flex items-center gap-2">
+                          <LocaleSelector isOpaque={true} />
+                          <CurrencySelector isOpaque={true} />
+                        </div>
                       </div>
                       <p className="font-body text-xs text-muted-foreground/60 tracking-[0.2em] uppercase">
                         {t('shop.pdp.mastery')}
@@ -221,13 +224,13 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                 </button>
               )}
 
-              <button 
+              <button
                 className="p-2 relative group"
                 onClick={() => setOpen(true)}
               >
                 <ShoppingBag className={`w-5 h-5 ${shouldUsePrimaryColor ? 'text-primary' : 'text-white dark:text-foreground'}`} strokeWidth={1} />
                 {cartItemCount > 0 && (
-                  <motion.span 
+                  <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     className="absolute top-1 right-1 w-4 h-4 bg-gold text-primary font-body text-[9px] flex items-center justify-center rounded-full border border-background shadow-sm"
@@ -236,9 +239,9 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
                   </motion.span>
                 )}
               </button>
-              
+
               <div className="hidden sm:flex items-center gap-2 sm:gap-4">
-                <LanguageToggle isOpaque={shouldUsePrimaryColor} />
+                <LocaleSelector isOpaque={shouldUsePrimaryColor} />
                 <ThemeToggle />
               </div>
             </div>

@@ -1,10 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from '@/hooks/useTranslation';
 import { User, ShoppingBag, Heart, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 
 export const SidebarNav: React.FC = () => {
+  const { t } = useTranslation();
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
 
@@ -14,9 +16,9 @@ export const SidebarNav: React.FC = () => {
   };
 
   const navItems = [
-    { label: 'Profile Overview', href: '/account', icon: User },
-    { label: 'Order History', href: '/account/orders', icon: ShoppingBag },
-    { label: 'Saved Items', href: '/account/saved', icon: Heart },
+    { label: t('account.nav.profile'), href: '/account', icon: User },
+    { label: t('account.nav.orders'), href: '/account/orders', icon: ShoppingBag },
+    { label: t('account.nav.saved'), href: '/account/saved', icon: Heart },
   ];
 
   return (
@@ -29,8 +31,8 @@ export const SidebarNav: React.FC = () => {
             end
             className={({ isActive }) => `
               flex items-center gap-4 py-3 text-sm tracking-widest uppercase transition-all duration-300
-              ${isActive 
-                ? 'text-primary font-medium' 
+              ${isActive
+                ? 'text-primary font-medium'
                 : 'text-muted-foreground hover:text-primary'
               }
             `}
@@ -47,7 +49,7 @@ export const SidebarNav: React.FC = () => {
           className="flex items-center gap-4 py-3 text-sm tracking-widest uppercase text-destructive/80 hover:text-destructive transition-all duration-300"
         >
           <LogOut className="w-4 h-4 stroke-[1.2]" />
-          <span>Logout</span>
+          <span>{t('account.nav.logout')}</span>
         </button>
       </div>
     </nav>

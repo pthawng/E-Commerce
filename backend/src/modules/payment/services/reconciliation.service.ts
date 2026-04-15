@@ -3,8 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { OrderStatusEnum, PaymentProcessingStatus, ReservationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaymentStateMachine } from './payment-state.machine';
-
 import { PaymentService } from '../payment.service';
+import { SystemAction } from '@common/decorators/system-action.decorator';
 
 /**
  * Payment Reconciliation Service
@@ -18,11 +18,10 @@ export class PaymentReconciliationService {
     private readonly prisma: PrismaService,
     private readonly stateMachine: PaymentStateMachine,
     private readonly paymentService: PaymentService,
-  ) {}
+  ) { }
 
   /**
    * Cron job to reconcile stale payments every 5 minutes
-   * Payments in INIT state for more than 15 minutes are considered stale
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async reconcileStalePayments() {
@@ -33,7 +32,6 @@ export class PaymentReconciliationService {
     expirationThreshold.setMinutes(expirationThreshold.getMinutes() - timeoutMinutes);
 
     try {
-      // Find all INIT payments created before the threshold
       const stalePayments = await this.prisma.payment.findMany({
         where: {
           status: PaymentProcessingStatus.INIT,
@@ -63,24 +61,23 @@ export class PaymentReconciliationService {
 
   /**
    * Reconcile a single stale payment
+   * 
+   * SE L8 Pattern: Wrapping sensitive mutation logic in @SystemAction
+   * ensures background reconciliation is authorized while preserving 
+   * invariant protection for the rest of the app.
    */
+  @SystemAction()
   private async reconcilePayment(payment: any) {
     this.logger.log(`Reconciling stale payment ${payment.id} for order ${payment.orderId}`);
 
     try {
-      // 1. Try to sync status with gateway first (QueryDR)
-      // This checks if the payment was actually successful but we missed the IPN
       const isSynced = await this.paymentService.syncPaymentStatus(payment.id);
       if (isSynced) {
-        this.logger.log(
-          `Payment ${payment.id} was successfully synced with gateway. Skipping cancellation.`,
-        );
+        this.logger.log(`Payment ${payment.id} synced with gateway. Skipping cancellation.`);
         return;
       }
 
-      // 2. If not synced (or failed), proceed with cancellation
       await this.prisma.$transaction(async (tx) => {
-        // Update Payment status to FAILED
         this.stateMachine.validateTransition(
           payment.id,
           payment.status,
@@ -98,17 +95,13 @@ export class PaymentReconciliationService {
           },
         });
 
-        // 2. Update Order status to cancelled if it's still pending_payment
         const order = payment.order;
         if (order.status === OrderStatusEnum.pending_payment) {
           await tx.order.update({
             where: { id: order.id },
-            data: {
-              status: OrderStatusEnum.cancelled,
-            },
+            data: { status: OrderStatusEnum.cancelled },
           });
 
-          // 3. Release inventory reservations
           const reservations = await tx.inventoryReservation.findMany({
             where: { orderId: order.id, status: ReservationStatus.active },
           });
@@ -125,7 +118,6 @@ export class PaymentReconciliationService {
             });
           }
 
-          // 4. Add timeline entry
           await tx.orderTimeline.create({
             data: {
               orderId: order.id,

@@ -26,7 +26,7 @@ export const RefractionSection = () => {
             <p className="font-body text-xs uppercase tracking-ultra text-muted-foreground mb-6">
               {t('home.craft.subtitle')}
             </p>
-            
+
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary tracking-luxury font-normal leading-tight mb-8">
               {t('home.craft.title')}
               <br />
@@ -45,7 +45,7 @@ export const RefractionSection = () => {
               <p className="font-body text-base text-muted-foreground leading-relaxed">
                 {t('home.craft.description1')}
               </p>
-              
+
               <p className="font-body text-base text-muted-foreground leading-relaxed">
                 {t('home.craft.description2')}
               </p>
@@ -75,13 +75,13 @@ export const RefractionSection = () => {
             <div className="relative aspect-[4/5] rounded-xl overflow-hidden shadow-luxury">
               {/* Ambient glow behind image */}
               <div className="absolute -inset-8 bg-gradient-radial from-gold/10 via-transparent to-transparent opacity-60 blur-3xl" />
-              
+
               <img
                 src={featuredNecklace}
-                alt="Diamond necklace showcasing light refraction"
+                alt={t('home.craft.refractionAlt')}
                 className="relative z-10 w-full h-full object-cover transition-transform duration-1000 hover:scale-105"
               />
-              
+
               {/* Subtle overlay */}
               <div className="absolute inset-0 z-20 bg-gradient-to-t from-background/20 via-transparent to-transparent" />
             </div>

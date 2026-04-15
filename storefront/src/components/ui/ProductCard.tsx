@@ -20,7 +20,7 @@ interface ProductCardProps {
   slug: string;
   hoverImage?: string;
   isNew?: boolean;
-  index?: number; 
+  index?: number;
   className?: string;
 }
 
@@ -49,7 +49,7 @@ export const ProductCard = React.memo(({
     if (idToUse) {
       addItem(idToUse, 1, {
         productId: id,
-        name: { [language]: name }, 
+        name: { [language]: name },
         price: rawPrice || 0,
         image: image,
         slug: slug
@@ -78,7 +78,7 @@ export const ProductCard = React.memo(({
         {hoverImage && (
           <motion.img
             src={hoverImage}
-            alt={`${name} secondary view`}
+            alt={t('common.actions.secondaryView', { name })}
             loading="lazy"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100"
@@ -86,7 +86,7 @@ export const ProductCard = React.memo(({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
       </CardHeader>
-      
+
       <CardContent className="flex flex-col flex-grow p-2 lg:p-3 text-center">
         <p className="font-body text-[9px] lg:text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1 lg:mb-2">
           {category}
@@ -100,17 +100,17 @@ export const ProductCard = React.memo(({
           {price}
         </p>
       </CardContent>
-      
+
       <CardFooter className="p-2 pt-0 justify-center h-auto min-h-[2.5rem] lg:min-h-0 lg:h-10">
         <div className="flex items-center justify-center gap-x-2 gap-y-2 lg:gap-x-6 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all duration-700 translate-y-0 lg:translate-y-2 group-hover:translate-y-0 flex-wrap">
-          <Link 
+          <Link
             to={`/product/${slug}`}
             className="font-body text-[9px] lg:text-[10px] uppercase tracking-ultra text-primary/60 border-b border-primary/20 hover:text-gold hover:border-gold transition-all duration-500 pb-1 flex-shrink-0"
           >
             {t('common.actions.quickView')}
           </Link>
           <div className="hidden sm:block w-px h-3 bg-primary/10" />
-          <button 
+          <button
             onClick={handleAddToCart}
             className="font-body text-[9px] lg:text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center justify-center gap-2 flex-shrink-0"
           >

@@ -1,7 +1,6 @@
-import React from 'react';
 import { CheckCircle2, Clock, Package, Truck, XCircle, AlertCircle } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 import { OrderTimeline, OrderStatus } from '../types';
-import { format } from 'date-fns';
 
 interface OrderTimelineViewProps {
   timelines: OrderTimeline[];
@@ -9,11 +8,12 @@ interface OrderTimelineViewProps {
 }
 
 export const OrderTimelineView: React.FC<OrderTimelineViewProps> = ({ timelines, currentStatus }) => {
+  const { t, language } = useTranslation();
   const getIcon = (action: string, status?: OrderStatus | null) => {
     if (action.includes('CANCEL')) return <XCircle className="w-4 h-4 text-destructive" />;
     if (action.includes('PAYMENT_SUCCESS')) return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
     if (action.includes('PAYMENT_FAILED')) return <XCircle className="w-4 h-4 text-destructive" />;
-    
+
     switch (status) {
       case 'pending': return <Clock className="w-4 h-4 text-gold-light" />;
       case 'confirmed': return <CheckCircle2 className="w-4 h-4 text-gold" />;
@@ -40,10 +40,10 @@ export const OrderTimelineView: React.FC<OrderTimelineViewProps> = ({ timelines,
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <span className="text-[10px] uppercase tracking-ultra text-primary font-medium">
-                {event.action.replace(/_/g, ' ')}
+                {t(`account.orders.timeline.${event.action}`, { defaultValue: event.action.replace(/_/g, ' ') })}
               </span>
               <span className="text-[10px] text-muted-foreground tabular-nums">
-                {format(new Date(event.createdAt), 'MMM d, HH:mm')}
+                {new Date(event.createdAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : language === 'vi' ? 'vi-VN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
             {event.description && (
@@ -54,11 +54,11 @@ export const OrderTimelineView: React.FC<OrderTimelineViewProps> = ({ timelines,
           </div>
         </div>
       ))}
-      
+
       {sortedTimelines.length === 0 && (
         <div className="flex items-center gap-3 text-muted-foreground italic text-xs py-4">
           <AlertCircle className="w-4 h-4 stroke-[1]" />
-          <span>No historical records found for this acquisition.</span>
+          <span>{t('account.orders.noTimelineFound')}</span>
         </div>
       )}
     </div>

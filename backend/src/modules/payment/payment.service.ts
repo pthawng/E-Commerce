@@ -169,26 +169,22 @@ export class PaymentService {
       // Verify callback first (to get transaction ID)
       const verifiedData = await provider.verifyCallback(callbackData);
 
-      // Generate idempotency key using transaction ID
-      const idempotencyKey = this.idempotencyService.generateCallbackKey(
-        verifiedData.transactionId,
-        paymentMethod,
-      );
+      // Generate unified execution lock key using transaction ID
+      // This key is shared by Webhook and Redirect flows for this specific transaction
+      const executionKey = `payment_execution:${verifiedData.transactionId}`;
 
-      // Check if this callback was already processed
-      const cachedResult = await this.idempotencyService.getResult(idempotencyKey);
+      // 1. Check if already processed (Distributed Cache Idempotency)
+      const cachedResult = await this.idempotencyService.getResult(executionKey);
       if (cachedResult) {
-        this.logger.log(`Callback already processed for transaction ${verifiedData.transactionId}`);
+        this.logger.log(`Transaction ${verifiedData.transactionId} already processed (CACHED).`);
         return cachedResult;
       }
 
-      // Acquire lock to prevent concurrent callback processing
-      const lockToken = await this.idempotencyService.acquireLock(idempotencyKey);
+      // 2. Acquire Distributed Lock for atomic execution
+      const lockToken = await this.idempotencyService.acquireLock(executionKey);
       if (!lockToken) {
-        this.logger.warn(
-          `Concurrent callback detected for transaction ${verifiedData.transactionId}`,
-        );
-        throw new ConflictException('Callback already being processed. Please wait.');
+        this.logger.warn(`Concurrent execution detected for transaction ${verifiedData.transactionId}`);
+        throw new ConflictException('Payment processing in progress. Please retry.');
       }
 
       try {
@@ -222,9 +218,21 @@ export class PaymentService {
 
           this.stateMachine.validateTransition(payment.id, payment.status, nextStatus);
 
-          if (payment.status === PaymentProcessingStatus.SUCCESS) {
-            this.logger.warn(`Payment ${payment.id} already successful, skipping processing.`);
-            return;
+          if (
+            payment.status === PaymentProcessingStatus.SUCCESS ||
+            payment.status === PaymentProcessingStatus.FAILED
+          ) {
+            this.logger.log(`Payment ${payment.id} already in terminal state: ${payment.status}. Returning current data.`);
+
+            // Reconstruct verifiedData from DB since we already did the work
+            return {
+              orderId: payment.orderId,
+              transactionId: payment.providerTransactionId,
+              amount: Number(payment.amount),
+              status: payment.status === PaymentProcessingStatus.SUCCESS ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
+              paymentMethod,
+              gatewayResponse: payment.rawPayload,
+            };
           }
 
           // 4. Update Payment record (Source of Truth)
@@ -316,10 +324,10 @@ export class PaymentService {
         this.logger.log(
           `Payment processed: Order=${verifiedData.orderId}, Status=${verifiedData.status}`,
         );
-        await this.idempotencyService.storeResult(idempotencyKey, verifiedData);
+        await this.idempotencyService.storeResult(executionKey, verifiedData);
         return verifiedData;
       } finally {
-        await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
+        await this.idempotencyService.releaseLock(executionKey, lockToken);
       }
     });
   }

@@ -5,6 +5,13 @@ import { JwtService } from '@nestjs/jwt';
 export interface CheckoutTokenPayload {
   jti: string; // Unique Token ID for Idempotency
   cartHash: string;
+  totalAmount: number; // Snapshot of total price (integer-safe precision)
+  currency: string;
+  lineItems: Array<{
+    variantId: string;
+    quantity: number;
+    price: number;
+  }>;
   userId?: string;
   sessionId?: string;
   expiresAt: number;
@@ -15,7 +22,7 @@ export class CheckoutTokenService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async generateToken(payload: Omit<CheckoutTokenPayload, 'expiresAt' | 'jti'>): Promise<string> {
     const expiresIn = this.configService.get<string>('JWT_CHECKOUT_EXPIRES_IN', '15m');

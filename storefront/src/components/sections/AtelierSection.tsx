@@ -21,9 +21,9 @@ export const AtelierSection = () => {
           className="w-full h-full object-cover opacity-40 dark:opacity-30"
           poster="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=1920&q=80"
         >
-          <source 
-            src="https://player.vimeo.com/external/370331493.sd.mp4?s=e90dcaba73c19e0e36f03406b47bbd6992dd6c1c&profile_id=165&oauth2_token_id=57447761" 
-            type="video/mp4" 
+          <source
+            src="https://player.vimeo.com/external/370331493.sd.mp4?s=e90dcaba73c19e0e36f03406b47bbd6992dd6c1c&profile_id=165&oauth2_token_id=57447761"
+            type="video/mp4"
           />
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90" />

@@ -71,7 +71,7 @@ export const FeaturedProductSection = () => {
             >
               <img
                 src={currentProduct.image}
-                alt={t.featured.products[currentProduct.nameKey as keyof typeof t.featured.products]?.name || "Featured Product"}
+                alt={t(`home.featured.products.${currentProduct.nameKey}`)}
                 className="w-48 sm:w-56 lg:w-64 h-auto mx-auto object-contain md:group-hover:scale-[1.02] transition-transform duration-700 ease-out"
               />
             </motion.div>
@@ -84,7 +84,7 @@ export const FeaturedProductSection = () => {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="font-display text-lg sm:text-xl lg:text-2xl text-foreground mb-3 sm:mb-4 italic tracking-wide font-normal"
             >
-              {t.featured.products[currentProduct.nameKey as keyof typeof t.featured.products]?.name || currentProduct.nameKey}
+              {t(`home.featured.products.${currentProduct.nameKey}`)}
             </motion.h3>
 
             <motion.p
@@ -94,7 +94,7 @@ export const FeaturedProductSection = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-muted-foreground text-xs sm:text-sm mb-2 tracking-wide font-body"
             >
-              {currentProduct.materials}
+              {t(`home.featured.products.${currentProduct.nameKey}Materials`)}
             </motion.p>
 
             <motion.p
@@ -114,7 +114,7 @@ export const FeaturedProductSection = () => {
               transition={{ duration: 0.5, delay: 0.4 }}
               className="text-muted-foreground text-2xs sm:text-xs mb-6 sm:mb-8 tracking-wide font-body"
             >
-              {currentProduct.variation}
+              {t(`home.featured.products.${currentProduct.nameKey}Variation`)}
             </motion.p>
 
             {/* Carousel Dots */}
@@ -123,12 +123,11 @@ export const FeaturedProductSection = () => {
                 <button
                   key={index}
                   onClick={() => setActiveIndex(index)}
-                  className={`h-1.5 sm:h-2 rounded-full transition-all duration-500 ${
-                    index === activeIndex
-                      ? "bg-primary w-4 sm:w-5"
-                      : "w-1.5 sm:w-2 bg-muted-foreground/20 hover:bg-muted-foreground/40"
-                  }`}
-                  aria-label={`View product ${index + 1}`}
+                  className={`h-1.5 sm:h-2 rounded-full transition-all duration-500 ${index === activeIndex
+                    ? "bg-primary w-4 sm:w-5"
+                    : "w-1.5 sm:w-2 bg-muted-foreground/20 hover:bg-muted-foreground/40"
+                    }`}
+                  aria-label={t('common.actions.viewProduct', { index: index + 1 })}
                 />
               ))}
             </div>
@@ -141,7 +140,7 @@ export const FeaturedProductSection = () => {
               transition={{ duration: 0.8, delay: 0.6 }}
               className="inline-block text-primary text-2xs sm:text-xs tracking-ultra uppercase font-body underline-expand pb-1 cta-quiet"
             >
-              {t.featured.moreCreations}
+              {t('home.featured.moreCreations')}
             </motion.a>
           </motion.div>
         </div>
@@ -155,7 +154,7 @@ export const FeaturedProductSection = () => {
         >
           <img
             src={featuredModel}
-            alt="Model wearing luxury jewelry"
+            alt={t('home.featured.modelAlt')}
             className="absolute inset-0 w-full h-full object-cover object-top"
           />
           {/* Subtle overlay for depth */}
@@ -170,7 +169,7 @@ export const FeaturedProductSection = () => {
           transition={{ duration: 0.9, delay: 0.4 }}
           className="font-body text-xs text-muted-foreground mt-6 mb-10"
         >
-          More configurations, same quiet language.
+          {t('home.featured.bridge')}
         </motion.p>
       </div>
     </section>

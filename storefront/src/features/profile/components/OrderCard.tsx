@@ -1,7 +1,7 @@
 import React from 'react';
-import { format } from 'date-fns';
-import { Package, ChevronRight, MapPin, User, ShoppingBag, Heart, LogOut } from 'lucide-react';
+import { Package, ChevronRight, MapPin } from 'lucide-react';
 import { getApiBaseUrl } from '@shared';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Order } from '../types';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -12,6 +12,7 @@ interface OrderCardProps {
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
+  const { t, formatPrice, language } = useTranslation();
   const resolveImageUrl = (url?: string | null) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
@@ -31,12 +32,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
     failed: 'text-destructive border-destructive/20 bg-destructive/5',
   };
 
-  const getStatusLabel = (status: string) => status.charAt(0).toUpperCase() + status.slice(1);
+  const getStatusLabel = (status: string) => t(`account.orders.status.${status}`);
 
   const items = order.items || [];
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -50,18 +51,18 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
               {getStatusLabel(order.status)}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-              {format(new Date(order.createdAt), 'MMM d, yyyy')}
+              {new Date(order.createdAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : language === 'vi' ? 'vi-VN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           </div>
-          
+
           <div className="space-y-1">
             <h3 className="text-xl font-display tracking-wide text-primary">
-              Order #{order.code}
+              {t('account.orders.id', { code: order.code })}
             </h3>
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-3 h-3 stroke-[1]" />
               <span className="text-[10px] uppercase tracking-widest">
-                {(order.shippingAddress as any)?.city || 'International Delivery'}
+                {(order.shippingAddress as any)?.city || t('account.orders.internationalDelivery')}
               </span>
             </div>
           </div>
@@ -71,14 +72,14 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
         <div className="flex items-center gap-4 py-2 overflow-x-auto no-scrollbar max-w-xs min-h-[80px]">
           {items.slice(0, 3).map((item) => {
             const displayThumbnail = item.thumbnailUrl || item.productVariant?.thumbnailUrl;
-            
+
             return (
               <div key={item.id} className="relative w-16 h-20 bg-background border border-primary/5 overflow-hidden flex-shrink-0">
                 {displayThumbnail ? (
-                  <img 
-                    src={resolveImageUrl(displayThumbnail) || ''} 
-                    alt={item.productName} 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  <img
+                    src={resolveImageUrl(displayThumbnail) || ''}
+                    alt={item.productName}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-primary/10">
@@ -99,17 +100,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
         {/* Total & Action */}
         <div className="flex flex-col justify-between items-end gap-6 md:min-w-[180px]">
           <div className="text-right space-y-1">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-ultra">Total Investment</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-ultra">{t('account.orders.totalInvestment')}</p>
             <p className="text-2xl font-display text-primary">
-              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.totalAmount)}
+              {formatPrice(order.totalAmount)}
             </p>
           </div>
-          
-          <Link 
+
+          <Link
             to={`/account/orders/${order.id}`}
             className="group/btn flex items-center gap-3 text-[10px] tracking-ultra uppercase text-primary/60 hover:text-primary transition-colors duration-500"
           >
-            <span>View Manifest</span>
+            <span>{t('account.actions.viewManifest')}</span>
             <div className="w-8 h-px bg-primary/20 group-hover/btn:w-12 group-hover/btn:bg-primary transition-all duration-500" />
             <ChevronRight className="w-3 h-3 stroke-[1.5]" />
           </Link>

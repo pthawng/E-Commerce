@@ -35,7 +35,7 @@ export class OrderPaymentService {
     private readonly checkoutTokenService: CheckoutTokenService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   /**
    * Step 1: Validate cart and reserve inventory (snapshot)
@@ -68,6 +68,13 @@ export class OrderPaymentService {
         cartHash,
         userId,
         sessionId,
+        totalAmount: totals.total,
+        currency: 'VND',
+        lineItems: cart.items.map((item) => ({
+          variantId: item.productVariantId,
+          quantity: item.quantity,
+          price: Number(variants.find((v) => v.id === item.productVariantId)?.price || 0),
+        })),
       });
 
       return {
@@ -132,13 +139,51 @@ export class OrderPaymentService {
         throw new BadRequestException('Cart is empty');
       }
 
-      // 3. Verify cart state hasn't changed since token generation
+      // 3. Verify cart state and PRICE stability hasn't changed since token generation
       const currentCartHash = this.generateCartHash(cart.items);
       if (currentCartHash !== tokenPayload.cartHash) {
         throw new ConflictException({
           code: 'CART_HASH_MISMATCH',
           message: 'Cart content has changed. Please re-validate checkout.',
         });
+      }
+
+      const { orderItemsData, totals } = this.calculateOrderTotals(
+        cart.items,
+        variants,
+        dto.shippingMethodId,
+      );
+
+      // Staff-level: Enforce Price Concurrency Safety (Integer-safe VND comparison)
+      // We check the TOTAL first, then individual items for forensic debugging
+      const isPriceSafe = Math.abs(Math.round(totals.total) - Math.round(tokenPayload.totalAmount)) <= 1;
+
+      if (!isPriceSafe) {
+        this.logger.warn(`Price mismatch detected for token ${tokenPayload.jti}. Expected: ${tokenPayload.totalAmount}, Actual: ${totals.total}`);
+        throw new ConflictException({
+          code: 'PRICE_STABILITY_ERROR',
+          message: 'Price has changed since validation. Please review your order totals.',
+          details: {
+            expected: tokenPayload.totalAmount,
+            actual: totals.total,
+          },
+        });
+      }
+
+      // Verify individual items to catch edge cases (e.g. price shifts that sum to same total)
+      for (const item of cart.items) {
+        const variant = variants.find((v) => v.id === item.productVariantId);
+        const snapshotItem = tokenPayload.lineItems.find((li) => li.variantId === item.productVariantId);
+
+        const currentPrice = Math.round(Number(variant?.price || 0));
+        const snapshotPrice = Math.round(snapshotItem?.price || 0);
+
+        if (currentPrice !== snapshotPrice) {
+          throw new ConflictException({
+            code: 'PRICE_STABILITY_ERROR',
+            message: `The price for ${variant?.sku || 'an item'} has changed.`,
+          });
+        }
       }
 
       // 4. Allocate inventory
@@ -149,11 +194,6 @@ export class OrderPaymentService {
         })),
       );
 
-      const { orderItemsData, totals } = this.calculateOrderTotals(
-        cart.items,
-        variants,
-        dto.shippingMethodId,
-      );
       const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
 
       try {

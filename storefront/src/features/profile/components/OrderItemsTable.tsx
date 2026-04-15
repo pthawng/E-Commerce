@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from '@shared';
+import { useTranslation } from '@/hooks/useTranslation';
 import { OrderItem } from '../types';
 import { Package } from 'lucide-react';
 
@@ -7,9 +8,7 @@ interface OrderItemsTableProps {
 }
 
 export const OrderItemsTable: React.FC<OrderItemsTableProps> = ({ items }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-  };
+  const { t, formatPrice } = useTranslation();
 
   const resolveImageUrl = (url?: string | null) => {
     if (!url) return null;
@@ -23,16 +22,16 @@ export const OrderItemsTable: React.FC<OrderItemsTableProps> = ({ items }) => {
     <div className="space-y-8">
       {items.map((item) => {
         const displayThumbnail = item.thumbnailUrl || item.productVariant?.thumbnailUrl;
-        
+
         return (
           <div key={item.id} className="group flex gap-8 items-center py-6 border-b border-primary/[0.03] last:border-0 transition-all duration-500 hover:bg-primary/[0.01]">
             {/* Thumbnail */}
             <div className="relative w-20 h-28 bg-background border border-primary/5 overflow-hidden flex-shrink-0">
               {displayThumbnail ? (
-                <img 
-                  src={resolveImageUrl(displayThumbnail) || ''} 
-                  alt={item.productName} 
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                <img
+                  src={resolveImageUrl(displayThumbnail) || ''}
+                  alt={item.productName}
+                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-primary/10">
@@ -54,13 +53,13 @@ export const OrderItemsTable: React.FC<OrderItemsTableProps> = ({ items }) => {
                   <p className="text-[9px] uppercase tracking-ultra text-muted-foreground">{item.sku}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-body text-primary">{formatCurrency(item.price)}</p>
+                  <p className="text-sm font-body text-primary">{formatPrice(item.price)}</p>
                   <p className="text-[9px] text-muted-foreground uppercase tracking-widest mt-1 italic">
-                    Qty: {item.quantity}
+                    {t('account.labels.qty')}: {item.quantity}
                   </p>
                 </div>
               </div>
-              
+
               {item.variantTitle && typeof item.variantTitle === 'object' && (
                 <div className="flex gap-4">
                   {Object.entries(item.variantTitle).map(([key, value]) => (

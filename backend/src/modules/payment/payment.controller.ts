@@ -32,7 +32,7 @@ export class PaymentController {
     private readonly paymentService: PaymentService,
     private readonly vietqrMatchingService: VietQRMatchingService,
     @InjectQueue('payment_status') private readonly paymentQueue: Queue,
-  ) {}
+  ) { }
 
   /**
    * Create payment for an order
@@ -86,13 +86,12 @@ export class PaymentController {
   })
   async vnpayCallback(@Query() query: any, @Res() res: Response) {
     try {
-      // VNPAY Return URL is for UX redirect only. NO DB WRITES.
-      // DB is updated via the synchronous IPN call (/vnpay/ipn)
-
-      // 1. For the user (Browser redirect)
-      // We verify synchronously ONLY for the redirect response, not for the DB update
-      const provider = this.paymentService.getProvider(PaymentMethodEnum.VNPAY);
-      const verifiedData = await provider.verifyCallback(query);
+      // Principal-level hardening: Execute full callback processing on redirect
+      // even if IPN hasn't arrived. Unified lock in Service ensures safety.
+      const verifiedData = await this.paymentService.processCallback(
+        PaymentMethodEnum.VNPAY,
+        query,
+      );
 
       const redirectUrl = new URL(process.env.FRONTEND_URL || 'http://localhost:8080');
       redirectUrl.pathname = '/payment/result';

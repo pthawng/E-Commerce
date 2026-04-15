@@ -138,7 +138,7 @@ export const CheckoutPage: React.FC = () => {
                 return;
             }
             if (err.statusCode === 400 && (err.message?.includes('token') || err.message?.includes('expired'))) {
-                toast.error('Session expired. Please review your cart.');
+                toast.error(t('checkout.messages.expired'));
                 await fetchCart();
                 navigate('/cart');
                 return;
@@ -212,7 +212,7 @@ export const CheckoutPage: React.FC = () => {
                                                 <Input
                                                     {...register('phone')}
                                                     id="phone"
-                                                    placeholder="0901234567"
+                                                    placeholder={t('checkout.fields.phonePlaceholder')}
                                                     className={cn("rounded-none border-border/50 focus-visible:ring-gold/20", errors.phone && "border-destructive/50")}
                                                 />
                                                 <ErrorMessage error={errors.phone} />
@@ -233,7 +233,7 @@ export const CheckoutPage: React.FC = () => {
                                             <Input
                                                 {...register('addressLine')}
                                                 id="addressLine"
-                                                placeholder="123 Lê Lợi"
+                                                placeholder={t('checkout.fields.addressPlaceholder')}
                                                 className={cn("rounded-none border-border/50 focus-visible:ring-gold/20", errors.addressLine && "border-destructive/50")}
                                             />
                                             <ErrorMessage error={errors.addressLine} />

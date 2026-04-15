@@ -12,7 +12,7 @@ export interface LegalPageContent {
   sections: LegalSectionContent[];
 }
 
-export const legalContent: Record<'en' | 'vi', { privacy: LegalPageContent; terms: LegalPageContent }> = {
+export const legalContent: Record<'en' | 'vi' | 'zh', { privacy: LegalPageContent; terms: LegalPageContent }> = {
   en: {
     privacy: {
       title: "Privacy Policy",
@@ -187,6 +187,95 @@ export const legalContent: Record<'en' | 'vi', { privacy: LegalPageContent; term
           id: "intellectual-property",
           title: "Sở Hữu Trí Tuệ",
           content: "Các thiết kế, hình ảnh và bản sắc thương hiệu Ray Paradis được bảo hộ bởi luật sở hữu trí tuệ quốc tế và Việt Nam. Mọi hành vi sao chép hoặc sử dụng trái phép đều bị nghiêm cấm."
+        }
+      ]
+    }
+  },
+  zh: {
+    privacy: {
+      title: "隐私政策",
+      subtitle: "恪守客户隐私承诺",
+      lastUpdated: "2026年1月14日",
+      sections: [
+        {
+          id: "our-commitment",
+          title: "我们的承诺",
+          content: "在 Ray Paradis，我们深知客户对我们的信任与我们在创作中所使用的材料一样珍贵。本隐私政策概述了当您通过我们的数字工坊和精品店与我们互动时，我们如何保护您的个人信息。"
+        },
+        {
+          id: "data-collection",
+          title: "我们收集的数据",
+          content: [
+            "为了提供个性化的奢华体验，我们会收集您通过创建账户、下单和订阅简报所分享的信息。",
+            "这包括但不限于：您的姓名、联系方式、账单和收货地址，以及帮助我们为您挑选符合您品味的珍宝的喜好设置。"
+          ]
+        },
+        {
+          id: "artistry-and-data",
+          title: "我们如何使用您的信息",
+          content: "您的数据仅用于处理您的订单、提升您的购物体验，并向您通报新的杰作或独家活动。我们不会出于营销目的向第三方出售或交易您的信息。",
+          subsections: [
+            {
+              title: "个性化",
+              content: "我们使用您的浏览历史来建议符合您个人风格的创作。"
+            },
+            {
+              title: "安全性",
+              content: "为了保护您的交易，我们采用行业标准的加密和欺诈预防措施。"
+            }
+          ]
+        },
+        {
+          id: "client-rights",
+          title: "作为鉴赏家的您的权利",
+          content: "作为 Ray Paradis 的珍贵客户，您有权随时访问、更正或要求删除您的个人数据。我们的礼宾团队随时为您提供有关隐私问题的咨询服务。"
+        },
+        {
+          id: "cookie-policy",
+          title: "数字足迹",
+          content: "我们的网站使用 cookie 来维护您的会话并了解访客如何探索我们的系列。这些小文件用于提升性能，绝不会用于在 Ray Paradis 生态系统之外追踪您。"
+        }
+      ]
+    },
+    terms: {
+      title: "服务条款",
+      subtitle: "规范 Ray Paradis 品牌体验",
+      lastUpdated: "2026年1月14日",
+      sections: [
+        {
+          id: "acceptance",
+          title: "条款确认",
+          content: "进入 Ray Paradis 的数字世界，即表示您同意接受本服务条款的约束。这些条款规范您对我们网站的使用、对我们创作的购买以及您与我们品牌的互动。"
+        },
+        {
+          id: "craftsmanship",
+          title: "正品保障与匠心工艺",
+          content: "每一件 Ray Paradis 的作品都是由我们的资深匠人倾心打造。我们保证材料的真实性与品质，包括宝石的来源以及贵金属的纯度。"
+        },
+        {
+          id: "sales-conditions",
+          title: "销售条款",
+          content: "所有订单均视供应情况和订单价格确认而定。由于我们的作品由手工打造，可能存在细微差异，使每一件作品都成为您独一无二的专属之选。",
+          subsections: [
+            {
+              title: "定价",
+              content: "价格以您所在地区的货币显示，并可能随时更改，恕不另行通知。"
+            },
+            {
+              title: "付款",
+              content: "我们接受通过 VNPAY、PayPal 和 VietQR 进行的安全支付。作品的所有权仅在全额付款后转移。"
+            }
+          ]
+        },
+        {
+          id: "shipping-returns",
+          title: "配送与退货",
+          content: "我们为所有珍宝提供免费的尊享配送服务。在原始状态和包装下，未佩戴过的杰作可在签收后30天内申请退货。"
+        },
+        {
+          id: "intellectual-property",
+          title: "知识产权",
+          content: "Ray Paradis 的设计、摄影及品牌精髓受国际知识产权法保护。严禁任何未经授权使用我们创意资产的行为。"
         }
       ]
     }
