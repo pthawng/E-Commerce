@@ -2,8 +2,10 @@ import type { User } from '@shared';
 
 export function sanitizeUser(
   user: any,
-): Pick<User, 'id' | 'email' | 'phone' | 'fullName' | 'isActive' | 'isEmailVerified' | 'createdAt' | 'updatedAt'> {
-
+): Pick<
+  User,
+  'id' | 'email' | 'phone' | 'fullName' | 'isActive' | 'isEmailVerified' | 'createdAt' | 'updatedAt'
+> {
   // Lọc bỏ các field nhạy cảm trước khi trả client
   return {
     id: user.id,
@@ -15,5 +17,4 @@ export function sanitizeUser(
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
-
 }

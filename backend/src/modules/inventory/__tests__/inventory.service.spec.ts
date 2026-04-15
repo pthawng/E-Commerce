@@ -1,7 +1,7 @@
+import { ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { InventoryService } from '../inventory.service';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { InventoryService } from '../inventory.service';
 
 describe('InventoryService', () => {
   let service: InventoryService;
@@ -28,10 +28,7 @@ describe('InventoryService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        InventoryService,
-        { provide: PrismaService, useValue: mockPrismaService },
-      ],
+      providers: [InventoryService, { provide: PrismaService, useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<InventoryService>(InventoryService);
@@ -85,8 +82,9 @@ describe('InventoryService', () => {
         { id: 'inv1', quantity: 10, reservedQuantity: 7 },
       ]);
 
-      await expect(service.reserve('order1', allocations, expiresAt))
-        .rejects.toThrow(ConflictException);
+      await expect(service.reserve('order1', allocations, expiresAt)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
@@ -137,13 +135,17 @@ describe('InventoryService', () => {
   describe('directDeduct', () => {
     it('should deduct stock directly without prior reservation (COD)', async () => {
       const allocations = [{ variantId: 'v1', warehouseId: 'w1', quantity: 3 }];
-      mockPrismaService.$queryRawUnsafe.mockResolvedValue([{ id: 'inv1', quantity: 10, reservedQuantity: 0 }]);
+      mockPrismaService.$queryRawUnsafe.mockResolvedValue([
+        { id: 'inv1', quantity: 10, reservedQuantity: 0 },
+      ]);
 
       await service.directDeduct('order_cod', allocations);
 
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({
-        data: { quantity: 7 }
-      }));
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { quantity: 7 },
+        }),
+      );
     });
   });
 
@@ -153,12 +155,16 @@ describe('InventoryService', () => {
 
       await service.receiveStock('v1', 'w1', 5);
 
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({
-        data: { quantity: 15 }
-      }));
-      expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ actionType: 'IMPORT', quantityChange: 5 })
-      }));
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { quantity: 15 },
+        }),
+      );
+      expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ actionType: 'IMPORT', quantityChange: 5 }),
+        }),
+      );
     });
   });
 
@@ -168,12 +174,16 @@ describe('InventoryService', () => {
 
       await service.adjustStock('v1', 'w1', 25, 'Physical count');
 
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({
-        data: { quantity: 25 }
-      }));
-      expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ actionType: 'ADJUSTMENT', quantityChange: 15 })
-      }));
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { quantity: 25 },
+        }),
+      );
+      expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ actionType: 'ADJUSTMENT', quantityChange: 15 }),
+        }),
+      );
     });
   });
 });

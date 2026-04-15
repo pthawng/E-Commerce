@@ -1,3 +1,5 @@
+import { SystemContextStore } from '@common/context/system-context.store';
+import { withRetry } from '@common/utils/retry.util';
 import {
   BadRequestException,
   ConflictException,
@@ -5,10 +7,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ActionType, Prisma, ReservationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma, ActionType, ReservationStatus } from '@prisma/client';
-import { SystemContextStore } from '@common/context/system-context.store';
-import { withRetry } from '@common/utils/retry.util';
 
 /**
  * Allocation item — result from InventoryAllocatorService
@@ -76,19 +76,22 @@ export class InventoryService {
 
         for (const alloc of allocations) {
           // Use NOWAIT + Retry for maximum concurrency safety without hanging
-          const inventoryItem = await withRetry(async () => {
-            const [item] = await tx.$queryRawUnsafe<
-              Array<{ id: string; quantity: number; reservedQuantity: number }>
-            >(
-              `SELECT id, quantity, "reservedQuantity"
+          const inventoryItem = await withRetry(
+            async () => {
+              const [item] = await tx.$queryRawUnsafe<
+                Array<{ id: string; quantity: number; reservedQuantity: number }>
+              >(
+                `SELECT id, quantity, "reservedQuantity"
                FROM "InventoryItem"
                WHERE "productVariantId" = $1 AND "warehouseId" = $2
                FOR UPDATE NOWAIT`,
-              alloc.variantId,
-              alloc.warehouseId,
-            );
-            return item;
-          }, { logger: this.logger, context: 'InventoryReserve' });
+                alloc.variantId,
+                alloc.warehouseId,
+              );
+              return item;
+            },
+            { logger: this.logger, context: 'InventoryReserve' },
+          );
 
           if (!inventoryItem) {
             throw new NotFoundException(
@@ -101,14 +104,14 @@ export class InventoryService {
           if (available < alloc.quantity) {
             throw new ConflictException({
               code: 'STOCK_INSUFFICIENT',
-              message: `Insufficient stock: available=${available}, requested=${alloc.quantity} ` +
-                `(variant=${alloc.variantId}, warehouse=${alloc.warehouseId})`
+              message:
+                `Insufficient stock: available=${available}, requested=${alloc.quantity} ` +
+                `(variant=${alloc.variantId}, warehouse=${alloc.warehouseId})`,
             });
           }
 
-
           const beforeQuantity = inventoryItem.quantity;
-          
+
           await tx.inventoryItem.update({
             where: { id: inventoryItem.id },
             data: {
@@ -166,19 +169,22 @@ export class InventoryService {
         });
 
         for (const res of reservations) {
-          const inventoryItem = await withRetry(async () => {
-            const [item] = await tx.$queryRawUnsafe<
-              Array<{ id: string; quantity: number; reservedQuantity: number }>
-            >(
-              `SELECT id, quantity, "reservedQuantity"
+          const inventoryItem = await withRetry(
+            async () => {
+              const [item] = await tx.$queryRawUnsafe<
+                Array<{ id: string; quantity: number; reservedQuantity: number }>
+              >(
+                `SELECT id, quantity, "reservedQuantity"
                FROM "InventoryItem"
                WHERE "productVariantId" = $1 AND "warehouseId" = $2
                FOR UPDATE NOWAIT`,
-              res.variantId,
-              res.warehouseId,
-            );
-            return item;
-          }, { logger: this.logger, context: 'InventoryDeduct' });
+                res.variantId,
+                res.warehouseId,
+              );
+              return item;
+            },
+            { logger: this.logger, context: 'InventoryDeduct' },
+          );
 
           if (!inventoryItem) continue;
 
@@ -230,19 +236,22 @@ export class InventoryService {
         });
 
         for (const res of reservations) {
-          const inventoryItem = await withRetry(async () => {
-            const [item] = await tx.$queryRawUnsafe<
-              Array<{ id: string; quantity: number; reservedQuantity: number }>
-            >(
-              `SELECT id, quantity, "reservedQuantity"
+          const inventoryItem = await withRetry(
+            async () => {
+              const [item] = await tx.$queryRawUnsafe<
+                Array<{ id: string; quantity: number; reservedQuantity: number }>
+              >(
+                `SELECT id, quantity, "reservedQuantity"
                FROM "InventoryItem"
                WHERE "productVariantId" = $1 AND "warehouseId" = $2
                FOR UPDATE NOWAIT`,
-              res.variantId,
-              res.warehouseId,
-            );
-            return item;
-          }, { logger: this.logger, context: 'InventoryRelease' });
+                res.variantId,
+                res.warehouseId,
+              );
+              return item;
+            },
+            { logger: this.logger, context: 'InventoryRelease' },
+          );
 
           if (!inventoryItem) continue;
 
@@ -308,7 +317,8 @@ export class InventoryService {
           },
         });
 
-        const beforeQuantity = inventoryItem.quantity - (inventoryItem.quantity === quantity ? 0 : quantity);
+        const beforeQuantity =
+          inventoryItem.quantity - (inventoryItem.quantity === quantity ? 0 : quantity);
 
         await tx.inventoryLog.create({
           data: {
@@ -329,26 +339,26 @@ export class InventoryService {
     });
   }
 
-  async adjustStock(
-    variantId: string,
-    warehouseId: string,
-    newQuantity: number,
-    reason?: string,
-  ) {
+  async adjustStock(variantId: string, warehouseId: string, newQuantity: number, reason?: string) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
         // Enforce row level lock for adjustment too
-        const inventoryItem = await withRetry(async () => {
-          const [item] = await tx.$queryRawUnsafe<any>(
-            `SELECT id, quantity FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE NOWAIT`,
-            variantId,
-            warehouseId
-          );
-          return item;
-        }, { logger: this.logger, context: 'InventoryAdjust' });
+        const inventoryItem = await withRetry(
+          async () => {
+            const [item] = await tx.$queryRawUnsafe<any>(
+              `SELECT id, quantity FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE NOWAIT`,
+              variantId,
+              warehouseId,
+            );
+            return item;
+          },
+          { logger: this.logger, context: 'InventoryAdjust' },
+        );
 
         if (!inventoryItem) {
-          throw new NotFoundException(`Inventory item not found for variant=${variantId} in warehouse=${warehouseId}`);
+          throw new NotFoundException(
+            `Inventory item not found for variant=${variantId} in warehouse=${warehouseId}`,
+          );
         }
 
         const beforeQuantity = inventoryItem.quantity;
@@ -386,14 +396,17 @@ export class InventoryService {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
         // Enforce row level lock
-        const inventoryItem = await withRetry(async () => {
-          const [item] = await tx.$queryRawUnsafe<any>(
-            `SELECT id, quantity FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE NOWAIT`,
-            variantId,
-            warehouseId
-          );
-          return item;
-        }, { logger: this.logger, context: 'InventoryDamage' });
+        const inventoryItem = await withRetry(
+          async () => {
+            const [item] = await tx.$queryRawUnsafe<any>(
+              `SELECT id, quantity FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE NOWAIT`,
+              variantId,
+              warehouseId,
+            );
+            return item;
+          },
+          { logger: this.logger, context: 'InventoryDamage' },
+        );
 
         if (!inventoryItem || inventoryItem.quantity < quantity) {
           throw new BadRequestException('Insufficient stock to report damage');

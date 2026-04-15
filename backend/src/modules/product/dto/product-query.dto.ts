@@ -1,5 +1,5 @@
-import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 import { PaginationDto } from 'src/common/pagination';
 
 export class ProductQueryDto extends PaginationDto {

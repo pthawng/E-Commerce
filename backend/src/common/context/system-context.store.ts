@@ -44,12 +44,12 @@ export class SystemContextStore {
   static async asInternal<T>(callerName: string, fn: () => Promise<T>): Promise<T> {
     const currentStore = this.storage.getStore();
     const store = currentStore || new Map<string, any>();
-    
+
     store.set('isInternalService', true);
     store.set('caller', callerName);
 
     if (currentStore) {
-        return fn();
+      return fn();
     }
 
     return this.storage.run(store, fn);

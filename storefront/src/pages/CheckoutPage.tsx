@@ -132,6 +132,12 @@ export const CheckoutPage: React.FC = () => {
                 await fetchCart();
                 return;
             }
+            if (err.statusCode === 400 && (err.message?.includes('token') || err.message?.includes('expired'))) {
+                toast.error('Session expired. Please review your cart.');
+                await fetchCart();
+                navigate('/cart');
+                return;
+            }
             toast.error(err.response?.data?.message || t('checkout.messages.error'));
         } finally {
             setIsSubmitting(false);

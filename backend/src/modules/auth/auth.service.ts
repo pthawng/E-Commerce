@@ -17,10 +17,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import type { AuthResponse, AuthTokens, User } from '@shared';
+import type { AuthResponse } from '@shared';
 import * as argon2 from 'argon2';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { randomUUID } from 'node:crypto';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 const ARGON_OPTIONS: argon2.Options = {
   type: argon2.argon2id,
@@ -51,7 +51,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly forgotPassEmailService: ForgotPassEmailService,
-  ) { }
+  ) {}
 
   // ---------------------------
   // PUBLIC API
@@ -72,14 +72,18 @@ export class AuthService {
     });
 
     try {
-      await this.verifyEmailService.sendVerifyEmail({
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName ?? user.email,
-      }, reqIp, reqUa);
+      await this.verifyEmailService.sendVerifyEmail(
+        {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName ?? user.email,
+        },
+        reqIp,
+        reqUa,
+      );
     } catch (error) {
       this.logger.error(`Failed to trigger verify email for ${user.email}`, error);
-      // NOTE: We no longer delete the user here in L8 flow. 
+      // NOTE: We no longer delete the user here in L8 flow.
       // The email is either queued in Outbox or the user can click "Resend".
     }
 
@@ -123,10 +127,10 @@ export class AuthService {
 
     // Role Validation
     if (requiredRole === USER_ROLES.CUSTOMER) {
-      const isCustomer = !((user as any).userType) || (user as any).userType === 'CUSTOMER';
+      const isCustomer = !(user as any).userType || (user as any).userType === 'CUSTOMER';
       if (!isCustomer) throw new UnauthorizedException('Invalid account type for this portal');
     } else if (requiredRole === USER_ROLES.ADMIN) {
-      const isCustomer = !((user as any).userType) || (user as any).userType === 'CUSTOMER';
+      const isCustomer = !(user as any).userType || (user as any).userType === 'CUSTOMER';
       if (isCustomer) throw new UnauthorizedException('Access denied');
     }
 
@@ -148,8 +152,10 @@ export class AuthService {
     return sanitizeUser(user);
   }
 
-  async updateMe(userId: string, dto: import('@modules/auth/dto/update-me.dto').UpdateMeDto): Promise<any> {
-
+  async updateMe(
+    userId: string,
+    dto: import('@modules/auth/dto/update-me.dto').UpdateMeDto,
+  ): Promise<any> {
     const user = await this.prismaService.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('User not found');
 
@@ -177,7 +183,6 @@ export class AuthService {
 
     return sanitizeUser(updated);
   }
-
 
   // ---------------------------
   // REFRESH TOKEN
@@ -213,7 +218,7 @@ export class AuthService {
 
   async logout(dto: import('@modules/auth/dto/logout.dto').LogoutDto) {
     try {
-      const payload = await this.jwtService.decode(dto.refreshToken) as any;
+      const payload = (await this.jwtService.decode(dto.refreshToken)) as any;
       const jti = payload?.jti;
       if (!jti) return { message: 'Logged out successfully' };
 
@@ -230,7 +235,10 @@ export class AuthService {
   // HELPERS
   // ---------------------------
 
-  public async issueTokenPair(userId: string, audience: 'customer' | 'admin' = 'customer'): Promise<AuthResponse> {
+  public async issueTokenPair(
+    userId: string,
+    audience: 'customer' | 'admin' = 'customer',
+  ): Promise<AuthResponse> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
       include: {
@@ -245,20 +253,14 @@ export class AuthService {
     const jti = randomUUID();
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(
-        { sub: userId, type: 'access', aud: audience, roles },
-        {
-          secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-          expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES') || TOKEN_EXPIRY.ACCESS,
-        } as any,
-      ),
-      this.jwtService.signAsync(
-        { sub: userId, type: 'refresh', aud: audience, jti },
-        {
-          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-          expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES') || TOKEN_EXPIRY.REFRESH,
-        } as any,
-      ),
+      this.jwtService.signAsync({ sub: userId, type: 'access', aud: audience, roles }, {
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES') || TOKEN_EXPIRY.ACCESS,
+      } as any),
+      this.jwtService.signAsync({ sub: userId, type: 'refresh', aud: audience, jti }, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES') || TOKEN_EXPIRY.REFRESH,
+      } as any),
     ]);
 
     await this.saveRefreshToken(userId, jti, refreshToken);
@@ -392,7 +394,8 @@ export class AuthService {
 
     // Security: Mask email (PII) to prevent leakage
     const [userPart, domainPart] = user.email.split('@');
-    const maskedEmail = userPart.length > 2 
+    const maskedEmail =
+      userPart.length > 2
         ? `${userPart[0]}${'*'.repeat(userPart.length - 2)}${userPart[userPart.length - 1]}@${domainPart}`
         : `${userPart[0]}***@${domainPart}`;
 

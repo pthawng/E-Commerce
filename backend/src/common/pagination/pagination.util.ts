@@ -66,7 +66,8 @@ export function buildPaginationMeta({
     limit,
     totalItems,
     totalPages,
-    hasNext: hasNext ?? (page !== undefined && totalPages !== undefined ? page < totalPages : false),
+    hasNext:
+      hasNext ?? (page !== undefined && totalPages !== undefined ? page < totalPages : false),
     hasPrev: page !== undefined ? page > 1 : false,
     nextCursor,
   };
@@ -107,7 +108,11 @@ export function buildPaginationLinks({
 
   return {
     self: buildUrl(page, null), // TODO: improve self link for cursor
-    next: nextCursor ? buildUrl(undefined, nextCursor) : (page !== undefined && totalPages !== undefined && page < totalPages ? buildUrl(page + 1) : null),
+    next: nextCursor
+      ? buildUrl(undefined, nextCursor)
+      : page !== undefined && totalPages !== undefined && page < totalPages
+        ? buildUrl(page + 1)
+        : null,
     prev: page !== undefined && page > 1 ? buildUrl(page - 1) : null,
   };
 }

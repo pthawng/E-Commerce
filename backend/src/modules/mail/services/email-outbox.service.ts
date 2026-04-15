@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class EmailOutboxService {
@@ -9,20 +9,23 @@ export class EmailOutboxService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Atomic record creation. 
+   * Atomic record creation.
    * Should be called within a business transaction if possible.
    */
-  async create(data: {
-    eventType: string;
-    recipient: string;
-    subject: string;
-    templateName: string;
-    context: any;
-    idempotencyKey: string;
-    templateVersion?: string;
-  }, tx?: Prisma.TransactionClient) {
+  async create(
+    data: {
+      eventType: string;
+      recipient: string;
+      subject: string;
+      templateName: string;
+      context: any;
+      idempotencyKey: string;
+      templateVersion?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
     const client = tx || this.prisma;
-    
+
     return client.emailOutbox.upsert({
       where: { idempotencyKey: data.idempotencyKey },
       update: {}, // Avoid overwriting if already exists
@@ -45,13 +48,16 @@ export class EmailOutboxService {
   async getPendingBatch(batchSize: number = 20) {
     // Prisma doesn't natively support SKIP LOCKED in the fluent API for all versions.
     // We use $queryRaw to ensure standard-compliant L8 performance.
-    return this.prisma.$queryRawUnsafe<any[]>(`
+    return this.prisma.$queryRawUnsafe<any[]>(
+      `
       SELECT * FROM "email_outbox"
       WHERE "status" = 'PENDING' AND "scheduledAt" <= NOW()
       ORDER BY "scheduledAt" ASC
       LIMIT $1
       FOR UPDATE SKIP LOCKED
-    `, batchSize);
+    `,
+      batchSize,
+    );
   }
 
   async markAsProcessing(ids: string[]) {
@@ -89,10 +95,13 @@ export class EmailOutboxService {
    * Updates status based on Webhook events (e.g., from SendGrid or SES).
    * Note: SendGrid often appends suffix data to 'sg_message_id' in webhooks.
    */
-  async updateStatusByProviderMessageId(providerMessageId: string, status: 'DELIVERED' | 'BOUNCED' | 'SPAM' | 'REJECTED') {
+  async updateStatusByProviderMessageId(
+    providerMessageId: string,
+    status: 'DELIVERED' | 'BOUNCED' | 'SPAM' | 'REJECTED',
+  ) {
     const baseId = providerMessageId.split('.')[0];
-    
-    // Prisma does not support startingWith on unique fields cleanly, 
+
+    // Prisma does not support startingWith on unique fields cleanly,
     // so we find First matching the prefix.
     const record = await this.prisma.emailOutbox.findFirst({
       where: {

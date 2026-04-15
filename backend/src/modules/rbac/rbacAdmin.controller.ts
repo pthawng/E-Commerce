@@ -47,7 +47,7 @@ import { RbacService } from './rbac.service';
   mode: 'any',
 })
 export class RbacAdminController {
-  constructor(private readonly rbacService: RbacService) { }
+  constructor(private readonly rbacService: RbacService) {}
 
   // ==================== ROLE ENDPOINTS ====================
 

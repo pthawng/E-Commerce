@@ -26,7 +26,7 @@ export class PaginationDto {
    */
   @IsOptional()
   @Matches(/^[a-zA-Z0-9_]+:(asc|desc)$/, {
-    message: 'Sort must be in format field:asc or field:desc'
+    message: 'Sort must be in format field:asc or field:desc',
   })
   sort?: string;
 

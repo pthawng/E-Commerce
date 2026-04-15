@@ -1,10 +1,10 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { PaginationService } from 'src/common/pagination';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { ProductService } from '../product.service';
 import { ProductStorageService } from '../product.storage/product-storage.service';
 import { VariantService } from '../variants/variant.service';
-import { ProductService } from '../product.service';
 
 describe('ProductService', () => {
   let service: ProductService;
@@ -86,8 +86,7 @@ describe('ProductService', () => {
     });
 
     it('should throw BadRequestException if name is missing', async () => {
-      await expect(service.createProduct({ name: {} } as any))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.createProduct({ name: {} } as any)).rejects.toThrow(BadRequestException);
     });
 
     it('should generate unique slug if collision occurs', async () => {
@@ -99,9 +98,11 @@ describe('ProductService', () => {
 
       await service.createProduct(createDto as any);
 
-      expect(mockPrismaService.product.create).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ slug: 'san-pham-moi-1' })
-      }));
+      expect(mockPrismaService.product.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ slug: 'san-pham-moi-1' }),
+        }),
+      );
     });
   });
 

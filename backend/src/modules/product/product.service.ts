@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PaginationDto, PaginationService, type PaginatedResult } from 'src/common/pagination';
-import { slugify } from 'src/common/utils/string.helper';
 import type { Prisma } from '@prisma/client';
+import { PaginationService, type PaginatedResult } from 'src/common/pagination';
+import { slugify } from 'src/common/utils/string.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto, CreateProductVariantInputDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
@@ -16,7 +16,7 @@ export class ProductService {
     private readonly paginationService: PaginationService,
     private readonly productStorageService: ProductStorageService,
     private readonly variantService: VariantService,
-  ) { }
+  ) {}
 
   // ---------------------------
   // GET ALL PRODUCTS (PAGINATED)
@@ -268,10 +268,7 @@ export class ProductService {
     return dto.name?.vi || dto.name?.en || (dto.name ? Object.values(dto.name)[0] : undefined);
   }
 
-  private async validateRelations(
-    dto: CreateProductDto,
-    tx: Prisma.TransactionClient,
-  ) {
+  private async validateRelations(dto: CreateProductDto, tx: Prisma.TransactionClient) {
     if (dto.categoryIds?.length) {
       await this.validateCategories(dto.categoryIds, tx);
     }
@@ -344,20 +341,20 @@ export class ProductService {
     const variantsInput: VariantInput[] = hasVariants
       ? (dto.variants as VariantInput[]) || []
       : [
-        {
-          sku: undefined,
-          price: dto.basePrice!,
-          compareAtPrice: dto.baseCompareAtPrice,
-          costPrice: dto.baseCostPrice,
-          weightGram: dto.baseWeightGram,
-          variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
-          isDefault: true,
-          isActive: dto.isActive ?? true,
-          position: 0,
-          attributeValueIds: [],
-          mediaIndexes: [],
-        },
-      ];
+          {
+            sku: undefined,
+            price: dto.basePrice!,
+            compareAtPrice: dto.baseCompareAtPrice,
+            costPrice: dto.baseCostPrice,
+            weightGram: dto.baseWeightGram,
+            variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
+            isDefault: true,
+            isActive: dto.isActive ?? true,
+            position: 0,
+            attributeValueIds: [],
+            mediaIndexes: [],
+          },
+        ];
 
     const defaultIndexExplicit = variantsInput.findIndex((v) => v.isDefault);
     const defaultIndex = defaultIndexExplicit >= 0 ? defaultIndexExplicit : 0;
@@ -549,7 +546,7 @@ export class ProductService {
       this.productStorageService.uploadMedia(productId, file, {
         isThumbnail: false,
         order: startOrder + index,
-      })
+      }),
     );
 
     await Promise.all(uploadPromises);

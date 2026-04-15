@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { AuthService } from '../auth.service';
 
 /**
@@ -32,8 +32,9 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       throw new UnauthorizedException('Invalid token type');
     }
 
-    const refreshToken = req?.cookies?.refreshToken || req?.get('Authorization')?.replace('Bearer ', '');
-    
+    const refreshToken =
+      req?.cookies?.refreshToken || req?.get('Authorization')?.replace('Bearer ', '');
+
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token missing');
     }

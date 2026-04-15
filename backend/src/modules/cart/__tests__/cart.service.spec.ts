@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CartService } from '../cart.service';
@@ -29,10 +29,7 @@ describe('CartService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CartService,
-        { provide: PrismaService, useValue: mockPrismaService },
-      ],
+      providers: [CartService, { provide: PrismaService, useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<CartService>(CartService);
@@ -88,7 +85,7 @@ describe('CartService', () => {
 
       mockPrismaService.cart.findFirst
         .mockResolvedValueOnce(guestCart) // find guest cart
-        .mockResolvedValueOnce(userCart);  // find user cart
+        .mockResolvedValueOnce(userCart); // find user cart
       mockPrismaService.cartItem.findMany.mockResolvedValue(guestItems);
       mockPrismaService.cartItem.findUnique.mockResolvedValue(null); // newItem in user cart
 
@@ -96,10 +93,10 @@ describe('CartService', () => {
 
       expect(mockPrismaService.cartItem.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-            cartId: 'user_c1',
-            productVariantId: 'v1',
-            quantity: 3
-        })
+          cartId: 'user_c1',
+          productVariantId: 'v1',
+          quantity: 3,
+        }),
       });
       expect(mockPrismaService.cart.delete).toHaveBeenCalledWith({ where: { id: 'guest_c1' } });
     });

@@ -79,9 +79,7 @@ export class PaginationService {
    * Execute hybrid pagination query (Cursor + Offset)
    * Enforces deterministic ordering using id as tie-breaker.
    */
-  async paginate<TItem = any>(
-    options: PaginationOptions<TItem>,
-  ): Promise<PaginatedResult<TItem>> {
+  async paginate<TItem = any>(options: PaginationOptions<TItem>): Promise<PaginatedResult<TItem>> {
     const {
       findMany,
       count,

@@ -19,7 +19,11 @@ export class OrderStatusValidator {
    * Validates if a transition from currentStatus to nextStatus is allowed.
    * Throws BadRequestException if the transition is invalid.
    */
-  static validate(orderId: string, currentStatus: OrderStatusEnum, nextStatus: OrderStatusEnum): void {
+  static validate(
+    orderId: string,
+    currentStatus: OrderStatusEnum,
+    nextStatus: OrderStatusEnum,
+  ): void {
     if (currentStatus === nextStatus) {
       return; // No change needed
     }
@@ -29,7 +33,7 @@ export class OrderStatusValidator {
     if (!allowedNextStatuses || !allowedNextStatuses.includes(nextStatus)) {
       throw new BadRequestException(
         `Invalid status transition for order ${orderId}: ${currentStatus} -> ${nextStatus}. ` +
-        `Allowed transitions: [${allowedNextStatuses?.join(', ') || 'none'}]`
+          `Allowed transitions: [${allowedNextStatuses?.join(', ') || 'none'}]`,
       );
     }
   }

@@ -1,6 +1,7 @@
 // mail.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import sgMail from '@sendgrid/mail';
 import * as fs from 'fs/promises';
 import { google } from 'googleapis';
@@ -8,7 +9,6 @@ import * as handlebars from 'handlebars';
 import * as nodemailer from 'nodemailer';
 import * as path from 'path';
 import { EmailOutboxService } from './services/email-outbox.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class MailService {
@@ -60,15 +60,18 @@ export class MailService {
    * If USE_NEW_MAIL_FLOW is enabled, it uses the Outbox Pattern (Async).
    * Otherwise, it uses the legacy blocking flow (Sync).
    */
-  async sendMail(options: { 
-    to: string; 
-    subject: string; 
-    template: string; 
-    context: any;
-    eventType?: string;
-    idempotencyKey?: string;
-    templateVersion?: string;
-  }, tx?: Prisma.TransactionClient): Promise<boolean> {
+  async sendMail(
+    options: {
+      to: string;
+      subject: string;
+      template: string;
+      context: any;
+      eventType?: string;
+      idempotencyKey?: string;
+      templateVersion?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<boolean> {
     const useNewFlow = this.configService.get<string>('USE_NEW_MAIL_FLOW') === 'true';
 
     if (useNewFlow) {
@@ -82,25 +85,31 @@ export class MailService {
   /**
    * Async Flow: Persists to Outbox.
    */
-  private async queueMail(options: { 
-    to: string; 
-    subject: string; 
-    template: string; 
-    context: any;
-    eventType?: string;
-    idempotencyKey?: string;
-    templateVersion?: string;
-  }, tx?: Prisma.TransactionClient): Promise<boolean> {
+  private async queueMail(
+    options: {
+      to: string;
+      subject: string;
+      template: string;
+      context: any;
+      eventType?: string;
+      idempotencyKey?: string;
+      templateVersion?: string;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<boolean> {
     try {
-      await this.outboxService.create({
-        eventType: options.eventType || 'generic.notification',
-        recipient: options.to,
-        subject: options.subject,
-        templateName: options.template,
-        templateVersion: options.templateVersion || 'v1',
-        context: options.context,
-        idempotencyKey: options.idempotencyKey || `mail_${Date.now()}_${options.to}`,
-      }, tx);
+      await this.outboxService.create(
+        {
+          eventType: options.eventType || 'generic.notification',
+          recipient: options.to,
+          subject: options.subject,
+          templateName: options.template,
+          templateVersion: options.templateVersion || 'v1',
+          context: options.context,
+          idempotencyKey: options.idempotencyKey || `mail_${Date.now()}_${options.to}`,
+        },
+        tx,
+      );
       return true;
     } catch (error) {
       this.logger.error(`Failed to queue email to ${options.to}: ${error.message}`, error.stack);
@@ -111,7 +120,12 @@ export class MailService {
   /**
    * Legacy Sync Flow: Blocks request lifecycle.
    */
-  private async sendMailSync(options: { to: string; subject: string; template: string; context: any }): Promise<boolean> {
+  private async sendMailSync(options: {
+    to: string;
+    subject: string;
+    template: string;
+    context: any;
+  }): Promise<boolean> {
     try {
       const html = await this.compileTemplate(options.template, options.context);
       const provider = this.configService.get<string>('MAIL_PROVIDER') || 'gmail';
@@ -143,7 +157,10 @@ export class MailService {
     }
   }
 
-  private async sendViaSendGrid(options: { to: string; subject: string }, html: string): Promise<boolean> {
+  private async sendViaSendGrid(
+    options: { to: string; subject: string },
+    html: string,
+  ): Promise<boolean> {
     const fromEmail = this.configService.get<string>('MAIL_FROM');
     if (!fromEmail) throw new Error('MAIL_FROM is not defined');
 
@@ -157,7 +174,10 @@ export class MailService {
     return true;
   }
 
-  private async sendViaGmail(options: { to: string; subject: string }, html: string): Promise<boolean> {
+  private async sendViaGmail(
+    options: { to: string; subject: string },
+    html: string,
+  ): Promise<boolean> {
     if (!this.oAuth2Client) {
       throw new Error('Gmail client not initialized properly');
     }

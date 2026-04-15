@@ -12,7 +12,14 @@ interface CartState {
     error: string | null;
     recentlyAddedId: string | null;
     version: number;
-    
+    isHydrated: boolean;
+    config: {
+        shippingThreshold: number;
+        shippingFee: number;
+        currency: string;
+        maxQuantityPerItem: number;
+    } | null;
+
     // Actions
     fetchCart: () => Promise<void>;
     addItem: (variantId: string, quantity: number, details: Partial<CartItem>) => Promise<void>;
@@ -21,9 +28,13 @@ interface CartState {
     clearCart: () => void;
     setOpen: (open: boolean) => void;
     mergeOnLogin: () => Promise<void>;
-    
+
     // Internal Sync
-    _syncWithBackend: (action: (version: number, signal: AbortSignal) => Promise<any>) => Promise<void>;
+    _syncWithBackend: (
+        action: (version: number, signal: AbortSignal) => Promise<any>,
+        versionOverride?: number,
+        rollbackItems?: CartItem[],
+    ) => Promise<void>;
 }
 
 // Module-level state for cancellation and debouncing
@@ -39,15 +50,22 @@ const DEFAULT_TOTALS: CartTotals = {
     shippingThreshold: 2000000,
 };
 
-// Pricing/Totals Utility
-const calculateTotals = (items: CartItem[]): CartTotals => {
+const DEFAULT_CONFIG = {
+    shippingThreshold: 2000000,
+    shippingFee: 35000,
+    currency: 'VND',
+    maxQuantityPerItem: 99,
+};
+
+// Pricing/Totals Utility (Centralized Logic - FE fallback)
+const calculateTotals = (items: CartItem[], config = DEFAULT_CONFIG): CartTotals => {
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const SHIPPING_THRESHOLD = 2000000;
-    const SHIPPING_FEE = 35000;
+    const SHIPPING_THRESHOLD = config.shippingThreshold;
+    const SHIPPING_FEE = config.shippingFee;
     const isFreeShipping = subtotal >= SHIPPING_THRESHOLD;
     const shipping = subtotal === 0 ? 0 : (isFreeShipping ? 0 : SHIPPING_FEE);
     const total = subtotal + shipping;
-    
+
     return {
         subtotal,
         shipping,
@@ -68,29 +86,37 @@ export const useCartStore = create<CartState>()(
             error: null,
             recentlyAddedId: null,
             version: 1,
+            isHydrated: false,
+            config: null,
 
             fetchCart: async () => {
                 set({ status: 'syncing' });
                 try {
+                    // Fetch config in background if not hydrated
+                    if (!get().isHydrated || !get().config) {
+                        CartService.getConfig().then(cfg => set({ config: cfg })).catch(() => { });
+                    }
+
                     const data = await CartService.getCart();
-                    set({ 
-                        items: data.items, 
+                    set({
+                        items: data.items,
                         totals: data.totals,
                         version: data.version || 1,
-                        status: 'idle' 
+                        isHydrated: true,
+                        status: 'idle'
                     });
                 } catch (err: any) {
-                    set({ status: 'error', error: err.message });
+                    set({ status: 'error', error: err.message, isHydrated: true });
                     toast.error('Could not load your cart. Please try again.');
                 }
             },
 
-            _syncWithBackend: async (action) => {
+            _syncWithBackend: async (action, versionOverride, rollbackItems) => {
                 // 1. Cancel previous in-flight request
                 if (activeAbortController) {
                     activeAbortController.abort();
                 }
-                
+
                 // 2. Clear previous debouncing
                 if (debounceTimer) {
                     clearTimeout(debounceTimer);
@@ -99,15 +125,17 @@ export const useCartStore = create<CartState>()(
 
                 activeAbortController = new AbortController();
                 const signal = activeAbortController.signal;
-                
+
+                // UX: do not clear totals/items; CartDrawer overlays on "syncing"
                 set({ status: 'syncing' });
-                
+
                 try {
-                    const data = await action(get().version, signal);
-                    if (!data) return; // Likely aborted or empty response
-                    
-                    set({ 
-                        items: data.items || [], 
+                    const versionSnapshot = versionOverride ?? get().version;
+                    const data = await action(versionSnapshot, signal);
+                    if (!data) return;
+
+                    set({
+                        items: data.items || [],
                         totals: data.totals || DEFAULT_TOTALS,
                         version: data.version || get().version,
                         status: 'success',
@@ -117,16 +145,17 @@ export const useCartStore = create<CartState>()(
                 } catch (err: any) {
                     if (err.name === 'AbortError') return;
 
-                    // 409 Conflict Handling (Versioning)
+                    // 409 Conflict Handling
                     if (err.response?.status === 409 || err.code === 'CART_VERSION_MISMATCH') {
-                        // Silent reconcile: just fetch the latest state and try to recover
                         await get().fetchCart();
                         return;
                     }
 
                     set({ status: 'error', error: err.message });
+                    if (rollbackItems) {
+                        set({ items: rollbackItems, totals: calculateTotals(rollbackItems, get().config || DEFAULT_CONFIG) });
+                    }
                     toast.error('Failed to update cart. Please try again.');
-                    console.error("Cart Sync Failed:", err);
                 } finally {
                     if (activeAbortController?.signal === signal) {
                         activeAbortController = null;
@@ -134,17 +163,16 @@ export const useCartStore = create<CartState>()(
                 }
             },
 
-
             addItem: async (variantId, quantity, details) => {
                 const existingItems = get().items;
                 let newItems: CartItem[] = [];
                 const existingItem = existingItems.find(i => i.variantId === variantId);
-                
+
                 if (existingItem) {
-                    newItems = existingItems.map(i => 
-                        i.variantId === variantId 
-                        ? { ...i, quantity: i.quantity + quantity } 
-                        : i
+                    newItems = existingItems.map(i =>
+                        i.variantId === variantId
+                            ? { ...i, quantity: i.quantity + quantity }
+                            : i
                     );
                 } else {
                     const newItem: CartItem = {
@@ -162,66 +190,96 @@ export const useCartStore = create<CartState>()(
                     newItems = [...existingItems, newItem];
                 }
 
-                // Optimistic UI for Items only (View Only)
-                // Totals are nullified until backend returns authoritative data
+                // L8+ UX: Keep old totals but show sync status
                 set({
                     items: newItems,
+                    status: 'syncing',
                     isOpen: true,
                     recentlyAddedId: variantId,
-                    status: 'syncing'
                 });
 
-                await get()._syncWithBackend((v, signal) => CartService.addItem(variantId, quantity, v, signal));
+                const idempotencyKey = crypto.randomUUID?.() || Math.random().toString(36).substring(7);
+                const currentVersion = get().version;
+                const prevItemsSnapshot = existingItems;
+
+                await get()._syncWithBackend(
+                    (v, signal) => CartService.addItem(variantId, quantity, currentVersion, signal, idempotencyKey),
+                    undefined,
+                    prevItemsSnapshot
+                );
                 setTimeout(() => set({ recentlyAddedId: null }), 3000);
             },
 
-            removeItem: async (variantId) => {
+            removeItem: async (variantId: string) => {
+                const currentVersion = get().version;
+                const prevItemsSnapshot = get().items;
                 const newItems = get().items.filter(i => i.variantId !== variantId);
-                set({ 
-                    items: newItems,
-                    status: 'syncing'
-                });
-                await get()._syncWithBackend((v, signal) => CartService.removeItem(variantId, v, signal));
+                set({ items: newItems, status: 'syncing' });
+
+                await get()._syncWithBackend(
+                    (v, signal) => CartService.removeItem(variantId, currentVersion, signal),
+                    undefined,
+                    prevItemsSnapshot
+                );
             },
 
-            updateQuantity: async (variantId, quantity) => {
+            updateQuantity: async (variantId: string, quantity: number) => {
+                const currentVersion = get().version;
                 if (quantity <= 0) {
                     await get().removeItem(variantId);
                     return;
                 }
 
-                // 1. Optimistic UI update (Items only)
+                // Optimistic UI
+                const prevItemsSnapshot = get().items;
                 const newItems = get().items.map(i => i.variantId === variantId ? { ...i, quantity } : i);
-                set({
-                    items: newItems,
-                    status: 'syncing'
-                });
+                set({ items: newItems, status: 'syncing' });
 
-                // 2. Debounced API Sync
+                // Debounced API Sync
+                if (debounceTimer) clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
-                    get()._syncWithBackend((v, signal) => CartService.updateItem(variantId, quantity, v, signal));
+                    get()._syncWithBackend(
+                        (v, signal) => CartService.updateItem(variantId, quantity, currentVersion, signal),
+                        currentVersion,
+                        prevItemsSnapshot
+                    );
                 }, 300);
             },
 
-            mergeOnLogin: async () => {
-                await get()._syncWithBackend(() => CartService.mergeCart());
-            },
-
-            clearCart: () => set({ items: [], totals: DEFAULT_TOTALS }),
+            clearCart: () => set({ items: [], totals: DEFAULT_TOTALS, version: 1 }),
 
             setOpen: (isOpen) => set({ isOpen }),
 
+            mergeOnLogin: async () => {
+                await get()._syncWithBackend(async () => {
+                    const data = await CartService.mergeCart();
+                    if (data.warnings?.length) {
+                        data.warnings.forEach((w: any) => {
+                            if (w.type === 'OUT_OF_STOCK') {
+                                toast.warning('Some items are out of stock and were removed.');
+                            } else if (w.type === 'QUANTITY_REDUCED') {
+                                toast.warning('Quantity for some items was adjusted based on stock.');
+                            }
+                        });
+                    }
+                    return data;
+                });
+            },
         }),
         {
             name: 'ray-paradis-cart',
             storage: createJSONStorage(() => localStorage),
-            partialize: (state) => ({ items: state.items, totals: state.totals, version: state.version }),
+            partialize: (state) => ({
+                items: state.items,
+                totals: state.totals,
+                version: state.version,
+                config: state.config
+            }),
         }
     )
 );
 
-// Listen for tab synchronization
-/*
+// Tab Synchronization
 if (typeof window !== 'undefined') {
     window.addEventListener('storage', (event) => {
         if (event.key === 'ray-paradis-cart') {
@@ -229,4 +287,3 @@ if (typeof window !== 'undefined') {
         }
     });
 }
-*/

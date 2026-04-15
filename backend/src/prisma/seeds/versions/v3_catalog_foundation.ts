@@ -14,8 +14,8 @@ export const v3_catalog_foundation: SeedScript = {
           { value: { vi: 'Vàng 18k', en: '18k Gold' }, metaValue: '#D4AF37' },
           { value: { vi: 'Bạch kim', en: 'Platinum' }, metaValue: '#E5E4E2' },
           { value: { vi: 'Kim Cương', en: 'Diamond' }, metaValue: '#FFFFFF' },
-        ]
-      }
+        ],
+      },
     ];
 
     for (const attr of attributes) {
@@ -26,12 +26,12 @@ export const v3_catalog_foundation: SeedScript = {
           code: attr.code,
           name: attr.name,
           values: {
-            create: attr.values.map(v => ({
+            create: attr.values.map((v) => ({
               value: v.value,
-              metaValue: v.metaValue
-            }))
-          }
-        }
+              metaValue: v.metaValue,
+            })),
+          },
+        },
       });
     }
 
@@ -50,9 +50,9 @@ export const v3_catalog_foundation: SeedScript = {
         create: {
           slug: cat.slug,
           name: cat.name,
-          isActive: true
-        }
+          isActive: true,
+        },
       });
     }
-  }
+  },
 };

@@ -1,9 +1,18 @@
-import { Body, Controller, Headers, HttpCode, HttpStatus, Logger, Post, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Post,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventWebhook } from '@sendgrid/eventwebhook';
+import { Request } from 'express';
 import { Public } from 'src/common/decorators/public.decorator';
 import { EmailOutboxService } from '../services/email-outbox.service';
-import { EventWebhook, EventWebhookHeader } from '@sendgrid/eventwebhook';
-import { Request } from 'express';
 
 @Controller('webhooks/mail')
 export class MailWebhookController {
@@ -23,7 +32,7 @@ export class MailWebhookController {
     @Headers('x-twilio-email-event-webhook-timestamp') timestamp: string,
   ) {
     const publicKey = this.configService.get<string>('SENDGRID_WEBHOOK_PUBLIC_KEY');
-    
+
     // In L8 production, verify signatures strictly
     if (publicKey && signature && timestamp) {
       try {
@@ -39,7 +48,7 @@ export class MailWebhookController {
         this.logger.error(`Webhook Verification failed: ${err.message}`);
         // If strict mode is enforced, throw. For dev, we might bypass.
         if (this.configService.get('NODE_ENV') === 'production') {
-           throw new UnauthorizedException('Invalid Signature');
+          throw new UnauthorizedException('Invalid Signature');
         }
       }
     }

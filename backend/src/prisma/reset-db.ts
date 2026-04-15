@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { Logger } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { Pool } from 'pg';
-import { Logger } from '@nestjs/common';
 import { EnvironmentGuard } from './seeds/utils/environment.guard';
 
 import * as fs from 'fs';
@@ -68,8 +68,10 @@ async function main() {
     // Note: We use executeRawUnsafe here because table names cannot be parameterized traditionally in TRUNCATE
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`);
 
-    logger.log('✨ Database reset successfully. All data cleared and identity sequences restarted.');
-    
+    logger.log(
+      '✨ Database reset successfully. All data cleared and identity sequences restarted.',
+    );
+
     if (isProd) {
       logger.warn('🔔 Reminder: Production data has been WIPED.');
     }

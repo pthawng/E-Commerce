@@ -1,3 +1,6 @@
+import { Permission } from '@modules/rbac/decorators/permission.decorator';
+import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
+import { PERMISSIONS } from '@modules/rbac/permissions.constants';
 import {
   Body,
   Controller,
@@ -10,9 +13,6 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { Permission } from '@modules/rbac/decorators/permission.decorator';
-import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
-import { PERMISSIONS } from '@modules/rbac/permissions.constants';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PaginationDto } from 'src/common/pagination';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -23,7 +23,7 @@ import { UserService } from './user.service';
 @Controller('users')
 @UseGuards(PermissionGuard)
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   // CREATE USER
   @Post()

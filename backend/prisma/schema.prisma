@@ -353,10 +353,12 @@ model Cart {
   sessionId String?    @db.VarChar(100)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @default(now())
+  expiresAt DateTime?
   version   Int        @default(1)
   items     CartItem[]
 
   @@unique([userId, sessionId])
+  @@map("carts")
 }
 
 model CartItem {
@@ -365,11 +367,26 @@ model CartItem {
   productVariantId String         @db.Uuid
   quantity         Int            @default(1)
   cachedPrice      Decimal        @db.Decimal(19, 2)
+  currency         String         @default("VND")
+  discountSnapshot Json?          // Snapshot of applied discounts at add-to-cart
+  taxRate          Decimal?       @db.Decimal(5, 2)
   addedAt          DateTime       @default(now())
   cart             Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, productVariantId])
+  @@map("cart_items")
+}
+
+model IdempotencyRecord {
+  idempotencyKey String   @unique @db.VarChar(255)
+  responseBody   Json?
+  statusCode     Int?
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@index([expiresAt])
+  @@map("idempotency_records")
 }
 
 /// ///////////////////////////////////

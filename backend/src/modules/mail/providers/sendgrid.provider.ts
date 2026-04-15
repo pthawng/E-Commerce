@@ -19,7 +19,7 @@ export class SendGridProvider extends EmailProvider {
 
   async send(options: EmailOptions): Promise<EmailResponse> {
     const from = options.from || this.configService.get<string>('MAIL_FROM');
-    
+
     try {
       const [response] = await sgMail.send({
         to: options.to,

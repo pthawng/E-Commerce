@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PaymentProcessingStatus, OrderStatusEnum, ReservationStatus } from '@prisma/client';
+import { OrderStatusEnum, PaymentProcessingStatus, ReservationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaymentStateMachine } from './payment-state.machine';
 
@@ -12,129 +12,135 @@ import { PaymentService } from '../payment.service';
  */
 @Injectable()
 export class PaymentReconciliationService {
-    private readonly logger = new Logger(PaymentReconciliationService.name);
+  private readonly logger = new Logger(PaymentReconciliationService.name);
 
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly stateMachine: PaymentStateMachine,
-        private readonly paymentService: PaymentService,
-    ) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stateMachine: PaymentStateMachine,
+    private readonly paymentService: PaymentService,
+  ) {}
 
-    /**
-     * Cron job to reconcile stale payments every 5 minutes
-     * Payments in INIT state for more than 15 minutes are considered stale
-     */
-    @Cron(CronExpression.EVERY_5_MINUTES)
-    async reconcileStalePayments() {
-        this.logger.log('Starting stale payment reconciliation job...');
+  /**
+   * Cron job to reconcile stale payments every 5 minutes
+   * Payments in INIT state for more than 15 minutes are considered stale
+   */
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async reconcileStalePayments() {
+    this.logger.log('Starting stale payment reconciliation job...');
 
-        const timeoutMinutes = 15;
-        const expirationThreshold = new Date();
-        expirationThreshold.setMinutes(expirationThreshold.getMinutes() - timeoutMinutes);
+    const timeoutMinutes = 15;
+    const expirationThreshold = new Date();
+    expirationThreshold.setMinutes(expirationThreshold.getMinutes() - timeoutMinutes);
 
-        try {
-            // Find all INIT payments created before the threshold
-            const stalePayments = await this.prisma.payment.findMany({
-                where: {
-                    status: PaymentProcessingStatus.INIT,
-                    createdAt: { lt: expirationThreshold },
-                },
-                include: {
-                    order: true,
-                },
+    try {
+      // Find all INIT payments created before the threshold
+      const stalePayments = await this.prisma.payment.findMany({
+        where: {
+          status: PaymentProcessingStatus.INIT,
+          createdAt: { lt: expirationThreshold },
+        },
+        include: {
+          order: true,
+        },
+      });
+
+      if (stalePayments.length === 0) {
+        this.logger.log('No stale payments found.');
+        return;
+      }
+
+      this.logger.log(`Found ${stalePayments.length} stale payments to reconcile.`);
+
+      for (const payment of stalePayments) {
+        await this.reconcilePayment(payment);
+      }
+
+      this.logger.log('Payment reconciliation job completed successfully.');
+    } catch (error) {
+      this.logger.error(`Error during payment reconciliation: ${error.message}`, error.stack);
+    }
+  }
+
+  /**
+   * Reconcile a single stale payment
+   */
+  private async reconcilePayment(payment: any) {
+    this.logger.log(`Reconciling stale payment ${payment.id} for order ${payment.orderId}`);
+
+    try {
+      // 1. Try to sync status with gateway first (QueryDR)
+      // This checks if the payment was actually successful but we missed the IPN
+      const isSynced = await this.paymentService.syncPaymentStatus(payment.id);
+      if (isSynced) {
+        this.logger.log(
+          `Payment ${payment.id} was successfully synced with gateway. Skipping cancellation.`,
+        );
+        return;
+      }
+
+      // 2. If not synced (or failed), proceed with cancellation
+      await this.prisma.$transaction(async (tx) => {
+        // Update Payment status to FAILED
+        this.stateMachine.validateTransition(
+          payment.id,
+          payment.status,
+          PaymentProcessingStatus.FAILED,
+        );
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentProcessingStatus.FAILED,
+            rawPayload: {
+              ...(payment.rawPayload || {}),
+              reconciliationNote: 'Marked as FAILED due to timeout (15 mins)',
+            },
+          },
+        });
+
+        // 2. Update Order status to cancelled if it's still pending_payment
+        const order = payment.order;
+        if (order.status === OrderStatusEnum.pending_payment) {
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              status: OrderStatusEnum.cancelled,
+            },
+          });
+
+          // 3. Release inventory reservations
+          const reservations = await tx.inventoryReservation.findMany({
+            where: { orderId: order.id, status: ReservationStatus.active },
+          });
+
+          for (const res of reservations) {
+            await tx.inventoryItem.updateMany({
+              where: { productVariantId: res.variantId, warehouseId: res.warehouseId },
+              data: { reservedQuantity: { decrement: res.quantity } },
             });
 
-            if (stalePayments.length === 0) {
-                this.logger.log('No stale payments found.');
-                return;
-            }
-
-            this.logger.log(`Found ${stalePayments.length} stale payments to reconcile.`);
-
-            for (const payment of stalePayments) {
-                await this.reconcilePayment(payment);
-            }
-
-            this.logger.log('Payment reconciliation job completed successfully.');
-        } catch (error) {
-            this.logger.error(`Error during payment reconciliation: ${error.message}`, error.stack);
-        }
-    }
-
-    /**
-     * Reconcile a single stale payment
-     */
-    private async reconcilePayment(payment: any) {
-        this.logger.log(`Reconciling stale payment ${payment.id} for order ${payment.orderId}`);
-
-        try {
-            // 1. Try to sync status with gateway first (QueryDR)
-            // This checks if the payment was actually successful but we missed the IPN
-            const isSynced = await this.paymentService.syncPaymentStatus(payment.id);
-            if (isSynced) {
-                this.logger.log(`Payment ${payment.id} was successfully synced with gateway. Skipping cancellation.`);
-                return;
-            }
-
-            // 2. If not synced (or failed), proceed with cancellation
-            await this.prisma.$transaction(async (tx) => {
-                // Update Payment status to FAILED
-                this.stateMachine.validateTransition(payment.id, payment.status, PaymentProcessingStatus.FAILED);
-                
-                await tx.payment.update({
-                    where: { id: payment.id },
-                    data: {
-                        status: PaymentProcessingStatus.FAILED,
-                        rawPayload: {
-                            ...(payment.rawPayload || {}),
-                            reconciliationNote: 'Marked as FAILED due to timeout (15 mins)'
-                        }
-                    },
-                });
-
-                // 2. Update Order status to cancelled if it's still pending_payment
-                const order = payment.order;
-                if (order.status === OrderStatusEnum.pending_payment) {
-                    await tx.order.update({
-                        where: { id: order.id },
-                        data: {
-                            status: OrderStatusEnum.cancelled,
-                        },
-                    });
-
-                    // 3. Release inventory reservations
-                    const reservations = await tx.inventoryReservation.findMany({
-                        where: { orderId: order.id, status: ReservationStatus.active },
-                    });
-
-                    for (const res of reservations) {
-                        await tx.inventoryItem.updateMany({
-                            where: { productVariantId: res.variantId, warehouseId: res.warehouseId },
-                            data: { reservedQuantity: { decrement: res.quantity } },
-                        });
-
-                        await tx.inventoryReservation.update({
-                            where: { id: res.id },
-                            data: { status: ReservationStatus.released },
-                        });
-                    }
-
-                    // 4. Add timeline entry
-                    await tx.orderTimeline.create({
-                        data: {
-                            orderId: order.id,
-                            action: 'ORDER_CANCELLED',
-                            toStatus: 'cancelled',
-                            description: 'Order automatically cancelled due to payment timeout.',
-                            actorType: 'system',
-                        },
-                    });
-                }
+            await tx.inventoryReservation.update({
+              where: { id: res.id },
+              data: { status: ReservationStatus.released },
             });
+          }
 
-            this.logger.log(`Successfully reconciled and cancelled order ${payment.orderId}`);
-        } catch (error) {
-            this.logger.error(`Failed to reconcile payment ${payment.id}: ${error.message}`);
+          // 4. Add timeline entry
+          await tx.orderTimeline.create({
+            data: {
+              orderId: order.id,
+              action: 'ORDER_CANCELLED',
+              toStatus: 'cancelled',
+              description: 'Order automatically cancelled due to payment timeout.',
+              actorType: 'system',
+            },
+          });
         }
+      });
+
+      this.logger.log(`Successfully reconciled and cancelled order ${payment.orderId}`);
+    } catch (error) {
+      this.logger.error(`Failed to reconcile payment ${payment.id}: ${error.message}`);
     }
+  }
 }

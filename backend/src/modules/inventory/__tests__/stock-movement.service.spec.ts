@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { StockMovementService } from '../stock-movement.service';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { StockMovementService } from '../stock-movement.service';
 
 describe('StockMovementService', () => {
   let service: StockMovementService;
@@ -25,10 +25,7 @@ describe('StockMovementService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        StockMovementService,
-        { provide: PrismaService, useValue: mockPrismaService },
-      ],
+      providers: [StockMovementService, { provide: PrismaService, useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<StockMovementService>(StockMovementService);
@@ -86,8 +83,7 @@ describe('StockMovementService', () => {
     });
 
     it('should throw BadRequestException if source and destination are same', async () => {
-      await expect(service.transfer('v1', 'w1', 'w1', 10))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.transfer('v1', 'w1', 'w1', 10)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if source stock is insufficient', async () => {
@@ -95,15 +91,13 @@ describe('StockMovementService', () => {
         { id: 'inv1', quantity: 5, reservedQuantity: 0 },
       ]);
 
-      await expect(service.transfer('v1', 'w1', 'w2', 10))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.transfer('v1', 'w1', 'w2', 10)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if internal record not found', async () => {
       mockPrismaService.$queryRawUnsafe.mockResolvedValueOnce([]); // from not found
 
-      await expect(service.transfer('v1', 'w1', 'w2', 10))
-        .rejects.toThrow(NotFoundException);
+      await expect(service.transfer('v1', 'w1', 'w2', 10)).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -1,5 +1,5 @@
-import { AuthController } from '@modules/auth/auth.controller';
 import { AdminAuthController } from '@modules/auth/admin-auth.controller';
+import { AuthController } from '@modules/auth/auth.controller';
 import { AuthService } from '@modules/auth/auth.service';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { AdminJwtAccessGuard } from '@modules/auth/guard/admin-access-jwt.guard';

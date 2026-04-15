@@ -1,9 +1,15 @@
-import { BadRequestException, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { SystemContextStore } from '@common/context/system-context.store';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { parse } from 'pg-connection-string';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
-import { SystemContextStore } from '@common/context/system-context.store';
+import { parse } from 'pg-connection-string';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -35,11 +41,21 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         $allModels: {
           async $allOperations({ model, operation, args, query }) {
             const sensitiveModels = ['InventoryItem', 'Order', 'Payment', 'InventoryReservation'];
-            const mutationActions = ['create', 'update', 'upsert', 'delete', 'updateMany', 'deleteMany'];
+            const mutationActions = [
+              'create',
+              'update',
+              'upsert',
+              'delete',
+              'updateMany',
+              'deleteMany',
+            ];
 
             if (model && sensitiveModels.includes(model) && mutationActions.includes(operation)) {
               if (!SystemContextStore.isInternalService) {
-                Logger.error(`❌ INVARIANT VIOLATION: Unauthorized mutation on ${model}.${operation} outside service layer!`, 'PrismaService');
+                Logger.error(
+                  `❌ INVARIANT VIOLATION: Unauthorized mutation on ${model}.${operation} outside service layer!`,
+                  'PrismaService',
+                );
                 throw new BadRequestException(
                   `System Invariant Violation: Direct mutation on ${model} is forbidden. Use the designated service layer.`,
                 );
@@ -47,9 +63,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
             }
 
             return query(args);
-          }
-        }
-      }
+          },
+        },
+      },
     }) as any;
   }
 

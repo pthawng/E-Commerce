@@ -29,10 +29,7 @@ describe('OrderService (Integration)', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        OrderService,
-        { provide: PrismaService, useValue: mockPrismaService },
-      ],
+      providers: [OrderService, { provide: PrismaService, useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<OrderService>(OrderService);
@@ -52,14 +49,16 @@ describe('OrderService (Integration)', () => {
         id: 'c1',
         items: [{ productVariantId: 'v1', quantity: 2, cachedPrice: 100 }],
       };
-      const variants = [{
-        id: 'v1',
-        sku: 'SKU1',
-        isActive: true,
-        price: 100,
-        product: { isActive: true, name: { vi: 'Product' } },
-        inventoryItems: [{ id: 'i1', quantity: 10, reservedQuantity: 0, warehouseId: 'w1' }],
-      }];
+      const variants = [
+        {
+          id: 'v1',
+          sku: 'SKU1',
+          isActive: true,
+          price: 100,
+          product: { isActive: true, name: { vi: 'Product' } },
+          inventoryItems: [{ id: 'i1', quantity: 10, reservedQuantity: 0, warehouseId: 'w1' }],
+        },
+      ];
 
       mockPrismaService.cart.findFirst.mockResolvedValue(cart);
       mockPrismaService.productVariant.findMany.mockResolvedValue(variants);
@@ -79,7 +78,9 @@ describe('OrderService (Integration)', () => {
     it('should throw BadRequestException if cart is empty', async () => {
       mockPrismaService.cart.findFirst.mockResolvedValue(null);
 
-      await expect(service.createOrder(userId, undefined, dto as any)).rejects.toThrow(BadRequestException);
+      await expect(service.createOrder(userId, undefined, dto as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException if stock is insufficient', async () => {
@@ -87,19 +88,23 @@ describe('OrderService (Integration)', () => {
         id: 'c1',
         items: [{ productVariantId: 'v1', quantity: 20, cachedPrice: 100 }],
       };
-      const variants = [{
-        id: 'v1',
-        sku: 'SKU1',
-        isActive: true,
-        price: 100,
-        product: { isActive: true },
-        inventoryItems: [{ id: 'i1', quantity: 10, reservedQuantity: 0 }],
-      }];
+      const variants = [
+        {
+          id: 'v1',
+          sku: 'SKU1',
+          isActive: true,
+          price: 100,
+          product: { isActive: true },
+          inventoryItems: [{ id: 'i1', quantity: 10, reservedQuantity: 0 }],
+        },
+      ];
 
       mockPrismaService.cart.findFirst.mockResolvedValue(cart);
       mockPrismaService.productVariant.findMany.mockResolvedValue(variants);
 
-      await expect(service.createOrder(userId, undefined, dto as any)).rejects.toThrow(BadRequestException);
+      await expect(service.createOrder(userId, undefined, dto as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

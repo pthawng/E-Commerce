@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { BasePolicy } from 'src/modules/abac/base/base-policy';
-import { PERMISSIONS } from 'src/modules/rbac/permissions.constants';
 import {
   PolicyAction,
   type PolicyContext,
   type PolicyResult,
 } from 'src/modules/abac/types/policy.types';
+import { PERMISSIONS } from 'src/modules/rbac/permissions.constants';
 
 /**
  * Product Variant Resource Interface
@@ -24,11 +24,11 @@ interface VariantResource {
 
 /**
  * VariantPolicy - Hybrid RBAC/ABAC Policy
- * 
+ *
  * Chiến lược phân quyền:
  * 1. RBAC (Role-Based): Kiểm tra role và permission cơ bản
  * 2. ABAC (Attribute-Based): Kiểm tra attributes của user, resource, environment
- * 
+ *
  * Quy tắc phân quyền:
  * - Admin: Full access (tất cả actions)
  * - Staff/Manager: Có thể CREATE, READ, UPDATE (cần permission tương ứng)
@@ -142,8 +142,8 @@ export class VariantPolicy extends BasePolicy<VariantResource> {
       return this.allow({
         metadata: {
           restrictedFields: ['stock', 'isActive'],
-          warning: 'Inventory manager chỉ nên cập nhật stock-related fields'
-        }
+          warning: 'Inventory manager chỉ nên cập nhật stock-related fields',
+        },
       });
     }
 

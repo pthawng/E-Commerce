@@ -1,12 +1,12 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PaymentService } from '../payment.service';
-import { VietQRProvider } from '../providers/vietqr/vietqr.provider';
 import { PayPalProvider } from '../providers/paypal/paypal.provider';
+import { VietQRProvider } from '../providers/vietqr/vietqr.provider';
 import { VNPayProvider } from '../providers/vnpay/vnpay.provider';
 import { IdempotencyService } from '../services/idempotency.service';
-import { PaymentMethodEnum, TransactionStatus } from '../types/payment.types';
+import { PaymentMethodEnum } from '../types/payment.types';
 
 describe('PaymentService', () => {
   let service: PaymentService;
@@ -72,7 +72,10 @@ describe('PaymentService', () => {
     it('should create payment and transaction record', async () => {
       const order = { id: 'o1', totalAmount: 1000, transactions: [] };
       mockPrismaService.order.findUnique.mockResolvedValue(order);
-      mockVNPayProvider.createPayment.mockResolvedValue({ transactionId: 'tx1', paymentUrl: 'url' });
+      mockVNPayProvider.createPayment.mockResolvedValue({
+        transactionId: 'tx1',
+        paymentUrl: 'url',
+      });
 
       const result = await service.createPayment('o1', PaymentMethodEnum.VNPAY);
 
@@ -84,14 +87,16 @@ describe('PaymentService', () => {
 
     it('should throw ConflictException if lock is not acquired', async () => {
       mockIdempotencyService.acquireLock.mockResolvedValue(null);
-      await expect(service.createPayment('o1', PaymentMethodEnum.VNPAY)).rejects.toThrow(ConflictException);
+      await expect(service.createPayment('o1', PaymentMethodEnum.VNPAY)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should return cached result if exists', async () => {
-        mockIdempotencyService.getResult.mockResolvedValue({ transactionId: 'cached' });
-        const result = await service.createPayment('o1', PaymentMethodEnum.VNPAY);
-        expect(result).toEqual({ transactionId: 'cached' });
-        expect(mockVNPayProvider.createPayment).not.toHaveBeenCalled();
+      mockIdempotencyService.getResult.mockResolvedValue({ transactionId: 'cached' });
+      const result = await service.createPayment('o1', PaymentMethodEnum.VNPAY);
+      expect(result).toEqual({ transactionId: 'cached' });
+      expect(mockVNPayProvider.createPayment).not.toHaveBeenCalled();
     });
   });
 
@@ -100,17 +105,28 @@ describe('PaymentService', () => {
       const order = {
         id: 'o1',
         totalAmount: 1000,
-        transactions: [{ type: 'payment', status: 'success', status_provider: 'tx_old', provider: 'VNPAY', transactionCode: 'tx_old' }],
-        items: [{ productVariantId: 'v1', quantity: 2 }]
+        transactions: [
+          {
+            type: 'payment',
+            status: 'success',
+            status_provider: 'tx_old',
+            provider: 'VNPAY',
+            transactionCode: 'tx_old',
+          },
+        ],
+        items: [{ productVariantId: 'v1', quantity: 2 }],
       };
-      
+
       const mockLogs = [
         { inventoryItemId: 'inv1', productVariantId: 'v1', warehouseId: 'w1', quantityChange: -1 },
         { inventoryItemId: 'inv2', productVariantId: 'v1', warehouseId: 'w2', quantityChange: -1 },
       ];
 
       mockPrismaService.order.findUnique.mockResolvedValue(order);
-      mockVNPayProvider.processRefund.mockResolvedValue({ success: true, refundTransactionId: 'ref_1' });
+      mockVNPayProvider.processRefund.mockResolvedValue({
+        success: true,
+        refundTransactionId: 'ref_1',
+      });
       mockPrismaService.inventoryLog.findMany.mockResolvedValue(mockLogs);
       mockPrismaService.inventoryItem.findUnique
         .mockResolvedValueOnce({ id: 'inv1', quantity: 10, warehouseId: 'w1' })
@@ -120,8 +136,12 @@ describe('PaymentService', () => {
 
       expect(result.success).toBe(true);
       expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledTimes(2);
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'inv1' } }));
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'inv2' } }));
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'inv1' } }),
+      );
+      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'inv2' } }),
+      );
     });
   });
 });

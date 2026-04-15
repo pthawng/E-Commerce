@@ -1,3 +1,4 @@
+import { AttributeInputType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -8,7 +9,6 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { AttributeInputType } from '@prisma/client';
 import { CreateAttributeValueDto } from './create-attribute-value.dto';
 
 export class CreateAttributeDto {

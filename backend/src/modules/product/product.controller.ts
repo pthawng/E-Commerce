@@ -18,7 +18,6 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public.decorator';
-import { PaginationDto } from 'src/common/pagination';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -28,7 +27,7 @@ import { ProductService } from './product.service';
 @Controller('products')
 @UseGuards(PermissionGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService) { }
+  constructor(private readonly productService: ProductService) {}
 
   @Public()
   @Get()
@@ -63,8 +62,14 @@ export class ProductController {
   @UseInterceptors(FilesInterceptor('images', 10))
   @ApiOperation({ summary: 'Tạo mới sản phẩm (có thể upload nhiều ảnh)' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Sản phẩm mới được tạo kèm ảnh (nếu có)' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dữ liệu không hợp lệ hoặc file ảnh không hợp lệ' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Sản phẩm mới được tạo kèm ảnh (nếu có)',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Dữ liệu không hợp lệ hoặc file ảnh không hợp lệ',
+  })
   createProduct(@Body() dto: CreateProductDto, @UploadedFiles() files?: Express.Multer.File[]) {
     return this.productService.createProduct(dto, files);
   }
@@ -75,8 +80,14 @@ export class ProductController {
   @UseInterceptors(FilesInterceptor('images', 10))
   @ApiOperation({ summary: 'Cập nhật sản phẩm (có thể upload thêm ảnh)' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: HttpStatus.OK, description: 'Sản phẩm sau khi cập nhật kèm ảnh mới (nếu có)' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Dữ liệu không hợp lệ hoặc file ảnh không hợp lệ' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Sản phẩm sau khi cập nhật kèm ảnh mới (nếu có)',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Dữ liệu không hợp lệ hoặc file ảnh không hợp lệ',
+  })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Sản phẩm không tồn tại' })
   updateProduct(
     @Param('id', new ParseUUIDPipe()) id: string,

@@ -13,7 +13,7 @@ import { CartItem } from '../features/cart/components/CartItem';
 import { CartConfidence } from '../features/cart/components/CartConfidence';
 
 export const CartPage = () => {
-    const { items, totals, clearCart, fetchCart } = useCartStore();
+    const { items, totals, clearCart, fetchCart, isHydrated, status } = useCartStore();
     const { t } = useTranslation();
     const { formatPrice } = useStore();
     const { subtotal, shipping, total, isFreeShipping } = totals;
@@ -24,6 +24,28 @@ export const CartPage = () => {
     }, [fetchCart, t]);
 
     const isEmpty = items.length === 0;
+    const isFirstLoad = !isHydrated && status === 'syncing';
+
+    if (isFirstLoad) {
+        return (
+            <Layout forceHeaderOpaque={true}>
+                <div className="pt-24 sm:pt-32 pb-20 min-h-screen">
+                    <Container>
+                        <div className="animate-pulse space-y-8">
+                            <div className="h-12 w-48 bg-secondary/10 rounded" />
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+                                <div className="lg:col-span-12 space-y-4">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-32 bg-secondary/10 rounded" />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </Container>
+                </div>
+            </Layout>
+        );
+    }
 
     return (
         <Layout forceHeaderOpaque={true}>
@@ -42,8 +64,8 @@ export const CartPage = () => {
                                 </h1>
                             </div>
                             {!isEmpty && (
-                                <Button 
-                                    variant="ghost" 
+                                <Button
+                                    variant="ghost"
                                     onClick={clearCart}
                                     className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-destructive flex items-center gap-2"
                                 >
@@ -54,7 +76,7 @@ export const CartPage = () => {
                         </div>
 
                         {isEmpty ? (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="flex flex-col items-center justify-center py-20 text-center"
@@ -90,7 +112,7 @@ export const CartPage = () => {
                                         <h2 className="font-display text-2xl text-primary italic border-b border-hairline pb-6">
                                             {t('cart.summary')}
                                         </h2>
-                                        
+
                                         <div className="space-y-4">
                                             <div className="flex justify-between">
                                                 <span className="font-body text-[11px] uppercase tracking-widest text-muted-foreground">
@@ -123,14 +145,14 @@ export const CartPage = () => {
 
                                         <div className="space-y-4 pt-4">
                                             <Link to="/checkout" className="block w-full">
-                                                <Button 
+                                                <Button
                                                     className="w-full bg-neutral-900 hover:bg-neutral-800 text-white h-16 rounded-none group text-xs uppercase tracking-widest"
                                                 >
                                                     {t('common.actions.checkout')}
                                                     <ArrowRight size={16} className="ml-2 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
                                                 </Button>
                                             </Link>
-                                            
+
                                             <CartConfidence />
                                         </div>
                                     </div>

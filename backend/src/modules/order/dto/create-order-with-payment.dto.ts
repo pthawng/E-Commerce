@@ -7,35 +7,35 @@ import { CreateOrderDto } from './create-order.dto';
  * Extends existing CreateOrderDto with payment-specific fields
  */
 export class CreateOrderWithPaymentDto extends CreateOrderDto {
-    // Inherited from CreateOrderDto:
-    // - guestEmail?: string
-    // - shippingAddress: AddressDto
-    // - billingAddress?: AddressDto
-    @ApiProperty({
-        description: 'Secure checkout token from validate step',
-        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        required: true,
-    })
-    @IsString()
-    checkoutToken: string;
+  // Inherited from CreateOrderDto:
+  // - guestEmail?: string
+  // - shippingAddress: AddressDto
+  // - billingAddress?: AddressDto
+  @ApiProperty({
+    description: 'Secure checkout token from validate step',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    required: true,
+  })
+  @IsString()
+  checkoutToken: string;
 
-    @ApiProperty({
-        description: 'Return URL after payment (optional, frontend can provide)',
-        example: 'https://myshop.com/order/success',
-        required: false,
-    })
-    @IsOptional()
-    @IsString()
-    @IsUrl({ require_tld: false })
-    returnUrl?: string;
+  @ApiProperty({
+    description: 'Return URL after payment (optional, frontend can provide)',
+    example: 'https://myshop.com/order/success',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_tld: false })
+  returnUrl?: string;
 
-    @ApiProperty({
-        description: 'Cancel URL after payment failure (optional)',
-        example: 'https://myshop.com/order/cancel',
-        required: false,
-    })
-    @IsOptional()
-    @IsString()
-    @IsUrl({ require_tld: false })
-    cancelUrl?: string;
+  @ApiProperty({
+    description: 'Cancel URL after payment failure (optional)',
+    example: 'https://myshop.com/order/cancel',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_tld: false })
+  cancelUrl?: string;
 }

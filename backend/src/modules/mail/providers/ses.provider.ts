@@ -12,12 +12,12 @@ export class SesProvider extends EmailProvider {
 
   async send(options: EmailOptions): Promise<EmailResponse> {
     const from = options.from || this.configService.get<string>('MAIL_FROM');
-    
+
     this.logger.log(`[MOCK SES] Sending email to ${options.to}`);
-    
+
     // In a real implementation, we would use AWS SDK here
     // const result = await this.ses.sendEmail(...).promise();
-    
+
     return {
       success: true,
       messageId: `ses-mock-${Date.now()}`,

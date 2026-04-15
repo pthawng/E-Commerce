@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -14,7 +14,7 @@ export class ForgotPassEmailService {
     private readonly prismaService: PrismaService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   /**
    * Generates a crytographically secure token and persists it.

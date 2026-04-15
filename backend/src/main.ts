@@ -1,5 +1,4 @@
 import { register } from 'tsconfig-paths';
-import { join } from 'path';
 
 // Dynamically register paths to resolve either `dist/` (runtime) or `src/` (ts-node runtime)
 register({
@@ -12,12 +11,12 @@ register({
   },
 });
 
-import cookieParser from 'cookie-parser';
 import { AllExceptionFilter } from '@common/filters/all-exception.filter';
 import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -40,7 +39,8 @@ async function bootstrap() {
     origin: corsOrigins,
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token',
+    allowedHeaders:
+      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token',
   });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )

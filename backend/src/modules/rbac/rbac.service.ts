@@ -7,14 +7,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PermissionCacheService } from './cache/permission-cache.service';
-import { PERMISSIONS } from './permissions.constants';
 
 @Injectable()
 export class RbacService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private permissionCacheService: PermissionCacheService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     await this.seedDefaultPermissions();

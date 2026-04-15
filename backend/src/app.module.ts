@@ -1,32 +1,32 @@
 import { AttributeModule } from '@modules/attribute/attribute.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
+import { CartModule } from '@modules/cart/cart.module';
 import { CategoryModule } from '@modules/category/category.module';
+import { InventoryModule } from '@modules/inventory/inventory.module';
 import { MailModule } from '@modules/mail/mail.module';
+import { OrderModule } from '@modules/order/order.module';
+import { PaymentModule } from '@modules/payment/payment.module';
 import { ProductModule } from '@modules/product/product.module';
 import { RbacModule } from '@modules/rbac/rbac.module';
 import { StorageModule } from '@modules/storage/storage.module';
 import { UserModule } from '@modules/user/user.module';
-import { CartModule } from '@modules/cart/cart.module';
-import { OrderModule } from '@modules/order/order.module';
-import { PaymentModule } from '@modules/payment/payment.module';
-import { InventoryModule } from '@modules/inventory/inventory.module';
-import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bull';
-import { Logger, Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { redisStore } from 'cache-manager-redis-yet';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import * as Joi from 'joi';
-import { PrismaModule } from './prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
-import { NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { SessionBindingGuard } from './common/guards/session-binding.guard';
+import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { SessionMiddleware } from './common/middleware/session.middleware';
+import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -34,9 +34,7 @@ import { SessionBindingGuard } from './common/guards/session-binding.guard';
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       validationSchema: Joi.object({
-        NODE_ENV: Joi.string()
-          .valid('development', 'production', 'test')
-          .default('development'),
+        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
         PORT: Joi.number().default(4000),
         DATABASE_URL: Joi.string().uri().required(),
         JWT_ACCESS_SECRET: Joi.string().required(),
@@ -89,6 +87,9 @@ import { SessionBindingGuard } from './common/guards/session-binding.guard';
       }),
     }),
     ScheduleModule.forRoot(), // NEW: Enable cron jobs
+    PrometheusModule.register({
+      path: '/metrics',
+    }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -145,8 +146,6 @@ import { SessionBindingGuard } from './common/guards/session-binding.guard';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(SecurityMiddleware)
-      .forRoutes('*');
+    consumer.apply(SecurityMiddleware, SessionMiddleware).forRoutes('*');
   }
 }

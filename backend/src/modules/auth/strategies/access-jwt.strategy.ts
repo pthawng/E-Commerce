@@ -2,7 +2,7 @@ import type { JwtAccessPayload, RequestUserPayload } from '@common/types/jwt.typ
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 /**
@@ -33,14 +33,14 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
     if (!secret) {
       throw new Error('JWT_ACCESS_SECRET is not defined!');
     }
-    
-        super({
-            jwtFromRequest: (req: any) => {
-                return req?.cookies?.['accessToken'] || null;
-            },
-            ignoreExpiration: false,
-            secretOrKey: configService.get<string>('JWT_ACCESS_SECRET')!,
-        });
+
+    super({
+      jwtFromRequest: (req: any) => {
+        return req?.cookies?.['accessToken'] || null;
+      },
+      ignoreExpiration: false,
+      secretOrKey: configService.get<string>('JWT_ACCESS_SECRET')!,
+    });
   }
 
   /**

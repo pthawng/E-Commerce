@@ -1,37 +1,35 @@
+import { SystemContextStore } from '@common/context/system-context.store';
 import {
-    BadRequestException,
-    ConflictException,
-    Injectable,
-    Logger,
-    NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-    ActionType,
-    OrderStatusEnum,
-    PaymentStatusEnum,
-    PaymentMethodEnum,
-    TransactionStatusEnum,
-    TransactionTypeEnum,
-    ReservationStatus,
-    Prisma,
-    PaymentProcessingStatus,
-    PaymentGatewayProvider
+  ActionType,
+  OrderStatusEnum,
+  PaymentGatewayProvider,
+  PaymentMethodEnum,
+  PaymentProcessingStatus,
+  PaymentStatusEnum,
+  Prisma,
+  TransactionStatusEnum,
+  TransactionTypeEnum,
 } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { VietQRProvider } from './providers/vietqr/vietqr.provider';
+import { InventoryService } from '../inventory/inventory.service';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
+import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { VNPayProvider } from './providers/vnpay/vnpay.provider';
 import { IdempotencyService } from './services/idempotency.service';
 import { PaymentStateMachine } from './services/payment-state.machine';
-import { InventoryService } from '../inventory/inventory.service';
-import { SystemContextStore } from '@common/context/system-context.store';
 import {
-    CallbackData,
-    IPaymentGatewayProvider,
-    PaymentMethodEnum as PaymentGatewayProviderMethodEnum,
-    PaymentResult,
-    RefundResult,
-    TransactionStatus,
+  CallbackData,
+  IPaymentGatewayProvider,
+  PaymentResult,
+  RefundResult,
+  TransactionStatus,
 } from './types/payment.types';
 
 /**
@@ -40,940 +38,953 @@ import {
  */
 @Injectable()
 export class PaymentService {
-    private readonly logger = new Logger(PaymentService.name);
-    private readonly providers: Map<PaymentMethodEnum, IPaymentGatewayProvider>;
+  private readonly logger = new Logger(PaymentService.name);
+  private readonly providers: Map<PaymentMethodEnum, IPaymentGatewayProvider>;
 
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly vnpayProvider: VNPayProvider,
-        private readonly paypalProvider: PayPalProvider,
-        private readonly vietqrProvider: VietQRProvider,
-        private readonly idempotencyService: IdempotencyService,
-        private readonly stateMachine: PaymentStateMachine,
-        private readonly inventoryService: InventoryService,
-    ) {
-        // Register payment providers
-        this.providers = new Map<PaymentMethodEnum, IPaymentGatewayProvider>([
-            [PaymentMethodEnum.VNPAY, this.vnpayProvider],
-            [PaymentMethodEnum.PAYPAL, this.paypalProvider],
-            [PaymentMethodEnum.VIETQR, this.vietqrProvider],
-        ]);
-    }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly vnpayProvider: VNPayProvider,
+    private readonly paypalProvider: PayPalProvider,
+    private readonly vietqrProvider: VietQRProvider,
+    private readonly idempotencyService: IdempotencyService,
+    private readonly stateMachine: PaymentStateMachine,
+    private readonly inventoryService: InventoryService,
+  ) {
+    // Register payment providers
+    this.providers = new Map<PaymentMethodEnum, IPaymentGatewayProvider>([
+      [PaymentMethodEnum.VNPAY, this.vnpayProvider],
+      [PaymentMethodEnum.PAYPAL, this.paypalProvider],
+      [PaymentMethodEnum.VIETQR, this.vietqrProvider],
+    ]);
+  }
 
-    /**
-     * Create payment for an order (with idempotency)
-     */
-    async createPayment(
-        orderId: string,
-        paymentMethod: PaymentMethodEnum,
-        metadata?: Record<string, any>,
-    ): Promise<PaymentResult> {
-        return SystemContextStore.asInternal('PaymentService', async () => {
-            // Generate idempotency key
-            const idempotencyKey = this.idempotencyService.generatePaymentKey(
-                orderId,
-                'create',
-            );
+  /**
+   * Create payment for an order (with idempotency)
+   */
+  async createPayment(
+    orderId: string,
+    paymentMethod: PaymentMethodEnum,
+    metadata?: Record<string, any>,
+  ): Promise<PaymentResult> {
+    return SystemContextStore.asInternal('PaymentService', async () => {
+      // Generate idempotency key
+      const idempotencyKey = this.idempotencyService.generatePaymentKey(orderId, 'create');
 
-            // Check for cached result
-            const cachedResult = await this.idempotencyService.getResult(idempotencyKey);
-            if (cachedResult) {
-                this.logger.log(`Returning cached payment result for order ${orderId}`);
-                return cachedResult;
-            }
+      // Check for cached result
+      const cachedResult = await this.idempotencyService.getResult(idempotencyKey);
+      if (cachedResult) {
+        this.logger.log(`Returning cached payment result for order ${orderId}`);
+        return cachedResult;
+      }
 
-            // Acquire distributed lock
-            const lockToken = await this.idempotencyService.acquireLock(idempotencyKey);
-            if (!lockToken) {
-                throw new ConflictException('Payment creation already in progress. Please wait.');
-            }
+      // Acquire distributed lock
+      const lockToken = await this.idempotencyService.acquireLock(idempotencyKey);
+      if (!lockToken) {
+        throw new ConflictException('Payment creation already in progress. Please wait.');
+      }
 
-            try {
-                // Fetch order
-                const order = await this.prisma.order.findUnique({
-                    where: { id: orderId },
-                    include: { transactions: true },
-                });
-
-                if (!order) {
-                    throw new NotFoundException(`Order ${orderId} not found`);
-                }
-
-                // Check if order already has a successful payment
-                const hasSuccessfulPayment = order.transactions.some(
-                    (tx) => tx.status === TransactionStatusEnum.success && tx.type === TransactionTypeEnum.payment,
-                );
-
-                if (hasSuccessfulPayment) {
-                    throw new BadRequestException('Order already paid');
-                }
-
-                // Get provider
-                const provider = this.getProvider(paymentMethod);
-
-                // Create payment
-                const result = await provider.createPayment(
-                    orderId,
-                    Number(order.totalAmount),
-                    metadata,
-                );
-
-                // 1. Create Payment record (Source of Truth)
-                await this.prisma.$transaction(async (tx) => {
-                    await tx.payment.create({
-                        data: {
-                            orderId,
-                            provider: paymentMethod as unknown as PaymentGatewayProvider,
-                            providerTransactionId: result.transactionId,
-                            amount: order.totalAmount,
-                            amountUsd: result.metadata?.amountUsd ? new Prisma.Decimal(result.metadata.amountUsd) : null,
-                            exchangeRate: result.metadata?.exchangeRate ? new Prisma.Decimal(result.metadata.exchangeRate) : null,
-                            status: PaymentProcessingStatus.INIT,
-                            rawPayload: result.metadata || {},
-                        },
-                    });
-
-                    // 2. Create transaction record (Audit log/History)
-                    await tx.paymentTransaction.create({
-                        data: {
-                            orderId,
-                            amount: order.totalAmount,
-                            type: TransactionTypeEnum.payment,
-                            status: TransactionStatusEnum.pending,
-                            provider: paymentMethod,
-                            method: paymentMethod,
-                            transactionCode: result.transactionId,
-                            gatewayResponse: result.metadata || {},
-                        },
-                    });
-                });
-
-                this.logger.log(`Payment created for order ${orderId}, method: ${paymentMethod}, transaction: ${result.transactionId}`);
-                await this.idempotencyService.storeResult(idempotencyKey, result);
-                return result;
-            } finally {
-                await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
-            }
-        });
-    }
-
-    /**
-     * Process payment callback from gateway (with idempotency)
-     */
-    async processCallback(
-        paymentMethod: PaymentMethodEnum,
-        callbackData: Record<string, any>,
-    ): Promise<CallbackData> {
-        return SystemContextStore.asInternal('PaymentService', async () => {
-            this.logger.log(`Processing callback for ${paymentMethod}`);
-            const provider = this.getProvider(paymentMethod);
-
-            // Verify callback first (to get transaction ID)
-            const verifiedData = await provider.verifyCallback(callbackData);
-
-            // Generate idempotency key using transaction ID
-            const idempotencyKey = this.idempotencyService.generateCallbackKey(
-                verifiedData.transactionId,
-                paymentMethod,
-            );
-
-            // Check if this callback was already processed
-            const cachedResult = await this.idempotencyService.getResult(idempotencyKey);
-            if (cachedResult) {
-                this.logger.log(`Callback already processed for transaction ${verifiedData.transactionId}`);
-                return cachedResult;
-            }
-
-            // Acquire lock to prevent concurrent callback processing
-            const lockToken = await this.idempotencyService.acquireLock(idempotencyKey);
-            if (!lockToken) {
-                this.logger.warn(`Concurrent callback detected for transaction ${verifiedData.transactionId}`);
-                throw new ConflictException('Callback already being processed. Please wait.');
-            }
-
-            try {
-                await this.prisma.$transaction(async (tx) => {
-                    // 1. Find Payment record (Database-level idempotency check with SELECT FOR UPDATE)
-                    const [payment] = await tx.$queryRawUnsafe<any[]>(
-                        `SELECT * FROM "Payment" WHERE "providerTransactionId" = $1 FOR UPDATE NOWAIT`,
-                        verifiedData.transactionId
-                    );
-
-                    if (!payment) {
-                        this.logger.error(`Payment ${verifiedData.transactionId} not found in DB during callback.`);
-                        throw new NotFoundException(`Payment not found for transaction ${verifiedData.transactionId}`);
-                    }
-
-                    // 2. Security: Amount mismatch check
-                    if (Math.abs(Number(payment.amount) - verifiedData.amount) > 0.01) {
-                        this.logger.error(`Amount mismatch for payment ${payment.id}. Fraud suspected!`);
-                        throw new BadRequestException('Amount mismatch detected.');
-                    }
-
-                    // 3. State Machine check
-                    const nextStatus = verifiedData.status === TransactionStatus.SUCCESS 
-                        ? PaymentProcessingStatus.SUCCESS 
-                        : PaymentProcessingStatus.FAILED;
-
-                    this.stateMachine.validateTransition(payment.id, payment.status, nextStatus);
-
-                    if (payment.status === PaymentProcessingStatus.SUCCESS) {
-                        this.logger.warn(`Payment ${payment.id} already successful, skipping processing.`);
-                        return;
-                    }
-
-                    // 4. Update Payment record (Source of Truth)
-                    await tx.payment.update({
-                        where: { id: payment.id },
-                        data: {
-                            status: nextStatus,
-                            rawPayload: verifiedData.gatewayResponse,
-                            captureId: verifiedData.gatewayResponse?.captureId || null,
-                            verifiedAt: new Date(),
-                        },
-                    });
-
-                    // 5. Update PaymentTransaction
-                    await tx.paymentTransaction.updateMany({
-                        where: { transactionCode: verifiedData.transactionId as string },
-                        data: {
-                            status: verifiedData.status,
-                            gatewayResponse: verifiedData.gatewayResponse,
-                        },
-                    });
-
-                    const order = await tx.order.findUnique({ where: { id: payment.orderId } });
-                    if (!order) {
-                        this.logger.error(`Order ${payment.orderId} not found for payment ${payment.id}`);
-                        throw new NotFoundException(`Order not found`);
-                    }
-
-                    // 6. Handle SUCCESS flow
-                    if (nextStatus === PaymentProcessingStatus.SUCCESS) {
-                        await tx.order.update({
-                            where: { id: payment.orderId },
-                            data: {
-                                paymentStatus: PaymentStatusEnum.paid,
-                                status: OrderStatusEnum.confirmed,
-                                confirmedAt: new Date(),
-                            } as any,
-                        });
-
-                        // Standard Invariant: Deduct stock (Reserve -> Confirm)
-                        await this.inventoryService.deduct(payment.orderId, tx);
-
-                        // Clear Cart (Only on success)
-                        const cartWhere = order.userId ? { userId: order.userId } : { sessionId: order.sessionId };
-                        await tx.cart.deleteMany({ where: cartWhere });
-
-                        await tx.orderTimeline.create({
-                            data: {
-                                orderId: payment.orderId,
-                                action: 'PAYMENT_SUCCESS_WEBHOOK',
-                                description: `Payment confirmed via ${paymentMethod} webhook. Order confirmed and inventory deducted.`,
-                                actorType: 'system',
-                                metadata: { transactionId: verifiedData.transactionId },
-                            },
-                        });
-                    } else {
-                        // 7. Handle FAILURE flow
-                        const isMaxRetries = order.retryCount >= 5;
-                        const finalOrderStatus = isMaxRetries ? OrderStatusEnum.cancelled : OrderStatusEnum.pending_payment;
-
-                        await tx.order.update({
-                            where: { id: payment.orderId },
-                            data: {
-                                status: finalOrderStatus,
-                                retryCount: { increment: 1 },
-                            } as any,
-                        });
-
-                        if (isMaxRetries) {
-                            await this.inventoryService.release(payment.orderId, tx);
-                        }
-
-                        await tx.orderTimeline.create({
-                            data: {
-                                orderId: payment.orderId,
-                                action: 'PAYMENT_FAILED_WEBHOOK',
-                                description: `Payment failed via ${paymentMethod} webhook. Status: ${finalOrderStatus}`,
-                                actorType: 'system',
-                                metadata: { transactionId: verifiedData.transactionId },
-                            },
-                        });
-                    }
-                });
-
-                this.logger.log(`Payment processed: Order=${verifiedData.orderId}, Status=${verifiedData.status}`);
-                await this.idempotencyService.storeResult(idempotencyKey, verifiedData);
-                return verifiedData;
-            } finally {
-                await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
-            }
-        });
-    }
-
-    /**
-     * Synchronize payment status with gateway
-     * Used by reconciliation service to check status of stale payments
-     */
-    async syncPaymentStatus(paymentId: string): Promise<boolean> {
-        this.logger.log(`Synchronizing status for payment ${paymentId}`);
-
-        const payment = await this.prisma.payment.findUnique({
-            where: { id: paymentId },
-            include: { order: true },
+      try {
+        // Fetch order
+        const order = await this.prisma.order.findUnique({
+          where: { id: orderId },
+          include: { transactions: true },
         });
 
-        if (!payment || payment.status !== PaymentProcessingStatus.INIT) {
-            return false;
+        if (!order) {
+          throw new NotFoundException(`Order ${orderId} not found`);
         }
 
-        const provider = this.getProvider(payment.provider as unknown as PaymentMethodEnum);
-        let verifiedData;
-        try {
-            verifiedData = await provider.queryTransaction(
-                payment.providerTransactionId,
-                payment.rawPayload as Record<string, any>,
-            );
-        } catch (error) {
-            this.logger.error(`Sync failed for payment ${paymentId}: ${error.message}`);
-            
-            // Mark as FAILED if synchronization failed due to provider error (e.g. account locked)
-            await this.prisma.$transaction(async (tx) => {
-                 await tx.payment.update({
-                    where: { id: paymentId },
-                    data: {
-                        status: PaymentProcessingStatus.FAILED,
-                        errorLog: error.message,
-                    },
-                });
-
-                await tx.orderTimeline.create({
-                    data: {
-                        orderId: payment.orderId,
-                        action: 'PAYMENT_SYNC_FAILED',
-                        toStatus: 'pending_payment',
-                        description: `Sync with ${payment.provider} failed: ${error.message}`,
-                        actorType: 'system',
-                    },
-                });
-            });
-            return true; // Return true as we successfully "synced" the failure state
-        }
-
-        if (!verifiedData) {
-            return false;
-        }
-
-        // If status is still PENDING/INIT, do nothing
-        if (verifiedData.status === TransactionStatus.PENDING) {
-            return false;
-        }
-
-        // Process the result as if it were a callback
-        // We can reuse processCallback logic by creating a mock callback or extracting the core logic
-        // For simplicity and safety, we'll manually trigger the update logic here or refactor processCallback
-        
-        if (verifiedData.status === TransactionStatus.SUCCESS) {
-            this.logger.log(`Payment ${paymentId} confirmed via QueryDR. Processing success.`);
-            
-            // Re-use logic for success (this should ideally be refactored into a shared method)
-            await this.prisma.$transaction(async (tx) => {
-                // Double check status inside transaction
-                const p = await tx.payment.findUnique({ where: { id: paymentId } });
-                if (!p || p.status !== PaymentProcessingStatus.INIT) return;
-
-                // Update payment
-                await tx.payment.update({
-                    where: { id: paymentId },
-                    data: {
-                        status: PaymentProcessingStatus.SUCCESS,
-                        rawPayload: verifiedData.gatewayResponse,
-                        verifiedAt: new Date(),
-                    },
-                });
-
-                // Update order
-                await tx.order.update({
-                    where: { id: payment.orderId },
-                    data: {
-                        paymentStatus: PaymentStatusEnum.paid,
-                        status: OrderStatusEnum.confirmed,
-                        confirmedAt: new Date(),
-                    } as any,
-                });
-
-                // Deduct inventory
-                await this.inventoryService.deduct(payment.orderId, tx);
-
-                // Add timeline
-                await tx.orderTimeline.create({
-                    data: {
-                        orderId: payment.orderId,
-                        action: 'PAYMENT_CONFIRMED',
-                        toStatus: 'confirmed',
-                        description: `Payment confirmed via reconciliation query (${payment.provider}).`,
-                        actorType: 'system',
-                        metadata: { transactionId: payment.providerTransactionId },
-                    },
-                });
-            });
-            return true;
-        } else if (verifiedData.status === TransactionStatus.FAILED) {
-            this.logger.log(`Payment ${paymentId} failed via QueryDR. Processing failure.`);
-            await this.prisma.payment.update({
-                where: { id: paymentId },
-                data: {
-                    status: PaymentProcessingStatus.FAILED,
-                    rawPayload: verifiedData.gatewayResponse,
-                },
-            });
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Process refund for an order (with idempotency)
-     */
-    async processRefund(
-        orderId: string,
-        amount: number,
-        reason?: string,
-        restoreInventory: boolean = true,
-    ): Promise<RefundResult> {
-        // Generate idempotency key
-        const idempotencyKey = this.idempotencyService.generatePaymentKey(
-            orderId,
-            'refund',
+        // Check if order already has a successful payment
+        const hasSuccessfulPayment = order.transactions.some(
+          (tx) =>
+            tx.status === TransactionStatusEnum.success && tx.type === TransactionTypeEnum.payment,
         );
 
-        // Check for cached result
-        const cachedResult = await this.idempotencyService.getResult(idempotencyKey);
-        if (cachedResult) {
-            this.logger.log(
-                `Returning cached refund result for order ${orderId}`,
-            );
-            return cachedResult;
+        if (hasSuccessfulPayment) {
+          throw new BadRequestException('Order already paid');
         }
 
-        // Acquire lock
-        const lockToken = await this.idempotencyService.acquireLock(idempotencyKey);
-        if (!lockToken) {
-            throw new ConflictException(
-                'Refund already in progress. Please wait.',
-            );
-        }
+        // Get provider
+        const provider = this.getProvider(paymentMethod);
 
-        try {
-            return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-                // Find order with transactions
-                const order = await tx.order.findUnique({
-                    where: { id: orderId },
-                    include: {
-                        transactions: true,
-                        items: true,
-                    },
-                });
+        // Create payment
+        const result = await provider.createPayment(orderId, Number(order.totalAmount), metadata);
 
-                if (!order) {
-                    throw new NotFoundException(`Order ${orderId} not found`);
-                }
-
-                // Check if already refunded
-                const existingRefund = order.transactions.find(
-                    (t) => t.type === TransactionTypeEnum.refund && t.status === TransactionStatusEnum.success,
-                );
-
-                if (existingRefund) {
-                    throw new BadRequestException('Order already refunded');
-                }
-
-                // Find successful payment record (Source of Truth)
-                const payment = await tx.payment.findFirst({
-                    where: { orderId, status: PaymentProcessingStatus.SUCCESS },
-                });
-
-                if (!payment) {
-                    throw new BadRequestException('No successful payment record found for order');
-                }
-
-                // Find successful payment transaction (for provider details)
-                const paymentTransaction = order.transactions.find(
-                    (t) => t.status === TransactionStatusEnum.success && t.type === TransactionTypeEnum.payment,
-                );
-
-                if (!paymentTransaction) {
-                    throw new BadRequestException('No successful payment transaction found for order');
-                }
-
-                // Validate refund amount
-                if (amount > Number(order.totalAmount)) {
-                    throw new BadRequestException(
-                        'Refund amount cannot exceed order total',
-                    );
-                }
-
-                // Get provider
-                const provider = this.getProvider(
-                    paymentTransaction.provider as PaymentMethodEnum,
-                );
-
-                // Process refund with provider
-                const refundResult = await provider.processRefund(
-                    paymentTransaction.transactionCode || '',
-                    amount,
-                    reason,
-                );
-
-                // Create refund transaction
-                await tx.paymentTransaction.create({
-                    data: {
-                        orderId,
-                        amount,
-                        type: TransactionTypeEnum.refund,
-                        status: refundResult.success ? TransactionStatusEnum.success : TransactionStatusEnum.failed,
-                        provider: paymentTransaction.provider,
-                        method: paymentTransaction.method,
-                        transactionCode: refundResult.refundTransactionId,
-                        gatewayResponse: refundResult.metadata || {},
-                        note: reason,
-                    },
-                });
-
-                // Update Payment record status
-                this.stateMachine.validateTransition(payment.id, payment.status, PaymentProcessingStatus.REFUNDED);
-                await tx.payment.update({
-                    where: { id: payment.id },
-                    data: {
-                        status: PaymentProcessingStatus.REFUNDED,
-                        rawPayload: {
-                            ...(payment.rawPayload as object),
-                            refund: refundResult.metadata,
-                        },
-                    },
-                });
-
-                // Update order status
-                await tx.order.update({
-                    where: { id: orderId },
-                    data: {
-                        paymentStatus: PaymentStatusEnum.refunded,
-                        status: OrderStatusEnum.refunded,
-                    },
-                });
-
-                // Restore inventory if requested
-                if (restoreInventory) {
-                    await this.restoreInventory(tx, order);
-                }
-
-                // Create order timeline entry
-                await tx.orderTimeline.create({
-                    data: {
-                        orderId,
-                        action: 'REFUND_PROCESSED',
-                        toStatus: OrderStatusEnum.refunded,
-                        description: `Refund processed: ${amount} VND. Reason: ${reason || 'N/A'}`,
-                        actorType: 'system',
-                        metadata: {
-                            refundTransactionId: refundResult.refundTransactionId,
-                            amount,
-                            reason,
-                        },
-                    },
-                });
-
-                this.logger.log(
-                    `Refund processed for order ${orderId}, amount: ${amount}, transaction: ${refundResult.refundTransactionId}`,
-                );
-
-                // Cache result
-                await this.idempotencyService.storeResult(idempotencyKey, refundResult);
-
-                return refundResult;
-            });
-        } finally {
-            // Always release lock
-            await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
-        }
-    }
-
-    /**
-     * Confirm VIETQR payment (manual confirmation by staff)
-     */
-    async confirmVietQRPayment(
-        orderId: string,
-        amount: number,
-        confirmedBy: string,
-        note?: string,
-    ): Promise<void> {
+        // 1. Create Payment record (Source of Truth)
         await this.prisma.$transaction(async (tx) => {
-            const order = await tx.order.findUnique({
-                where: { id: orderId },
-                include: { transactions: true },
-            });
-
-            if (!order) {
-                throw new NotFoundException(`Order ${orderId} not found`);
-            }
-
-            // Find pending VIETQR Payment record
-            const vietqrPayment = await tx.payment.findFirst({
-                where: { orderId, provider: PaymentGatewayProvider.VIETQR, status: PaymentProcessingStatus.INIT },
-            });
-
-            if (!vietqrPayment) {
-                throw new BadRequestException('No pending VIETQR payment found');
-            }
-
-            // Validate transition
-            this.stateMachine.validateTransition(vietqrPayment.id, vietqrPayment.status, PaymentProcessingStatus.SUCCESS);
-
-            // Update Payment
-            await tx.payment.update({
-                where: { id: vietqrPayment.id },
-                data: {
-                    status: PaymentProcessingStatus.SUCCESS,
-                    verifiedAt: new Date(),
-                    rawPayload: {
-                        confirmedBy,
-                        confirmedAt: new Date().toISOString(),
-                        note,
-                    },
-                },
-            });
-
-            // Find pending VIETQR transaction (Audit log)
-            const vietqrTransaction = order.transactions.find(
-                (t) => t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
-            );
-
-            if (vietqrTransaction) {
-                // Update transaction
-                await tx.paymentTransaction.update({
-                    where: { id: vietqrTransaction.id },
-                    data: {
-                        status: TransactionStatusEnum.success,
-                        gatewayResponse: {
-                            confirmedBy,
-                            confirmedAt: new Date().toISOString(),
-                            note,
-                        },
-                    },
-                });
-            }
-
-            // Update order
-            await tx.order.update({
-                where: { id: orderId },
-                data: {
-                    paymentStatus: PaymentStatusEnum.paid,
-                    status: OrderStatusEnum.confirmed,
-                    confirmedAt: new Date(),
-                },
-            });
-
-            // Create timeline
-            await tx.orderTimeline.create({
-                data: {
-                    orderId,
-                    action: 'VIETQR_PAYMENT_CONFIRMED',
-                    toStatus: 'confirmed',
-                    description: `VietQR payment confirmed by staff`,
-                    actorId: confirmedBy,
-                    actorType: 'staff',
-                    metadata: { amount, note },
-                },
-            });
-        });
-
-        this.logger.log(`VietQR payment confirmed for order ${orderId}`);
-    }
-
-    /**
-     * Get payment status for an order
-     * Supports lookup by Order ID or Provider Transaction ID (e.g. PayPal Token)
-     */
-    async getPaymentProcessingStatus(orderIdOrToken: string) {
-        let order: any = null;
-
-        // 1. Try to find by Order ID (ONLY if it's a valid UUID to avoid Prisma error)
-        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orderIdOrToken);
-
-        if (isUuid) {
-            order = await this.prisma.order.findUnique({
-                where: { id: orderIdOrToken },
-                include: {
-                    transactions: {
-                        orderBy: { createdAt: 'desc' },
-                    },
-                },
-            });
-        }
-
-        // 2. If not found (or not a UUID), try to find by Payment Provider Transaction ID (e.g. PayPal Token)
-        if (!order) {
-            const payment = await this.prisma.payment.findUnique({
-                where: { providerTransactionId: orderIdOrToken },
-                include: {
-                    order: {
-                        include: {
-                            transactions: {
-                                orderBy: { createdAt: 'desc' },
-                            },
-                        },
-                    },
-                },
-            });
-
-            if (payment) {
-                order = payment.order as any;
-            }
-        }
-
-        if (!order) {
-            throw new NotFoundException(`Order or Payment Token ${orderIdOrToken} not found`);
-        }
-
-        // 3. Proactive Sync: If status is still INIT/pending_payment, try to sync it (Synchronous Reconciliation)
-        // Especially useful for PayPal where webhook might be slow or missing in local dev
-        if (order.status === 'pending_payment' || order.paymentStatus === 'unpaid') {
-            const pendingPayment = await this.prisma.payment.findFirst({
-                where: { orderId: order.id, status: 'INIT' }
-            });
-
-            if (pendingPayment) {
-                this.logger.log(`Proactively syncing payment status for order ${order.id}`);
-                const isSynced = await this.syncPaymentStatus(pendingPayment.id);
-                if (isSynced) {
-                    // Refetch order to get updated status
-                    order = await this.prisma.order.findUnique({
-                        where: { id: order.id },
-                        include: { transactions: { orderBy: { createdAt: 'desc' } } }
-                    });
-                }
-            }
-        }
-
-        return {
-            orderId: order.id,
-            orderCode: order.code,
-            paymentStatus: order.paymentStatus,
-            status: order.status,
-            totalAmount: order.totalAmount,
-            transactions: order.transactions,
-        };
-    }
-
-    /**
-     * Restore inventory after refund
-     */
-    private async restoreInventory(
-        tx: Prisma.TransactionClient,
-        order: Prisma.OrderGetPayload<{ include: { items: true } }>,
-    ): Promise<void> {
-        // Find all original deduction logs for this order to know exactly where to return stock
-        const deductionLogs = await tx.inventoryLog.findMany({
-            where: {
-                referenceId: order.id,
-                referenceType: 'ORDER',
-                actionType: ActionType.SALE,
-                quantityChange: { lt: 0 },
+          await tx.payment.create({
+            data: {
+              orderId,
+              provider: paymentMethod as unknown as PaymentGatewayProvider,
+              providerTransactionId: result.transactionId,
+              amount: order.totalAmount,
+              amountUsd: result.metadata?.amountUsd
+                ? new Prisma.Decimal(result.metadata.amountUsd)
+                : null,
+              exchangeRate: result.metadata?.exchangeRate
+                ? new Prisma.Decimal(result.metadata.exchangeRate)
+                : null,
+              status: PaymentProcessingStatus.INIT,
+              rawPayload: result.metadata || {},
             },
+          });
+
+          // 2. Create transaction record (Audit log/History)
+          await tx.paymentTransaction.create({
+            data: {
+              orderId,
+              amount: order.totalAmount,
+              type: TransactionTypeEnum.payment,
+              status: TransactionStatusEnum.pending,
+              provider: paymentMethod,
+              method: paymentMethod,
+              transactionCode: result.transactionId,
+              gatewayResponse: result.metadata || {},
+            },
+          });
         });
 
-        if (deductionLogs.length === 0) {
-            this.logger.warn(`No inventory deduction logs found for order ${order.id}. Skipping restoration.`);
+        this.logger.log(
+          `Payment created for order ${orderId}, method: ${paymentMethod}, transaction: ${result.transactionId}`,
+        );
+        await this.idempotencyService.storeResult(idempotencyKey, result);
+        return result;
+      } finally {
+        await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
+      }
+    });
+  }
+
+  /**
+   * Process payment callback from gateway (with idempotency)
+   */
+  async processCallback(
+    paymentMethod: PaymentMethodEnum,
+    callbackData: Record<string, any>,
+  ): Promise<CallbackData> {
+    return SystemContextStore.asInternal('PaymentService', async () => {
+      this.logger.log(`Processing callback for ${paymentMethod}`);
+      const provider = this.getProvider(paymentMethod);
+
+      // Verify callback first (to get transaction ID)
+      const verifiedData = await provider.verifyCallback(callbackData);
+
+      // Generate idempotency key using transaction ID
+      const idempotencyKey = this.idempotencyService.generateCallbackKey(
+        verifiedData.transactionId,
+        paymentMethod,
+      );
+
+      // Check if this callback was already processed
+      const cachedResult = await this.idempotencyService.getResult(idempotencyKey);
+      if (cachedResult) {
+        this.logger.log(`Callback already processed for transaction ${verifiedData.transactionId}`);
+        return cachedResult;
+      }
+
+      // Acquire lock to prevent concurrent callback processing
+      const lockToken = await this.idempotencyService.acquireLock(idempotencyKey);
+      if (!lockToken) {
+        this.logger.warn(
+          `Concurrent callback detected for transaction ${verifiedData.transactionId}`,
+        );
+        throw new ConflictException('Callback already being processed. Please wait.');
+      }
+
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          // 1. Find Payment record (Database-level idempotency check with SELECT FOR UPDATE)
+          const [payment] = await tx.$queryRawUnsafe<any[]>(
+            `SELECT * FROM "Payment" WHERE "providerTransactionId" = $1 FOR UPDATE NOWAIT`,
+            verifiedData.transactionId,
+          );
+
+          if (!payment) {
+            this.logger.error(
+              `Payment ${verifiedData.transactionId} not found in DB during callback.`,
+            );
+            throw new NotFoundException(
+              `Payment not found for transaction ${verifiedData.transactionId}`,
+            );
+          }
+
+          // 2. Security: Amount mismatch check
+          if (Math.abs(Number(payment.amount) - verifiedData.amount) > 0.01) {
+            this.logger.error(`Amount mismatch for payment ${payment.id}. Fraud suspected!`);
+            throw new BadRequestException('Amount mismatch detected.');
+          }
+
+          // 3. State Machine check
+          const nextStatus =
+            verifiedData.status === TransactionStatus.SUCCESS
+              ? PaymentProcessingStatus.SUCCESS
+              : PaymentProcessingStatus.FAILED;
+
+          this.stateMachine.validateTransition(payment.id, payment.status, nextStatus);
+
+          if (payment.status === PaymentProcessingStatus.SUCCESS) {
+            this.logger.warn(`Payment ${payment.id} already successful, skipping processing.`);
             return;
-        }
+          }
 
-        for (const log of deductionLogs) {
-            const quantityToRestore = Math.abs(log.quantityChange);
+          // 4. Update Payment record (Source of Truth)
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: nextStatus,
+              rawPayload: verifiedData.gatewayResponse,
+              captureId: verifiedData.gatewayResponse?.captureId || null,
+              verifiedAt: new Date(),
+            },
+          });
 
-            // Fetch current inventory item to get accurate beforeQuantity for logging
-            const inventoryItem = await tx.inventoryItem.findUnique({
-                where: { id: log.inventoryItemId },
+          // 5. Update PaymentTransaction
+          await tx.paymentTransaction.updateMany({
+            where: { transactionCode: verifiedData.transactionId as string },
+            data: {
+              status: verifiedData.status,
+              gatewayResponse: verifiedData.gatewayResponse,
+            },
+          });
+
+          const order = await tx.order.findUnique({ where: { id: payment.orderId } });
+          if (!order) {
+            this.logger.error(`Order ${payment.orderId} not found for payment ${payment.id}`);
+            throw new NotFoundException(`Order not found`);
+          }
+
+          // 6. Handle SUCCESS flow
+          if (nextStatus === PaymentProcessingStatus.SUCCESS) {
+            await tx.order.update({
+              where: { id: payment.orderId },
+              data: {
+                paymentStatus: PaymentStatusEnum.paid,
+                status: OrderStatusEnum.confirmed,
+                confirmedAt: new Date(),
+              } as any,
             });
 
-            if (!inventoryItem) {
-                this.logger.error(`Inventory item ${log.inventoryItemId} not found during restoration for order ${order.id}`);
-                continue;
+            // Standard Invariant: Deduct stock (Reserve -> Confirm)
+            await this.inventoryService.deduct(payment.orderId, tx);
+
+            // Clear Cart (Only on success)
+            const cartWhere = order.userId
+              ? { userId: order.userId }
+              : { sessionId: order.sessionId };
+            await tx.cart.deleteMany({ where: cartWhere });
+
+            await tx.orderTimeline.create({
+              data: {
+                orderId: payment.orderId,
+                action: 'PAYMENT_SUCCESS_WEBHOOK',
+                description: `Payment confirmed via ${paymentMethod} webhook. Order confirmed and inventory deducted.`,
+                actorType: 'system',
+                metadata: { transactionId: verifiedData.transactionId },
+              },
+            });
+          } else {
+            // 7. Handle FAILURE flow
+            const isMaxRetries = order.retryCount >= 5;
+            const finalOrderStatus = isMaxRetries
+              ? OrderStatusEnum.cancelled
+              : OrderStatusEnum.pending_payment;
+
+            await tx.order.update({
+              where: { id: payment.orderId },
+              data: {
+                status: finalOrderStatus,
+                retryCount: { increment: 1 },
+              } as any,
+            });
+
+            if (isMaxRetries) {
+              await this.inventoryService.release(payment.orderId, tx);
             }
 
-            // Restore stock
-            await tx.inventoryItem.update({
-                where: { id: inventoryItem.id },
-                data: {
-                    quantity: { increment: quantityToRestore },
-                },
+            await tx.orderTimeline.create({
+              data: {
+                orderId: payment.orderId,
+                action: 'PAYMENT_FAILED_WEBHOOK',
+                description: `Payment failed via ${paymentMethod} webhook. Status: ${finalOrderStatus}`,
+                actorType: 'system',
+                metadata: { transactionId: verifiedData.transactionId },
+              },
             });
+          }
+        });
 
-            // Create return log
-            await tx.inventoryLog.create({
-                data: {
-                    inventoryItemId: inventoryItem.id,
-                    productVariantId: log.productVariantId,
-                    warehouseId: log.warehouseId,
-                    actionType: ActionType.RETURN,
-                    quantityChange: quantityToRestore,
-                    beforeQuantity: inventoryItem.quantity,
-                    afterQuantity: inventoryItem.quantity + quantityToRestore,
-                    referenceType: 'ORDER',
-                    referenceId: order.id,
-                    note: 'Inventory restored to original warehouse due to refund',
-                },
-            });
-        }
-
-        this.logger.log(`Inventory restored for order ${order.id} across ${deductionLogs.length} warehouse locations`);
-    }
-
-    /**
-     * Get payment provider by method
-     */
-    public getProvider(method: PaymentMethodEnum): IPaymentGatewayProvider {
-        const provider = this.providers.get(method);
-        if (!provider) {
-            throw new BadRequestException(`Unsupported payment method: ${method}`);
-        }
-        return provider;
-    }
-
-    /**
-     * Generate payment URL for order
-     * Used by OrderPaymentService for order-payment integration
-     * 
-     * @param orderId - Order ID
-     * @param orderCode - Order code for display
-     * @param amount - Payment amount
-     * @param provider - Payment provider (VIETQR/VNPAY/PAYPAL)
-     * @param returnUrl - Optional return URL
-     * @param cancelUrl - Optional cancel URL
-     * @returns Payment URL or null for VIETQR
-     */
-    async generatePaymentUrl(
-        orderId: string,
-        orderCode: string,
-        amount: number,
-        provider: string,
-        returnUrl?: string,
-        cancelUrl?: string,
-    ): Promise<string | null> {
         this.logger.log(
-            `Generating payment URL: provider=${provider}, orderId=${orderId}`,
+          `Payment processed: Order=${verifiedData.orderId}, Status=${verifiedData.status}`,
+        );
+        await this.idempotencyService.storeResult(idempotencyKey, verifiedData);
+        return verifiedData;
+      } finally {
+        await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
+      }
+    });
+  }
+
+  /**
+   * Synchronize payment status with gateway
+   * Used by reconciliation service to check status of stale payments
+   */
+  async syncPaymentStatus(paymentId: string): Promise<boolean> {
+    this.logger.log(`Synchronizing status for payment ${paymentId}`);
+
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { order: true },
+    });
+
+    if (!payment || payment.status !== PaymentProcessingStatus.INIT) {
+      return false;
+    }
+
+    const provider = this.getProvider(payment.provider as unknown as PaymentMethodEnum);
+    let verifiedData;
+    try {
+      verifiedData = await provider.queryTransaction(
+        payment.providerTransactionId,
+        payment.rawPayload as Record<string, any>,
+      );
+    } catch (error) {
+      this.logger.error(`Sync failed for payment ${paymentId}: ${error.message}`);
+
+      // Mark as FAILED if synchronization failed due to provider error (e.g. account locked)
+      await this.prisma.$transaction(async (tx) => {
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: PaymentProcessingStatus.FAILED,
+            errorLog: error.message,
+          },
+        });
+
+        await tx.orderTimeline.create({
+          data: {
+            orderId: payment.orderId,
+            action: 'PAYMENT_SYNC_FAILED',
+            toStatus: 'pending_payment',
+            description: `Sync with ${payment.provider} failed: ${error.message}`,
+            actorType: 'system',
+          },
+        });
+      });
+      return true; // Return true as we successfully "synced" the failure state
+    }
+
+    if (!verifiedData) {
+      return false;
+    }
+
+    // If status is still PENDING/INIT, do nothing
+    if (verifiedData.status === TransactionStatus.PENDING) {
+      return false;
+    }
+
+    // Process the result as if it were a callback
+    // We can reuse processCallback logic by creating a mock callback or extracting the core logic
+    // For simplicity and safety, we'll manually trigger the update logic here or refactor processCallback
+
+    if (verifiedData.status === TransactionStatus.SUCCESS) {
+      this.logger.log(`Payment ${paymentId} confirmed via QueryDR. Processing success.`);
+
+      // Re-use logic for success (this should ideally be refactored into a shared method)
+      await this.prisma.$transaction(async (tx) => {
+        // Double check status inside transaction
+        const p = await tx.payment.findUnique({ where: { id: paymentId } });
+        if (!p || p.status !== PaymentProcessingStatus.INIT) return;
+
+        // Update payment
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: PaymentProcessingStatus.SUCCESS,
+            rawPayload: verifiedData.gatewayResponse,
+            verifiedAt: new Date(),
+          },
+        });
+
+        // Update order
+        await tx.order.update({
+          where: { id: payment.orderId },
+          data: {
+            paymentStatus: PaymentStatusEnum.paid,
+            status: OrderStatusEnum.confirmed,
+            confirmedAt: new Date(),
+          } as any,
+        });
+
+        // Deduct inventory
+        await this.inventoryService.deduct(payment.orderId, tx);
+
+        // Add timeline
+        await tx.orderTimeline.create({
+          data: {
+            orderId: payment.orderId,
+            action: 'PAYMENT_CONFIRMED',
+            toStatus: 'confirmed',
+            description: `Payment confirmed via reconciliation query (${payment.provider}).`,
+            actorType: 'system',
+            metadata: { transactionId: payment.providerTransactionId },
+          },
+        });
+      });
+      return true;
+    } else if (verifiedData.status === TransactionStatus.FAILED) {
+      this.logger.log(`Payment ${paymentId} failed via QueryDR. Processing failure.`);
+      await this.prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: PaymentProcessingStatus.FAILED,
+          rawPayload: verifiedData.gatewayResponse,
+        },
+      });
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Process refund for an order (with idempotency)
+   */
+  async processRefund(
+    orderId: string,
+    amount: number,
+    reason?: string,
+    restoreInventory: boolean = true,
+  ): Promise<RefundResult> {
+    // Generate idempotency key
+    const idempotencyKey = this.idempotencyService.generatePaymentKey(orderId, 'refund');
+
+    // Check for cached result
+    const cachedResult = await this.idempotencyService.getResult(idempotencyKey);
+    if (cachedResult) {
+      this.logger.log(`Returning cached refund result for order ${orderId}`);
+      return cachedResult;
+    }
+
+    // Acquire lock
+    const lockToken = await this.idempotencyService.acquireLock(idempotencyKey);
+    if (!lockToken) {
+      throw new ConflictException('Refund already in progress. Please wait.');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        // Find order with transactions
+        const order = await tx.order.findUnique({
+          where: { id: orderId },
+          include: {
+            transactions: true,
+            items: true,
+          },
+        });
+
+        if (!order) {
+          throw new NotFoundException(`Order ${orderId} not found`);
+        }
+
+        // Check if already refunded
+        const existingRefund = order.transactions.find(
+          (t) =>
+            t.type === TransactionTypeEnum.refund && t.status === TransactionStatusEnum.success,
         );
 
-        // VIETQR doesn't need payment URL (static QR or manual)
-        if (provider === 'VIETQR' || provider === 'COD') {
-            return null;
+        if (existingRefund) {
+          throw new BadRequestException('Order already refunded');
         }
 
-        // Get frontend URL and ensure no trailing slash for clean concatenation
-        const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/$/, '');
-        
-        const metadata = {
+        // Find successful payment record (Source of Truth)
+        const payment = await tx.payment.findFirst({
+          where: { orderId, status: PaymentProcessingStatus.SUCCESS },
+        });
+
+        if (!payment) {
+          throw new BadRequestException('No successful payment record found for order');
+        }
+
+        // Find successful payment transaction (for provider details)
+        const paymentTransaction = order.transactions.find(
+          (t) =>
+            t.status === TransactionStatusEnum.success && t.type === TransactionTypeEnum.payment,
+        );
+
+        if (!paymentTransaction) {
+          throw new BadRequestException('No successful payment transaction found for order');
+        }
+
+        // Validate refund amount
+        if (amount > Number(order.totalAmount)) {
+          throw new BadRequestException('Refund amount cannot exceed order total');
+        }
+
+        // Get provider
+        const provider = this.getProvider(paymentTransaction.provider as PaymentMethodEnum);
+
+        // Process refund with provider
+        const refundResult = await provider.processRefund(
+          paymentTransaction.transactionCode || '',
+          amount,
+          reason,
+        );
+
+        // Create refund transaction
+        await tx.paymentTransaction.create({
+          data: {
             orderId,
-            orderCode,
-            returnUrl: returnUrl || `${frontendUrl}/payment-result`,
-            cancelUrl: cancelUrl || `${frontendUrl}/payment-result?status=failed`,
-        };
+            amount,
+            type: TransactionTypeEnum.refund,
+            status: refundResult.success
+              ? TransactionStatusEnum.success
+              : TransactionStatusEnum.failed,
+            provider: paymentTransaction.provider,
+            method: paymentTransaction.method,
+            transactionCode: refundResult.refundTransactionId,
+            gatewayResponse: refundResult.metadata || {},
+            note: reason,
+          },
+        });
 
-        try {
-            let paymentMethod: PaymentMethodEnum;
-            if (provider === 'VNPAY') {
-                paymentMethod = PaymentMethodEnum.VNPAY;
-            } else if (provider === 'PAYPAL') {
-                paymentMethod = PaymentMethodEnum.PAYPAL;
-            } else if (provider === 'VIETQR' || provider === 'COD') {
-                 paymentMethod = PaymentMethodEnum.VIETQR;
-            } else {
-                throw new BadRequestException(`Unsupported payment provider: ${provider}`);
-            }
-
-            // Use createPayment to ensure record exists before redirect (Source of Truth)
-            const result = await this.createPayment(
-                orderId,
-                paymentMethod,
-                metadata,
-            );
-
-            return result.paymentUrl || null;
-        } catch (error) {
-            this.logger.error(
-                `Failed to generate payment URL for provider ${provider}`,
-                error,
-            );
-            throw error;
-        }
-    }
-    /**
-     * Get PayPal provider for advanced operations
-     */
-    getPayPalProvider(): PayPalProvider {
-        return this.paypalProvider;
-    }
-
-    /**
-     * Find all transactions for admin (paginated)
-     */
-    async findTransactions(filters: {
-        page?: number;
-        limit?: number;
-        status?: string;
-        provider?: string;
-        orderCode?: string;
-    }) {
-        const {
-            page = 1,
-            limit = 10,
-            status,
-            provider,
-            orderCode,
-        } = filters;
-        const skip = (Number(page) - 1) * Number(limit);
-        const take = Number(limit);
-
-        const where: Prisma.PaymentTransactionWhereInput = {};
-        if (status) where.status = status as TransactionStatus;
-        if (provider) where.provider = provider;
-        if (orderCode) {
-            where.order = {
-                code: {
-                    contains: orderCode,
-                    mode: 'insensitive',
-                },
-            };
-        }
-
-        const [items, total] = await Promise.all([
-            this.prisma.paymentTransaction.findMany({
-                where,
-                skip,
-                take,
-                include: {
-                    order: {
-                        select: {
-                            id: true,
-                            code: true,
-                        },
-                    },
-                },
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.paymentTransaction.count({ where }),
-        ]);
-
-        return {
-            items,
-            meta: {
-                total,
-                page: Number(page),
-                limit: Number(limit),
-                totalPages: Math.ceil(total / Number(limit)),
+        // Update Payment record status
+        this.stateMachine.validateTransition(
+          payment.id,
+          payment.status,
+          PaymentProcessingStatus.REFUNDED,
+        );
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentProcessingStatus.REFUNDED,
+            rawPayload: {
+              ...(payment.rawPayload as object),
+              refund: refundResult.metadata,
             },
-        };
+          },
+        });
+
+        // Update order status
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            paymentStatus: PaymentStatusEnum.refunded,
+            status: OrderStatusEnum.refunded,
+          },
+        });
+
+        // Restore inventory if requested
+        if (restoreInventory) {
+          await this.restoreInventory(tx, order);
+        }
+
+        // Create order timeline entry
+        await tx.orderTimeline.create({
+          data: {
+            orderId,
+            action: 'REFUND_PROCESSED',
+            toStatus: OrderStatusEnum.refunded,
+            description: `Refund processed: ${amount} VND. Reason: ${reason || 'N/A'}`,
+            actorType: 'system',
+            metadata: {
+              refundTransactionId: refundResult.refundTransactionId,
+              amount,
+              reason,
+            },
+          },
+        });
+
+        this.logger.log(
+          `Refund processed for order ${orderId}, amount: ${amount}, transaction: ${refundResult.refundTransactionId}`,
+        );
+
+        // Cache result
+        await this.idempotencyService.storeResult(idempotencyKey, refundResult);
+
+        return refundResult;
+      });
+    } finally {
+      // Always release lock
+      await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
     }
+  }
+
+  /**
+   * Confirm VIETQR payment (manual confirmation by staff)
+   */
+  async confirmVietQRPayment(
+    orderId: string,
+    amount: number,
+    confirmedBy: string,
+    note?: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { transactions: true },
+      });
+
+      if (!order) {
+        throw new NotFoundException(`Order ${orderId} not found`);
+      }
+
+      // Find pending VIETQR Payment record
+      const vietqrPayment = await tx.payment.findFirst({
+        where: {
+          orderId,
+          provider: PaymentGatewayProvider.VIETQR,
+          status: PaymentProcessingStatus.INIT,
+        },
+      });
+
+      if (!vietqrPayment) {
+        throw new BadRequestException('No pending VIETQR payment found');
+      }
+
+      // Validate transition
+      this.stateMachine.validateTransition(
+        vietqrPayment.id,
+        vietqrPayment.status,
+        PaymentProcessingStatus.SUCCESS,
+      );
+
+      // Update Payment
+      await tx.payment.update({
+        where: { id: vietqrPayment.id },
+        data: {
+          status: PaymentProcessingStatus.SUCCESS,
+          verifiedAt: new Date(),
+          rawPayload: {
+            confirmedBy,
+            confirmedAt: new Date().toISOString(),
+            note,
+          },
+        },
+      });
+
+      // Find pending VIETQR transaction (Audit log)
+      const vietqrTransaction = order.transactions.find(
+        (t) =>
+          t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
+      );
+
+      if (vietqrTransaction) {
+        // Update transaction
+        await tx.paymentTransaction.update({
+          where: { id: vietqrTransaction.id },
+          data: {
+            status: TransactionStatusEnum.success,
+            gatewayResponse: {
+              confirmedBy,
+              confirmedAt: new Date().toISOString(),
+              note,
+            },
+          },
+        });
+      }
+
+      // Update order
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: PaymentStatusEnum.paid,
+          status: OrderStatusEnum.confirmed,
+          confirmedAt: new Date(),
+        },
+      });
+
+      // Create timeline
+      await tx.orderTimeline.create({
+        data: {
+          orderId,
+          action: 'VIETQR_PAYMENT_CONFIRMED',
+          toStatus: 'confirmed',
+          description: `VietQR payment confirmed by staff`,
+          actorId: confirmedBy,
+          actorType: 'staff',
+          metadata: { amount, note },
+        },
+      });
+    });
+
+    this.logger.log(`VietQR payment confirmed for order ${orderId}`);
+  }
+
+  /**
+   * Get payment status for an order
+   * Supports lookup by Order ID or Provider Transaction ID (e.g. PayPal Token)
+   */
+  async getPaymentProcessingStatus(orderIdOrToken: string) {
+    let order: any = null;
+
+    // 1. Try to find by Order ID (ONLY if it's a valid UUID to avoid Prisma error)
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        orderIdOrToken,
+      );
+
+    if (isUuid) {
+      order = await this.prisma.order.findUnique({
+        where: { id: orderIdOrToken },
+        include: {
+          transactions: {
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+    }
+
+    // 2. If not found (or not a UUID), try to find by Payment Provider Transaction ID (e.g. PayPal Token)
+    if (!order) {
+      const payment = await this.prisma.payment.findUnique({
+        where: { providerTransactionId: orderIdOrToken },
+        include: {
+          order: {
+            include: {
+              transactions: {
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+          },
+        },
+      });
+
+      if (payment) {
+        order = payment.order as any;
+      }
+    }
+
+    if (!order) {
+      throw new NotFoundException(`Order or Payment Token ${orderIdOrToken} not found`);
+    }
+
+    // 3. Proactive Sync: If status is still INIT/pending_payment, try to sync it (Synchronous Reconciliation)
+    // Especially useful for PayPal where webhook might be slow or missing in local dev
+    if (order.status === 'pending_payment' || order.paymentStatus === 'unpaid') {
+      const pendingPayment = await this.prisma.payment.findFirst({
+        where: { orderId: order.id, status: 'INIT' },
+      });
+
+      if (pendingPayment) {
+        this.logger.log(`Proactively syncing payment status for order ${order.id}`);
+        const isSynced = await this.syncPaymentStatus(pendingPayment.id);
+        if (isSynced) {
+          // Refetch order to get updated status
+          order = await this.prisma.order.findUnique({
+            where: { id: order.id },
+            include: { transactions: { orderBy: { createdAt: 'desc' } } },
+          });
+        }
+      }
+    }
+
+    return {
+      orderId: order.id,
+      orderCode: order.code,
+      paymentStatus: order.paymentStatus,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      transactions: order.transactions,
+    };
+  }
+
+  /**
+   * Restore inventory after refund
+   */
+  private async restoreInventory(
+    tx: Prisma.TransactionClient,
+    order: Prisma.OrderGetPayload<{ include: { items: true } }>,
+  ): Promise<void> {
+    // Find all original deduction logs for this order to know exactly where to return stock
+    const deductionLogs = await tx.inventoryLog.findMany({
+      where: {
+        referenceId: order.id,
+        referenceType: 'ORDER',
+        actionType: ActionType.SALE,
+        quantityChange: { lt: 0 },
+      },
+    });
+
+    if (deductionLogs.length === 0) {
+      this.logger.warn(
+        `No inventory deduction logs found for order ${order.id}. Skipping restoration.`,
+      );
+      return;
+    }
+
+    for (const log of deductionLogs) {
+      const quantityToRestore = Math.abs(log.quantityChange);
+
+      // Fetch current inventory item to get accurate beforeQuantity for logging
+      const inventoryItem = await tx.inventoryItem.findUnique({
+        where: { id: log.inventoryItemId },
+      });
+
+      if (!inventoryItem) {
+        this.logger.error(
+          `Inventory item ${log.inventoryItemId} not found during restoration for order ${order.id}`,
+        );
+        continue;
+      }
+
+      // Restore stock
+      await tx.inventoryItem.update({
+        where: { id: inventoryItem.id },
+        data: {
+          quantity: { increment: quantityToRestore },
+        },
+      });
+
+      // Create return log
+      await tx.inventoryLog.create({
+        data: {
+          inventoryItemId: inventoryItem.id,
+          productVariantId: log.productVariantId,
+          warehouseId: log.warehouseId,
+          actionType: ActionType.RETURN,
+          quantityChange: quantityToRestore,
+          beforeQuantity: inventoryItem.quantity,
+          afterQuantity: inventoryItem.quantity + quantityToRestore,
+          referenceType: 'ORDER',
+          referenceId: order.id,
+          note: 'Inventory restored to original warehouse due to refund',
+        },
+      });
+    }
+
+    this.logger.log(
+      `Inventory restored for order ${order.id} across ${deductionLogs.length} warehouse locations`,
+    );
+  }
+
+  /**
+   * Get payment provider by method
+   */
+  public getProvider(method: PaymentMethodEnum): IPaymentGatewayProvider {
+    const provider = this.providers.get(method);
+    if (!provider) {
+      throw new BadRequestException(`Unsupported payment method: ${method}`);
+    }
+    return provider;
+  }
+
+  /**
+   * Generate payment URL for order
+   * Used by OrderPaymentService for order-payment integration
+   *
+   * @param orderId - Order ID
+   * @param orderCode - Order code for display
+   * @param amount - Payment amount
+   * @param provider - Payment provider (VIETQR/VNPAY/PAYPAL)
+   * @param returnUrl - Optional return URL
+   * @param cancelUrl - Optional cancel URL
+   * @returns Payment URL or null for VIETQR
+   */
+  async generatePaymentUrl(
+    orderId: string,
+    orderCode: string,
+    amount: number,
+    provider: string,
+    returnUrl?: string,
+    cancelUrl?: string,
+  ): Promise<string | null> {
+    this.logger.log(`Generating payment URL: provider=${provider}, orderId=${orderId}`);
+
+    // VIETQR doesn't need payment URL (static QR or manual)
+    if (provider === 'VIETQR' || provider === 'COD') {
+      return null;
+    }
+
+    // Get frontend URL and ensure no trailing slash for clean concatenation
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/$/, '');
+
+    const metadata = {
+      orderId,
+      orderCode,
+      returnUrl: returnUrl || `${frontendUrl}/payment-result`,
+      cancelUrl: cancelUrl || `${frontendUrl}/payment-result?status=failed`,
+    };
+
+    try {
+      let paymentMethod: PaymentMethodEnum;
+      if (provider === 'VNPAY') {
+        paymentMethod = PaymentMethodEnum.VNPAY;
+      } else if (provider === 'PAYPAL') {
+        paymentMethod = PaymentMethodEnum.PAYPAL;
+      } else if (provider === 'VIETQR' || provider === 'COD') {
+        paymentMethod = PaymentMethodEnum.VIETQR;
+      } else {
+        throw new BadRequestException(`Unsupported payment provider: ${provider}`);
+      }
+
+      // Use createPayment to ensure record exists before redirect (Source of Truth)
+      const result = await this.createPayment(orderId, paymentMethod, metadata);
+
+      return result.paymentUrl || null;
+    } catch (error) {
+      this.logger.error(`Failed to generate payment URL for provider ${provider}`, error);
+      throw error;
+    }
+  }
+  /**
+   * Get PayPal provider for advanced operations
+   */
+  getPayPalProvider(): PayPalProvider {
+    return this.paypalProvider;
+  }
+
+  /**
+   * Find all transactions for admin (paginated)
+   */
+  async findTransactions(filters: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    provider?: string;
+    orderCode?: string;
+  }) {
+    const { page = 1, limit = 10, status, provider, orderCode } = filters;
+    const skip = (Number(page) - 1) * Number(limit);
+    const take = Number(limit);
+
+    const where: Prisma.PaymentTransactionWhereInput = {};
+    if (status) where.status = status as TransactionStatus;
+    if (provider) where.provider = provider;
+    if (orderCode) {
+      where.order = {
+        code: {
+          contains: orderCode,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.paymentTransaction.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          order: {
+            select: {
+              id: true,
+              code: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.paymentTransaction.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / Number(limit)),
+      },
+    };
+  }
 }

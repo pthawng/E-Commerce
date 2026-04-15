@@ -51,7 +51,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                     )}>
                         {typeof item.name === 'string' ? item.name : (item.name[language] || item.name['en'])}
                     </h3>
-                    <button 
+                    <button
                         onClick={() => removeItem(item.variantId)}
                         className="text-muted-foreground hover:text-primary transition-colors p-1"
                     >
@@ -71,7 +71,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                 {/* Price & Quantity Area */}
                 <div className="mt-auto flex justify-between items-center pt-2">
                     <div className="flex items-center border border-hairline overflow-hidden bg-background shadow-sm hover:border-primary/20 transition-colors">
-                        <button 
+                        <button
                             onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
                             className="p-2.5 sm:p-2.5 hover:bg-secondary/10 transition-colors disabled:opacity-30"
                             disabled={item.quantity <= 1}
@@ -81,14 +81,14 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                         <span className="w-10 sm:w-10 text-center font-body text-[11px] tabular-nums font-medium">
                             {item.quantity}
                         </span>
-                        <button 
+                        <button
                             onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
                             className="p-2.5 sm:p-2.5 hover:bg-secondary/10 transition-colors"
                         >
                             <Plus size={13} strokeWidth={1} />
                         </button>
                     </div>
-                    
+
                     <p className={cn(
                         "font-body font-medium tabular-nums",
                         isPage ? "text-base text-primary" : "text-xs text-primary/80"

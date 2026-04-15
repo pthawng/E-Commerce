@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { IsDateString, IsOptional, IsString } from 'class-validator';
 import { PaginationDto } from 'src/common/pagination';
 
 export class StockQueryDto extends PaginationDto {

@@ -1,3 +1,4 @@
+import { Public } from '@common/decorators/public.decorator';
 import {
   Body,
   Controller,
@@ -13,7 +14,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UploadMediaDto } from './dto/upload-media.dto';
 import { ProductStorageService } from './product-storage.service';
-import { Public } from '@common/decorators/public.decorator';
 
 /**
  * Product Storage Controller

@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PermissionCacheService } from '../cache/permission-cache.service';
@@ -39,9 +39,7 @@ describe('RbacService', () => {
 
   describe('getUserPermissions', () => {
     it('should aggregate permissions from roles and direct assignments', async () => {
-      const rolePerms = [
-        { role: { rolePermissions: [{ permission: { action: 'p1' } }] } },
-      ];
+      const rolePerms = [{ role: { rolePermissions: [{ permission: { action: 'p1' } }] } }];
       const directPerms = [{ permission: { action: 'p2' } }];
 
       mockPrismaService.userRole.findMany.mockResolvedValue(rolePerms);
@@ -55,11 +53,15 @@ describe('RbacService', () => {
     });
 
     it('should return unique permissions', async () => {
-        mockPrismaService.userRole.findMany.mockResolvedValue([{ role: { rolePermissions: [{ permission: { action: 'p1' } }] } }]);
-        mockPrismaService.userPermission.findMany.mockResolvedValue([{ permission: { action: 'p1' } }]);
+      mockPrismaService.userRole.findMany.mockResolvedValue([
+        { role: { rolePermissions: [{ permission: { action: 'p1' } }] } },
+      ]);
+      mockPrismaService.userPermission.findMany.mockResolvedValue([
+        { permission: { action: 'p1' } },
+      ]);
 
-        const result = await service.getUserPermissions('u1');
-        expect(result).toEqual(['p1']);
+      const result = await service.getUserPermissions('u1');
+      expect(result).toEqual(['p1']);
     });
   });
 

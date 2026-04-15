@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { Pool } from 'pg';
@@ -13,7 +13,7 @@ const prisma = new PrismaClient({ adapter });
 
 async function verify() {
   console.log('🔍 Verifying Seed Data...');
-  
+
   const counts = {
     permissions: await prisma.permission.count(),
     roles: await prisma.role.count(),
@@ -35,7 +35,6 @@ async function verify() {
   console.log(`- Warehouses: ${counts.warehouses}`);
   console.log(`- Inventory: ${counts.inventory}`);
   console.log(`- Shipping: ${counts.shipping}`);
-
 
   if (counts.products >= 50 && counts.inventory > 0) {
     console.log('✅ SEED SUCCESS: 50+ products and stock are present.');

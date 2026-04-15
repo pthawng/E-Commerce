@@ -1,16 +1,16 @@
+import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { BullModule } from '@nestjs/bull';
 import { PrismaModule } from 'src/prisma/prisma.module';
-import { MailService } from './mail.service';
-import { EmailOutboxService } from './services/email-outbox.service';
-import { OutboxRelayService } from './services/outbox-relay.service';
-import { EmailProcessor } from './services/email.processor';
-import { SendGridProvider } from './providers/sendgrid.provider';
-import { SesProvider } from './providers/ses.provider';
 import { MailAdminController } from './controllers/mail-admin.controller';
 import { MailWebhookController } from './controllers/mail-webhook.controller';
+import { MailService } from './mail.service';
+import { SendGridProvider } from './providers/sendgrid.provider';
+import { SesProvider } from './providers/ses.provider';
 import { CircuitBreakerService } from './services/circuit-breaker.service';
+import { EmailOutboxService } from './services/email-outbox.service';
+import { EmailProcessor } from './services/email.processor';
+import { OutboxRelayService } from './services/outbox-relay.service';
 import { EmailRetentionService } from './services/retention.service';
 
 @Module({

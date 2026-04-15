@@ -1,11 +1,11 @@
 import { VerifyEmailDto } from '@modules/auth/dto/verify-email.dto';
-import { BadRequestException, Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { AuthResponse } from '@shared';
 import { randomBytes } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
 import { AuthService } from '../auth.service';
-import type { AuthResponse } from '@shared';
 
 @Injectable()
 export class VerifyEmailService {
@@ -18,7 +18,7 @@ export class VerifyEmailService {
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => AuthService)) private readonly authService: AuthService,
-  ) { }
+  ) {}
 
   /**
    * Generates a crytographically secure token and persists it.
@@ -34,7 +34,11 @@ export class VerifyEmailService {
     return token;
   }
 
-  async sendVerifyEmail(user: { id: string; email: string; fullName: string }, reqIp?: string, reqUserAgent?: string) {
+  async sendVerifyEmail(
+    user: { id: string; email: string; fullName: string },
+    reqIp?: string,
+    reqUserAgent?: string,
+  ) {
     const token = await this.createAndSaveToken(user.id, reqIp, reqUserAgent);
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
 
@@ -62,7 +66,7 @@ export class VerifyEmailService {
     } catch (error) {
       this.logger.error(`Error triggering verify email: ${error.message}`, error.stack);
       // We no longer throw here or revoke the token, as the MailService handles the persistent queueing.
-      return true; 
+      return true;
     }
   }
 
@@ -82,26 +86,37 @@ export class VerifyEmailService {
       where: { userId: user.id },
     });
 
-    await this.sendVerifyEmail({
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName ?? user.email,
-    }, reqIp, reqUserAgent);
+    await this.sendVerifyEmail(
+      {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName ?? user.email,
+      },
+      reqIp,
+      reqUserAgent,
+    );
 
     return true;
   }
 
-  async verifyToken(dto: VerifyEmailDto, reqIp?: string, reqUserAgent?: string): Promise<{ verified: true, requireLogin: boolean, auth?: AuthResponse }> {
+  async verifyToken(
+    dto: VerifyEmailDto,
+    reqIp?: string,
+    reqUserAgent?: string,
+  ): Promise<{ verified: true; requireLogin: boolean; auth?: AuthResponse }> {
     const record = await this.prisma.verifyEmailToken.findUnique({
       where: { token: dto.token },
       include: { user: true },
     });
 
-    if (!record) throw new BadRequestException('Liên kết xác thực không hợp lệ hoặc đã được sử dụng.');
+    if (!record)
+      throw new BadRequestException('Liên kết xác thực không hợp lệ hoặc đã được sử dụng.');
 
     if (record.expiresAt < new Date()) {
       await this.prisma.verifyEmailToken.delete({ where: { id: record.id } });
-      throw new BadRequestException('Liên kết xác thực đã hết hạn (quá 15 phút). Vui lòng yêu cầu lại.');
+      throw new BadRequestException(
+        'Liên kết xác thực đã hết hạn (quá 15 phút). Vui lòng yêu cầu lại.',
+      );
     }
 
     // Transaction: Activate user and STRICT ONE-TIME delete token
@@ -117,7 +132,8 @@ export class VerifyEmailService {
     // Only auto-login if they clicked it on the same device/IP (if recorded)
     let safeToAutoLogin = true;
     if (record.ipAddress && reqIp && record.ipAddress !== reqIp) safeToAutoLogin = false;
-    if (record.userAgent && reqUserAgent && record.userAgent !== reqUserAgent) safeToAutoLogin = false;
+    if (record.userAgent && reqUserAgent && record.userAgent !== reqUserAgent)
+      safeToAutoLogin = false;
 
     if (safeToAutoLogin) {
       const authResponse = await this.authService.issueTokenPair(record.userId, 'customer');

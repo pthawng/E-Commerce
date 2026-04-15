@@ -23,10 +23,7 @@ describe('AuthController (e2e)', () => {
 
   describe('/auth/register (POST)', () => {
     it('should return 400 for invalid data', () => {
-      return request(app.getHttpServer())
-        .post('/auth/register')
-        .send({})
-        .expect(400);
+      return request(app.getHttpServer()).post('/auth/register').send({}).expect(400);
     });
 
     // Note: Success case would require a clean DB or mocking Prisma inside E2E
@@ -46,10 +43,14 @@ describe('AuthController (e2e)', () => {
     it('should eventually return 429 Too Many Requests', async () => {
       // We hit the limit defined in AppModule (default 10)
       for (let i = 0; i < 10; i++) {
-        await request(app.getHttpServer()).post('/auth/login').send({ email: 'a@b.com', password: 'p' });
+        await request(app.getHttpServer())
+          .post('/auth/login')
+          .send({ email: 'a@b.com', password: 'p' });
       }
 
-      const response = await request(app.getHttpServer()).post('/auth/login').send({ email: 'a@b.com', password: 'p' });
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'a@b.com', password: 'p' });
       expect(response.status).toBe(429);
     });
   });

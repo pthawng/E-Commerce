@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 
 @Catch()
 export class AllExceptionFilter implements ExceptionFilter {
@@ -33,7 +40,7 @@ export class AllExceptionFilter implements ExceptionFilter {
     }
 
     if (!code && status === HttpStatus.INTERNAL_SERVER_ERROR) {
-       code = 'INTERNAL_SERVER_ERROR';
+      code = 'INTERNAL_SERVER_ERROR';
     }
 
     response.status(status).json({
@@ -47,6 +54,5 @@ export class AllExceptionFilter implements ExceptionFilter {
       meta: null,
       data: null,
     });
-
   }
 }

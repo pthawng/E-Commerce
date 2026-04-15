@@ -25,9 +25,7 @@ export class InventoryAllocatorService {
    * @returns Array of allocation items (variantId + warehouseId + quantity)
    * @throws ConflictException if total available < requested
    */
-  async allocate(
-    items: Array<{ variantId: string; quantity: number }>,
-  ): Promise<AllocationItem[]> {
+  async allocate(items: Array<{ variantId: string; quantity: number }>): Promise<AllocationItem[]> {
     const allocations: AllocationItem[] = [];
 
     for (const item of items) {
@@ -50,10 +48,7 @@ export class InventoryAllocatorService {
       warehouseStocks.sort((a, b) => b.available - a.available);
 
       let remaining = item.quantity;
-      const totalAvailable = warehouseStocks.reduce(
-        (sum, w) => sum + Math.max(0, w.available),
-        0,
-      );
+      const totalAvailable = warehouseStocks.reduce((sum, w) => sum + Math.max(0, w.available), 0);
 
       if (totalAvailable < item.quantity) {
         throw new ConflictException(
@@ -82,9 +77,7 @@ export class InventoryAllocatorService {
 
       if (remaining > 0) {
         // Should not reach here due to check above, but safety net
-        throw new ConflictException(
-          `Could not fully allocate variant ${item.variantId}`,
-        );
+        throw new ConflictException(`Could not fully allocate variant ${item.variantId}`);
       }
     }
 

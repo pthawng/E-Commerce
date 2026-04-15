@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { seedCatalog } from './catalog'; // We'll move this later
 import { seedInventory } from './inventory';
 
 export interface DemoSeedScript {
@@ -11,13 +10,13 @@ export const demoSeeds: DemoSeedScript[] = [
   {
     name: 'Jewelry Catalog (50 Products Factory)',
     run: async (prisma) => {
-        // Import dynamically to avoid loading dev dependencies or large mocks in prod if possible
-        const { seedCatalog } = await import('./catalog');
-        await seedCatalog(prisma);
-    }
+      // Import dynamically to avoid loading dev dependencies or large mocks in prod if possible
+      const { seedCatalog } = await import('./catalog');
+      await seedCatalog(prisma);
+    },
   },
   {
     name: 'Stock Allocation',
-    run: seedInventory
-  }
+    run: seedInventory,
+  },
 ];

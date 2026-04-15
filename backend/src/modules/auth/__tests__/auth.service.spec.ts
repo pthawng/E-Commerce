@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -90,7 +90,11 @@ describe('AuthService', () => {
     it('should successfully register a new user', async () => {
       mockPrismaService.user.count.mockResolvedValue(0);
       (argon2.hash as jest.Mock).mockResolvedValue('hashed_password');
-      mockPrismaService.user.create.mockResolvedValue({ id: 'u1', email: registerDto.email, fullName: registerDto.fullName });
+      mockPrismaService.user.create.mockResolvedValue({
+        id: 'u1',
+        email: registerDto.email,
+        fullName: registerDto.fullName,
+      });
       mockJwtService.signAsync.mockResolvedValue('token');
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'u1',
@@ -117,10 +121,18 @@ describe('AuthService', () => {
     const loginDto = { email: 'test@example.com', password: 'password123' };
 
     it('should successfully login', async () => {
-      const user = { id: 'u1', email: 'test@example.com', passwordHash: 'hash', userType: 'CUSTOMER' };
+      const user = {
+        id: 'u1',
+        email: 'test@example.com',
+        passwordHash: 'hash',
+        userType: 'CUSTOMER',
+      };
       mockPrismaService.user.findFirst.mockResolvedValue(user);
       (argon2.verify as jest.Mock).mockResolvedValue(true);
-      mockPrismaService.user.findUnique.mockResolvedValue({ ...user, userRoles: [{ role: { slug: 'customer' } }] });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...user,
+        userRoles: [{ role: { slug: 'customer' } }],
+      });
       mockJwtService.signAsync.mockResolvedValue('token');
 
       const result = await service.login(loginDto);
@@ -166,7 +178,9 @@ describe('AuthService', () => {
       });
       (argon2.verify as jest.Mock).mockResolvedValue(true);
 
-      await expect(service.refreshToken({ refreshToken: 'expired_rt' })).rejects.toThrow(ForbiddenException);
+      await expect(service.refreshToken({ refreshToken: 'expired_rt' })).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

@@ -6,14 +6,14 @@ import * as querystring from 'querystring';
  * VNPAY requires parameters to be sorted before hashing
  */
 export function sortObject<T extends Record<string, any>>(obj: T): T {
-    const sorted: Record<string, any> = {};
-    const keys = Object.keys(obj).sort();
+  const sorted: Record<string, any> = {};
+  const keys = Object.keys(obj).sort();
 
-    keys.forEach((key) => {
-        sorted[key] = obj[key];
-    });
+  keys.forEach((key) => {
+    sorted[key] = obj[key];
+  });
 
-    return sorted as T;
+  return sorted as T;
 }
 
 /**
@@ -22,31 +22,28 @@ export function sortObject<T extends Record<string, any>>(obj: T): T {
  * @param secretKey - VNPAY hash secret
  * @returns Secure hash string
  */
-export function generateVNPayHash(
-    data: Record<string, any>,
-    secretKey: string,
-): string {
-    // Remove hash field if exists
-    const { vnp_SecureHash, vnp_SecureHashType, ...signData } = data;
+export function generateVNPayHash(data: Record<string, any>, secretKey: string): string {
+  // Remove hash field if exists
+  const { vnp_SecureHash, vnp_SecureHashType, ...signData } = data;
 
-    // Sort parameters
-    const sortedData = sortObject(signData);
+  // Sort parameters
+  const sortedData = sortObject(signData);
 
-    // Create raw query string (Strictly encode for v2.1.0)
-    // Note: VNPay requires encoding values and then replacing %20 with +
-    const signDataString = Object.entries(sortedData)
-        .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-        .map(([key, value]) => {
-            const encodedValue = encodeURIComponent(String(value)).replace(/%20/g, '+');
-            return `${key}=${encodedValue}`;
-        })
-        .join('&');
+  // Create raw query string (Strictly encode for v2.1.0)
+  // Note: VNPay requires encoding values and then replacing %20 with +
+  const signDataString = Object.entries(sortedData)
+    .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+    .map(([key, value]) => {
+      const encodedValue = encodeURIComponent(String(value)).replace(/%20/g, '+');
+      return `${key}=${encodedValue}`;
+    })
+    .join('&');
 
-    // Generate HMAC SHA512
-    const hmac = crypto.createHmac('sha512', secretKey);
-    const hash = hmac.update(Buffer.from(signDataString, 'utf-8')).digest('hex');
+  // Generate HMAC SHA512
+  const hmac = crypto.createHmac('sha512', secretKey);
+  const hash = hmac.update(Buffer.from(signDataString, 'utf-8')).digest('hex');
 
-    return hash;
+  return hash;
 }
 
 /**
@@ -56,12 +53,9 @@ export function generateVNPayHash(
  * @param secretKey - VNPAY hash secret
  * @returns Secure hash string
  */
-export function generateVNPayApiHash(
-    signData: string,
-    secretKey: string,
-): string {
-    const hmac = crypto.createHmac('sha512', secretKey);
-    return hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+export function generateVNPayApiHash(signData: string, secretKey: string): string {
+  const hmac = crypto.createHmac('sha512', secretKey);
+  return hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 }
 
 /**
@@ -70,19 +64,16 @@ export function generateVNPayApiHash(
  * @param secretKey - VNPAY hash secret
  * @returns True if signature is valid
  */
-export function verifyVNPaySignature(
-    data: Record<string, any>,
-    secretKey: string,
-): boolean {
-    const receivedHash = data.vnp_SecureHash;
+export function verifyVNPaySignature(data: Record<string, any>, secretKey: string): boolean {
+  const receivedHash = data.vnp_SecureHash;
 
-    if (!receivedHash) {
-        return false;
-    }
+  if (!receivedHash) {
+    return false;
+  }
 
-    const calculatedHash = generateVNPayHash(data, secretKey);
+  const calculatedHash = generateVNPayHash(data, secretKey);
 
-    return receivedHash === calculatedHash;
+  return receivedHash === calculatedHash;
 }
 
 /**
@@ -91,14 +82,14 @@ export function verifyVNPaySignature(
  * @returns Formatted date string
  */
 export function formatVNPayDate(date: Date = new Date()): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
 
-    return `${year}${month}${day}${hours}${minutes}${seconds}`;
+  return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
 
 /**
@@ -106,9 +97,9 @@ export function formatVNPayDate(date: Date = new Date()): string {
  * Format: yyyyMMddHHmmss
  */
 export function generateVNPayTxnRef(orderId: string): string {
-    const timestamp = Date.now().toString();
-    // VNPAY txnRef max length is 100 characters
-    return `${orderId}_${timestamp}`.substring(0, 100);
+  const timestamp = Date.now().toString();
+  // VNPAY txnRef max length is 100 characters
+  return `${orderId}_${timestamp}`.substring(0, 100);
 }
 
 /**
@@ -117,11 +108,8 @@ export function generateVNPayTxnRef(orderId: string): string {
  * @param params - Payment parameters
  * @returns Complete payment URL
  */
-export function buildVNPayUrl(
-    baseUrl: string,
-    params: Record<string, any>,
-): string {
-    const sortedParams = sortObject(params);
-    const queryString = querystring.stringify(sortedParams);
-    return `${baseUrl}?${queryString}`;
+export function buildVNPayUrl(baseUrl: string, params: Record<string, any>): string {
+  const sortedParams = sortObject(params);
+  const queryString = querystring.stringify(sortedParams);
+  return `${baseUrl}?${queryString}`;
 }

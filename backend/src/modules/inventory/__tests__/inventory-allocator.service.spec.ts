@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { InventoryAllocatorService } from '../inventory-allocator.service';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ConflictException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { InventoryAllocatorService } from '../inventory-allocator.service';
 
 describe('InventoryAllocatorService', () => {
   let service: InventoryAllocatorService;
@@ -56,18 +56,18 @@ describe('InventoryAllocatorService', () => {
     });
 
     it('should split allocation when one warehouse is not enough', async () => {
-        const largeRequest = [{ variantId, quantity: 20 }];
-        mockPrismaService.inventoryItem.findMany.mockResolvedValue([
-          { warehouseId: 'w1', quantity: 15, reservedQuantity: 0, warehouse: { name: 'W1' } },
-          { warehouseId: 'w2', quantity: 10, reservedQuantity: 0, warehouse: { name: 'W2' } },
-        ]);
-  
-        const result = await service.allocate(largeRequest);
-  
-        expect(result).toHaveLength(2);
-        // Sorted desc: w1 (15), w2 (10)
-        expect(result[0]).toEqual({ variantId, warehouseId: 'w1', quantity: 15 });
-        expect(result[1]).toEqual({ variantId, warehouseId: 'w2', quantity: 5 });
+      const largeRequest = [{ variantId, quantity: 20 }];
+      mockPrismaService.inventoryItem.findMany.mockResolvedValue([
+        { warehouseId: 'w1', quantity: 15, reservedQuantity: 0, warehouse: { name: 'W1' } },
+        { warehouseId: 'w2', quantity: 10, reservedQuantity: 0, warehouse: { name: 'W2' } },
+      ]);
+
+      const result = await service.allocate(largeRequest);
+
+      expect(result).toHaveLength(2);
+      // Sorted desc: w1 (15), w2 (10)
+      expect(result[0]).toEqual({ variantId, warehouseId: 'w1', quantity: 15 });
+      expect(result[1]).toEqual({ variantId, warehouseId: 'w2', quantity: 5 });
     });
 
     it('should throw ConflictException if total stock is insufficient', async () => {
@@ -79,16 +79,16 @@ describe('InventoryAllocatorService', () => {
     });
 
     it('should ignore warehouses with no available stock', async () => {
-        mockPrismaService.inventoryItem.findMany.mockResolvedValue([
-          { warehouseId: 'w1', quantity: 10, reservedQuantity: 10, warehouse: { name: 'W1' } },
-          { warehouseId: 'w2', quantity: 15, reservedQuantity: 0, warehouse: { name: 'W2' } },
-        ]);
-  
-        const result = await service.allocate(items);
-  
-        expect(result).toHaveLength(1);
-        expect(result[0].warehouseId).toBe('w2');
-        expect(result[0].quantity).toBe(10);
-      });
+      mockPrismaService.inventoryItem.findMany.mockResolvedValue([
+        { warehouseId: 'w1', quantity: 10, reservedQuantity: 10, warehouse: { name: 'W1' } },
+        { warehouseId: 'w2', quantity: 15, reservedQuantity: 0, warehouse: { name: 'W2' } },
+      ]);
+
+      const result = await service.allocate(items);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].warehouseId).toBe('w2');
+      expect(result[0].quantity).toBe(10);
+    });
   });
 });

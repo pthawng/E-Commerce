@@ -21,8 +21,8 @@ export const CartService = {
     /**
      * Add single item to server cart
      */
-    addItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal): Promise<any> => {
-        const response = await apiPost(API_ENDPOINTS.CART.BASE, { variantId, quantity, version }, {
+    addItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal, idempotencyKey?: string): Promise<any> => {
+        const response = await apiPost(API_ENDPOINTS.CART.BASE, { variantId, quantity, version, idempotencyKey }, {
             signal
         });
         return response.data;
@@ -54,6 +54,14 @@ export const CartService = {
      */
     mergeCart: async (): Promise<any> => {
         const response = await apiPost(`${API_ENDPOINTS.CART.BASE}/merge`, {});
+        return response.data;
+    },
+
+    /**
+     * Get global cart config (shipping thresholds, etc.)
+     */
+    getConfig: async (): Promise<any> => {
+        const response = await apiGet(`${API_ENDPOINTS.CART.BASE}/config`);
         return response.data;
     }
 };

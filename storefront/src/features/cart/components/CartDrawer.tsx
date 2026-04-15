@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-    Sheet, 
-    SheetContent, 
-    SheetHeader, 
-    SheetTitle, 
-    SheetFooter 
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetFooter
 } from '@/components/ui/sheet';
 import { useCartStore } from '../store/useCartStore';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -16,6 +16,7 @@ import { ShoppingBag, ArrowRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Link } from 'react-router-dom';
 import { CartConfidence } from './CartConfidence';
+import { cn } from '@/lib/utils';
 
 export const CartDrawer = () => {
     const { items, isOpen, setOpen, totals, fetchCart, status } = useCartStore();
@@ -46,9 +47,9 @@ export const CartDrawer = () => {
 
                 {/* Body */}
                 <div className="flex-grow min-h-0 relative">
-                    {isSyncing && items.length > 0 && (
+                    {isSyncing && (
                         <div className="absolute top-0 left-0 w-full h-[1px] bg-secondary/10 z-20 pointer-events-none overflow-hidden">
-                            <motion.div 
+                            <motion.div
                                 className="h-full bg-gold/30"
                                 animate={{ x: ['-100%', '200%'] }}
                                 transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
@@ -64,9 +65,9 @@ export const CartDrawer = () => {
                             <h3 className="font-display text-xl text-primary/80 mb-2 italic">
                                 {t('cart.empty')}
                             </h3>
-                            <Button 
+                            <Button
                                 asChild
-                                variant="link" 
+                                variant="link"
                                 className="text-gold uppercase tracking-widest text-[10px] mt-4 shadow-none hover:no-underline"
                                 onClick={() => setOpen(false)}
                             >
@@ -77,7 +78,7 @@ export const CartDrawer = () => {
                         </div>
                     ) : (
                         <ScrollArea className="h-full px-6">
-                            <div className="py-2">
+                            <div className={cn("py-2 transition-opacity duration-300", isSyncing && "opacity-60 pointer-events-none")}>
                                 {items.map((item) => (
                                     <CartItem key={item.variantId} item={item} layout="drawer" />
                                 ))}
@@ -89,10 +90,10 @@ export const CartDrawer = () => {
                 {/* Footer Center - High Aligned Layout */}
                 {!isEmpty && (
                     <SheetFooter className="mt-auto p-5 sm:p-7 border-t border-hairline bg-secondary/[0.01] flex-col space-y-0">
-                        <div className="flex items-start justify-between gap-6">
+                        <div className={cn("flex items-start justify-between gap-6 transition-opacity duration-300", isSyncing && "opacity-60")}>
                             {/* Left: Primary Action & Confidence */}
                             <div className="flex-[3] space-y-4">
-                                <Button 
+                                <Button
                                     asChild
                                     className="w-full bg-primary hover:bg-primary/95 text-primary-foreground h-16 rounded-none group shadow-luxury-soft"
                                     onClick={() => setOpen(false)}
@@ -104,7 +105,7 @@ export const CartDrawer = () => {
                                         <ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
                                     </Link>
                                 </Button>
-                                
+
                                 <div className="pl-1 opacity-80">
                                     <CartConfidence />
                                 </div>

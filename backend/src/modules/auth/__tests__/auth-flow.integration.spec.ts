@@ -1,13 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from '../auth.service';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { VerifyEmailService } from '../services/verify-email.auth.service';
-import { ForgotPassEmailService } from '../services/forgot-pass-email.auth.service';
-import { UserService } from '../../user/user.service';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
 import * as argon2 from 'argon2';
-import { BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { UserService } from '../../user/user.service';
+import { AuthService } from '../auth.service';
+import { ForgotPassEmailService } from '../services/forgot-pass-email.auth.service';
+import { VerifyEmailService } from '../services/verify-email.auth.service';
 
 describe('AuthFlow Integration', () => {
   let service: AuthService;
@@ -27,9 +26,9 @@ describe('AuthFlow Integration', () => {
       delete: jest.fn(),
     },
     refreshToken: {
-        create: jest.fn(),
-        delete: jest.fn(),
-        findFirst: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+      findFirst: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
   };
@@ -65,7 +64,7 @@ describe('AuthFlow Integration', () => {
   describe('Registration to Verification Flow', () => {
     it('should complete the full registration and verification flow', async () => {
       const dto = { email: 'new@example.com', password: 'password', fullName: 'New User' };
-      
+
       // 1. Register
       mockPrismaService.user.count.mockResolvedValue(0);
       mockPrismaService.user.create.mockResolvedValue({ id: 'u1', ...dto });
@@ -76,9 +75,14 @@ describe('AuthFlow Integration', () => {
       expect(mockVerifyEmailService.sendVerifyEmail).toHaveBeenCalled();
 
       // 2. Simulate Login before verification (should still work unless restricted)
-      mockPrismaService.user.findFirst.mockResolvedValue({ id: 'u1', email: dto.email, passwordHash: 'hash', isEmailVerified: false });
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        id: 'u1',
+        email: dto.email,
+        passwordHash: 'hash',
+        isEmailVerified: false,
+      });
       jest.spyOn(argon2, 'verify').mockResolvedValue(true);
-      
+
       const loginResult = await service.login({ email: dto.email, password: dto.password });
       expect(loginResult.tokens).toBeDefined();
     });
@@ -86,12 +90,12 @@ describe('AuthFlow Integration', () => {
 
   describe('Password Reset Flow', () => {
     it('should handle forgot password and reset password', async () => {
-        // This is a simplified test to verify service orchestration
-        const email = 'lost@example.com';
-        mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1', email });
-        
-        // Assume forgot password trigger works (tested in its own service usually)
-        // Here we test the auth service's role if it has any specific orchestration
+      // This is a simplified test to verify service orchestration
+      const email = 'lost@example.com';
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1', email });
+
+      // Assume forgot password trigger works (tested in its own service usually)
+      // Here we test the auth service's role if it has any specific orchestration
     });
   });
 });

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { slugify } from 'src/common/utils/string.helper';
 import type { Prisma } from '@prisma/client';
+import { slugify } from 'src/common/utils/string.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';

@@ -21,8 +21,8 @@ export const v4_initial_admin: SeedScript = {
 
     const admin = await prisma.user.upsert({
       where: { email: ADMIN_EMAIL },
-      update: { 
-        fullName: 'Ray Paradis Admin', 
+      update: {
+        fullName: 'Ray Paradis Admin',
         passwordHash: hashedAdminPass,
         userType: UserType.SUPER_ADMIN,
       },
@@ -41,5 +41,5 @@ export const v4_initial_admin: SeedScript = {
       update: {},
       create: { userId: admin.id, roleId: superAdminRole.id },
     });
-  }
+  },
 };

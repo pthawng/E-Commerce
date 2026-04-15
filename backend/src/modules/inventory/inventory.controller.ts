@@ -1,23 +1,15 @@
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
-import { WarehouseService } from './warehouse.service';
+  AdjustStockDto,
+  CreateWarehouseDto,
+  ReceiveStockDto,
+  StockQueryDto,
+  TransferStockDto,
+  UpdateWarehouseDto,
+} from './dto';
 import { InventoryService } from './inventory.service';
 import { StockMovementService } from './stock-movement.service';
-import {
-  CreateWarehouseDto,
-  UpdateWarehouseDto,
-  ReceiveStockDto,
-  AdjustStockDto,
-  TransferStockDto,
-  StockQueryDto,
-} from './dto';
+import { WarehouseService } from './warehouse.service';
 
 @Controller('inventory')
 export class InventoryController {
@@ -42,10 +34,7 @@ export class InventoryController {
   }
 
   @Patch('warehouses/:id')
-  async updateWarehouse(
-    @Param('id') id: string,
-    @Body() dto: UpdateWarehouseDto,
-  ) {
+  async updateWarehouse(@Param('id') id: string, @Body() dto: UpdateWarehouseDto) {
     return this.warehouseService.update(id, dto);
   }
 

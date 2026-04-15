@@ -21,7 +21,9 @@ export class EnvironmentGuard {
    */
   static denyProduction(taskName: string): void {
     if (this.isProduction()) {
-      this.logger.error(`❌ CRITICAL SAFETY BREACH: Attempted to run "${taskName}" on PRODUCTION environment.`);
+      this.logger.error(
+        `❌ CRITICAL SAFETY BREACH: Attempted to run "${taskName}" on PRODUCTION environment.`,
+      );
       throw new Error(`Safety Violation: "${taskName}" is strictly forbidden on production.`);
     }
   }
