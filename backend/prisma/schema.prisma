@@ -145,6 +145,7 @@ model Category {
 
   @@index([parentId])
   @@index([slug])
+  @@index([name], type: Gin)
   @@map("categories")
 }
 
@@ -154,6 +155,7 @@ model Attribute {
   name       Json
   filterType AttributeInputType @default(select)
   values     AttributeValue[]
+  @@index([name], type: Gin)
 }
 
 model AttributeValue {
@@ -166,6 +168,7 @@ model AttributeValue {
   variantAttributes VariantAttributeValue[]
 
   @@index([attributeId])
+  @@index([value], type: Gin)
 }
 
 model Product {
@@ -187,6 +190,7 @@ model Product {
   categories      ProductCategory[]
 
   @@index([slug], map: "idx_products_slug")
+  @@index([name], type: Gin)
   @@map("products")
 }
 
@@ -232,6 +236,7 @@ model ProductVariant {
   @@index([productId], map: "idx_variants_product_id")
   @@index([sku], map: "idx_variants_sku")
   @@index([price], map: "idx_variants_price")
+  @@index([variantTitle], type: Gin)
 }
 
 model VariantAttributeValue {
@@ -598,6 +603,7 @@ model Post {
 }
 
 model AuditLog {
+  /// @id @default(dbmanaged) -- TODO: Switch to UUID v7 for time-sortability
   id          String   @id @default(uuid()) @db.Uuid
   userId      String?  @db.Uuid
   action      String
@@ -611,6 +617,7 @@ model AuditLog {
 
   @@index([entityTable, entityId], map: "idx_audit_entity")
   @@index([createdAt], map: "idx_audit_created")
+  /// @@partitioned(by: "createdAt", interval: "month")
 }
 
 enum AttributeInputType {
@@ -753,6 +760,7 @@ model DataSeedHistory {
 }
 
 model EmailOutbox {
+  /// @id @default(dbmanaged) -- TODO: Switch to UUID v7 for time-sortability
   id                String       @id @default(uuid()) @db.Uuid
   eventType         String       // e.g. 'order.confirmed'
   recipient         String
@@ -776,6 +784,7 @@ model EmailOutbox {
   childOutboxes     EmailOutbox[] @relation("OutboxOverrides")
 
   @@index([status, scheduledAt])
+  /// @@partitioned(by: "createdAt", interval: "month")
   @@map("email_outbox")
 }
 

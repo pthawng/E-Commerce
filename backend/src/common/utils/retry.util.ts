@@ -32,7 +32,9 @@ export async function withRetry<T>(
         throw error;
       }
 
-      const waitTime = backoffMs * Math.pow(2, attempt - 1);
+      const baseWaitTime = backoffMs * Math.pow(2, attempt - 1);
+      const jitter = Math.random() * 0.1 * baseWaitTime; 
+      const waitTime = Math.round(baseWaitTime + jitter);
       logger?.warn(
         `[${context}] Attempt ${attempt} failed. Retrying in ${waitTime}ms... Error: ${error.message}`,
       );

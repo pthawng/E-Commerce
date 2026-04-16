@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
   UnauthorizedException,
@@ -10,13 +11,15 @@ import { PermissionCacheService } from './cache/permission-cache.service';
 
 @Injectable()
 export class RbacService implements OnModuleInit {
+  private readonly logger = new Logger(RbacService.name);
+
   constructor(
     private prisma: PrismaService,
     private permissionCacheService: PermissionCacheService,
-  ) {}
+  ) { }
 
   async onModuleInit() {
-    await this.seedDefaultPermissions();
+    this.logger.log('RbacService initialized. Seeding skip (handled by orchestrator).');
   }
 
   /** Đảm bảo user tồn tại và đang hoạt động */

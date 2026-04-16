@@ -11,6 +11,8 @@ import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { parse } from 'pg-connection-string';
 
+import { softDeleteExtension } from './extensions/soft-delete.extension';
+
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
@@ -35,8 +37,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       `PrismaService initialized. DB Info: host=${this.dbInfo.host}, port=${this.dbInfo.port}, database=${this.dbInfo.database}, user=${this.dbInfo.user}`,
     );
 
-    // Modern Prisma Extension for Invariant Guard (Replaces deprecated $use)
-    return this.$extends({
+    // Chain Extensions: Soft Delete + Invariant Guard
+    return this.$extends(softDeleteExtension).$extends({
       query: {
         $allModels: {
           async $allOperations({ model, operation, args, query }) {
