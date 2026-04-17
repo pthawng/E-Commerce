@@ -8,6 +8,7 @@ export default {
         emptyTitle: 'A Rare Void',
         emptyDesc: 'No items match your criteria.',
         all: 'All',
+        refining: 'Refining Collection...',
     },
     pdp: {
         backToCollection: 'Back to Collection',

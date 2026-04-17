@@ -52,6 +52,7 @@ export default {
         clearAll: 'Xóa Tất Cả',
         backToCart: 'Quay Lại Giỏ Hàng',
         backToHome: 'Về Trang Chủ',
+        tryAgain: 'Thử Lại',
     },
     newsletter: {
         subtitle: 'Khơi Nguồn Cảm Hứng',
@@ -67,6 +68,7 @@ export default {
         cart: 'Túi Mua Sắm | Ray Paradis',
         checkout: 'Thanh Toán | Ray Paradis',
         home: 'Ray Paradis | Trang Sức Cao Cấp & Di Sản',
+        collections: 'Bộ Sưu Tập | Ray Paradis',
     },
     badge: {
         new: 'Tuyệt Tác Mới',

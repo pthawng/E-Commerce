@@ -202,6 +202,7 @@ model Product {
 
   @@index([slug], map: "idx_products_slug")
   @@index([name], type: Gin)
+  @@index([createdAt(sort: Desc), id(sort: Desc)], map: "idx_products_cursor")
   @@map("products")
 }
 

@@ -14,6 +14,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PaginationRateLimitGuard } from 'src/common/guards/pagination-rate-limit.guard';
+import { Throttle } from '@nestjs/throttler';
 import { PaginationDto } from 'src/common/pagination';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -23,7 +25,7 @@ import { UserService } from './user.service';
 @Controller('users')
 @UseGuards(PermissionGuard)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   // CREATE USER
   @Post()
@@ -44,6 +46,8 @@ export class UserController {
   }
 
   // GET ALL USERS (PAGINATED)
+  @UseGuards(PaginationRateLimitGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Get('list')
   @ApiOperation({ summary: 'Lấy danh sách user (có phân trang)' })
   @ApiResponse({ status: 200, description: 'Danh sách user kèm meta phân trang' })

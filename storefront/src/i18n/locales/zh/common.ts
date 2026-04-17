@@ -52,6 +52,7 @@ export default {
         clearAll: '清空全部',
         backToCart: '返回购物袋',
         backToHome: '返回首页',
+        tryAgain: '重试',
     },
     newsletter: {
         subtitle: '灵感常伴',
@@ -67,6 +68,7 @@ export default {
         cart: '购物袋 | Ray Paradis',
         checkout: '结账 | Ray Paradis',
         home: 'Ray Paradis | 高级珠宝与品牌传承',
+        collections: '系列作品 | Ray Paradis',
     },
     badge: {
         new: '新作面世',

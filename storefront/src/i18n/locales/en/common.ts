@@ -52,6 +52,7 @@ export default {
         clearAll: 'Clear All',
         backToCart: 'Back to Cart',
         backToHome: 'Return to Home',
+        tryAgain: 'Try Again',
         secondaryView: '{{name}} secondary view',
     },
     newsletter: {
@@ -68,6 +69,7 @@ export default {
         cart: 'Shopping Bag | Ray Paradis',
         checkout: 'Checkout | Ray Paradis',
         home: 'Ray Paradis | High Jewelry & Heritage',
+        collections: 'The Collection | Ray Paradis',
     },
     badge: {
         new: 'New Creation',

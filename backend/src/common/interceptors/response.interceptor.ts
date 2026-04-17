@@ -25,8 +25,11 @@ export class ResponseInterceptor implements NestInterceptor {
           message: data?.message ?? 'OK',
           path: request.url,
           timestamp: new Date().toISOString(),
-          data: isPaginated ? paginatedData!.items : (data ?? null),
-          meta: isPaginated ? paginatedData!.meta : null,
+          // FIX: For pagination, we store the full result (items, meta, links)
+          // inside the data field so FE hooks can unwrap it correctly.
+          data: isPaginated ? data : (data ?? null),
+          // We also keep meta at top level for backward compat or easy access
+          meta: isPaginated ? (data as any).meta : null,
         };
       }),
     );

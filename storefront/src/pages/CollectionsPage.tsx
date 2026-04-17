@@ -52,9 +52,10 @@ export const CollectionsPage = () => {
     const allProducts = useMemo(() => {
         if (!data?.pages) return [];
 
-        // This is still O(N) overall but stable during app life
+        // This is still O(N) overall but stable during app life.
+        // P1-6 FIX: Access `page.items` (PaginatedResponse shape), not `page.data`.
         return data.pages.flatMap((page, pageIndex) =>
-            page.data.map((p, itemInPageIndex) => ({
+            page.items.map((p, itemInPageIndex) => ({
                 ...mapProductToCardProps(p, language, formatPrice),
                 index: pageIndex * 12 + itemInPageIndex // For LCP prioritization
             }))
@@ -63,13 +64,24 @@ export const CollectionsPage = () => {
 
     // L7 Optimization: Automated Infinite Scroll
     const { targetRef: loadMoreRef } = useInfiniteScroll({
-        onIntersect: () => fetchNextPage(),
+        onIntersect: () => {
+            // Gate infinite scroll fire until initial page is back.
+            // This prevents race conditions where the observer fires before the
+            // query reset has cleared/loaded the first page of new filters.
+            if (data?.pages && data.pages.length > 0) {
+                fetchNextPage();
+            }
+        },
         hasNextPage: !!hasNextPage,
         isFetchingNextPage: isFetchingNextPage,
-        rootMargin: '600px', // Start loading even earlier
+        rootMargin: '150px', // Only trigger when user is 150px from the sentinel
     });
 
     const lastPageMeta = data?.pages[data.pages.length - 1]?.meta;
+    // P1-6 FIX: Use pages[0] for totalItems — the first page is the stable carrier of the
+    // snapshot-consistent total count. lastPage shifts on every scroll and can be cursor-mode
+    // which has no totalItems at all.
+    const totalItemCount = data?.pages[0]?.meta?.totalItems ?? allProducts.length;
 
     const handleFilterChange = (categoryId: string | null) => {
         setActiveCategory(categoryId);
@@ -146,7 +158,7 @@ export const CollectionsPage = () => {
 
                         <div className="flex items-center gap-4">
                             <span className="font-body text-[10px] uppercase tracking-widest text-muted-foreground hidden sm:block">
-                                {allProducts.length} {t('shop.listing.items')}
+                                {totalItemCount} {t('shop.listing.items')}
                             </span>
                         </div>
                     </Container>
@@ -191,7 +203,7 @@ export const CollectionsPage = () => {
                                 <div className="flex items-center gap-3 py-4">
                                     <RefreshCw className="h-4 w-4 animate-spin text-gold" />
                                     <span className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">
-                                        Refining Collection...
+                                        {t('shop.listing.refining')}
                                     </span>
                                 </div>
                             )}

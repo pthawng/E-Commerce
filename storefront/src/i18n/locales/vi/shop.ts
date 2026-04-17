@@ -8,6 +8,7 @@ export default {
         emptyTitle: 'Kho Tàng Trống Vắng',
         emptyDesc: 'Không có sản phẩm nào phù hợp.',
         all: 'Tất cả',
+        refining: 'Đang tinh tuyển...',
     },
     pdp: {
         backToCollection: 'Quay Lại Bộ Sưu Tập',

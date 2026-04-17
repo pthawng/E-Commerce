@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface UseInfiniteScrollOptions {
   onIntersect: () => void;
@@ -9,51 +9,56 @@ interface UseInfiniteScrollOptions {
 }
 
 /**
- * L7/L8 Standard Infinite Scroll Hook
- * Uses IntersectionObserver for efficient viewport monitoring.
- * Separates the trigger logic from the rendering logic.
+ * L8+ Infinite Scroll Hook — Stable Observer Edition
+ *
+ * Key fix over naive implementations:
+ * - Uses a `callbackRef` to keep the latest handler WITHOUT re-creating the
+ *   IntersectionObserver on every render. Re-creating the observer causes a
+ *   disconnect/reconnect cycle that can fire "intersecting" again mid-fetch → loop.
+ * - The observer is created ONCE and lives for the component's lifetime.
+ * - Guards: only calls onIntersect when hasNextPage AND not already fetching.
  */
 export function useInfiniteScroll({
   onIntersect,
   hasNextPage,
   isFetchingNextPage,
-  rootMargin = '400px', // Pre-fetch 400px before reaching the end
-  threshold = 0.1,
+  rootMargin = '200px', // Conservative: only pre-fetch when 200px away
+  threshold = 0,
 }: UseInfiniteScrollOptions) {
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const targetRef = useRef<HTMLDivElement | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const handleIntersect = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries;
-      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        onIntersect();
-      }
-    },
-    [onIntersect, hasNextPage, isFetchingNextPage]
-  );
-
+  // Stable ref that always holds the latest values — no re-mount needed
+  const callbackRef = useRef({ onIntersect, hasNextPage, isFetchingNextPage });
   useEffect(() => {
-    if (!targetRef.current) return;
+    callbackRef.current = { onIntersect, hasNextPage, isFetchingNextPage };
+  });
 
-    // Clean up previous observer
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
+  // Create the observer ONCE and never recreate it
+  useEffect(() => {
+    const node = targetRef.current;
+    if (!node) return;
 
-    observerRef.current = new IntersectionObserver(handleIntersect, {
-      rootMargin,
-      threshold,
-    });
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        const { hasNextPage, isFetchingNextPage, onIntersect } = callbackRef.current;
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          onIntersect();
+        }
+      },
+      { rootMargin, threshold }
+    );
 
-    observerRef.current.observe(targetRef.current);
+    observerRef.current.observe(node);
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
+      observerRef.current?.disconnect();
     };
-  }, [handleIntersect, rootMargin, threshold]);
+    // Intentionally only depends on rootMargin/threshold — observer lifecycle is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rootMargin, threshold]);
 
   return { targetRef };
 }
+

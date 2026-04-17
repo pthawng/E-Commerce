@@ -15,7 +15,7 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
-  ) {}
+  ) { }
 
   // ---------------------------
   // CREATE USER
@@ -80,7 +80,8 @@ export class UserService {
 
     const result = await this.paginationService.paginate<PrismaUser>({
       findMany: (args) => {
-        const where: UserWhereInput = args.where ? { ...baseWhere, ...args.where } : baseWhere;
+        // P0-5 FIX: Use Prisma AND operator instead of flat spread merge.
+        const where: UserWhereInput = args.where ? { AND: [baseWhere, args.where] } : baseWhere;
 
         return this.prisma.user.findMany({
           where,
@@ -97,7 +98,7 @@ export class UserService {
         });
       },
       count: (args) => {
-        const where: UserWhereInput = args.where ? { ...baseWhere, ...args.where } : baseWhere;
+        const where: UserWhereInput = args.where ? { AND: [baseWhere, args.where] } : baseWhere;
 
         return this.prisma.user.count({ where });
       },
@@ -106,6 +107,8 @@ export class UserService {
       allowedSortFields: ['createdAt', 'email', 'fullName', 'updatedAt'],
       defaultSort: { field: 'createdAt', order: 'desc' },
       basePath: '/users',
+      // P1-2 FIX: Declare join count (userRoles) for QueryCostService
+      joinCount: 1,
     });
 
     return {
@@ -154,11 +157,11 @@ export class UserService {
     // Hash password nếu client gửi
     const passwordHash = dto.password
       ? await argon2.hash(dto.password, {
-          type: argon2.argon2id,
-          timeCost: 2,
-          memoryCost: 19456,
-          parallelism: 1,
-        })
+        type: argon2.argon2id,
+        timeCost: 2,
+        memoryCost: 19456,
+        parallelism: 1,
+      })
       : undefined;
 
     const updated = await this.prisma.user.update({

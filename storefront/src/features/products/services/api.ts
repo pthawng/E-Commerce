@@ -1,13 +1,21 @@
 import { apiGet } from '@/services/apiClient';
 import { Product, ProductParams } from '../types';
 import { API_ENDPOINTS } from '@shared';
+import type { PaginationMeta, PaginationLinks } from '@/types/pagination';
+
+export interface PaginatedResponse<T> {
+    items: T[];
+    meta: PaginationMeta;
+    links: PaginationLinks;
+    data: T[]; // some API consumers use .data — aliased for backward compat
+}
 
 const PRODUCT_ENDPOINT = API_ENDPOINTS.PRODUCTS.BASE;
 
 export const productApi = {
     getAll: async (params?: ProductParams, signal?: AbortSignal) => {
         const searchParams = new URLSearchParams();
-        
+
         if (params?.page) searchParams.append('page', params.page.toString());
         if (params?.limit) searchParams.append('limit', params.limit.toString());
         if (params?.cursor) searchParams.append('cursor', params.cursor); // NEW: Cursor support
@@ -19,8 +27,10 @@ export const productApi = {
         const queryString = searchParams.toString();
         const url = queryString ? `${PRODUCT_ENDPOINT}?${queryString}` : PRODUCT_ENDPOINT;
 
-        // Pass the AbortSignal for request cancellation
-        return apiGet<Product[]>(url, { signal });
+        // P1-6 FIX: Return type is now PaginatedResponse<Product>, not Product[].
+        // Previously typed as Product[] which is a lie — the API returns { items, meta, links }.
+        // This causes getNextPageParam to receive undefined meta and breaks infinite scroll.
+        return apiGet<PaginatedResponse<Product>>(url, { signal });
     },
 
     getBySlug: async (slug: string, signal?: AbortSignal) => {

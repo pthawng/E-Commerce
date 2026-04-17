@@ -18,6 +18,8 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public.decorator';
+import { PaginationRateLimitGuard } from 'src/common/guards/pagination-rate-limit.guard';
+import { Throttle } from '@nestjs/throttler';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -27,9 +29,11 @@ import { ProductService } from './product.service';
 @Controller('products')
 @UseGuards(PermissionGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(private readonly productService: ProductService) { }
 
   @Public()
+  @UseGuards(PaginationRateLimitGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm (phân trang)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Danh sách sản phẩm kèm meta phân trang' })

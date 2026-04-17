@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { PaginationService } from './pagination.service';
+import { QueryCostService } from './query-cost.service';
 
 @Module({
-  providers: [PaginationService],
-  exports: [PaginationService],
+  imports: [CacheModule.register()],
+  providers: [PaginationService, QueryCostService],
+  exports: [PaginationService, QueryCostService],
 })
-export class PaginationModule {}
+export class PaginationModule { }

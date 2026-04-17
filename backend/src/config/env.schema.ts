@@ -33,6 +33,7 @@ export const envSchema = z.object({
     JWT_REFRESH_SECRET: z.string().min(32),
     JWT_ACCESS_EXPIRES: z.string().default('15m'),
     JWT_REFRESH_EXPIRES: z.string().default('7d'),
+    PAGINATION_SECRET: z.string().min(32),
 
     // Redis
     REDIS_HOST: z.string().default('localhost'),

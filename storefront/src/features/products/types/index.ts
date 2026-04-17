@@ -66,7 +66,7 @@ export interface Product {
 
 import { ApiResponse } from '@shared';
 
-export interface ProductResponse extends ApiResponse<Product[]> {}
+export interface ProductResponse extends ApiResponse<Product[]> { }
 
 export interface ProductParams {
     page?: number;

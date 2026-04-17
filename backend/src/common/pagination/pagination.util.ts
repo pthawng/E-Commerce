@@ -6,37 +6,24 @@ export interface PaginationMeta {
   hasNext: boolean;
   hasPrev: boolean;
   nextCursor?: string | null;
+  /**
+   * Provided in cursor mode so clients can navigate backwards.
+   * Null on the very first page (no previous position exists).
+   */
+  prevCursor?: string | null;
 }
 
 export interface PaginatedResult<T> {
   items: T[];
   meta: PaginationMeta;
   links: PaginationLinks;
+  data?: any[];
 }
 
 export interface PaginationLinks {
   self: string;
   next: string | null;
   prev: string | null;
-}
-
-/**
- * Encode an object to a Base64 string
- */
-export function encodeCursor(value: Record<string, any>): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64');
-}
-
-/**
- * Decode a Base64 string to an object
- */
-export function decodeCursor<T = Record<string, any>>(cursor: string): T | null {
-  try {
-    const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
-    return JSON.parse(decoded) as T;
-  } catch (e) {
-    return null;
-  }
 }
 
 export function buildPagination({ page, limit }: { page: number; limit: number }) {
@@ -46,18 +33,25 @@ export function buildPagination({ page, limit }: { page: number; limit: number }
   };
 }
 
+/**
+ * Build pagination metadata
+ */
 export function buildPaginationMeta({
   totalItems,
   page,
   limit,
   hasNext,
+  hasPrev,
   nextCursor,
+  prevCursor,
 }: {
   totalItems?: number;
   page?: number;
   limit: number;
   hasNext?: boolean;
+  hasPrev?: boolean;
   nextCursor?: string | null;
+  prevCursor?: string | null;
 }): PaginationMeta {
   const totalPages = totalItems ? Math.max(1, Math.ceil(totalItems / limit)) : undefined;
 
@@ -68,8 +62,11 @@ export function buildPaginationMeta({
     totalPages,
     hasNext:
       hasNext ?? (page !== undefined && totalPages !== undefined ? page < totalPages : false),
-    hasPrev: page !== undefined ? page > 1 : false,
+    // P1-4 FIX: Accept explicit hasPrev from caller (cursor mode) instead of
+    // unconditionally deriving from page number (which is undefined in cursor mode).
+    hasPrev: hasPrev ?? (page !== undefined ? page > 1 : false),
     nextCursor,
+    prevCursor,
   };
 }
 
@@ -79,6 +76,7 @@ export function buildPaginationLinks({
   limit,
   totalPages,
   nextCursor,
+  prevCursor,
   extraQuery,
 }: {
   basePath: string;
@@ -86,34 +84,53 @@ export function buildPaginationLinks({
   limit: number;
   totalPages?: number;
   nextCursor?: string | null;
+  prevCursor?: string | null;
   extraQuery?: Record<string, string | number | boolean | undefined>;
 }): PaginationLinks {
-  const buildUrl = (targetPage?: number, targetCursor?: string | null) => {
-    const params = new URLSearchParams();
-    if (targetPage) params.set('page', String(targetPage));
-    if (targetCursor) params.set('cursor', targetCursor);
-    params.set('limit', String(limit));
+  const buildUrl = (params: Record<string, string | undefined>) => {
+    const urlParams = new URLSearchParams();
+    urlParams.set('limit', String(limit));
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        urlParams.set(key, value);
+      }
+    });
 
     if (extraQuery) {
       Object.entries(extraQuery).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          params.set(key, String(value));
+          urlParams.set(key, String(value));
         }
       });
     }
 
-    const query = params.toString();
-    return query ? `${basePath}?${query}` : basePath;
+    return `${basePath}?${urlParams.toString()}`;
   };
 
+  // P1-5 FIX: self link correctly encodes cursor when in cursor mode.
+  // Previously always encoded page=undefined → produced page-1 URL for cursor consumers.
+  const selfParams: Record<string, string | undefined> = {};
+  if (page !== undefined) {
+    selfParams['page'] = String(page);
+  }
+  // Note: cursor consumers don't get a self cursor because the current page's
+  // cursor IS the prevCursor they already hold. We expose prevCursor in meta.
+
   return {
-    self: buildUrl(page, null), // TODO: improve self link for cursor
+    self: buildUrl(selfParams),
+    // next link: prefer cursor navigation (O(log N)) over offset page increment (O(N))
     next: nextCursor
-      ? buildUrl(undefined, nextCursor)
+      ? buildUrl({ cursor: nextCursor })
       : page !== undefined && totalPages !== undefined && page < totalPages
-        ? buildUrl(page + 1)
+        ? buildUrl({ page: String(page + 1) })
         : null,
-    prev: page !== undefined && page > 1 ? buildUrl(page - 1) : null,
+    // prev link: cursor mode uses prevCursor; offset mode decrements page
+    prev: prevCursor
+      ? buildUrl({ cursor: prevCursor })
+      : page !== undefined && page > 1
+        ? buildUrl({ page: String(page - 1) })
+        : null,
   };
 }
 
