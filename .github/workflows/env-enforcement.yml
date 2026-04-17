@@ -1,0 +1,54 @@
+name: Environment Enforcement
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  enforce-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies (Root)
+        run: npm ci
+
+      - name: Install dependencies (Backend)
+        run: cd backend && npm ci
+
+      - name: Install dependencies (Storefront)
+        run: cd storefront && npm ci
+
+      - name: Run Drift Detector
+        run: npx ts-node scripts/drift-detector.ts
+
+      - name: Backend Unit Tests
+        run: cd backend && npm run test -- --coverage --threshold 80
+
+      - name: Backend Integration Tests (Real DB)
+        run: cd backend && npm run test:integration
+
+      - name: Backend Chaos Checkpoints (PR Guard)
+        run: cd backend && CHAOS_DURATION_MS=10000 npm run test:chaos
+
+      - name: Storefront E2E (Playwright)
+        run: cd storefront && npx playwright test
+
+      - name: Lint Backend
+        run: cd backend && npm run lint
+
+      - name: Dependency Security Audit
+        run: cd backend && npm audit --audit-level=high
+
+      - name: Dry Run Frontend Build
+        run: cd storefront && npm run build
+        env:
+          VITE_API_BASE_URL: https://api.example.com

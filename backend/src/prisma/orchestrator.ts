@@ -15,13 +15,15 @@ import * as fs from 'fs';
 
 const logger = new Logger('MasterSeed');
 
-// Load environment variables (look for .env or .env.development)
+// Load environment variables (Priority: .env.[mode] > .env)
+const nodeEnv = process.env.NODE_ENV || 'development';
 const envRoot = path.join(__dirname, '../../');
-const envPath = fs.existsSync(path.join(envRoot, '.env'))
-  ? path.join(envRoot, '.env')
-  : path.join(envRoot, '.env.development');
+const envPath = [`.env.${nodeEnv}`, '.env']
+  .map(file => path.join(envRoot, file))
+  .find(fullPath => fs.existsSync(fullPath)) || path.join(envRoot, '.env');
 
 dotenv.config({ path: envPath });
+logger.debug(`Loaded environment from: ${envPath}`);
 
 const connStr = process.env.DATABASE_URL || '';
 const pool = new Pool({ connectionString: connStr });
@@ -29,6 +31,14 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const allowProdSeed = process.env.ALLOW_PROD_SEED === 'true';
+
+  if (nodeEnv === 'production' && !allowProdSeed) {
+    logger.error('❌ CRITICAL: Seeding is blocked in PRODUCTION mode. Set ALLOW_PROD_SEED=true to override.');
+    process.exit(1);
+  }
+
   logger.log('🚀 Starting Versioned Seeding Process...');
 
   // 1. Concurrency Protection

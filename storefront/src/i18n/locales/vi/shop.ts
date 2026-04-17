@@ -7,6 +7,7 @@ export default {
         search: 'Tìm kiếm báu vật của bạn...',
         emptyTitle: 'Kho Tàng Trống Vắng',
         emptyDesc: 'Không có sản phẩm nào phù hợp.',
+        all: 'Tất cả',
     },
     pdp: {
         backToCollection: 'Quay Lại Bộ Sưu Tập',

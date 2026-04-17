@@ -7,6 +7,7 @@ export default {
         search: 'Discover your masterpiece...',
         emptyTitle: 'A Rare Void',
         emptyDesc: 'No items match your criteria.',
+        all: 'All',
     },
     pdp: {
         backToCollection: 'Back to Collection',

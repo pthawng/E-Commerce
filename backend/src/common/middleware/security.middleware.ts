@@ -19,13 +19,14 @@ export class SecurityMiddleware implements NestMiddleware {
 
     // Strict CSP Header
     // Note: In development, we relax some rules ('unsafe-inline' for HMR)
+    // Strict CSP Header - Principal Grade Shielding
     const scriptSrc = isProduction
       ? `'self' 'nonce-${nonce}'`
       : `'self' 'unsafe-inline' 'unsafe-eval'`;
 
     const cspHeader = [
       `default-src 'self'`,
-      `script-src ${scriptSrc} https://cdn.jsdelivr.net https://pay.vnpay.vn https://www.paypal.com`,
+      `script-src ${scriptSrc} https://pay.vnpay.vn https://www.paypal.com`,
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `img-src 'self' data: https:`,
       `font-src 'self' https://fonts.gstatic.com`,

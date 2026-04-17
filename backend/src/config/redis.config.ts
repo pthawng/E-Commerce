@@ -4,10 +4,10 @@ import { redisStore } from 'cache-manager-redis-yet';
 
 export const getRedisConnectionOptions = (configService: ConfigService, moduleName: string) => {
   const logger = new Logger(`${moduleName}RedisConfig`);
-  const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
+  const url = configService.get<string>('REDIS_URL');
 
   if (url && url.trim() !== '') {
-    logger.log(`[${moduleName}] Connecting via URL (length: ${url.length})`);
+    logger.log(`[${moduleName}] Connecting via URL`);
     const isTls = url.startsWith('rediss://');
 
     try {
@@ -37,33 +37,29 @@ export const getRedisConnectionOptions = (configService: ConfigService, moduleNa
   }
 
   return {
-    host: process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost',
-    port: Number(process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379),
-    password: process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD'),
+    host: configService.get<string>('REDIS_HOST') || 'localhost',
+    port: configService.get<number>('REDIS_PORT') || 6379,
+    password: configService.get<string>('REDIS_PASSWORD') || undefined,
   };
 };
 
 export const bullConfigFactory = async (configService: ConfigService) => {
   const redisOptions = getRedisConnectionOptions(configService, 'Bull');
 
-  if (redisOptions.host) {
-    return {
-      redis: {
-        ...redisOptions,
-        maxRetriesPerRequest: null,
-      },
-    };
-  }
-
-  return { redis: redisOptions.redis || 'localhost:6379' };
+  return {
+    redis: {
+      ...redisOptions,
+      maxRetriesPerRequest: null,
+    },
+  };
 };
 
 export const cacheConfigFactory = async (configService: ConfigService) => {
   const logger = new Logger('CacheConfig');
-  const url = process.env.REDIS_URL || configService.get<string>('REDIS_URL');
-  const host = process.env.REDIS_HOST || configService.get('REDIS_HOST') || 'localhost';
-  const port = process.env.REDIS_PORT || configService.get('REDIS_PORT') || 6379;
-  const password = process.env.REDIS_PASSWORD || configService.get('REDIS_PASSWORD');
+  const url = configService.get<string>('REDIS_URL');
+  const host = configService.get<string>('REDIS_HOST') || 'localhost';
+  const port = configService.get<number>('REDIS_PORT') || 6379;
+  const password = configService.get<string>('REDIS_PASSWORD');
 
   const redisUrl =
     url && url.trim() !== ''
@@ -80,7 +76,7 @@ export const cacheConfigFactory = async (configService: ConfigService) => {
   return {
     store: await redisStore({
       url: redisUrl,
-      ttl: configService.get('REDIS_TTL') || 600,
+      ttl: configService.get<number>('REDIS_TTL') || 60000,
       ...(isTls ? { tls: {} } : {}),
     }),
   };

@@ -208,7 +208,9 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.refreshToken(dto);
+    const ip = req.ip;
+    const ua = req.headers['user-agent'] as string | undefined;
+    const result = await this.authService.refreshToken(dto, ip, ua);
     this.setAuthCookies(req, res, result.tokens);
     return result;
   }

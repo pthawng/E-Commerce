@@ -1,7 +1,10 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ActionType, OrderStatusEnum, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { OwnershipRegistry } from '@modules/security/ownership.registry';
+import { Principal, PrincipalType } from 'src/common/types/principal.types';
+import { IOwnable } from 'src/common/interfaces/ownable.interface';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatusValidator } from './utils/order-status.validator';
 
@@ -11,7 +14,10 @@ export class OrderService {
   private readonly SHIPPING_FEE = 30000;
   private readonly ORDER_CODE_PREFIX = 'ORD';
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ownershipRegistry: OwnershipRegistry,
+  ) { }
 
   // ============================================
   // PUBLIC API
@@ -46,7 +52,7 @@ export class OrderService {
     });
   }
 
-  async getOrder(id: string, userId?: string) {
+  async getOrder(id: string, principal: Principal) {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
@@ -61,10 +67,22 @@ export class OrderService {
 
     if (!order) throw new NotFoundException('Order not found');
 
-    // Security check: If strict user check is required
-    if (userId && order.userId && order.userId !== userId) {
-      throw new NotFoundException('Order not found');
-    }
+    // Categorical Ownership Implementation
+    const orderOwnable: IOwnable = {
+      getOwners: () => {
+        const owners: Principal[] = [];
+        if (order.userId) {
+          owners.push({ id: order.userId, type: PrincipalType.USER });
+        }
+        if (order.sessionId) {
+          owners.push({ id: order.sessionId, type: PrincipalType.GUEST });
+        }
+        return owners;
+      }
+    };
+
+    this.ownershipRegistry.verify(principal, orderOwnable, `OrderDetailAccess:${id}`);
+
     return order;
   }
 

@@ -7,10 +7,16 @@
     "build:backend": "npm run build:shared && cd backend && npm install && npm run build",
     "build:frontend": "npm run build:shared && cd storefront && npm install && npm run build",
     "prisma:generate": "cd backend && npx prisma generate",
-    "prisma:migrate": "cd backend && npx prisma migrate deploy"
+    "prisma:migrate": "cd backend && npx prisma migrate deploy",
+    "release": "cd backend && npm run release --"
   },
   "prisma": {
     "seed": "ts-node backend/src/prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "dotenv": "^17.4.2",
+    "typescript": "^5.7.3",
+    "ts-node": "^10.9.2"
   }
 }
-

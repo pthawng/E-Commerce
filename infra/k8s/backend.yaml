@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-paradis-backend
+  labels:
+    app: ray-paradis-backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ray-paradis-backend
+  template:
+    metadata:
+      labels:
+        app: ray-paradis-backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/${{ github.repository }}/backend:latest
+        ports:
+        - containerPort: 4000
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 4000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 4000
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        envFrom:
+        - configMapRef:
+            name: backend-config
+        - secretRef:
+            name: backend-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ray-paradis-backend-svc
+spec:
+  selector:
+    app: ray-paradis-backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 4000
+  type: ClusterIP

@@ -7,6 +7,9 @@ import { ResetPasswordDto } from '@modules/auth/dto/reset-password.dto';
 import { sanitizeUser } from '@modules/auth/sanitize/user.sanitize';
 import { ForgotPassEmailService } from '@modules/auth/services/forgot-pass-email.auth.service';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
+import { RiskScoreService } from '@modules/auth/services/risk-score.service';
+import { SecurityEventBus, SecurityEventType } from '@modules/security/security-event-bus.service';
+import { PrincipalType } from 'src/common/types/principal.types';
 import { UserService } from '@modules/user/user.service';
 import {
   BadRequestException,
@@ -51,6 +54,8 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly forgotPassEmailService: ForgotPassEmailService,
+    private readonly riskScoreService: RiskScoreService,
+    private readonly eventBus: SecurityEventBus,
   ) { }
 
   // ---------------------------
@@ -134,7 +139,7 @@ export class AuthService {
       if (isCustomer) throw new UnauthorizedException('Access denied');
     }
 
-    return this.issueTokenPair(user.id, requiredRole === USER_ROLES.ADMIN ? 'admin' : 'customer');
+    return await this.issueTokenPair(user.id, requiredRole === USER_ROLES.ADMIN ? 'admin' : 'customer');
   }
 
   // ---------------------------
@@ -185,9 +190,9 @@ export class AuthService {
   }
 
   // ---------------------------
-  // REFRESH TOKEN
+  // REFRESH TOKEN (Atomic Rotation - Principal Grade)
   // ---------------------------
-  async refreshToken(dto: RefreshTokenDto): Promise<AuthResponse> {
+  async refreshToken(dto: RefreshTokenDto, reqIp?: string, reqUa?: string): Promise<AuthResponse> {
     const payload = await this.verifyRefreshToken(dto.refreshToken);
     const jti = (payload as any).jti;
 
@@ -203,17 +208,65 @@ export class AuthService {
       throw new ForbiddenException('Invalid refresh token');
     }
 
+    // 1. ATOMIC REUSE DETECTION (PANIC / GRACE WINDOW)
+    if (tokenRecord.revokedAt) {
+      const gracePeriodMs = 5000;
+      const tRecord = tokenRecord as any;
+      const timeSinceRevocation = Date.now() - tRecord.revokedAt.getTime();
+      const isWithinGrace = timeSinceRevocation < gracePeriodMs;
+
+      // Identity check for grace window: Must be same IP
+      if (isWithinGrace && (tokenRecord as any).ipAddress === reqIp) {
+        this.logger.debug(`Race condition grace hit for JTI ${jti}. IP: ${reqIp}. Skipping panic.`);
+        // Note: For now we throw a special error the client can handle or retry.
+        throw new ForbiddenException('RETRY_DETECTED: Rotation already in progress.');
+      }
+
+      const pToken = tokenRecord as any;
+      this.eventBus.emit(SecurityEventType.TOKEN_REPLAY, { id: tokenRecord.userId, type: PrincipalType.USER }, { jti, reason: pToken.revokedReason });
+      this.logger.error(`REUSE DETECTED! JTI: ${jti}, User: ${tokenRecord.userId}. Revoke Reason: ${pToken.revokedReason}`);
+
+      // Response: Critical Mitigation - Invalidate ALL user sessions
+      await this.prismaService.refreshToken.updateMany({
+        where: { userId: tokenRecord.userId },
+        data: {
+          revokedAt: new Date(),
+          revokedReason: 'GLOBAL_PANIC_REUSE_DETECTED'
+        }
+      });
+
+      throw new ForbiddenException('Security compromise detected. All sessions revoked.');
+    }
+
+    // 2. EXPIRY CHECK
     if (tokenRecord.expiresAt < new Date()) {
-      await this.prismaService.refreshToken.delete({ where: { id: tokenRecord.id } });
+      await this.prismaService.refreshToken.update({
+        where: { id: jti },
+        data: { revokedAt: new Date(), revokedReason: 'EXPIRED' }
+      });
       throw new ForbiddenException('Refresh token expired');
     }
 
-    // Rotate token: User only allowed one active session per device flow?
-    // Current logic deletes logic, implying rotation.
-    await this.prismaService.refreshToken.delete({ where: { id: tokenRecord.id } });
-
+    // 3. ATOMIC SUCCESSFUL ROTATION
     const audience = (payload as any).aud === 'admin' ? 'admin' : 'customer';
-    return this.issueTokenPair(payload.sub, audience);
+
+    // Mark as revoked (used) to prevent reuse, but keep the record for forensic chain tracing
+    await this.prismaService.refreshToken.update({
+      where: { id: jti },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: 'ROTATED'
+      }
+    });
+
+    return this.issueTokenPair(
+      payload.sub,
+      audience,
+      jti, // parentJti
+      tokenRecord.version + 1,
+      reqIp,
+      reqUa
+    );
   }
 
   async logout(dto: import('@modules/auth/dto/logout.dto').LogoutDto) {
@@ -238,6 +291,10 @@ export class AuthService {
   public async issueTokenPair(
     userId: string,
     audience: 'customer' | 'admin' = 'customer',
+    parentJti?: string,
+    version = 1,
+    ipAddress?: string,
+    userAgent?: string,
   ): Promise<AuthResponse> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
@@ -263,7 +320,15 @@ export class AuthService {
       } as any),
     ]);
 
-    await this.saveRefreshToken(userId, jti, refreshToken);
+    await this.saveRefreshToken({
+      userId,
+      jti,
+      rawToken: refreshToken,
+      parentJti,
+      version,
+      ipAddress,
+      userAgent
+    });
 
     return {
       user: sanitizeUser(user),
@@ -271,13 +336,24 @@ export class AuthService {
     };
   }
 
-  private async saveRefreshToken(userId: string, jti: string, rawToken: string) {
-    const tokenHash = await this.hashPassword(rawToken);
+  private async saveRefreshToken(params: {
+    userId: string;
+    jti: string;
+    rawToken: string;
+    parentJti?: string;
+    version?: number;
+    ipAddress?: string;
+    userAgent?: string;
+  }) {
+    const tokenHash = await this.hashPassword(params.rawToken);
     await this.prismaService.refreshToken.create({
       data: {
-        id: jti,
-        userId,
+        id: params.jti,
+        userId: params.userId,
         token: tokenHash,
+        parentJti: params.parentJti,
+        version: params.version ?? 1,
+        ipAddress: params.ipAddress,
         expiresAt: new Date(Date.now() + TOKEN_EXPIRY.REFRESH_DB_MS),
       },
     });

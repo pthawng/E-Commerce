@@ -81,7 +81,10 @@ export class AuditLogInterceptor implements NestInterceptor {
     private sanitizeBody(body: any): any {
         if (!body) return null;
         const sanitized = { ...body };
-        const sensitiveKeys = ['password', 'token', 'refreshToken', 'card_number', 'cvv'];
+        const sensitiveKeys = [
+            'password', 'token', 'refreshToken', 'card_number', 'cvv',
+            'fullName', 'phoneNumber', 'addressLine', 'city', 'email'
+        ];
         for (const key of sensitiveKeys) {
             if (sanitized[key]) sanitized[key] = '********';
         }

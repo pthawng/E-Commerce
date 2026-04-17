@@ -7,6 +7,7 @@ export default {
         search: '捕捉您的灵感之作...',
         emptyTitle: '寻觅无果',
         emptyDesc: '没有找到符合条件的作品。',
+        all: '全部',
     },
     pdp: {
         backToCollection: '返回系列',

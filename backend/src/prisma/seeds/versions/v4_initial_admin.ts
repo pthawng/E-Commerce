@@ -14,7 +14,12 @@ export const v4_initial_admin: SeedScript = {
   name: 'Initial Super Admin Allocation',
   run: async (prisma: PrismaClient) => {
     const ADMIN_EMAIL = 'admin@rayparadis.vn';
-    const ADMIN_PASS = process.env.SEED_ADMIN_PASSWORD || 'Admin@123';
+    const ADMIN_PASS = process.env.SEED_ADMIN_PASSWORD;
+
+    if (!ADMIN_PASS) {
+      throw new Error('❌ SEED_ADMIN_PASSWORD is not defined. Admin allocation failed.');
+    }
+
     const hashedAdminPass = await argon2.hash(ADMIN_PASS, ARGON_OPTIONS);
 
     const superAdminRole = await prisma.role.findUniqueOrThrow({ where: { slug: 'SUPER_ADMIN' } });

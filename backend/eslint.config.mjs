@@ -8,7 +8,7 @@ export default tseslint.config(
   {
     ignores: ['eslint.config.mjs', 'dist', 'node_modules', 'coverage'],
   },
-  
+
   // Các config nền tảng
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -25,6 +25,7 @@ export default tseslint.config(
       parser: tseslint.parser,
       parserOptions: {
         projectService: true,
+        // @ts-ignore - import.meta.dirname is available in Node 20.11+
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -34,9 +35,26 @@ export default tseslint.config(
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      
+
       // Fix lỗi Prettier xuống dòng trên Windows
       "prettier/prettier": ["error", { endOfLine: "auto" }],
+
+      // Staff+ Enforcement: Ban direct process.env usage
+      "no-restricted-properties": [
+        "error",
+        {
+          "object": "process",
+          "property": "env",
+          "message": "Direct access to process.env is forbidden. Use ConfigService instead."
+        }
+      ],
     },
   },
+  {
+    // Allow process.env ONLY in config/validation layers and scripts
+    files: ['src/config/env.schema.ts', 'src/config/env.validator.ts', 'src/config/app-config.module.ts', 'scripts/**/*.ts'],
+    rules: {
+      "no-restricted-properties": "off"
+    }
+  }
 );

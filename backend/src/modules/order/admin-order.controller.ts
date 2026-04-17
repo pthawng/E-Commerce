@@ -17,13 +17,14 @@ import { CurrentUser } from '../../common/decorators/get-user.decorator';
 import { PaginationDto } from '../../common/pagination';
 import { RequestUserPayload } from '../../common/types/jwt.types';
 import { OrderService } from './order.service';
+import { PrincipalType } from '../../common/types/principal.types';
 
 @ApiTags('Admin Order')
 @Controller('admin/orders')
 @UseGuards(PermissionGuard)
 @ApiBearerAuth()
 export class AdminOrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly orderService: OrderService) { }
 
   @Get()
   @Permission(PERMISSIONS.ORDER.READ)
@@ -35,8 +36,14 @@ export class AdminOrderController {
   @Get(':id')
   @Permission(PERMISSIONS.ORDER.READ)
   @ApiOperation({ summary: 'Chi tiết đơn hàng (Admin)' })
-  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.orderService.getOrder(id);
+  findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: RequestUserPayload,
+  ) {
+    return this.orderService.getOrder(id, {
+      id: user.userId,
+      type: PrincipalType.USER,
+    });
   }
 
   @Patch(':id')

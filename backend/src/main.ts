@@ -1,3 +1,6 @@
+import { otelSDK } from './otel-sdk';
+otelSDK.start();
+
 import { register } from 'tsconfig-paths';
 
 // Dynamically register paths to resolve either `dist/` (runtime) or `src/` (ts-node runtime)
@@ -11,29 +14,35 @@ register({
   },
 });
 
+import * as dotenv from 'dotenv';
+import { validateEnv } from '@config/env.validator';
+
+// Load environment variable file and Validate/Freeze BEFORE anything else
+const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
+dotenv.config({ path: envFile });
+validateEnv();
+
 import { AllExceptionFilter } from '@common/filters/all-exception.filter';
 import { ResponseInterceptor } from '@common/interceptors/response.interceptor';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+  const nodeEnv = configService.get<string>('NODE_ENV');
+  const isProduction = nodeEnv === 'production';
 
-  const app = await NestFactory.create(AppModule, {
-    logger: isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose'],
-  });
-
+  app.useLogger(isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose']);
   app.use(cookieParser());
-
   app.setGlobalPrefix('api');
 
   // CORS Configuration
-  const corsOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-    : [];
+  const corsOrigins = configService.get<string[]>('CORS_ORIGIN') ?? [];
 
   app.enableCors({
     origin: corsOrigins,
@@ -67,7 +76,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 4000);
+  const port = configService.get<number>('PORT') ?? 4000;
+  await app.listen(port);
+  Logger.log(`🚀 Application is running on: http://localhost:${port}/api/docs`, 'Bootstrap');
 }
 
 bootstrap();

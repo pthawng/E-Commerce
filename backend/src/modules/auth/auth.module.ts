@@ -8,6 +8,7 @@ import { ForgotPassEmailService } from '@modules/auth/services/forgot-pass-email
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { JwtAccessStrategy } from '@modules/auth/strategies/access-jwt.strategy';
 import { JwtRefreshStrategy } from '@modules/auth/strategies/refresh-jwt.strategy';
+import { RiskScoreService } from '@modules/auth/services/risk-score.service';
 import { MailModule } from '@modules/mail/mail.module';
 import { RbacModule } from '@modules/rbac/rbac.module';
 import { UserModule } from '@modules/user/user.module';
@@ -44,7 +45,8 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     JwtRefreshGuard,
     VerifyEmailService,
     ForgotPassEmailService,
+    RiskScoreService,
   ],
   exports: [AuthService, JwtAccessGuard, AdminJwtAccessGuard, JwtRefreshGuard],
 })
-export class AuthModule {}
+export class AuthModule { }

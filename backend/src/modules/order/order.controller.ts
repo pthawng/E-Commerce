@@ -18,6 +18,7 @@ import { CreateOrderWithPaymentDto } from './dto/create-order-with-payment.dto';
 import { OrderPaymentResponseDto } from './dto/order-payment-response.dto';
 import { OrderService } from './order.service';
 import { OrderPaymentService } from './services/order-payment.service';
+import { OwnershipRegistry } from '@modules/security/ownership.registry';
 
 @ApiTags('Order')
 @Controller('orders')
@@ -25,6 +26,7 @@ export class OrderController {
   constructor(
     private readonly orderService: OrderService,
     private readonly orderPaymentService: OrderPaymentService,
+    private readonly ownershipRegistry: OwnershipRegistry,
   ) { }
 
   // -------------------------
@@ -70,7 +72,9 @@ export class OrderController {
   getOrder(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Req() req: { user?: RequestUserPayload },
+    @CurrentSession() sessionId?: string,
   ) {
-    return this.orderService.getOrder(id, req.user?.userId);
+    const principal = this.ownershipRegistry.createPrincipal(req.user, sessionId);
+    return this.orderService.getOrder(id, principal);
   }
 }
