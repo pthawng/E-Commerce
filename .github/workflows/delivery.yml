@@ -16,6 +16,10 @@ jobs:
           node-version: 22
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
+      - name: Install Shared Dependencies
+        run: cd shared && npm ci
+      - name: Build Shared Module
+        run: cd shared && npm run build
       - name: Install Backend Dependencies
         run: cd backend && npm ci
       - name: Backend Tests
