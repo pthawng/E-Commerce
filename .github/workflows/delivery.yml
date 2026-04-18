@@ -55,7 +55,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=long
+            type=sha
+            type=raw,value=${{ github.sha }}
 
       - name: Build and Push
         uses: docker/build-push-action@v5
