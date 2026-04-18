@@ -33,7 +33,7 @@ export class ProductController {
 
   @Public()
   @UseGuards(PaginationRateLimitGuard)
-  @Throttle({ default: { limit: 20, ttl: 60000 } }) 
+  @Throttle({ fast: { limit: 100, ttl: 60000 } })
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm (phân trang)' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Danh sách sản phẩm kèm meta phân trang' })

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ResilientHttpClient } from '@common/services/resilient-http.client';
 import {
   CallbackData,
   PaymentMethodEnum,
@@ -38,7 +39,10 @@ export class VNPayProvider extends BasePaymentProvider {
   private readonly returnUrl: string;
   private readonly apiUrl: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly resilientHttpClient: ResilientHttpClient,
+  ) {
     super('VNPayProvider');
 
     // Load configuration from environment
@@ -212,13 +216,12 @@ export class VNPayProvider extends BasePaymentProvider {
     const secureHash = generateVNPayApiHash(signData, this.hashSecret);
 
     try {
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, vnp_SecureHash: secureHash }),
+      const result = await this.resilientHttpClient.post<any>(this.apiUrl, {
+        ...data,
+        vnp_SecureHash: secureHash
+      }, {
+        headers: { 'Content-Type': 'application/json' }
       });
-
-      const result = (await response.json()) as any;
 
       if (result.vnp_ResponseCode === VNPAY_RESPONSE_CODE.SUCCESS) {
         // Determine status based on vnp_TransactionStatus
@@ -299,13 +302,12 @@ export class VNPayProvider extends BasePaymentProvider {
     const secureHash = generateVNPayApiHash(signData, this.hashSecret);
 
     try {
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, vnp_SecureHash: secureHash }),
+      const result = await this.resilientHttpClient.post<any>(this.apiUrl, {
+        ...data,
+        vnp_SecureHash: secureHash
+      }, {
+        headers: { 'Content-Type': 'application/json' }
       });
-
-      const result = (await response.json()) as any;
 
       if (result.vnp_ResponseCode === VNPAY_RESPONSE_CODE.SUCCESS) {
         return {

@@ -33,6 +33,8 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
+
   const configService = app.get(ConfigService);
   const nodeEnv = configService.get<string>('NODE_ENV');
   const isProduction = nodeEnv === 'production';

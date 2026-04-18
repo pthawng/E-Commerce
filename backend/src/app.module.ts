@@ -31,11 +31,13 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { SessionMiddleware } from './common/middleware/session.middleware';
 import { AppConfigModule } from './config/app-config.module';
 import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
+import { CommonModule } from './common/common.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
     AppConfigModule,
+    CommonModule,
     ScheduleModule.forRoot(),
     PrometheusModule.register({
       path: '/metrics',
@@ -45,8 +47,19 @@ import { PrismaModule } from './prisma/prisma.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [
         {
-          ttl: config.get<number>('THROTTLE_TTL') || 60000,
-          limit: config.get<number>('THROTTLE_LIMIT') || 10,
+          name: 'strict',
+          ttl: 60000,
+          limit: 5,
+        },
+        {
+          name: 'standard',
+          ttl: 60000,
+          limit: 30,
+        },
+        {
+          name: 'fast',
+          ttl: 60000,
+          limit: 100,
         },
       ],
     }),

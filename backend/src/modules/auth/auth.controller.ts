@@ -28,7 +28,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { randomUUID } from 'crypto';
 import { Request, Response } from 'express';
 
@@ -42,6 +42,7 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('Authentication')
+@Throttle({ strict: { limit: 5, ttl: 60000 } })
 @Controller('auth')
 export class AuthController {
   constructor(
