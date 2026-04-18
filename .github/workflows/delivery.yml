@@ -6,8 +6,24 @@ on:
       - 'v*' # Trigger on version tags (e.g., v1.0.0)
 
 jobs:
+  verify-integrity:
+    name: Verify Code Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - run: npm ci
+      - name: Backend Tests
+        run: cd backend && npm ci && npm run test
+      - name: Lint Check
+        run: cd backend && npm run lint
+
   build-and-push:
     name: Build and Push Docker Image
+    needs: verify-integrity
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,4 +88,9 @@ jobs:
       - name: Trigger Deploy Hook
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      
+      - name: Wait for Stability (Health Polling)
+        run: npx ts-node scripts/verify-deploy.ts
+        env:
+            DEPLOY_HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
         # L8 Note: Ensure RENDER_DEPLOY_HOOK_URL is added to GitHub Secrets

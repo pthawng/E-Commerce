@@ -52,7 +52,7 @@ RUN DATABASE_URL=postgres://dummy:dummy@localhost:5432/dummy ./node_modules/.bin
 # Script to run migrations and start app
 RUN echo '#!/bin/sh' > start.sh && \
     echo 'echo "Applying Database Migrations (Production Mode)..."' >> start.sh && \
-    echo './node_modules/.bin/prisma migrate deploy || echo "Migration failed, continuing..."' >> start.sh && \
+    echo './node_modules/.bin/prisma migrate deploy || { echo "🚨 FATAL: Database migration failed. Terminating container."; exit 1; }' >> start.sh && \
     echo 'echo "Starting application..."' >> start.sh && \
     echo 'node dist/main' >> start.sh && \
     chmod +x start.sh && \
