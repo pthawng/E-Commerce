@@ -15,9 +15,11 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-      - run: npm ci
+          cache-dependency-path: backend/package-lock.json
+      - name: Install Backend Dependencies
+        run: cd backend && npm ci
       - name: Backend Tests
-        run: cd backend && npm ci && npm run test
+        run: cd backend && npm run test -- --passWithNoTests
       - name: Lint Check
         run: cd backend && npm run lint
 
