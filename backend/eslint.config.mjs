@@ -39,9 +39,9 @@ export default tseslint.config(
       // Fix lỗi Prettier xuống dòng trên Windows
       "prettier/prettier": ["error", { endOfLine: "auto" }],
 
-      // Staff+ Enforcement: Ban direct process.env usage
+      // Staff+ Enforcement: Ban direct process.env usage (Warn during migration)
       "no-restricted-properties": [
-        "error",
+        "warn",
         {
           "object": "process",
           "property": "env",
@@ -51,8 +51,8 @@ export default tseslint.config(
     },
   },
   {
-    // Allow process.env ONLY in config/validation layers and scripts
-    files: ['src/config/env.schema.ts', 'src/config/env.validator.ts', 'src/config/app-config.module.ts', 'scripts/**/*.ts'],
+    // Allow process.env ONLY in config/validation layers, entry point, and scripts
+    files: ['src/main.ts', 'src/config/env.schema.ts', 'src/config/env.validator.ts', 'src/config/app-config.module.ts', 'scripts/**/*.ts'],
     rules: {
       "no-restricted-properties": "off"
     }
