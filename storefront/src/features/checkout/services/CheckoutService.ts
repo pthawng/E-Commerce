@@ -42,5 +42,23 @@ export const CheckoutService = {
     initiatePayment: async (orderId: string, paymentMethod: string): Promise<{ paymentUrl: string }> => {
         const response = await apiPost(API_ENDPOINTS.ORDERS.INITIATE_PAYMENT, { orderId, paymentMethod });
         return response.data as { paymentUrl: string };
+    },
+
+    /**
+     * Guest OTP: Request verification code (L8 Standard)
+     */
+    requestGuestOTP: async (email: string): Promise<{ message: string }> => {
+        const response = await apiPost('/api/auth/guest/verify-request', { email });
+        // ResponseInterceptor wraps: { success, data: { message } }
+        return (response.data as any) || response as any;
+    },
+
+    /**
+     * Guest OTP: Verify code and get token (L8 Standard)
+     */
+    verifyGuestOTP: async (email: string, code: string): Promise<{ guestVerifyToken: string }> => {
+        const response = await apiPost('/api/auth/guest/verify-confirm', { email, code });
+        // ResponseInterceptor wraps: { success, data: { guestVerifyToken } }
+        return (response.data as any) || response as any;
     }
 };

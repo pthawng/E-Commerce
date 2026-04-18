@@ -67,6 +67,14 @@ export class OrderService {
 
     if (!order) throw new NotFoundException('Order not found');
 
+    // Stateless order access claim override
+    if (principal.type === PrincipalType.ORDER_ACCESS) {
+      if (principal.id === id) {
+        return order;
+      }
+      throw new ForbiddenException('Access Denied: Invalid order access token for this resource.');
+    }
+
     // Categorical Ownership Implementation
     const orderOwnable: IOwnable = {
       getOwners: () => {

@@ -35,9 +35,11 @@ export class JwtAccessGuard extends AuthGuard('jwt-access') {
     request['isOptionalAuth'] = isOptional;
 
     // Execute standard Passport validation
-    // If isOptional is true, handleRequest will prevent 401 on failure
+    // If isOptional is true, we always return true even if passport fails
     try {
-      return (await super.canActivate(context)) as boolean;
+      const canActivate = (await super.canActivate(context)) as boolean;
+      if (isOptional) return true;
+      return canActivate;
     } catch (err) {
       if (isOptional) return true;
       throw err;

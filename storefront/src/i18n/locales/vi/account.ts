@@ -65,6 +65,7 @@ export default {
         shippingTo: 'Địa Chỉ Giao Hàng',
         status: {
             pending: 'Chờ Xác Thực',
+            pending_payment: 'Chờ Thanh Toán',
             confirmed: 'Đã Xác Nhận',
             processing: 'Đang Chuẩn Bị',
             shipping: 'Đang Vận Chuyển',

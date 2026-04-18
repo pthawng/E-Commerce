@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, Lock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VietQRPaymentModal } from '@/components/payment/VietQRPaymentModal';
+import { GuestOTPModal } from '@/components/checkout/GuestOTPModal';
 import { Layout } from '@/components/layout/Layout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useStore } from '@/store/useStore';
@@ -29,6 +30,12 @@ export const CheckoutPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'VIETQR' | 'VNPAY' | 'PAYPAL'>('VNPAY');
 
+    // Guest OTP States (L8 Standard)
+    const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
+    const [otpEmail, setOtpEmail] = useState('');
+    const [guestVerifyToken, setGuestVerifyToken] = useState<string | null>(null);
+    const [pendingFormData, setPendingFormData] = useState<CheckoutShippingV1 | null>(null);
+
     const [vietQRInfo, setVietQRInfo] = useState<{
         orderId: string;
         orderCode: string;
@@ -42,6 +49,7 @@ export const CheckoutPage: React.FC = () => {
     } | null>(null);
 
     const user = useAuthStore(s => s.user);
+    const isAuthenticated = useAuthStore(s => s.isAuthenticated);
 
     // Initialize React Hook Form with Zod validation
     const {
@@ -65,12 +73,12 @@ export const CheckoutPage: React.FC = () => {
 
     // Pre-fill user data if logged in
     useEffect(() => {
-        if (user) {
+        if (isAuthenticated && user) {
             if (user.fullName) setValue('fullName', user.fullName);
             if (user.email) setValue('email', user.email);
             if (user.phone) setValue('phone', user.phone);
         }
-    }, [user, setValue]);
+    }, [isAuthenticated, user, setValue]);
 
     useEffect(() => {
         document.title = t('common.meta.checkout');
@@ -86,7 +94,30 @@ export const CheckoutPage: React.FC = () => {
         }
     }, [items.length, fetchCart, navigate]);
 
-    const onSubmit = async (formData: CheckoutShippingV1) => {
+    const onSubmit = async (formData: CheckoutShippingV1, manualToken?: any) => {
+        // manualToken might be the React Event object if called via handleSubmit
+        const effectiveToken = typeof manualToken === 'string' ? manualToken : guestVerifyToken;
+
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+
+        // Step 0: Guest Verification Gate (L8 standard)
+        // Use isAuthenticated (not user object) to avoid stale Zustand persist state
+        if (!isAuthenticated && !effectiveToken) {
+            setPendingFormData(formData);
+            setOtpEmail(formData.email);
+            setIsSubmitting(true);
+            try {
+                await CheckoutService.requestGuestOTP(formData.email);
+                setIsOTPModalOpen(true);
+            } catch (err: any) {
+                toast.error(err.response?.data?.message || t('checkout.messages.otpRequestError') || 'Không thể yêu cầu mã OTP');
+            } finally {
+                setIsSubmitting(false);
+            }
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -103,12 +134,18 @@ export const CheckoutPage: React.FC = () => {
                 shippingAddress: addressFields,
                 paymentMethod,
                 guestEmail: email,
+                guestVerifyToken: effectiveToken || undefined,
                 confirmPriceChange: true,
                 returnUrl: `${window.location.origin}/payment-result`,
                 cancelUrl: `${window.location.origin}/payment-result?status=failed`
             };
 
             const orderResponse = await CheckoutService.createOrder(payload);
+
+            // Persist stateless access grant for success page
+            if (orderResponse.orderAccessToken) {
+                sessionStorage.setItem('orderAccessToken', orderResponse.orderAccessToken);
+            }
 
             const paymentUrl = orderResponse.payment?.paymentUrl;
             const paymentMeta = orderResponse.payment?.metadata;
@@ -132,6 +169,8 @@ export const CheckoutPage: React.FC = () => {
                 navigate('/');
             }
         } catch (err: any) {
+            console.error('Checkout error:', err);
+
             if (err.response?.status === 409) {
                 toast.error(t('checkout.messages.cartChanged'));
                 await fetchCart();
@@ -146,6 +185,15 @@ export const CheckoutPage: React.FC = () => {
             toast.error(err.response?.data?.message || t('checkout.messages.error'));
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleOTPVerified = (token: string) => {
+        setGuestVerifyToken(token);
+        setIsOTPModalOpen(false);
+        if (pendingFormData) {
+            // Re-trigger submission with the now verified token (Pass token directly to avoid state race condition)
+            onSubmit(pendingFormData, token);
         }
     };
 
@@ -377,6 +425,13 @@ export const CheckoutPage: React.FC = () => {
                     onClose={() => setVietQRInfo(null)}
                 />
             )}
+
+            <GuestOTPModal
+                isOpen={isOTPModalOpen}
+                email={otpEmail}
+                onClose={() => setIsOTPModalOpen(false)}
+                onVerified={handleOTPVerified}
+            />
         </>
     );
 };

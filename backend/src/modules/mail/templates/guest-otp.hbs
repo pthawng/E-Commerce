@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Xác thực Email - Ray Paradis</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .otp-code { display: block; width: fit-content; margin: 30px auto; padding: 15px 30px; background-color: #f3f4f6; border: 2px dashed #3b82f6; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1d4ed8; }
+        .footer { margin-top: 40px; font-size: 12px; color: #6b7280; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Xác thực Email của bạn</h2>
+            <p>Xin chào quý khách,</p>
+            <p>Bạn đang thực hiện đặt hàng tại <strong>{{companyName}}</strong>. Vui lòng sử dụng mã xác thực bên dưới để hoàn tất quá trình thanh toán:</p>
+        </div>
+        
+        <div class="otp-code">{{otp}}</div>
+        
+        <p>Mã này sẽ hết hạn sau <strong>{{expiryMinutes}} phút</strong>.</p>
+        <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
+        
+        <div class="footer">
+            <p>&copy; {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p>Đây là email tự động, vui lòng không trả lời.</p>
+        </div>
+    </div>
+</body>
+</html>

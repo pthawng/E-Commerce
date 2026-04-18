@@ -36,7 +36,20 @@ export class AllExceptionFilter implements ExceptionFilter {
         }
       }
     } else {
-      // ... handled below ...
+      // Log non-HttpExceptions as errors
+      this.logger.error(`Unhandled Exception: ${exception instanceof Error ? exception.message : exception}`);
+      if (exception instanceof Error && exception.stack) {
+        this.logger.error(exception.stack);
+      }
+    }
+
+    // Pro-Level Debug Logging
+    this.logger.error(`[${request.method}] ${request.url} - Status: ${status}`);
+    this.logger.error(`Request Body: ${JSON.stringify(request.body, null, 2)}`);
+    if (errors) {
+      this.logger.error(`Validation Errors: ${JSON.stringify(errors, null, 2)}`);
+    } else if (exception instanceof HttpException) {
+      this.logger.error(`Exception Detail: ${JSON.stringify(exception.getResponse(), null, 2)}`);
     }
 
     if (!code && status === HttpStatus.INTERNAL_SERVER_ERROR) {

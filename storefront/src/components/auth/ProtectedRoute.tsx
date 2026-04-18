@@ -38,7 +38,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!isAuthenticated) {
     // Redirect to login, but save the intended destination
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
+    // Redirect to home, where the AuthSheet can be triggered
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

@@ -72,9 +72,10 @@ export class OrderController {
   getOrder(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Req() req: { user?: RequestUserPayload },
+    @Headers('x-order-access-token') orderAccessToken?: string,
     @CurrentSession() sessionId?: string,
   ) {
-    const principal = this.ownershipRegistry.createPrincipal(req.user, sessionId);
+    const principal = this.ownershipRegistry.createPrincipal(req.user, sessionId, orderAccessToken);
     return this.orderService.getOrder(id, principal);
   }
 }

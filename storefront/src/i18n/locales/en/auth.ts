@@ -41,5 +41,16 @@ export default {
         successRegister: 'Welcome to the Circle. Your journey begins.',
         successReset: 'A recovery protocol has been dispatched to your email.',
         unverifiedEmail: 'Authentication pending. A verification link resides in your inbox.',
+    },
+    guest: {
+        verifyTitle: 'Verify Email',
+        verifySubtitle: 'A 6-digit verification code has been dispatched to:',
+        secureNote: 'This protocol remains valid for 5 minutes',
+        resendIn: 'Retry after',
+        resendAction: 'Request new code',
+        verifySuccess: 'Verification captured successfully',
+        verifyError: 'Invalid verification signal',
+        resendSuccess: 'A new protocol has been dispatched',
+        resendError: 'Unable to dispatch new protocol',
     }
 };

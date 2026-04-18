@@ -1,18 +1,22 @@
 export const easing = [0.33, 1, 0.68, 1] as const;
 
+export const prefersReducedMotion = typeof window !== 'undefined'
+  ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  : false;
+
 export const durations = {
-  headline: 1.5,
-  section: 1.0,
+  headline: prefersReducedMotion ? 0.3 : 1.5,
+  section: prefersReducedMotion ? 0.2 : 1.0,
   micro: 0.26,
 } as const;
 
 export const stagger = {
-  desktop: 0.15,
+  desktop: prefersReducedMotion ? 0.05 : 0.15,
   mobile: 0.08,
 } as const;
 
 export const headlineLine = {
-  hidden: { y: '100%', opacity: 0, rotateX: 6 },
+  hidden: { y: prefersReducedMotion ? 0 : '100%', opacity: 0, rotateX: prefersReducedMotion ? 0 : 6 },
   visible: {
     y: '0%',
     opacity: 1,
@@ -25,7 +29,7 @@ export const headlineLine = {
 };
 
 export const sectionVariants = {
-  hidden: { opacity: 0, y: 18 },
+  hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 18 },
   visible: {
     opacity: 1,
     y: 0,
@@ -42,6 +46,7 @@ export default {
   stagger,
   headlineLine,
   sectionVariants,
+  prefersReducedMotion
 };
 
 

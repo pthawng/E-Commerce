@@ -1,4 +1,5 @@
 import { Public } from '@common/decorators/public.decorator';
+import { OptionalAuth } from '@common/decorators/optional-auth.decorator';
 import { InjectQueue } from '@nestjs/bull';
 import {
   BadRequestException,
@@ -17,6 +18,8 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Queue } from 'bull';
 import { Request, Response } from 'express';
+import { Principal } from '@common/types/principal.types';
+import { OwnershipRegistry } from '../security/ownership.registry';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmVietQRPaymentDto, RefundPaymentDto } from './dto/refund.dto';
 import { PaymentService } from './payment.service';
@@ -25,12 +28,14 @@ import { PaymentMethodEnum } from './types/payment.types';
 
 @ApiTags('Payment')
 @Controller('payment')
+@OptionalAuth()
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
 
   constructor(
     private readonly paymentService: PaymentService,
     private readonly vietqrMatchingService: VietQRMatchingService,
+    private readonly ownershipRegistry: OwnershipRegistry,
     @InjectQueue('payment_status') private readonly paymentQueue: Queue,
   ) { }
 
@@ -57,13 +62,25 @@ export class PaymentController {
   })
   async createPayment(@Body() dto: CreatePaymentDto, @Req() req: Request) {
     const ipAddr = req.ip || req.socket.remoteAddress || '127.0.0.1';
+    const orderAccessToken = req.headers['x-order-access-token'] as string;
 
-    const result = await this.paymentService.createPayment(dto.orderId, dto.paymentMethod, {
-      returnUrl: dto.returnUrl,
-      cancelUrl: dto.cancelUrl,
-      ipAddr: dto.ipAddr || ipAddr,
-      bankCode: dto.bankCode,
-    });
+    const principal = this.ownershipRegistry.createPrincipal(
+      (req as any).user,
+      (req as any).sessionId,
+      orderAccessToken,
+    );
+
+    const result = await this.paymentService.createPayment(
+      dto.orderId,
+      dto.paymentMethod,
+      principal,
+      {
+        returnUrl: dto.returnUrl,
+        cancelUrl: dto.cancelUrl,
+        ipAddr: dto.ipAddr || ipAddr,
+        bankCode: dto.bankCode,
+      },
+    );
 
     return {
       transactionId: result.transactionId,
@@ -307,8 +324,15 @@ export class PaymentController {
       },
     },
   })
-  async getPaymentStatus(@Param('orderId') orderId: string) {
-    return await this.paymentService.getPaymentProcessingStatus(orderId);
+  async getPaymentStatus(@Param('orderId') orderId: string, @Req() req: Request) {
+    const orderAccessToken = req.headers['x-order-access-token'] as string;
+    const principal = this.ownershipRegistry.createPrincipal(
+      (req as any).user,
+      (req as any).sessionId,
+      orderAccessToken,
+    );
+
+    return await this.paymentService.getPaymentProcessingStatus(orderId, principal);
   }
 
   /**

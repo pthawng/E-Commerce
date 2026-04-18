@@ -1,6 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'node:crypto';
 
 export interface CheckoutTokenPayload {
   jti: string; // Unique Token ID for Idempotency
@@ -19,27 +20,36 @@ export interface CheckoutTokenPayload {
 
 @Injectable()
 export class CheckoutTokenService {
+  private readonly logger = new Logger(CheckoutTokenService.name);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) { }
 
   async generateToken(payload: Omit<CheckoutTokenPayload, 'expiresAt' | 'jti'>): Promise<string> {
-    const expiresIn = this.configService.get<string>('JWT_CHECKOUT_EXPIRES_IN', '15m');
-    const jti = crypto.randomUUID();
-    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
+    try {
+      const expiresIn = this.configService.get<string>('JWT_CHECKOUT_EXPIRES_IN', '15m');
+      const jti = randomUUID();
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
 
-    return this.jwtService.sign(
-      {
-        ...payload,
-        jti,
-        expiresAt,
-      },
-      {
-        secret: this.configService.get<string>('JWT_CHECKOUT_SECRET'),
-        expiresIn: expiresIn as any,
-      },
-    );
+      this.logger.debug(`Generating checkout token with JTI: ${jti}`);
+
+      return this.jwtService.sign(
+        {
+          ...payload,
+          jti,
+          expiresAt,
+        },
+        {
+          secret: this.configService.get<string>('JWT_CHECKOUT_SECRET'),
+          expiresIn: expiresIn as any,
+        },
+      );
+    } catch (error) {
+      this.logger.error(`Error generating checkout token: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async verifyToken(token: string): Promise<CheckoutTokenPayload> {

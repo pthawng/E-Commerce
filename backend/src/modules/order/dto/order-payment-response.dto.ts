@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 /**
  * Order summary in response
@@ -85,6 +86,14 @@ export class OrderPaymentResponseDto {
     description: 'Overall flow status',
   })
   flowStatus: 'pending_payment' | 'confirmed' | 'failed';
+
+  @ApiProperty({
+    description: 'Order access token for success page',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  orderAccessToken?: string;
 
   @ApiProperty({
     example: 'Order created successfully. Please complete payment within 15 minutes.',

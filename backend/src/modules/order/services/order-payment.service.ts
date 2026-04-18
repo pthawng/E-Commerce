@@ -1,6 +1,6 @@
 import { SystemContextStore } from '@common/context/system-context.store';
 import { PaymentService } from '@modules/payment/payment.service';
-import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OrderStatusEnum, PaymentMethodEnum, Prisma } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
@@ -13,6 +13,8 @@ import { OrderPaymentResponseDto } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { OrderStatusValidator } from '../utils/order-status.validator';
 import { CheckoutTokenService } from './checkout-token.service';
+import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
+import { JwtService } from '@nestjs/jwt';
 
 /**
  * OrderPaymentService
@@ -29,12 +31,15 @@ export class OrderPaymentService {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => PaymentService))
     private readonly paymentService: PaymentService,
     private readonly inventoryService: InventoryService,
     private readonly inventoryAllocator: InventoryAllocatorService,
     private readonly checkoutTokenService: CheckoutTokenService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
+    private readonly guestVerificationService: GuestVerificationService,
+    private readonly jwtService: JwtService,
   ) { }
 
   /**
@@ -102,6 +107,14 @@ export class OrderPaymentService {
   ): Promise<OrderPaymentResponseDto> {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
       this.logger.log(`Creating order: method=${dto.paymentMethod}, userId=${userId}`);
+
+      // Enforce Guest Email Verification (L8 FAANG Standard)
+      if (!userId && dto.guestEmail) {
+        if (!dto.guestVerifyToken) {
+          throw new BadRequestException('Email guest chưa được xác thực (missing token).');
+        }
+        await this.guestVerificationService.validateVerifyToken(dto.guestEmail, dto.guestVerifyToken);
+      }
 
       // 1. Verify checkout token FIRST to get authoritative jti
       const tokenPayload = await this.checkoutTokenService.verifyToken(dto.checkoutToken);
@@ -261,11 +274,21 @@ export class OrderPaymentService {
           }
         }
 
+        // Step 6: Generate stateless Order Access Token (L8 Standard)
+        const orderAccessToken = await this.jwtService.signAsync(
+          { orderId: result.order.id, sub: 'order_access' },
+          {
+            secret: this.configService.get('JWT_CHECKOUT_SECRET'),
+            expiresIn: '1h',
+          },
+        );
+
         return this.buildOrderPaymentResponse(
           result.order,
           result.payment,
           paymentUrl,
           dto.paymentMethod === 'VIETQR',
+          orderAccessToken,
         );
       } catch (error) {
         this.logger.error('Failed to create order with payment pipeline', error);
@@ -274,24 +297,39 @@ export class OrderPaymentService {
     });
   }
 
-  async confirmOrder(orderId: string): Promise<void> {
+  async confirmOrder(orderId: string, tx?: Prisma.TransactionClient): Promise<void> {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
       this.logger.log(`Confirming order: ${orderId}`);
 
-      await this.prisma.$transaction(async (tx) => {
-        const order = await tx.order.findUnique({
-          where: { id: orderId },
-          include: { items: true },
-        });
+      const executeInTransaction = async (currentTx: Prisma.TransactionClient) => {
+        // 1. Pessimistic Lock (L8 Production Standard)
+        // We lock the Order record to prevent race conditions between callback and syncStatus.
+        const orders = await currentTx.$queryRawUnsafe<any[]>(
+          `SELECT * FROM "Order" WHERE "id" = $1 FOR UPDATE`,
+          orderId,
+        );
+        const order = orders[0];
 
-        if (!order || order.status === OrderStatusEnum.confirmed) return;
+        if (!order) {
+          this.logger.warn(`Order ${orderId} not found during confirmation attempt.`);
+          return;
+        }
 
+        // 2. Idempotency Gate (Post-lock)
+        if (order.status === OrderStatusEnum.confirmed) {
+          this.logger.log(`Order ${orderId} already confirmed. Skipping.`);
+          return;
+        }
+
+        // 3. Status Transition Validation
         OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.confirmed);
 
-        // Staff-level: Deduct (Reserve -> Confirm)
-        await this.inventoryService.deduct(orderId, tx);
+        // 4. Atomic Side Effects
+        // Deduction (Reserve -> Confirm)
+        await this.inventoryService.deduct(orderId, currentTx);
 
-        await tx.order.update({
+        // Update Order Status
+        await currentTx.order.update({
           where: { id: orderId },
           data: {
             status: OrderStatusEnum.confirmed,
@@ -300,7 +338,8 @@ export class OrderPaymentService {
           },
         });
 
-        await tx.orderTimeline.create({
+        // Audit Trail
+        await currentTx.orderTimeline.create({
           data: {
             orderId,
             action: 'PAYMENT_SUCCESS_CONFIRMED',
@@ -311,59 +350,70 @@ export class OrderPaymentService {
           },
         });
 
-        // Production Pattern: Clear Cart ONLY on success
-        await tx.cart.deleteMany({
-          where: order.userId ? { userId: order.userId } : { sessionId: order.sessionId },
-        });
+        // Reliable Notification (Transactional Outbox)
+        const recipientEmail = order.userId ? (await currentTx.user.findUnique({ where: { id: order.userId }, select: { email: true } }))?.email : order.guestEmail;
 
-        // L8 Email Integration: Atomic Outbox Trigger
-        // We fetch the full order with items and user to ensure template context is rich.
-        const fullOrder = await tx.order.findUnique({
-          where: { id: orderId },
-          include: {
-            items: true,
-            user: { select: { email: true, fullName: true } },
-          },
-        });
-
-        if (!fullOrder) {
-          this.logger.warn(`Order ${orderId} not found for confirmation email trigger`);
-          return;
-        }
-
-        const recipientEmail = fullOrder?.user?.email || (fullOrder?.shippingAddress as any)?.email;
         if (recipientEmail) {
+          // Fetch items for template context within the lock
+          const items = await currentTx.orderItem.findMany({ where: { orderId } });
+
           await this.mailService.sendMail(
             {
               to: recipientEmail,
-              subject: `Order Confirmation - ${fullOrder.code}`,
+              subject: `Order Confirmation - ${order.code}`,
               template: 'order-confirmation',
               eventType: 'order.confirmed',
-              idempotencyKey: `order_confirm_${fullOrder.id}`,
+              idempotencyKey: `order_confirm_${order.id}`,
               context: {
-                orderCode: fullOrder.code,
-                customerName:
-                  fullOrder.user?.fullName ||
-                  (fullOrder.shippingAddress as any)?.fullName ||
-                  'Valued Customer',
-                items: fullOrder.items.map((item) => ({
+                orderCode: order.code,
+                customerName: (order.shippingAddress as any)?.fullName || 'Valued Customer',
+                orderDate: new Intl.DateTimeFormat('vi-VN', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                  timeZone: 'Asia/Ho_Chi_Minh',
+                }).format(order.createdAt),
+                shippingAddress: [
+                  (order.shippingAddress as any)?.addressDetail,
+                  (order.shippingAddress as any)?.wardName,
+                  (order.shippingAddress as any)?.districtName,
+                  (order.shippingAddress as any)?.provinceName,
+                ]
+                  .filter(Boolean)
+                  .join(', '),
+                customerPhone: (order.shippingAddress as any)?.phone || 'N/A',
+                companyName: this.configService.get('COMPANY_NAME', 'Ray Paradis'),
+                supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@rayparadis.com'),
+                supportPhone: this.configService.get('SUPPORT_PHONE', '0123 456 789'),
+                items: items.map((item) => ({
                   name: item.productName,
                   quantity: item.quantity,
                   price: Number(item.price).toLocaleString('vi-VN'),
                   total: Number(item.totalLine).toLocaleString('vi-VN'),
+                  currency: 'VND',
                 })),
-                totalAmount: Number(fullOrder.totalAmount).toLocaleString('vi-VN'),
-                shippingFee: Number(fullOrder.shippingFee).toLocaleString('vi-VN'),
+                totalAmount: Number(order.totalAmount).toLocaleString('vi-VN'),
+                shippingFee: Number(order.shippingFee).toLocaleString('vi-VN'),
                 currency: 'VND',
-                orderUrl: `${this.configService.get('FRONTEND_URL')}/me/orders/${fullOrder.id}`,
+                orderUrl: `${this.configService.get('FRONTEND_URL')}/payment-result?orderId=${order.id}`,
               },
             },
-            tx,
+            currentTx,
           );
-        } else {
-          this.logger.warn(`No recipient email found for order confirmation ${orderId}`);
         }
-      });
+
+        // Clear Cart (Only on success)
+        await currentTx.cart.deleteMany({
+          where: order.userId ? { userId: order.userId } : { sessionId: order.sessionId },
+        });
+      };
+
+      if (tx) {
+        await executeInTransaction(tx);
+      } else {
+        await this.prisma.$transaction(async (newTx) => {
+          await executeInTransaction(newTx);
+        });
+      }
     });
   }
 
@@ -424,6 +474,7 @@ export class OrderPaymentService {
         code: orderCode,
         userId: params.userId,
         sessionId: params.sessionId,
+        guestEmail: params.dto.guestEmail,
         status: params.status,
         paymentStatus: 'unpaid',
         paymentMethod: params.dto.paymentMethod as PaymentMethodEnum,
@@ -502,6 +553,7 @@ export class OrderPaymentService {
     payment: any,
     paymentUrl: string | null,
     isVietQR: boolean,
+    orderAccessToken?: string,
   ): OrderPaymentResponseDto {
     return {
       order: {
@@ -523,6 +575,7 @@ export class OrderPaymentService {
       },
       flowStatus: PaymentFlowStatus.PENDING_PAYMENT,
       message: 'Order created. Please complete payment.',
+      orderAccessToken,
     };
   }
 

@@ -15,6 +15,7 @@ import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { CheckoutTokenService } from './services/checkout-token.service';
 import { OrderPaymentService } from './services/order-payment.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { OrderPaymentService } from './services/order-payment.service';
     InventoryModule,
     MailModule,
     forwardRef(() => PaymentModule),
+    forwardRef(() => AuthModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -44,4 +46,4 @@ import { OrderPaymentService } from './services/order-payment.service';
   ],
   exports: [OrderService, OrderPaymentService, CheckoutTokenService],
 })
-export class OrderModule {}
+export class OrderModule { }

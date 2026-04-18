@@ -49,6 +49,8 @@ export default {
         checkout: 'Thanh Toán',
         placeOrder: 'Đặt Hàng Ngay',
         processing: 'Đang xử lý...',
+        sending: 'Đang gửi...',
+        verify: 'Xác nhận',
         clearAll: 'Xóa Tất Cả',
         backToCart: 'Quay Lại Giỏ Hàng',
         backToHome: 'Về Trang Chủ',
@@ -69,6 +71,7 @@ export default {
         checkout: 'Thanh Toán | Ray Paradis',
         home: 'Ray Paradis | Trang Sức Cao Cấp & Di Sản',
         collections: 'Bộ Sưu Tập | Ray Paradis',
+        notFound: 'Không tìm thấy | Ray Paradis',
     },
     badge: {
         new: 'Tuyệt Tác Mới',

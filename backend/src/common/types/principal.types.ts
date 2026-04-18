@@ -2,6 +2,7 @@ export enum PrincipalType {
     USER = 'USER',
     GUEST = 'GUEST',
     SYSTEM = 'SYSTEM',
+    ORDER_ACCESS = 'ORDER_ACCESS',
 }
 
 export interface Principal {

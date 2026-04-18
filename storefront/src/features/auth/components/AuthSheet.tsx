@@ -12,6 +12,7 @@ import { apiPost } from '@/services/apiClient';
 import { API_ENDPOINTS, type AuthResponse, type User } from '@shared';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 import { toast } from 'sonner';
+import DOMPurify from 'dompurify';
 
 type AuthMode = 'login' | 'register' | 'forgot';
 
@@ -20,7 +21,7 @@ const passwordSchema = z.string().min(8);
 const nameSchema = z.string().trim().min(2);
 
 const sanitizeInput = (input: string): string => {
-  return input.replace(/<[^>]*>/g, '').trim();
+  return DOMPurify.sanitize(input, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
 };
 
 interface AuthSheetProps {

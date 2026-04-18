@@ -49,7 +49,7 @@ async function bootstrap() {
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
-      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token',
+      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token, x-order-access-token',
   });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )

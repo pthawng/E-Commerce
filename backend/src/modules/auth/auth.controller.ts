@@ -210,7 +210,16 @@ export class AuthController {
   ) {
     const ip = req.ip;
     const ua = req.headers['user-agent'] as string | undefined;
-    const result = await this.authService.refreshToken(dto, ip, ua);
+
+    // L8 Hybrid Refresh: Support both Body (Header-based) and Cookie (HttpOnly)
+    // If dto.refreshToken is missing, use the one extracted by JwtRefreshGuard from cookies
+    const token = dto.refreshToken || (req.user as any)?.refreshToken;
+
+    if (!token) {
+      throw new BadRequestException('Refresh token is required via cookie or body');
+    }
+
+    const result = await this.authService.refreshToken({ refreshToken: token }, ip, ua);
     this.setAuthCookies(req, res, result.tokens);
     return result;
   }

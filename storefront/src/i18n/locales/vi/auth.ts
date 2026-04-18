@@ -41,5 +41,16 @@ export default {
         successRegister: 'Chào mừng bạn đến với Vòng Tròn. Hành trình của bạn bắt đầu.',
         successReset: 'Một giao thức khôi phục đã được gửi đến email của bạn.',
         unverifiedEmail: 'Đang chờ xác thực. Một liên kết xác minh đã được gửi đến hộp thư của bạn.',
+    },
+    guest: {
+        verifyTitle: 'Xác thực Email',
+        verifySubtitle: 'Chúng tôi đã gửi mã xác thực gồm 6 chữ số đến:',
+        secureNote: 'Mã xác thực có hiệu lực trong 5 phút',
+        resendIn: 'Gửi lại mã sau',
+        resendAction: 'Gửi lại mã',
+        verifySuccess: 'Xác thực email thành công',
+        verifyError: 'Mã xác thực không hợp lệ',
+        resendSuccess: 'Mã mới đã được gửi',
+        resendError: 'Không thể gửi lại mã',
     }
 };

@@ -18,6 +18,7 @@ import { useCartStore } from '@/features/cart/store/useCartStore';
 import { Layout } from '@/components/layout/Layout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { CheckoutService } from '@/features/checkout/services/CheckoutService';
+import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 import { toast } from 'sonner';
 
 /**
@@ -36,8 +37,10 @@ interface OrderInfo {
 export const PaymentResultPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, formatPrice } = useTranslation();
   const { clearCart } = useCartStore();
+  const { user } = useAuthStore();
+  const isGuest = !user;
 
   const [uiState, setUiState] = useState<PaymentUIState>('INIT');
   const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(null);
@@ -242,7 +245,7 @@ export const PaymentResultPage: React.FC = () => {
                             {t('checkout.paymentResult.amount')}
                           </span>
                           <span className="font-semibold text-sm">
-                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(orderInfo.totalAmount)}
+                            {formatPrice(orderInfo.totalAmount)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -250,7 +253,10 @@ export const PaymentResultPage: React.FC = () => {
                             {t('checkout.paymentResult.paymentMethod')}
                           </span>
                           <span className="text-sm font-medium uppercase tracking-tight">
-                            {orderInfo.paymentMethod || 'Credit Card'}
+                            {orderInfo.paymentMethod === 'VNPAY' ? t('checkout.payment.vnpay') :
+                             orderInfo.paymentMethod === 'PAYPAL' ? t('checkout.payment.paypal') :
+                             orderInfo.paymentMethod === 'VIETQR' ? t('checkout.payment.vietqr') :
+                             orderInfo.paymentMethod || t('checkout.paymentResult.defaultPayment')}
                           </span>
                         </div>
                       </div>
@@ -289,7 +295,7 @@ export const PaymentResultPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <AlertCircle className="h-4 w-4 text-amber-500" />
                           <span className="text-[10px] uppercase tracking-widest font-semibold text-amber-600">
-                            Support Information
+                            {t('checkout.paymentResult.supportInfo')}
                           </span>
                         </div>
                         <p className="text-[11px] text-muted-foreground italic leading-relaxed">
@@ -306,15 +312,18 @@ export const PaymentResultPage: React.FC = () => {
               <div className="grid w-full gap-3">
                 {uiState === 'SUCCESS' ? (
                   <>
-                    <Button asChild size="lg" className="h-14 bg-[#1c1b1b] hover:bg-[#2a2929] text-white rounded-none tracking-widest uppercase text-[11px] font-semibold transition-all duration-500">
-                      <Link to="/profile/orders">
-                        {t('checkout.paymentResult.viewOrders')}
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" asChild size="lg" className="h-14 rounded-none tracking-widest uppercase text-[11px] font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground">
+                    {!isGuest && (
+                      <Button asChild size="lg" className="h-14 bg-[#1c1b1b] hover:bg-[#2a2929] text-white rounded-none tracking-widest uppercase text-[11px] font-semibold transition-all duration-500">
+                        <Link to="/profile/orders">
+                          {t('checkout.paymentResult.viewOrders')}
+                          <ChevronRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant={isGuest ? "default" : "ghost"} asChild size="lg" className={`h-14 rounded-none tracking-widest uppercase text-[11px] font-semibold ${isGuest ? 'bg-[#1c1b1b] text-white' : 'text-muted-foreground hover:bg-transparent hover:text-foreground'}`}>
                       <Link to="/collections">
                         {t('checkout.paymentResult.continueShopping')}
+                        {isGuest && <ChevronRight className="ml-2 h-4 w-4" />}
                       </Link>
                     </Button>
                   </>

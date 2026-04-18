@@ -49,8 +49,8 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
             });
         } catch (e) {
             this.logger.error('Throttler handleRequest error', e);
-            // Fail open in case of throttler internal error (Priority: Availability)
+            // Fail open in case of throttler internal error (Priority: Availabilityb)
             return true;
-        }
+        } 
     }
 }

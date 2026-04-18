@@ -9,6 +9,8 @@ import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.ser
 import { JwtAccessStrategy } from '@modules/auth/strategies/access-jwt.strategy';
 import { JwtRefreshStrategy } from '@modules/auth/strategies/refresh-jwt.strategy';
 import { RiskScoreService } from '@modules/auth/services/risk-score.service';
+import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
+import { GuestVerificationController } from '@modules/auth/controllers/guest-verification.controller';
 import { MailModule } from '@modules/mail/mail.module';
 import { RbacModule } from '@modules/rbac/rbac.module';
 import { UserModule } from '@modules/user/user.module';
@@ -16,6 +18,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { CacheModule } from '@nestjs/cache-manager';
 import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Module({
@@ -26,6 +29,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     PassportModule,
     MailModule,
     RbacModule,
+    CacheModule.register(),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (_configService: ConfigService) => ({
@@ -35,7 +39,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, AdminAuthController],
+  controllers: [AuthController, AdminAuthController, GuestVerificationController],
   providers: [
     AuthService,
     JwtAccessStrategy,
@@ -46,7 +50,8 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     VerifyEmailService,
     ForgotPassEmailService,
     RiskScoreService,
+    GuestVerificationService,
   ],
-  exports: [AuthService, JwtAccessGuard, AdminJwtAccessGuard, JwtRefreshGuard],
+  exports: [AuthService, JwtAccessGuard, AdminJwtAccessGuard, JwtRefreshGuard, GuestVerificationService],
 })
 export class AuthModule { }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosRetry, { isNetworkOrIdempotentRequestError } from 'axios-retry';
 import type { AxiosInstance, AxiosRequestHeaders, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { buildApiUrl, API_ENDPOINTS } from '@shared';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
@@ -18,9 +19,23 @@ const getCookie = (name: string): string | null => {
 
 const axiosInstance: AxiosInstance = axios.create({
   withCredentials: true,
+  timeout: 15000, // 15s absolute timeout for Luxury perception
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Configure Axios Retry (Exponential Backoff)
+axiosRetry(axiosInstance, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx idempotent requests
+    return isNetworkOrIdempotentRequestError(error) || error.response?.status === 503;
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    console.warn(`[AxiosRetry] Retry attempt #${retryCount} for ${requestConfig.url}`);
+  }
 });
 
 let isRefreshing = false;
@@ -36,12 +51,16 @@ const processQueue = (error: unknown) => {
 
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    config.headers = config.headers || {} as AxiosRequestHeaders;
-    
     // CSRF Protection: Inject x-csrf-token header for mutations
     const csrfToken = getCookie('csrfToken');
     if (csrfToken && ['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
       (config.headers as Record<string, unknown>)['x-csrf-token'] = csrfToken;
+    }
+
+    // Order Access Token: For guest success pages
+    const orderAccessToken = sessionStorage.getItem('orderAccessToken');
+    if (orderAccessToken && config.url?.includes('/api/') && (config.url?.includes('/orders/') || config.url?.includes('/payment/'))) {
+      (config.headers as Record<string, unknown>)['x-order-access-token'] = orderAccessToken;
     }
 
     return config;
@@ -77,17 +96,17 @@ axiosInstance.interceptors.response.use(
         // In session-based auth, we just call the refresh endpoint. 
         // Cookies are sent/received automatically via withCredentials.
         await axiosInstance.post(buildApiUrl(API_ENDPOINTS.AUTH.REFRESH));
-        
+
         processQueue(null);
-        
+
         // Refresh done. Retry the original request.
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        
+
         // Clear local auth state on total session failure
         useAuthStore.getState().clearAuth();
-        
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

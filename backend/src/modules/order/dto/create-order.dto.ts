@@ -26,9 +26,6 @@ export class AddressDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
   addressLine: string; // Street address
 
   @ApiPropertyOptional()
@@ -48,10 +45,15 @@ export class AddressDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ description: 'Customer email (if guest)' })
+  @ApiPropertyOptional({ description: 'Email address for guest checkout' })
   @IsOptional()
   @IsEmail()
   guestEmail?: string;
+
+  @ApiPropertyOptional({ description: 'Verification token for guest' })
+  @IsOptional()
+  @IsString()
+  guestVerifyToken?: string;
 
   @ApiProperty({ type: AddressDto })
   @IsObject()

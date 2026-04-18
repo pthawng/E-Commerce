@@ -65,6 +65,7 @@ export default {
         shippingTo: 'Shipping Destination',
         status: {
             pending: 'Pending Authentication',
+            pending_payment: 'Pending Payment',
             confirmed: 'Confirmed',
             processing: 'In Preparation',
             shipping: 'In Transit',

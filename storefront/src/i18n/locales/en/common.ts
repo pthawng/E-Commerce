@@ -49,6 +49,8 @@ export default {
         checkout: 'Proceed to Checkout',
         placeOrder: 'Place Order Now',
         processing: 'Processing...',
+        sending: 'Sending...',
+        verify: 'Verify',
         clearAll: 'Clear All',
         backToCart: 'Back to Cart',
         backToHome: 'Return to Home',
@@ -70,6 +72,7 @@ export default {
         checkout: 'Checkout | Ray Paradis',
         home: 'Ray Paradis | High Jewelry & Heritage',
         collections: 'The Collection | Ray Paradis',
+        notFound: 'Not Found | Ray Paradis',
     },
     badge: {
         new: 'New Creation',

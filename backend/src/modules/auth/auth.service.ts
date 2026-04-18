@@ -193,6 +193,10 @@ export class AuthService {
   // REFRESH TOKEN (Atomic Rotation - Principal Grade)
   // ---------------------------
   async refreshToken(dto: RefreshTokenDto, reqIp?: string, reqUa?: string): Promise<AuthResponse> {
+    if (!dto.refreshToken) {
+      throw new BadRequestException('Refresh token is required');
+    }
+
     const payload = await this.verifyRefreshToken(dto.refreshToken);
     const jti = (payload as any).jti;
 
