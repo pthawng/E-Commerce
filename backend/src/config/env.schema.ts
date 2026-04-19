@@ -22,7 +22,7 @@ export const envSchema = z.object({
     // Server
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().default(4000),
-    CORS_ORIGIN: z.string().transform((s) => s.split(',').map((o) => o.trim())),
+    CORS_ORIGIN: z.string().default('').transform((s) => (s ? s.split(',').map((o) => o.trim()) : [])),
     FRONTEND_URL: z.string().url(),
 
     // Database
@@ -87,11 +87,18 @@ export function validateAndFreezeConfig(config: Record<string, unknown>): Readon
 
     if (!result.success) {
         const errorMessages = result.error.issues
-            .map((err) => `[${err.path.join('.')}] ${err.message}`)
+            .map((err) => `   - [${err.path.join('.')}] ${err.message}`)
             .join('\n');
 
-        console.error('❌ CRITICAL_CONFIG_ERROR: Environment validation failed:');
-        console.error(errorMessages);
+        const fatalMessage = `
+❌ CRITICAL_CONFIG_ERROR: Environment validation failed in ${process.env.NODE_ENV} mode!
+Missing or invalid variables:
+${errorMessages}
+Please check your Render Environment Variables / .env file.
+`;
+
+        // Use process.stderr.write for immediate synchronous flushing
+        process.stderr.write(fatalMessage);
 
         // Fail-fast logic for production and CI
         if (process.env.NODE_ENV === 'production' || process.env.CI) {

@@ -117,6 +117,6 @@ import { PrismaModule } from './prisma/prisma.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(SecurityMiddleware, SessionMiddleware).forRoutes('*');
+    consumer.apply(SecurityMiddleware, SessionMiddleware).forRoutes('*path');
   }
 }

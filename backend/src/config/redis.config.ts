@@ -67,29 +67,31 @@ export const bullConfigFactory = async (configService: ConfigService) => {
 };
 
 export const cacheConfigFactory = async (configService: ConfigService) => {
-  const logger = new Logger('CacheConfig');
   const url = configService.get<string>('REDIS_URL');
-  const host = configService.get<string>('REDIS_HOST') || 'localhost';
-  const port = configService.get<number>('REDIS_PORT') || 6379;
-  const password = configService.get<string>('REDIS_PASSWORD');
+  const redisOptions = getRedisConnectionOptions(configService, 'Cache');
 
-  const redisUrl =
-    url && url.trim() !== ''
-      ? url
-      : password
-        ? `redis://:${password}@${host}${host.includes(':') ? '' : `:${port}`}`
-        : `redis://${host}${host.includes(':') ? '' : `:${port}`}`;
+  // If we have a full URL (Production preference), use it directly
+  if (url && url.trim() !== '') {
+    return {
+      store: await redisStore({
+        url: url.trim(),
+        ttl: configService.get<number>('REDIS_TTL') || 60000,
+        ...(url.startsWith('rediss://') ? { tls: {} } : {}),
+      } as any),
+    };
+  }
 
-  const isTls = redisUrl.startsWith('rediss://');
-  logger.log(
-    `[Cache] Using Redis at ${redisUrl.split('@')[1] || redisUrl.split('//')[1] || 'localhost'} (TLS: ${isTls})`,
-  );
-
+  // Fallback to structured socket (Dev/Split config)
   return {
     store: await redisStore({
-      url: redisUrl,
+      socket: {
+        host: redisOptions.host,
+        port: redisOptions.port,
+        tls: redisOptions.tls ? true : false,
+        reconnectStrategy: (retries) => Math.min(retries * 50, 2000),
+      },
+      password: redisOptions.password,
       ttl: configService.get<number>('REDIS_TTL') || 60000,
-      ...(isTls ? { tls: {} } : {}),
-    }),
+    } as any),
   };
 };
