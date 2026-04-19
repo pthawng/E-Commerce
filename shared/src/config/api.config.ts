@@ -36,13 +36,13 @@ function getEnvVar(key: string): string | undefined {
  */
 export function resolveAppConfig(): AppConfig {
   const nodeEnv = (getEnvVar('NODE_ENV') || getEnvVar('VITE_USER_NODE_ENV') || 'development') as any;
-  
+
   return {
     nodeEnv,
-    apiBaseUrl: 
-      getEnvVar('VITE_API_BASE_URL') || 
-      getEnvVar('API_BASE_URL') || 
-      getEnvVar('BACKEND_URL') || 
+    apiBaseUrl:
+      getEnvVar('VITE_API_BASE_URL') ||
+      getEnvVar('API_BASE_URL') ||
+      getEnvVar('BACKEND_URL') ||
       'http://localhost:4000',
     client: {
       url: getEnvVar('VITE_CLIENT_URL') || getEnvVar('FRONTEND_URL') || 'http://localhost:5173',
@@ -51,10 +51,21 @@ export function resolveAppConfig(): AppConfig {
 }
 
 // Global snapshot for easy access
-const config = resolveAppConfig();
+let config = resolveAppConfig();
 
-export const API_BASE_URL = config.apiBaseUrl;
+export let API_BASE_URL = config.apiBaseUrl;
 export const NODE_ENV = config.nodeEnv;
+
+/**
+ * Configure API Base URL manually
+ * Dùng để force một URL đặc biệt từ bên ngoài (ví dụ: main.tsx)
+ */
+export function configureApiBaseUrl(url: string | undefined): void {
+  if (url) {
+    API_BASE_URL = url;
+    config.apiBaseUrl = url;
+  }
+}
 
 /**
  * API Endpoints
