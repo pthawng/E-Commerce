@@ -41,7 +41,9 @@ async function bootstrap() {
 
   app.useLogger(isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose']);
   app.use(cookieParser());
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: ['/'],
+  });
 
   // CORS Configuration
   const corsOrigins = configService.get<string[]>('CORS_ORIGIN') ?? [];
