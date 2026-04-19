@@ -68,6 +68,13 @@ export function configureApiBaseUrl(url: string | undefined): void {
 }
 
 /**
+ * Get current API Base URL
+ */
+export function getApiBaseUrl(): string {
+  return API_BASE_URL;
+}
+
+/**
  * API Endpoints
  * Các endpoint paths dùng chung
  */
