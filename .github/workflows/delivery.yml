@@ -93,6 +93,9 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Trigger Deploy Hook
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
