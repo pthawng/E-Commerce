@@ -144,7 +144,7 @@ export const Footer = () => {
           </div>
           <div className="flex gap-8">
             <span className="font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 italic">
-              Legacy in every facet.
+              {t('common.footer.links.legacy')}
             </span>
           </div>
         </div>

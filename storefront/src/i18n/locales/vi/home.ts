@@ -4,7 +4,8 @@ export default {
         quietLuxury: 'Nghệ Thuật Khúc Xạ Ánh Sáng',
         description: 'Khám phá thế giới trang sức cao cấp độc quyền, nơi mỗi giác cắt kể về di sản, ánh sáng và sự đổi mới vượt thời gian.',
         explore: 'Khám Phá Các Bộ Sưu Tập',
-        bridge: 'Sự hiện diện vĩnh cửu / Chế tác cho thiên thu'
+        bridge: 'Sự hiện diện vĩnh cửu / Chế tác cho thiên thu',
+        alt: 'Trang sức kim cương cao cấp trên nền nhung',
     },
     featured: {
         title: 'Kiệt Tác Tuyển Chọn',

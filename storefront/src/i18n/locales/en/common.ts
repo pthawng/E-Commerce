@@ -37,6 +37,7 @@ export default {
             privacyPolicy: 'Privacy Policy',
             termsOfUse: 'Terms of Use',
             cookiePolicy: 'Cookie Policy',
+            legacy: 'Legacy in every facet.',
         }
     },
     actions: {

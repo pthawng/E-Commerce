@@ -37,6 +37,7 @@ export default {
             privacyPolicy: 'Chính Sách Bảo Mật',
             termsOfUse: 'Điều Khoản Sử Dụng',
             cookiePolicy: 'Chính Sách Cookie',
+            legacy: 'Di sản trong từng giác cắt.',
         }
     },
     actions: {

@@ -36,7 +36,7 @@ export const HeroSection = () => {
       <div className="absolute inset-0">
         <motion.img
           src={heroImage}
-          alt="Luxury diamond jewelry on velvet"
+          alt={t('home.hero.alt')}
           className="w-full h-full object-cover"
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}

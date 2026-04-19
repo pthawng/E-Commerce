@@ -37,6 +37,7 @@ export default {
             privacyPolicy: '隐私政策',
             termsOfUse: '使用条款',
             cookiePolicy: 'Cookie政策',
+            legacy: '凡面皆传奇。',
         }
     },
     actions: {

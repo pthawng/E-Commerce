@@ -4,7 +4,8 @@ export default {
         quietLuxury: '折射的光影艺术',
         description: '探索高级珠宝的独享世界，每一处刻面都诉说着关于传承、光影与永恒创新的故事。',
         explore: '探索系列作品',
-        bridge: '永恒风采 / 传世之作'
+        bridge: '永恒风采 / 传世之作',
+        alt: '丝绒上的华贵钻石珠宝',
     },
     featured: {
         title: '臻选杰作',

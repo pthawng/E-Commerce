@@ -4,7 +4,8 @@ export default {
         quietLuxury: 'The Art of Refraction',
         description: 'Discover an exclusive world of high jewelry, where every facet tells a story of heritage, light, and timeless innovation.',
         explore: 'Explore Collections',
-        bridge: 'Timeless presence / Crafted for eternity'
+        bridge: 'Timeless presence / Crafted for eternity',
+        alt: 'Luxury diamond jewelry on high-end display',
     },
     featured: {
         title: 'Curated Masterpieces',

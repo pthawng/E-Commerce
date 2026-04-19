@@ -2,7 +2,9 @@ import { Controller, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { HealthService } from './health.service';
 import { Public } from '@common/decorators/public.decorator';
+import { SkipThrottle } from '@nestjs/throttler';
 
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
     constructor(private healthService: HealthService) { }
