@@ -36,9 +36,21 @@ export const getRedisConnectionOptions = (configService: ConfigService, moduleNa
     }
   }
 
+  const rawHost = configService.get<string>('REDIS_HOST') || 'localhost';
+  const rawPort = configService.get<number>('REDIS_PORT') || 6379;
+
+  let host = rawHost;
+  let port = rawPort;
+
+  if (rawHost.includes(':')) {
+    const parts = rawHost.split(':');
+    host = parts[0];
+    port = parseInt(parts[1], 10);
+  }
+
   return {
-    host: configService.get<string>('REDIS_HOST') || 'localhost',
-    port: configService.get<number>('REDIS_PORT') || 6379,
+    host,
+    port,
     password: configService.get<string>('REDIS_PASSWORD') || undefined,
   };
 };
@@ -65,8 +77,8 @@ export const cacheConfigFactory = async (configService: ConfigService) => {
     url && url.trim() !== ''
       ? url
       : password
-        ? `redis://:${password}@${host}:${port}`
-        : `redis://${host}:${port}`;
+        ? `redis://:${password}@${host}${host.includes(':') ? '' : `:${port}`}`
+        : `redis://${host}${host.includes(':') ? '' : `:${port}`}`;
 
   const isTls = redisUrl.startsWith('rediss://');
   logger.log(
