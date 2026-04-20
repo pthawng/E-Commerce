@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { NextFunction, Request, Response } from 'express';
+import { getConfig } from '@config/env.validator';
 
 /**
  * SecurityMiddleware
@@ -20,6 +21,8 @@ export class SecurityMiddleware implements NestMiddleware {
     // Strict CSP Header
     // Note: In development, we relax some rules ('unsafe-inline' for HMR)
     // Strict CSP Header - Principal Grade Shielding
+    const { CORS_ORIGIN: corsOrigins } = getConfig();
+
     const scriptSrc = isProduction
       ? `'self' 'nonce-${nonce}'`
       : `'self' 'unsafe-inline' 'unsafe-eval'`;
@@ -30,7 +33,7 @@ export class SecurityMiddleware implements NestMiddleware {
       `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `img-src 'self' data: https:`,
       `font-src 'self' https://fonts.gstatic.com`,
-      `connect-src 'self' https://sandbox.vnpayment.vn https://api-m.sandbox.paypal.com`,
+      `connect-src 'self' ${corsOrigins.join(' ')} https://sandbox.vnpayment.vn https://api-m.sandbox.paypal.com`,
       `frame-src 'self' https://pay.vnpay.vn https://www.paypal.com`,
       `object-src 'none'`,
       `base-uri 'self'`,

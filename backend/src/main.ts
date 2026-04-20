@@ -15,7 +15,7 @@ register({
 });
 
 import * as dotenv from 'dotenv';
-import { validateEnv } from '@config/env.validator';
+import { validateEnv, getConfig } from '@config/env.validator';
 
 // Load environment variable file and Validate/Freeze BEFORE anything else
 const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
@@ -52,7 +52,8 @@ async function bootstrap() {
   });
 
   // CORS Configuration
-  const corsOrigins = configService.get<string[]>('CORS_ORIGIN') ?? [];
+  const { CORS_ORIGIN: corsOrigins } = getConfig();
+  Logger.log(`🔒 CORS origins: ${corsOrigins.join(', ')}`, 'Bootstrap');
 
   app.enableCors({
     origin: corsOrigins,
