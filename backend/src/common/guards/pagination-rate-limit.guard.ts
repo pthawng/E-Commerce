@@ -15,6 +15,12 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
         // Safety check for request object
         if (!request) return true;
 
+        // Exempt infrastructure health probes to ensure high availability
+        const path = request.url || '';
+        if (path === '/' || path.includes('/health') || path === '/api') {
+            return true;
+        }
+
         const user = request.user;
         const query = request.query || {};
 
@@ -51,6 +57,6 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
             this.logger.error('Throttler handleRequest error', e);
             // Fail open in case of throttler internal error (Priority: Availabilityb)
             return true;
-        } 
+        }
     }
 }
