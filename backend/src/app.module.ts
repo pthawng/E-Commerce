@@ -33,6 +33,7 @@ import { AppConfigModule } from './config/app-config.module';
 import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
 import { CommonModule } from './common/common.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { GlobalThrottlerGuard } from './common/guards/global-throttler.guard';
 
 @Module({
   imports: [
@@ -99,7 +100,7 @@ import { PrismaModule } from './prisma/prisma.module';
     },
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: GlobalThrottlerGuard,
     },
     {
       provide: APP_GUARD,

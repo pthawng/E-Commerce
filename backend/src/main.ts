@@ -39,10 +39,16 @@ async function bootstrap() {
   const nodeEnv = configService.get<string>('NODE_ENV');
   const isProduction = nodeEnv === 'production';
 
+  // Support Render.com proxy trust for correct rate limiting
+  if (isProduction) {
+    // @ts-ignore - set() exists on Express instance
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  }
+
   app.useLogger(isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose']);
   app.use(cookieParser());
   app.setGlobalPrefix('api', {
-    exclude: ['/'],
+    exclude: ['/', '/health', '/metrics'],
   });
 
   // CORS Configuration
