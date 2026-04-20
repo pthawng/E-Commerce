@@ -18,13 +18,16 @@ export class GlobalThrottlerGuard extends ThrottlerGuard {
         const path = request.url || '';
 
         // P0: Exempt infrastructure paths (Render, Prometheus, K8s)
-        if (
-            path === '/' ||
-            path === '/health' ||
-            path === '/metrics' ||
-            path === '/api' ||
-            path.startsWith('/health/')
-        ) {
+        const exemptPaths = [
+            '/',
+            '/health',
+            '/api/health',
+            '/metrics',
+            '/api/metrics',
+            '/api',
+        ];
+
+        if (exemptPaths.includes(path) || path.startsWith('/health/') || path.startsWith('/api/health/')) {
             return true;
         }
 
