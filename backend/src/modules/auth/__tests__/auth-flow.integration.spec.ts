@@ -1,13 +1,12 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as argon2 from 'argon2';
+import { IntegrationTestBase } from '../../../../test/utils/integration-test-base';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UserService } from '../../user/user.service';
 import { AuthService } from '../auth.service';
 import { ForgotPassEmailService } from '../services/forgot-pass-email.auth.service';
 import { VerifyEmailService } from '../services/verify-email.auth.service';
-import { IntegrationTestBase } from '../../../../test/utils/integration-test-base';
 
 describe('AuthFlow Integration (Real DB)', () => {
   const base = new IntegrationTestBase();
@@ -71,7 +70,7 @@ describe('AuthFlow Integration (Real DB)', () => {
       const dto = {
         email: `test-${Date.now()}@example.com`,
         password: 'password123',
-        fullName: 'Integration Test User'
+        fullName: 'Integration Test User',
       };
 
       // 1. Register
@@ -87,7 +86,7 @@ describe('AuthFlow Integration (Real DB)', () => {
       // 2. Login
       const loginResult = await service.login({
         email: dto.email,
-        password: dto.password
+        password: dto.password,
       });
 
       expect(loginResult.tokens).toBeDefined();

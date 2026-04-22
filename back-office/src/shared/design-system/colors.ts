@@ -9,7 +9,7 @@ export const colors = {
     primary: {
         lighter: '#334E6F',
         light: '#1D3F66',
-        main: '#0B2545', // Deep Midnight Blue - Ray Paradis Brand Color
+        main: '#0B2545', // Midnight Navy
         dark: '#061426',
         darker: '#020A14',
     },
@@ -17,58 +17,72 @@ export const colors = {
     secondary: {
         lighter: '#F9F1E6',
         light: '#E8D5C0',
-        main: '#C5A065', // Muted Satin Gold - Elegant, not yellow
+        main: '#C5A065', // Satin Gold
         dark: '#8E6E38',
         darker: '#56411F',
     },
 
-    // Functional Colors (Status)
+    // Functional Colors (Status - Luxury Emerald/Amber/Crimson)
     success: {
-        bg: '#F0F9EB',
-        border: '#B2D8B4',
-        main: '#2E5C35', // Deep green
-        text: '#1B3B20',
+        bg: '#ECFDF5',
+        border: '#A7F3D0',
+        main: '#065F46',
+        text: '#064E3B',
     },
     warning: {
-        bg: '#FFF8E6',
-        border: '#FFDCA8',
-        main: '#B57B0D', // Gold/Amber
-        text: '#754C00',
+        bg: '#FFFBEB',
+        border: '#FDE68A',
+        main: '#92400E',
+        text: '#78350F',
     },
     error: {
         bg: '#FEF2F2',
-        border: '#F8B4B4',
-        main: '#9B1C1C', // Deep red
-        text: '#771D1D',
+        border: '#FECACA',
+        main: '#991B1B',
+        text: '#7F1D1D',
     },
     info: {
-        bg: '#EFF6FF',
-        border: '#BFDBFE',
-        main: '#1E40AF', // Deep blue
-        text: '#1E3A8A',
+        bg: '#F0F9FF',
+        border: '#BAE6FD',
+        main: '#075985',
+        text: '#0C4A6E',
     },
 
-    // Neutral Scale (Cool Grays)
+    // Brand Signature
+    brand: {
+        gold: '#C5A065',
+        goldSubtle: 'rgba(197, 160, 101, 0.1)',
+    },
+
+    // Interaction Contract
+    interaction: {
+        hoverBrightness: 'brightness(1.05)',
+        transition: '150ms cubic-bezier(0.4, 0, 0.2, 1)',
+        activeScale: 'scale(0.98)',
+        focusRing: '0 0 0 2px rgba(197, 160, 101, 0.2)',
+    },
+
+    // Neutral Scale (Luxury Slate)
     neutral: {
         white: '#FFFFFF',
-        50: '#F8FAFC', // Very cool gray
+        50: '#F8FAFC',
         100: '#F1F5F9',
         200: '#E2E8F0',
         300: '#CBD5E1',
         400: '#94A3B8',
         500: '#64748B',
         600: '#475569',
-        700: '#334155', // Headings
+        700: '#334155',
         800: '#1E293B',
-        900: '#0F172A', // Deepest text
+        900: '#0F172A',
         black: '#020617',
     },
 
     // Semantic Backgrounds
     background: {
-        body: '#F8FAFC',      // Cool light gray
+        body: '#F8FAFC',
         surface: '#FFFFFF',
-        sidebar: '#0B2545',   // Brand Navy for Sidebar
+        sidebar: '#0B2545',
         input: '#FFFFFF',
         modal: '#FFFFFF',
     },
@@ -86,6 +100,6 @@ export const colors = {
         secondary: '#475569',
         tertiary: '#94A3B8',
         disabled: '#CBD5E1',
-        inverse: '#FFFFFF', // For text on Navy background
+        inverse: '#FFFFFF',
     }
 };

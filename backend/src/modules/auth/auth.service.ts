@@ -6,10 +6,9 @@ import { RegisterDto } from '@modules/auth/dto/register.dto';
 import { ResetPasswordDto } from '@modules/auth/dto/reset-password.dto';
 import { sanitizeUser } from '@modules/auth/sanitize/user.sanitize';
 import { ForgotPassEmailService } from '@modules/auth/services/forgot-pass-email.auth.service';
-import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { RiskScoreService } from '@modules/auth/services/risk-score.service';
+import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { SecurityEventBus, SecurityEventType } from '@modules/security/security-event-bus.service';
-import { PrincipalType } from 'src/common/types/principal.types';
 import { UserService } from '@modules/user/user.service';
 import {
   BadRequestException,
@@ -23,6 +22,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { AuthResponse } from '@shared';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
+import { PrincipalType } from 'src/common/types/principal.types';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 const ARGON_OPTIONS: argon2.Options = {
@@ -56,7 +56,7 @@ export class AuthService {
     private readonly forgotPassEmailService: ForgotPassEmailService,
     private readonly riskScoreService: RiskScoreService,
     private readonly eventBus: SecurityEventBus,
-  ) { }
+  ) {}
 
   // ---------------------------
   // PUBLIC API
@@ -139,7 +139,10 @@ export class AuthService {
       if (isCustomer) throw new UnauthorizedException('Access denied');
     }
 
-    return await this.issueTokenPair(user.id, requiredRole === USER_ROLES.ADMIN ? 'admin' : 'customer');
+    return await this.issueTokenPair(
+      user.id,
+      requiredRole === USER_ROLES.ADMIN ? 'admin' : 'customer',
+    );
   }
 
   // ---------------------------
@@ -227,16 +230,22 @@ export class AuthService {
       }
 
       const pToken = tokenRecord as any;
-      this.eventBus.emit(SecurityEventType.TOKEN_REPLAY, { id: tokenRecord.userId, type: PrincipalType.USER }, { jti, reason: pToken.revokedReason });
-      this.logger.error(`REUSE DETECTED! JTI: ${jti}, User: ${tokenRecord.userId}. Revoke Reason: ${pToken.revokedReason}`);
+      this.eventBus.emit(
+        SecurityEventType.TOKEN_REPLAY,
+        { id: tokenRecord.userId, type: PrincipalType.USER },
+        { jti, reason: pToken.revokedReason },
+      );
+      this.logger.error(
+        `REUSE DETECTED! JTI: ${jti}, User: ${tokenRecord.userId}. Revoke Reason: ${pToken.revokedReason}`,
+      );
 
       // Response: Critical Mitigation - Invalidate ALL user sessions
       await this.prismaService.refreshToken.updateMany({
         where: { userId: tokenRecord.userId },
         data: {
           revokedAt: new Date(),
-          revokedReason: 'GLOBAL_PANIC_REUSE_DETECTED'
-        }
+          revokedReason: 'GLOBAL_PANIC_REUSE_DETECTED',
+        },
       });
 
       throw new ForbiddenException('Security compromise detected. All sessions revoked.');
@@ -246,7 +255,7 @@ export class AuthService {
     if (tokenRecord.expiresAt < new Date()) {
       await this.prismaService.refreshToken.update({
         where: { id: jti },
-        data: { revokedAt: new Date(), revokedReason: 'EXPIRED' }
+        data: { revokedAt: new Date(), revokedReason: 'EXPIRED' },
       });
       throw new ForbiddenException('Refresh token expired');
     }
@@ -259,8 +268,8 @@ export class AuthService {
       where: { id: jti },
       data: {
         revokedAt: new Date(),
-        revokedReason: 'ROTATED'
-      }
+        revokedReason: 'ROTATED',
+      },
     });
 
     return this.issueTokenPair(
@@ -269,7 +278,7 @@ export class AuthService {
       jti, // parentJti
       tokenRecord.version + 1,
       reqIp,
-      reqUa
+      reqUa,
     );
   }
 
@@ -331,7 +340,7 @@ export class AuthService {
       parentJti,
       version,
       ipAddress,
-      userAgent
+      userAgent,
     });
 
     return {

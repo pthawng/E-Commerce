@@ -18,9 +18,10 @@ const logger = new Logger('MasterSeed');
 // Load environment variables (Priority: .env.[mode] > .env)
 const nodeEnv = process.env.NODE_ENV || 'development';
 const envRoot = path.join(__dirname, '../../');
-const envPath = [`.env.${nodeEnv}`, '.env']
-  .map(file => path.join(envRoot, file))
-  .find(fullPath => fs.existsSync(fullPath)) || path.join(envRoot, '.env');
+const envPath =
+  [`.env.${nodeEnv}`, '.env']
+    .map((file) => path.join(envRoot, file))
+    .find((fullPath) => fs.existsSync(fullPath)) || path.join(envRoot, '.env');
 
 dotenv.config({ path: envPath });
 logger.debug(`Loaded environment from: ${envPath}`);
@@ -35,7 +36,9 @@ async function main() {
   const allowProdSeed = process.env.ALLOW_PROD_SEED === 'true';
 
   if (nodeEnv === 'production' && !allowProdSeed) {
-    logger.error('❌ CRITICAL: Seeding is blocked in PRODUCTION mode. Set ALLOW_PROD_SEED=true to override.');
+    logger.error(
+      '❌ CRITICAL: Seeding is blocked in PRODUCTION mode. Set ALLOW_PROD_SEED=true to override.',
+    );
     process.exit(1);
   }
 

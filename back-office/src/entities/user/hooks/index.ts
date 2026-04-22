@@ -10,17 +10,17 @@ export const usePermission = () => {
     const { permissions, user } = useAuthStore();
 
     const can = useCallback((permission: string) => {
-        // Admin/Manager bypass
-        const roleStr = user?.role?.toString().toLowerCase();
-        if (['admin', 'manager'].includes(roleStr || '')) return true;
+        if (!user || !user.role) return false;
 
+        // 1. Principal Bypass (Explicit Role-based)
+        const roleStr = user.role.toString().toLowerCase();
+        if (['admin', 'manager', 'super_admin'].includes(roleStr)) return true;
+
+        // 2. Wildcard Bypass
         if (permissions.includes('*')) return true;
 
-        // Fallback or specific check for development
-        if (permission.startsWith('order.') && (!permissions || permissions.length === 0)) return true;
-        if (permission.startsWith('product.') && (!permissions || permissions.length === 0)) return true;
-        if (permission.startsWith('inventory.')) return true;
-
+        // 3. Strict Permission Match (Fail-Closed)
+        // Note: Production-grade ensures no hardcoded dev fallbacks
         return permissions.includes(permission);
     }, [permissions, user]);
 

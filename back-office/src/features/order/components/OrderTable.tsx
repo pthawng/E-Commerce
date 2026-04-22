@@ -1,11 +1,8 @@
 import React from 'react';
-import { Table, Tag, Typography, Space } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { Order, OrderStatus, PaymentStatus } from '@/entities/order/model/types';
-import { OrderStatus as OrderStatusEnum, PaymentStatus as PaymentStatusEnum } from '@/entities/order/model/types';
-import dayjs from 'dayjs';
-
-const { Text } = Typography;
+import type { Order } from '@/entities/order/model/types';
+import { LuxuryTable } from '@/shared/ui/DataTable';
+import type { ColumnSchema } from '@/shared/ui/DataTable';
+import { colors } from '@/shared/design-system/colors';
 
 interface OrderTableProps {
     data?: Order[];
@@ -18,6 +15,9 @@ interface OrderTableProps {
     selectedRowId?: string;
 }
 
+/**
+ * OrderTable: Refactored to LuxuryTable (Schema-Driven)
+ */
 export const OrderTable: React.FC<OrderTableProps> = ({
     data,
     loading,
@@ -28,117 +28,67 @@ export const OrderTable: React.FC<OrderTableProps> = ({
     onRowClick,
     selectedRowId,
 }) => {
-    const getStatusColor = (status: OrderStatus) => {
-        switch (status) {
-            case OrderStatusEnum.PENDING: return 'orange';
-            case OrderStatusEnum.CONFIRMED: return 'cyan';
-            case OrderStatusEnum.PROCESSING: return 'blue';
-            case OrderStatusEnum.SHIPPING: return 'purple';
-            case OrderStatusEnum.DELIVERED: return 'green';
-            case OrderStatusEnum.COMPLETED: return 'success';
-            case OrderStatusEnum.CANCELLED: return 'error';
-            case OrderStatusEnum.RETURNED: return 'magenta';
-            case OrderStatusEnum.REFUNDED: return 'volcano';
-            default: return 'default';
-        }
-    };
-
-    const getPaymentStatusColor = (status: PaymentStatus) => {
-        switch (status) {
-            case PaymentStatusEnum.PAID: return 'green';
-            case PaymentStatusEnum.UNPAID: return 'orange';
-            case PaymentStatusEnum.REFUNDED: return 'error';
-            default: return 'default';
-        }
-    };
-
-    const columns: ColumnsType<Order> = [
+    const schema: ColumnSchema<Order>[] = [
         {
-            title: 'Mã đơn',
-            dataIndex: 'code',
+            title: 'Order ID',
             key: 'code',
+            type: 'id',
             width: 140,
-            render: (code: string) => <Text strong className="text-blue-600">{code}</Text>,
         },
         {
-            title: 'Khách hàng',
-            key: 'customer',
-            width: 200,
-            render: (_, record) => (
-                <Space direction="vertical" size={0}>
-                    <Text strong>{record.shippingAddress.fullName}</Text>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>{record.user?.email || 'Khách vãng lai'}</Text>
-                </Space>
-            ),
+            title: 'Customer',
+            key: 'shippingAddress.fullName', // In a real system, we'd handle nested keys
+            type: 'text',
+            width: 220,
         },
         {
-            title: 'Ngày tạo',
-            dataIndex: 'createdAt',
+            title: 'Date',
             key: 'createdAt',
+            type: 'date',
             width: 160,
-            render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm'),
             sorter: true,
         },
         {
-            title: 'Tổng tiền',
-            dataIndex: 'totalAmount',
+            title: 'Amount',
             key: 'totalAmount',
+            type: 'currency',
             width: 150,
             align: 'right',
-            render: (amount: number) => (
-                <Text strong>
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)}
-                </Text>
-            ),
             sorter: true,
         },
         {
-            title: 'Thanh toán',
-            key: 'payment',
-            width: 240,
-            render: (_, record) => (
-                <Space size="middle">
-                    <Tag bordered={false}>{record.paymentMethod}</Tag>
-                    <Tag color={getPaymentStatusColor(record.paymentStatus)} bordered={false}>
-                        {record.paymentStatus.toUpperCase()}
-                    </Tag>
-                </Space>
-            ),
-        },
-        {
-            title: 'Trạng thái',
-            dataIndex: 'status',
+            title: 'Status',
             key: 'status',
-            width: 130,
+            type: 'status-badge',
+            width: 140,
             align: 'center',
-            render: (status: OrderStatus) => (
-                <Tag color={getStatusColor(status)} bordered={false} className="px-3 rounded-full">
-                    {status.toUpperCase().replace('_', ' ')}
-                </Tag>
-            ),
+            renderOptions: {
+                statusMap: {
+                    PENDING: { color: colors.warning.main, bg: `${colors.warning.main}12` },
+                    CONFIRMED: { color: colors.warning.main, bg: `${colors.warning.main}12` },
+                    PROCESSING: { color: colors.warning.main, bg: `${colors.warning.main}12` },
+                    SHIPPING: { color: colors.info.main, bg: `${colors.info.main}12` },
+                    DELIVERED: { color: colors.success.main, bg: `${colors.success.main}12` },
+                    COMPLETED: { color: colors.success.main, bg: `${colors.success.main}12` },
+                    CANCELLED: { color: colors.error.main, bg: `${colors.error.main}12` },
+                }
+            }
         },
     ];
 
     return (
-        <Table
-            columns={columns}
+        <LuxuryTable<Order>
+            schema={schema}
             dataSource={data}
             loading={loading}
-            rowKey="id"
-            onRow={(record) => ({
-                onClick: () => onRowClick(record),
-                className: `cursor-pointer transition-colors hover:bg-blue-50 ${selectedRowId === record.id ? 'bg-blue-50' : ''}`,
-            })}
+            selectedRowId={selectedRowId}
+            onRowClick={onRowClick}
+            onPageChange={onPageChange}
             pagination={{
                 total,
                 current: currentPage,
                 pageSize,
-                showSizeChanger: true,
-                onChange: onPageChange,
-                position: ['bottomRight'],
             }}
-            scroll={{ x: 'max-content' }}
-            className="shadow-sm border rounded-lg overflow-hidden border-0"
         />
     );
 };

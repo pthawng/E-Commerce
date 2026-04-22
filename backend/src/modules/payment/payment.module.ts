@@ -1,9 +1,14 @@
+import { BullAdapter } from '@bull-board/api/bullAdapter';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { PaginationModule } from '@common/pagination';
+import { RbacModule } from '@modules/rbac/rbac.module';
 import { BullModule } from '@nestjs/bull';
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { OrderModule } from '../order/order.module';
+import { AdminPaymentController } from './admin-payment.controller';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
 import { PaymentProcessor } from './processors/payment.processor';
@@ -21,11 +26,23 @@ import { VietQRMatchingService } from './services/vietqr-matching.service';
     PrismaModule,
     forwardRef(() => OrderModule), // Circular dependency resolution
     InventoryModule,
+    PaginationModule,
+    RbacModule,
     BullModule.registerQueue({
       name: 'payment_status',
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: false, // Ensures failed jobs go to DLQ
+      },
+    }),
+    BullBoardModule.forFeature({
+      name: 'payment_status',
+      adapter: BullAdapter,
     }),
   ],
-  controllers: [PaymentController],
+  controllers: [PaymentController, AdminPaymentController],
   providers: [
     PaymentService,
     VNPayProvider,

@@ -14,8 +14,8 @@ register({
   },
 });
 
+import { getConfig, validateEnv } from '@config/env.validator';
 import * as dotenv from 'dotenv';
-import { validateEnv, getConfig } from '@config/env.validator';
 
 // Load environment variable file and Validate/Freeze BEFORE anything else
 const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
@@ -39,10 +39,13 @@ async function bootstrap() {
   const nodeEnv = configService.get<string>('NODE_ENV');
   const isProduction = nodeEnv === 'production';
 
+  const { CORS_ORIGIN: corsOrigins, TRUST_PROXY_DEPTH } = getConfig();
+
   // Support Render.com proxy trust for correct rate limiting
   if (isProduction) {
     // @ts-ignore - set() exists on Express instance
-    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+    app.getHttpAdapter().getInstance().set('trust proxy', TRUST_PROXY_DEPTH);
+    Logger.log(`🛡️ Trust Proxy set to depth: ${TRUST_PROXY_DEPTH}`, 'Bootstrap');
   }
 
   app.useLogger(isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose']);
@@ -52,7 +55,6 @@ async function bootstrap() {
   });
 
   // CORS Configuration
-  const { CORS_ORIGIN: corsOrigins } = getConfig();
   Logger.log(`🔒 CORS origins: ${corsOrigins.join(', ')}`, 'Bootstrap');
 
   app.enableCors({

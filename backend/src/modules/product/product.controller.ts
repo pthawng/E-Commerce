@@ -17,9 +17,9 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Public } from 'src/common/decorators/public.decorator';
 import { PaginationRateLimitGuard } from 'src/common/guards/pagination-rate-limit.guard';
-import { Throttle } from '@nestjs/throttler';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -29,7 +29,7 @@ import { ProductService } from './product.service';
 @Controller('products')
 @UseGuards(PermissionGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService) { }
+  constructor(private readonly productService: ProductService) {}
 
   @Public()
   @UseGuards(PaginationRateLimitGuard)

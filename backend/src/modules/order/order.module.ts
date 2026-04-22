@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 import { CartModule } from '../cart/cart.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { MailModule } from '../mail/mail.module';
@@ -15,7 +16,7 @@ import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { CheckoutTokenService } from './services/checkout-token.service';
 import { OrderPaymentService } from './services/order-payment.service';
-import { AuthModule } from '../auth/auth.module';
+import { RefundService } from './services/refund.service';
 
 @Module({
   imports: [
@@ -42,8 +43,9 @@ import { AuthModule } from '../auth/auth.module';
     OrderService,
     OrderPaymentService,
     CheckoutTokenService,
+    RefundService,
     CleanupExpiredReservationsJob,
   ],
-  exports: [OrderService, OrderPaymentService, CheckoutTokenService],
+  exports: [OrderService, OrderPaymentService, CheckoutTokenService, RefundService],
 })
-export class OrderModule { }
+export class OrderModule {}

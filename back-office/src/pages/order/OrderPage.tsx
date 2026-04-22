@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { SplitLayout } from '@/shared/ui/SplitLayout';
+import { PageContainer } from '@/app/layout/PageContainer';
+import { SplitLayout, LayoutStack } from '@/shared/ui';
 import { OrderFilters } from '@/features/order/components/OrderFilters';
 import { OrderTable } from '@/features/order/components/OrderTable';
 import { OrderDetail } from '@/features/order/components/OrderDetail';
@@ -19,33 +20,38 @@ export const OrderPage: React.FC = () => {
     };
 
     return (
-        <div className="h-full flex flex-col">
-            <OrderFilters
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                loading={isLoading}
-            />
+        <PageContainer>
+            <LayoutStack>
+                <OrderFilters
+                    filters={filters}
+                    onFiltersChange={handleFiltersChange}
+                    loading={isLoading}
+                />
 
-            <SplitLayout
-                table={
-                    <OrderTable
-                        data={data?.items}
-                        loading={isLoading}
-                        total={data?.meta.total}
-                        currentPage={filters.page}
-                        pageSize={filters.limit}
-                        onPageChange={(page, pageSize) => handleFiltersChange({ page, limit: pageSize })}
-                        onRowClick={(order) => setSelectedOrderId(order.id)}
-                        selectedRowId={selectedOrderId || undefined}
-                    />
-                }
-                detail={
-                    <OrderDetail
-                        order={selectedOrder || null}
-                        loading={isLoadingDetail}
-                    />
-                }
-            />
-        </div>
+                <SplitLayout
+                    table={
+                        <OrderTable
+                            data={data?.items}
+                            loading={isLoading}
+                            total={data?.meta.totalItems}
+                            currentPage={filters.page}
+                            pageSize={filters.limit}
+                            onPageChange={(page, pageSize) => handleFiltersChange({ page, limit: pageSize })}
+                            onRowClick={(order) => setSelectedOrderId(order.id)}
+                            selectedRowId={selectedOrderId || undefined}
+                        />
+                    }
+                    detail={
+                        selectedOrderId ? (
+                            <OrderDetail
+                                order={selectedOrder || null}
+                                loading={isLoadingDetail}
+                                onClose={() => setSelectedOrderId(null)}
+                            />
+                        ) : null
+                    }
+                />
+            </LayoutStack>
+        </PageContainer>
     );
 };

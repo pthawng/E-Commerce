@@ -3,7 +3,7 @@ import { FeatureFlagService } from './feature-flag.service';
 
 @Global()
 @Module({
-    providers: [FeatureFlagService],
-    exports: [FeatureFlagService],
+  providers: [FeatureFlagService],
+  exports: [FeatureFlagService],
 })
-export class FeatureFlagModule { }
+export class FeatureFlagModule {}

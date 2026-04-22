@@ -54,6 +54,7 @@ export interface CallbackData {
   status: TransactionStatus;
   paymentMethod: PaymentMethodEnum;
   gatewayResponse: Record<string, any>;
+  transactionType?: 'payment' | 'refund';
   signature?: string;
 }
 

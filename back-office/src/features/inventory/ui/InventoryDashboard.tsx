@@ -1,36 +1,29 @@
 import React, { useState } from 'react';
-import { 
-  Table, 
-  Card, 
-  Typography, 
-  Space, 
-  Button, 
-  Tag, 
-  Input, 
-  Select, 
-  Row, 
-  Col, 
-  Tooltip,
-} from 'antd';
-import { 
-  ReloadOutlined, 
-  SwapOutlined, 
-  WarningOutlined, 
-  SearchOutlined,
-  HistoryOutlined,
-  HomeOutlined
-} from '@ant-design/icons';
+import { PageContainer } from '@/app/layout/PageContainer';
+import { Space, Typography, Button, Input, Select, Row, Col } from 'antd';
+import { ReloadOutlined, SwapOutlined, SearchOutlined, HistoryOutlined, ArrowRightOutlined, EyeOutlined, EditOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { inventoryApi } from '../api/inventory.api';
 import { queryKeys } from '@/shared/api/queryKeys';
 import type { InventoryItem } from '../models/inventory.types';
+import { LuxuryTable } from '@/shared/ui/DataTable';
+import type { ColumnSchema, RowActionConfig } from '@/shared/ui/DataTable';
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { radius } from '@/shared/design-system/radius';
+import { mapStockStatus, StatusRegistry } from '@/shared/registry/StatusRegistry';
 
 const { Title, Text } = Typography;
+
+// Add derived properties to InventoryItem for the schema
+interface InventoryDisplayItem extends InventoryItem {
+  available: number;
+  stockStatus: string;
+}
 
 export const InventoryDashboard: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | undefined>(undefined);
-  
+
   // Queries
   const { data: warehouses, isLoading: isLoadingWarehouses } = useQuery({
     queryKey: queryKeys.inventory.warehouses,
@@ -42,133 +35,222 @@ export const InventoryDashboard: React.FC = () => {
     queryFn: () => inventoryApi.getStockLevels({ warehouseId: selectedWarehouse }),
   });
 
-  // Table Columns
-  const columns = [
+  // Derived Stats
+  const totals = stock?.reduce((acc, item) => ({
+    total: acc.total + item.quantity,
+    reserved: acc.reserved + item.reservedQuantity,
+    available: acc.available + (item.quantity - item.reservedQuantity)
+  }), { total: 0, reserved: 0, available: 0 }) || { total: 0, reserved: 0, available: 0 };
+
+  const lowStockCount = stock?.filter(item => (item.quantity - item.reservedQuantity) <= 20).length || 0;
+
+  // Table Schema
+  const schema: ColumnSchema<InventoryDisplayItem>[] = [
     {
-      title: 'Product SKU',
-      dataIndex: ['productVariant', 'sku'],
-      key: 'sku',
-      render: (sku: string) => <Text strong>{sku}</Text>,
+      title: 'SKU Reference',
+      key: 'productVariant.sku',
+      type: 'id',
+      width: 140,
     },
     {
-      title: 'Warehouse',
-      dataIndex: ['warehouse', 'name'],
-      key: 'warehouse',
-      render: (name: string, _record: InventoryItem) => (
-        <Space>
-          <HomeOutlined style={{ color: '#C5A065' }} />
-          <Text>{name}</Text>
-          <Tag>{_record.warehouse?.code}</Tag>
-        </Space>
-      ),
+      title: 'Facility',
+      key: 'warehouse.name',
+      type: 'text',
+      width: 200,
     },
     {
-      title: 'Total Quantity',
-      dataIndex: 'quantity',
+      title: 'Physical Stock',
       key: 'quantity',
-      sorter: (a: InventoryItem, b: InventoryItem) => a.quantity - b.quantity,
-      render: (qty: number) => <Text style={{ fontSize: '16px' }}>{qty}</Text>,
+      type: 'number',
+      width: 130,
+      align: 'right',
     },
     {
       title: 'Reserved',
-      dataIndex: 'reservedQuantity',
-      key: 'reserved',
-      render: (reserved: number) => (
-        <Text type={reserved > 0 ? 'warning' : 'secondary'}>{reserved}</Text>
-      ),
+      key: 'reservedQuantity',
+      type: 'number',
+      width: 120,
+      align: 'right',
     },
     {
       title: 'Available',
       key: 'available',
-      render: (_: any, _record: InventoryItem) => {
-        const available = _record.quantity - _record.reservedQuantity;
-        const status = available <= 10 ? 'error' : available <= 50 ? 'warning' : 'success';
-        return <Tag color={status}>{available}</Tag>;
-      },
+      type: 'number',
+      width: 120,
+      align: 'right',
     },
     {
-      title: 'Last Updated',
-      dataIndex: 'updatedAt',
+      title: 'Stock Health',
+      key: 'stockStatus',
+      type: 'status-badge',
+      width: 150,
+      align: 'center',
+      renderOptions: {
+        statusMap: {
+          [StatusRegistry.STOCK.IN_STOCK.label]: StatusRegistry.STOCK.IN_STOCK,
+          [StatusRegistry.STOCK.LOW_STOCK.label]: StatusRegistry.STOCK.LOW_STOCK,
+          [StatusRegistry.STOCK.OUT_OF_STOCK.label]: StatusRegistry.STOCK.OUT_OF_STOCK,
+        }
+      }
+    },
+    {
+      title: 'Last Reconciled',
       key: 'updatedAt',
-      render: (date: string) => new Date(date).toLocaleString(),
+      type: 'date',
+      width: 160,
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, _record: InventoryItem) => (
-        <Space>
-          <Tooltip title="Transfer Stock">
-            <Button icon={<SwapOutlined />} size="small" />
-          </Tooltip>
-          <Tooltip title="Report Damage">
-            <Button icon={<WarningOutlined />} danger size="small" />
-          </Tooltip>
-        </Space>
-      ),
-    },
+      type: 'actions',
+      width: 120,
+      align: 'right',
+      renderOptions: {
+        actions: (_record): RowActionConfig<InventoryDisplayItem>[] => [
+          {
+            key: 'view',
+            label: 'View Logs',
+            icon: <EyeOutlined />,
+            onClick: (item) => console.log('Viewing', item)
+          },
+          {
+            key: 'adjust',
+            label: 'Adjust Stock',
+            icon: <EditOutlined />,
+            onClick: (item) => console.log('Adjusting', item)
+          },
+          {
+            key: 'transfer',
+            label: 'Fast Transfer',
+            icon: <SwapOutlined />,
+            onClick: (item) => console.log('Transferring', item)
+          }
+        ]
+      }
+    }
   ];
 
-  const filteredData = stock?.filter(item => 
+  const processedData = stock?.map(item => {
+    const available = item.quantity - item.reservedQuantity;
+    const stockStatus = mapStockStatus(available).label;
+    return { ...item, available, stockStatus } as InventoryDisplayItem;
+  }).filter(item =>
     item.productVariant?.sku.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%', padding: '24px' }}>
-      <Row justify="space-between" align="middle">
-        <Col>
-          <Title level={2} style={{ margin: 0, color: '#C5A065' }}>Inventory Management</Title>
-          <Text type="secondary">Monitor and manage stock across all warehouses</Text>
-        </Col>
-        <Col>
-          <Space>
-            <Button 
-              icon={<ReloadOutlined />} 
-              onClick={() => refetch()}
-              loading={isLoadingStock}
-            >
-              Refresh
-            </Button>
-            <Button icon={<HistoryOutlined />}>Movement History</Button>
-          </Space>
-        </Col>
-      </Row>
+    <PageContainer
+      action={
+        <Space size="middle">
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => refetch()}
+            loading={isLoadingStock}
+            style={{ borderRadius: radius.xs }}
+          >
+            Refresh
+          </Button>
+          <Button
+            icon={<HistoryOutlined />}
+            style={{ borderRadius: radius.xs }}
+          >
+            Movement Logs
+          </Button>
+          <Button
+            type="primary"
+            icon={<SwapOutlined />}
+            style={{ borderRadius: radius.xs, fontWeight: 600 }}
+          >
+            Bulk Transfer
+          </Button>
+        </Space>
+      }
+    >
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
 
-      <Card>
-        <Row gutter={16} align="middle">
-          <Col span={8}>
-            <Input 
-              placeholder="Search by SKU..." 
-              prefix={<SearchOutlined />} 
+        {/* Stock Health Summary */}
+        <Row gutter={24}>
+          <Col span={6}>
+            <GlassCard variant="borderless">
+              <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gross Stock</Text>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <Title level={3} style={{ margin: 0, fontWeight: 700 }}>{totals.total.toLocaleString()}</Title>
+                <Text type="secondary" style={{ fontSize: '12px' }}>Units</Text>
+              </div>
+            </GlassCard>
+          </Col>
+          <Col span={6}>
+            <GlassCard variant="borderless">
+              <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reserved Capital</Text>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <Title level={3} style={{ margin: 0, fontWeight: 700, color: 'var(--color-status-warning-text)' }}>{totals.reserved.toLocaleString()}</Title>
+                <Text type="secondary" style={{ fontSize: '12px' }}>Awaiting Fulfillment</Text>
+              </div>
+            </GlassCard>
+          </Col>
+          <Col span={6}>
+            <GlassCard variant="borderless">
+              <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Available Liberty</Text>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <Title level={3} style={{ margin: 0, fontWeight: 700, color: 'var(--color-status-success-text)' }}>{totals.available.toLocaleString()}</Title>
+                <Text type="secondary" style={{ fontSize: '12px' }}>Sellable Units</Text>
+              </div>
+            </GlassCard>
+          </Col>
+          <Col span={6}>
+            <GlassCard variant="borderless" style={{ background: lowStockCount > 0 ? 'rgba(var(--color-status-error-rgb), 0.05)' : 'transparent' }}>
+              <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inventory Pressure</Text>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <Title level={3} style={{ margin: 0, fontWeight: 700, color: lowStockCount > 0 ? 'var(--color-status-error-text)' : 'var(--color-status-success-text)' }}>{lowStockCount}</Title>
+                <Text type="secondary" style={{ fontSize: '12px' }}>SKUs below threshold</Text>
+              </div>
+            </GlassCard>
+          </Col>
+        </Row>
+
+        {/* Main Content */}
+        <GlassCard variant="borderless">
+          <div style={{ marginBottom: '24px', display: 'flex', gap: '16px' }}>
+            <Input
+              placeholder="Interrogate by SKU..."
+              prefix={<SearchOutlined style={{ color: 'var(--color-neutral-400)' }} />}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
               allowClear
+              style={{ width: '400px', borderRadius: radius.xs, height: '42px' }}
             />
-          </Col>
-          <Col span={6}>
             <Select
-              placeholder="All Warehouses"
-              style={{ width: '100%' }}
+              placeholder="Select Facility"
+              style={{ width: '240px', height: '42px' }}
               allowClear
               loading={isLoadingWarehouses}
               onChange={value => setSelectedWarehouse(value)}
               options={warehouses?.map(w => ({ label: w.name, value: w.id }))}
             />
-          </Col>
-        </Row>
-      </Card>
+          </div>
 
-      <Table 
-        columns={columns} 
-        dataSource={filteredData} 
-        rowKey="id"
-        loading={isLoadingStock}
-        pagination={{ pageSize: 10 }}
-        style={{ 
-          background: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-        }}
-      />
-    </Space>
+          <LuxuryTable<InventoryDisplayItem>
+            schema={schema}
+            dataSource={processedData}
+            loading={isLoadingStock}
+            pagination={{ pageSize: 12 }}
+            bulkActions={[
+              {
+                key: 'reconcile',
+                label: 'Manual Reconcile',
+                icon: <ArrowRightOutlined />,
+                onClick: (objects) => console.log('Reconciling', objects)
+              },
+              {
+                key: 'transfer',
+                label: 'Initiate Transfer',
+                icon: <SwapOutlined />,
+                onClick: (objects) => console.log('Transferring', objects)
+              }
+            ]}
+          />
+        </GlassCard>
+      </Space>
+    </PageContainer>
   );
 };

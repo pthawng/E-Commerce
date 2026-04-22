@@ -1,5 +1,5 @@
-import { Public } from '@common/decorators/public.decorator';
 import { OptionalAuth } from '@common/decorators/optional-auth.decorator';
+import { Public } from '@common/decorators/public.decorator';
 import { InjectQueue } from '@nestjs/bull';
 import {
   BadRequestException,
@@ -18,10 +18,10 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Queue } from 'bull';
 import { Request, Response } from 'express';
-import { Principal } from '@common/types/principal.types';
 import { OwnershipRegistry } from '../security/ownership.registry';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ConfirmVietQRPaymentDto, RefundPaymentDto } from './dto/refund.dto';
+import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { PaymentService } from './payment.service';
 import { CassoWebhookPayload, VietQRMatchingService } from './services/vietqr-matching.service';
 import { PaymentMethodEnum } from './types/payment.types';
@@ -37,7 +37,7 @@ export class PaymentController {
     private readonly vietqrMatchingService: VietQRMatchingService,
     private readonly ownershipRegistry: OwnershipRegistry,
     @InjectQueue('payment_status') private readonly paymentQueue: Queue,
-  ) { }
+  ) {}
 
   /**
    * Create payment for an order
@@ -338,22 +338,7 @@ export class PaymentController {
   /**
    * Get all transactions for admin (paginated)
    */
-  @Get('admin/all')
-  @ApiOperation({ summary: 'Get all transactions for admin (paginated)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Transactions retrieved successfully',
-  })
-  async findAllTransactions(
-    @Query()
-    query: {
-      page?: number;
-      limit?: number;
-      status?: string;
-      provider?: string;
-      orderCode?: string;
-    },
-  ) {
+  async findAllTransactions(@Query() query: TransactionQueryDto) {
     return await this.paymentService.findTransactions(query);
   }
 }

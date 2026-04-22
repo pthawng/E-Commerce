@@ -24,7 +24,7 @@ import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
 @ApiTags('Cart')
 @Controller('cart')
 export class CartController {
-  constructor(private readonly cartService: CartService) { }
+  constructor(private readonly cartService: CartService) {}
 
   // -------------------------
   // 1. GET CART (Hybrid)

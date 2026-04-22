@@ -1,24 +1,21 @@
 import React, { useMemo } from 'react';
 import { Layout, Menu } from 'antd';
 import {
-    ContainerOutlined,
-    DashboardOutlined,
-    PicLeftOutlined,
-    ShoppingOutlined,
-    TeamOutlined,
-    TagsOutlined,
-    SafetyCertificateOutlined,
-    IdcardOutlined,
-    KeyOutlined,
-    ShoppingCartOutlined,
-    DollarOutlined,
-    AppstoreAddOutlined,
-    AppstoreOutlined,
-    CarOutlined,
-} from '@ant-design/icons';
+    LayoutDashboard,
+    ShoppingCart,
+    CircleDollarSign,
+    Package,
+    Grip,
+    Users,
+    ShieldCheck,
+    Layers
+} from 'lucide-react';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePermission } from '@/entities/user/hooks';
+import { colors } from '@/shared/design-system/colors';
+import { typography } from '@/shared/design-system/typography';
+import { useLayout } from '@/shared/context/LayoutContext';
 
 const { Sider } = Layout;
 
@@ -29,159 +26,162 @@ function getItem(
     key: React.Key,
     icon?: React.ReactNode,
     children?: MenuItem[],
+    type?: 'group'
 ): MenuItem {
     return {
         key,
         icon,
         children,
         label,
+        type
     } as MenuItem;
 }
 
-interface SidebarProps {
-    collapsed: boolean;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
+export const Sidebar: React.FC = React.memo(() => {
     const navigate = useNavigate();
     const location = useLocation();
     const { can, user } = usePermission();
+    const { collapsed } = useLayout();
 
     const menuItems = useMemo(() => {
         const items: MenuItem[] = [];
 
-        // Dashboard (always visible if authenticated by default)
-        items.push(getItem('Dashboard', '/dashboard', <DashboardOutlined />));
+        // Dashboard
+        items.push(getItem('Dashboard', '/dashboard', <LayoutDashboard size={20} strokeWidth={2} />));
 
         const isAdmin = ['admin', 'manager'].includes(user?.role?.toString().toLowerCase() || '');
 
-        // Sales & Commerce Group
+        // Sales Group
         const salesItems: MenuItem[] = [];
         if (isAdmin || can('order.read')) {
-            salesItems.push(getItem('Orders', '/orders', <ShoppingCartOutlined />));
+            salesItems.push(getItem('Orders', '/orders', <ShoppingCart size={20} strokeWidth={2} />));
         }
         if (isAdmin || can('auth.payment.read')) {
-            salesItems.push(getItem('Transactions', '/transactions', <DollarOutlined />));
+            salesItems.push(getItem('Transactions', '/transactions', <CircleDollarSign size={20} strokeWidth={2} />));
         }
-
         if (salesItems.length > 0) {
-            items.push(getItem('Sales', 'sales', <ShoppingCartOutlined />, salesItems));
+            items.push(getItem('SALES', 'sales-group', null, salesItems, 'group'));
         }
 
         // Operations Group
         const operationsItems: MenuItem[] = [];
-        operationsItems.push(getItem('Inventory', '/inventory', <AppstoreAddOutlined />));
-        operationsItems.push(getItem(<span style={{ opacity: 0.5 }}>Shipments (Soon)</span>, 'shipments', <CarOutlined />));
-
+        operationsItems.push(getItem('Inventory', '/inventory', <Package size={20} strokeWidth={2} />));
         if (operationsItems.length > 0) {
-            items.push(getItem('Operations', 'operations', <AppstoreOutlined />, operationsItems));
+            items.push(getItem('OPERATIONS', 'ops-group', null, operationsItems, 'group'));
         }
 
-        // Catalog Management Group
+        // Catalog Group
         const catalogItems: MenuItem[] = [];
-        if (isAdmin || can('product.item.read') || can('product.read')) {
-            catalogItems.push(getItem('Products', '/products', <ShoppingOutlined />));
+        if (isAdmin || can('product.read')) {
+            catalogItems.push(getItem('Products', '/products', <Grip size={20} strokeWidth={2} />));
         }
         if (isAdmin || can('product.category.read')) {
-            catalogItems.push(getItem('Categories', '/categories', <PicLeftOutlined />));
+            catalogItems.push(getItem('Categories', '/categories', <Layers size={20} strokeWidth={2} />));
         }
-        if (isAdmin || can('product.attribute.read')) {
-            catalogItems.push(getItem('Attributes', '/attributes', <TagsOutlined />));
-        }
-
         if (catalogItems.length > 0) {
-            items.push(getItem('Catalog', 'catalog', <ContainerOutlined />, catalogItems));
+            items.push(getItem('CATALOG', 'catalog-group', null, catalogItems, 'group'));
         }
 
-        // Identity & Access
-        const identityItems: MenuItem[] = [];
-        if (isAdmin || can('auth.user.read') || can('user.read')) {
-            identityItems.push(getItem('Users', '/users', <TeamOutlined />));
+        // Administration
+        const adminItems: MenuItem[] = [];
+        if (isAdmin || can('auth.user.read')) {
+            adminItems.push(getItem('Users', '/users', <Users size={20} strokeWidth={2} />));
         }
         if (isAdmin || can('auth.role.read')) {
-            identityItems.push(getItem('Roles', '/roles', <SafetyCertificateOutlined />));
-            identityItems.push(getItem('Permissions', '/permissions', <KeyOutlined />));
+            adminItems.push(getItem('Roles & Permissions', '/roles', <ShieldCheck size={20} strokeWidth={2} />));
         }
-
-        if (identityItems.length > 0) {
-            items.push(getItem('Identity & Access', 'identity', <IdcardOutlined />, identityItems));
+        if (adminItems.length > 0) {
+            items.push(getItem('ADMINISTRATION', 'admin-group', null, adminItems, 'group'));
         }
 
         return items;
     }, [can, user]);
-
-    // Handle initial selection based on URL
-    const openKeys = useMemo(() => {
-        const keys = [];
-        if (location.pathname.startsWith('/products') || location.pathname.startsWith('/categories') || location.pathname.startsWith('/attributes')) {
-            keys.push('catalog');
-        }
-        if (location.pathname.startsWith('/orders') || location.pathname.startsWith('/transactions')) {
-            keys.push('sales');
-        }
-        if (location.pathname.startsWith('/inventory') || location.pathname.startsWith('/shipments')) {
-            keys.push('operations');
-        }
-        if (location.pathname.startsWith('/users') || location.pathname.startsWith('/roles') || location.pathname.startsWith('/permissions')) {
-            keys.push('identity');
-        }
-        return keys;
-    }, [location.pathname]);
 
     return (
         <Sider
             trigger={null}
             collapsible
             collapsed={collapsed}
-            collapsedWidth={0}
+            collapsedWidth={80} // Updated for icon-only layout
+            width={260}
+            aria-label="Main Navigation"
             style={{
-                background: '#0B2545',
-                borderRight: '1px solid rgba(255,255,255,0.05)',
-            }}
-            zeroWidthTriggerStyle={{
-                top: '12px',
-                right: '-40px',
-                background: '#0B2545',
-                borderRadius: '0 4px 4px 0',
+                background: 'var(--sidebar-gradient)',
+                borderRight: `1px solid var(--sidebar-border)`,
+                height: '100vh',
+                position: 'fixed',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                zIndex: 'var(--z-sidebar)' as any,
+                transition: 'all var(--sidebar-transition)',
+                boxShadow: 'var(--sidebar-shadow)'
             }}
         >
+            {/* Logo Area */}
             <div
                 style={{
                     height: 64,
+                    padding: 0,
                     display: 'flex',
                     alignItems: 'center',
-                    padding: '0 24px',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    justifyContent: 'center',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                    marginBottom: 8
                 }}
             >
                 <div
                     style={{
-                        fontFamily: "'Playfair Display', serif",
-                        fontSize: '20px',
-                        fontWeight: 600,
-                        color: '#C5A065', // Gold
-                        letterSpacing: '0.02em',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        cursor: 'pointer'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        cursor: 'pointer',
+                        transition: 'var(--transition-standard)'
                     }}
                     onClick={() => navigate('/dashboard')}
                 >
-                    Ray Paradis
+                    <div style={{
+                        fontFamily: typography.fontFamily.serif,
+                        fontSize: collapsed ? '22px' : '20px',
+                        fontWeight: 700,
+                        color: colors.neutral.white,
+                        letterSpacing: '0.04em',
+                        whiteSpace: 'nowrap',
+                        textTransform: 'uppercase',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        gap: '4px',
+                        transition: 'var(--transition-standard)'
+                    }}>
+                        {collapsed ? (
+                            <span style={{ color: colors.secondary.main }}>RP</span>
+                        ) : (
+                            <>
+                                <span style={{ color: colors.secondary.main }}>Ray</span>
+                                <span>Paradis</span>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
+
+            {/* Navigation Menu */}
             <Menu
                 theme="dark"
                 selectedKeys={[location.pathname]}
-                defaultOpenKeys={openKeys}
                 mode="inline"
                 items={menuItems}
-                onClick={({ key }) => {
-                    navigate(key);
+                onClick={({ key }) => navigate(key)}
+                style={{
+                    background: 'transparent',
+                    borderRight: 0,
+                    marginTop: 16,
+                    padding: '0 8px'
                 }}
-                style={{ background: 'transparent', borderRight: 0, marginTop: 8 }}
             />
         </Sider>
     );
-};
-
+});

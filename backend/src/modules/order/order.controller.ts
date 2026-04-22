@@ -1,3 +1,4 @@
+import { OwnershipRegistry } from '@modules/security/ownership.registry';
 import {
   Body,
   Controller,
@@ -18,7 +19,6 @@ import { CreateOrderWithPaymentDto } from './dto/create-order-with-payment.dto';
 import { OrderPaymentResponseDto } from './dto/order-payment-response.dto';
 import { OrderService } from './order.service';
 import { OrderPaymentService } from './services/order-payment.service';
-import { OwnershipRegistry } from '@modules/security/ownership.registry';
 
 @ApiTags('Order')
 @Controller('orders')
@@ -27,7 +27,7 @@ export class OrderController {
     private readonly orderService: OrderService,
     private readonly orderPaymentService: OrderPaymentService,
     private readonly ownershipRegistry: OwnershipRegistry,
-  ) { }
+  ) {}
 
   // -------------------------
   // 1. CREATE ORDER (Checkout)

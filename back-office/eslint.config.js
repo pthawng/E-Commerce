@@ -19,5 +19,14 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXAttribute[name.name="style"]',
+          message: 'Inline styles are strictly forbidden. Use strict spacing tokens through Tailwind or the global layout system (PageContainer).',
+        }
+      ]
+    }
   },
 ])

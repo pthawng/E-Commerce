@@ -1,7 +1,16 @@
 import { SystemContextStore } from '@common/context/system-context.store';
+import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
 import { PaymentService } from '@modules/payment/payment.service';
-import { BadRequestException, ConflictException, forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { OrderStatusEnum, PaymentMethodEnum, Prisma } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -13,8 +22,6 @@ import { OrderPaymentResponseDto } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { OrderStatusValidator } from '../utils/order-status.validator';
 import { CheckoutTokenService } from './checkout-token.service';
-import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
-import { JwtService } from '@nestjs/jwt';
 
 /**
  * OrderPaymentService
@@ -40,7 +47,7 @@ export class OrderPaymentService {
     private readonly configService: ConfigService,
     private readonly guestVerificationService: GuestVerificationService,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   /**
    * Step 1: Validate cart and reserve inventory (snapshot)
@@ -113,7 +120,10 @@ export class OrderPaymentService {
         if (!dto.guestVerifyToken) {
           throw new BadRequestException('Email guest chưa được xác thực (missing token).');
         }
-        await this.guestVerificationService.validateVerifyToken(dto.guestEmail, dto.guestVerifyToken);
+        await this.guestVerificationService.validateVerifyToken(
+          dto.guestEmail,
+          dto.guestVerifyToken,
+        );
       }
 
       // 1. Verify checkout token FIRST to get authoritative jti
@@ -169,10 +179,13 @@ export class OrderPaymentService {
 
       // Staff-level: Enforce Price Concurrency Safety (Integer-safe VND comparison)
       // We check the TOTAL first, then individual items for forensic debugging
-      const isPriceSafe = Math.abs(Math.round(totals.total) - Math.round(tokenPayload.totalAmount)) <= 1;
+      const isPriceSafe =
+        Math.abs(Math.round(totals.total) - Math.round(tokenPayload.totalAmount)) <= 1;
 
       if (!isPriceSafe) {
-        this.logger.warn(`Price mismatch detected for token ${tokenPayload.jti}. Expected: ${tokenPayload.totalAmount}, Actual: ${totals.total}`);
+        this.logger.warn(
+          `Price mismatch detected for token ${tokenPayload.jti}. Expected: ${tokenPayload.totalAmount}, Actual: ${totals.total}`,
+        );
         throw new ConflictException({
           code: 'PRICE_STABILITY_ERROR',
           message: 'Price has changed since validation. Please review your order totals.',
@@ -186,7 +199,9 @@ export class OrderPaymentService {
       // Verify individual items to catch edge cases (e.g. price shifts that sum to same total)
       for (const item of cart.items) {
         const variant = variants.find((v) => v.id === item.productVariantId);
-        const snapshotItem = tokenPayload.lineItems.find((li) => li.variantId === item.productVariantId);
+        const snapshotItem = tokenPayload.lineItems.find(
+          (li) => li.variantId === item.productVariantId,
+        );
 
         const currentPrice = Math.round(Number(variant?.price || 0));
         const snapshotPrice = Math.round(snapshotItem?.price || 0);
@@ -351,7 +366,14 @@ export class OrderPaymentService {
         });
 
         // Reliable Notification (Transactional Outbox)
-        const recipientEmail = order.userId ? (await currentTx.user.findUnique({ where: { id: order.userId }, select: { email: true } }))?.email : order.guestEmail;
+        const recipientEmail = order.userId
+          ? (
+              await currentTx.user.findUnique({
+                where: { id: order.userId },
+                select: { email: true },
+              })
+            )?.email
+          : order.guestEmail;
 
         if (recipientEmail) {
           // Fetch items for template context within the lock

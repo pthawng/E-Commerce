@@ -25,7 +25,7 @@ export class CheckoutTokenService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   async generateToken(payload: Omit<CheckoutTokenPayload, 'expiresAt' | 'jti'>): Promise<string> {
     try {

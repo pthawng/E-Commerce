@@ -1,6 +1,6 @@
+import { ResilientHttpClient } from '@common/services/resilient-http.client';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ResilientHttpClient } from '@common/services/resilient-http.client';
 import {
   CallbackData,
   PaymentMethodEnum,
@@ -216,12 +216,16 @@ export class VNPayProvider extends BasePaymentProvider {
     const secureHash = generateVNPayApiHash(signData, this.hashSecret);
 
     try {
-      const result = await this.resilientHttpClient.post<any>(this.apiUrl, {
-        ...data,
-        vnp_SecureHash: secureHash
-      }, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const result = await this.resilientHttpClient.post<any>(
+        this.apiUrl,
+        {
+          ...data,
+          vnp_SecureHash: secureHash,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
 
       if (result.vnp_ResponseCode === VNPAY_RESPONSE_CODE.SUCCESS) {
         // Determine status based on vnp_TransactionStatus
@@ -302,12 +306,16 @@ export class VNPayProvider extends BasePaymentProvider {
     const secureHash = generateVNPayApiHash(signData, this.hashSecret);
 
     try {
-      const result = await this.resilientHttpClient.post<any>(this.apiUrl, {
-        ...data,
-        vnp_SecureHash: secureHash
-      }, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const result = await this.resilientHttpClient.post<any>(
+        this.apiUrl,
+        {
+          ...data,
+          vnp_SecureHash: secureHash,
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
 
       if (result.vnp_ResponseCode === VNPAY_RESPONSE_CODE.SUCCESS) {
         return {

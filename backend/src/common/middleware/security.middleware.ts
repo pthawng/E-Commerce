@@ -1,7 +1,7 @@
+import { getConfig } from '@config/env.validator';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { NextFunction, Request, Response } from 'express';
-import { getConfig } from '@config/env.validator';
 
 /**
  * SecurityMiddleware

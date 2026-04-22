@@ -62,6 +62,7 @@ export const PERMISSIONS = {
     DELETE: 'order.delete',
     MANAGE_PAYMENT: 'order.payment.manage',
     SHIPMENT_MANAGE: 'order.shipment.manage',
+    REFUND: 'order.refund',
   },
   INVENTORY: {
     READ: 'inventory.read',
@@ -69,9 +70,11 @@ export const PERMISSIONS = {
     TRANSFER: 'inventory.transfer',
     ADJUST: 'inventory.adjust',
   },
+  DASHBOARD: {
+    VIEW: 'dashboard.view',
+  },
 } as const;
 
-// Đệ quy lấy tất cả value string bên trong PERMISSIONS
 type NestedValues<T> = T extends string
   ? T
   : T extends object

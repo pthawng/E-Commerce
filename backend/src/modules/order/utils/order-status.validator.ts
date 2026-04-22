@@ -5,12 +5,24 @@ export class OrderStatusValidator {
   private static readonly VALID_TRANSITIONS: Record<OrderStatusEnum, OrderStatusEnum[]> = {
     [OrderStatusEnum.pending_payment]: [OrderStatusEnum.confirmed, OrderStatusEnum.cancelled],
     [OrderStatusEnum.pending]: [OrderStatusEnum.confirmed, OrderStatusEnum.cancelled],
-    [OrderStatusEnum.confirmed]: [OrderStatusEnum.processing, OrderStatusEnum.cancelled],
-    [OrderStatusEnum.processing]: [OrderStatusEnum.shipping, OrderStatusEnum.cancelled],
-    [OrderStatusEnum.shipping]: [OrderStatusEnum.delivered, OrderStatusEnum.cancelled],
+    [OrderStatusEnum.confirmed]: [
+      OrderStatusEnum.processing,
+      OrderStatusEnum.cancelled,
+      OrderStatusEnum.refunded,
+    ],
+    [OrderStatusEnum.processing]: [
+      OrderStatusEnum.shipping,
+      OrderStatusEnum.cancelled,
+      OrderStatusEnum.refunded,
+    ],
+    [OrderStatusEnum.shipping]: [
+      OrderStatusEnum.delivered,
+      OrderStatusEnum.refunded,
+      OrderStatusEnum.cancelled,
+    ],
     [OrderStatusEnum.delivered]: [OrderStatusEnum.completed, OrderStatusEnum.returned],
     [OrderStatusEnum.returned]: [OrderStatusEnum.refunded],
-    [OrderStatusEnum.completed]: [],
+    [OrderStatusEnum.completed]: [OrderStatusEnum.refunded], // Allow refunds after completion (customer support)
     [OrderStatusEnum.cancelled]: [],
     [OrderStatusEnum.refunded]: [],
   };

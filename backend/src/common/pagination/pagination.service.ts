@@ -1,9 +1,9 @@
-import { Buffer } from 'node:buffer';
-import { createHmac, timingSafeEqual, createHash } from 'node:crypto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { Buffer } from 'node:buffer';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import type { PaginationDto } from './pagination.dto';
 import {
   buildPagination,
@@ -132,7 +132,9 @@ export class PaginationService {
 
     const [itemsRaw, totalItems] = await Promise.all([
       findMany(queryArgs),
-      isFirstPage ? this.getCachedCount(options.count, queryWhere, basePath) : Promise.resolve(undefined),
+      isFirstPage
+        ? this.getCachedCount(options.count, queryWhere, basePath)
+        : Promise.resolve(undefined),
     ]);
 
     const hasNext = itemsRaw.length > dto.limit;
@@ -255,8 +257,8 @@ export class PaginationService {
     const total = await countFn({ where });
 
     try {
-      this.cacheManager.set(cacheKey, total, COUNT_CACHE_TTL_MS).catch(() => { });
-    } catch { }
+      this.cacheManager.set(cacheKey, total, COUNT_CACHE_TTL_MS).catch(() => {});
+    } catch {}
 
     return total;
   }

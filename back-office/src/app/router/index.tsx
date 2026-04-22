@@ -4,11 +4,13 @@ import { LoginPage } from '@/pages/auth/login';
 import { ProtectedRoute } from '@/features/auth/auth-guard';
 import { UserPage } from '@/pages/user';
 import { DashboardPage } from '@/pages/dashboard';
-import { RolesListPage, RoleCreatePage, RoleEditPage, PermissionsListPage, PermissionCreatePage, PermissionEditPage } from '@/pages/rbac';
+import { RolesList, RoleCreatePage, RoleEditPage, PermissionsList, PermissionCreatePage, PermissionEditPage } from '@/pages/rbac';
 import { ProductsPage, ProductCreatePage, ProductEditPage, CategoriesPage, AttributesPage } from '@/pages/product';
 import { OrdersPage } from '@/pages/order';
 import { TransactionsPage } from '@/pages/sales';
 import { InventoryPage } from '@/pages/inventory';
+import { ProfilePage } from '@/pages/profile';
+import { SettingsPage } from '@/pages/settings';
 
 export const router = createBrowserRouter([
     {
@@ -55,7 +57,7 @@ export const router = createBrowserRouter([
                 path: 'roles',
                 element: (
                     <ProtectedRoute permission="auth.role.read">
-                        <RolesListPage />
+                        <RolesList />
                     </ProtectedRoute>
                 ),
             },
@@ -79,7 +81,7 @@ export const router = createBrowserRouter([
                 path: 'permissions',
                 element: (
                     <ProtectedRoute permission="auth.role.read">
-                        <PermissionsListPage />
+                        <PermissionsList />
                     </ProtectedRoute>
                 ),
             },
@@ -147,6 +149,14 @@ export const router = createBrowserRouter([
                         <InventoryPage />
                     </ProtectedRoute>
                 ),
+            },
+            {
+                path: 'profile',
+                element: <ProfilePage />,
+            },
+            {
+                path: 'settings',
+                element: <SettingsPage />,
             },
         ],
     },

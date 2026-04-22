@@ -1,3 +1,5 @@
+import { BullAdapter } from '@bull-board/api/bullAdapter';
+import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -19,6 +21,16 @@ import { EmailRetentionService } from './services/retention.service';
     PrismaModule,
     BullModule.registerQueue({
       name: 'email-queue',
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    }),
+    BullBoardModule.forFeature({
+      name: 'email-queue',
+      adapter: BullAdapter,
     }),
   ],
   controllers: [MailAdminController, MailWebhookController],

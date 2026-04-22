@@ -1,29 +1,88 @@
 import React from 'react';
-import { Breadcrumb } from 'antd';
+import { Breadcrumb, Typography, Space } from 'antd';
+import { useLocation, Link } from 'react-router-dom';
+import styles from './PageContainer.module.css';
 
-interface PageContainerProps {
-    title?: string;
+const { Title, Text } = Typography;
+
+const breadcrumbNameMap: Record<string, string> = {
+    '/dashboard': 'Dashboard',
+    '/products': 'Products',
+    '/products/create': 'Create',
+    '/orders': 'Orders',
+    '/users': 'Users',
+    '/roles': 'Roles',
+    '/permissions': 'Permissions',
+    '/inventory': 'Inventory',
+    '/categories': 'Categories',
+    '/attributes': 'Attributes',
+    '/transactions': 'Transactions',
+};
+
+export interface PageContainerProps {
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    action?: React.ReactNode;
     children: React.ReactNode;
-    breadcrumbItems?: { title: string; href?: string }[];
+    breadcrumbItems?: any[];
 }
 
-export const PageContainer: React.FC<PageContainerProps> = ({ title, children, breadcrumbItems }) => {
+export const PageContainer: React.FC<PageContainerProps> = ({
+    title,
+    description,
+    action,
+    children,
+    breadcrumbItems: manualBreadcrumbs
+}) => {
+    const location = useLocation();
+    const pathSnippets = location.pathname.split('/').filter((i) => i);
+
+    const automatedBreadcrumbs = pathSnippets.map((_, index) => {
+        const url = `/${pathSnippets.slice(0, index + 1).join('/')}`;
+        return {
+            title: breadcrumbNameMap[url] ? (
+                index === pathSnippets.length - 1 ? (
+                    breadcrumbNameMap[url]
+                ) : (
+                    <Link to={url}>{breadcrumbNameMap[url]}</Link>
+                )
+            ) : (
+                index === pathSnippets.length - 1 ? _ : <Link to={url}>{_}</Link>
+            ),
+        };
+    });
+
+    const breadcrumbItems = manualBreadcrumbs || automatedBreadcrumbs;
+
     return (
-        <div style={{ padding: 0 }}>
-            {breadcrumbItems && (
-                <Breadcrumb
-                    items={breadcrumbItems}
-                    style={{ marginBottom: 16 }}
-                />
-            )}
+        <div className={styles.container}>
+            <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+                {breadcrumbItems.length > 1 && (
+                    <Breadcrumb items={breadcrumbItems} />
+                )}
 
-            {title && (
-                <h2 style={{ marginBottom: 24, fontSize: 24, fontWeight: 600 }}>
-                    {title}
-                </h2>
-            )}
+                {(title || action) && (
+                    <div className={styles.header}>
+                        <div className={styles.headerInfo}>
+                            {title && (
+                                <Title level={2} className={styles.title}>
+                                    {title}
+                                </Title>
+                            )}
+                            {description && (
+                                <Text type="secondary" className={styles.description}>
+                                    {description}
+                                </Text>
+                            )}
+                        </div>
+                        {action && <div>{action}</div>}
+                    </div>
+                )}
 
-            <div>{children}</div>
+                <div className={styles.content}>
+                    {children}
+                </div>
+            </Space>
         </div>
     );
 };

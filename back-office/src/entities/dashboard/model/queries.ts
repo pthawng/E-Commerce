@@ -23,3 +23,36 @@ export const useRevenueData = (range: string = '7d') => {
         staleTime: 1000 * 60 * 10, // 10 mins
     });
 };
+
+/**
+ * Hook to fetch top selling products
+ */
+export const useTopProducts = (limit: number = 5) => {
+    return useQuery({
+        queryKey: ['dashboard', 'top-products', limit],
+        queryFn: () => dashboardApi.getTopProducts(limit),
+        staleTime: 1000 * 60 * 15,
+    });
+};
+
+/**
+ * Hook to fetch recent orders for dashboard
+ */
+export const useRecentOrders = (limit: number = 10) => {
+    return useQuery({
+        queryKey: ['dashboard', 'recent-orders', limit],
+        queryFn: () => dashboardApi.getRecentOrders(limit),
+        staleTime: 1000 * 60,
+    });
+};
+
+/**
+ * Hook to fetch low stock alerts
+ */
+export const useLowStockAlerts = (limit: number = 10) => {
+    return useQuery({
+        queryKey: ['dashboard', 'low-stock', limit],
+        queryFn: () => dashboardApi.getLowStockAlerts(limit),
+        staleTime: 1000 * 60 * 5,
+    });
+};

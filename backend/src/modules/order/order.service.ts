@@ -1,10 +1,16 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { OwnershipRegistry } from '@modules/security/ownership.registry';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ActionType, OrderStatusEnum, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { OwnershipRegistry } from '@modules/security/ownership.registry';
-import { Principal, PrincipalType } from 'src/common/types/principal.types';
 import { IOwnable } from 'src/common/interfaces/ownable.interface';
+import { Principal, PrincipalType } from 'src/common/types/principal.types';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatusValidator } from './utils/order-status.validator';
 
@@ -17,7 +23,7 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ownershipRegistry: OwnershipRegistry,
-  ) { }
+  ) {}
 
   // ============================================
   // PUBLIC API
@@ -86,7 +92,7 @@ export class OrderService {
           owners.push({ id: order.sessionId, type: PrincipalType.GUEST });
         }
         return owners;
-      }
+      },
     };
 
     this.ownershipRegistry.verify(principal, orderOwnable, `OrderDetailAccess:${id}`);
@@ -163,40 +169,66 @@ export class OrderService {
   }
 
   async updateStatus(id: string, status: string, actorId?: string, note?: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { id },
-      include: { items: true },
-    });
+    return this.transitionTo(id, status as OrderStatusEnum, actorId, note);
+  }
 
-    if (!order) throw new NotFoundException('Order not found');
-
-    // Validate state transition
-    const nextStatus = status as OrderStatusEnum;
-    OrderStatusValidator.validate(id, order.status, nextStatus);
-
+  /**
+   * Principal-Grade State Transition
+   * 1. Acquire row-level lock (FOR UPDATE)
+   * 2. Validate against State Machine matrix
+   * 3. Atomic update of status and timeline
+   */
+  private async transitionTo(
+    id: string,
+    nextStatus: OrderStatusEnum,
+    actorId?: string,
+    note?: string,
+  ) {
     return this.prisma.$transaction(async (tx) => {
+      // 1. Acquire row lock (Concurrency Safety)
+      // We use raw SQL because Prisma 5 findUnique with select for update is limited
+      const [order]: any[] = await tx.$queryRaw`
+        SELECT id, status FROM "Order" WHERE id = ${id}::uuid FOR UPDATE
+      `;
+
+      if (!order) throw new NotFoundException('Order not found');
+
+      // 2. Validate transition (Fail-Closed)
+      OrderStatusValidator.validate(id, order.status, nextStatus);
+
+      // 3. Atomic Update
       const updatedOrder = await tx.order.update({
         where: { id },
         data: {
           status: nextStatus,
           // Auto-set timestamps based on status
-          ...(status === OrderStatusEnum.confirmed ? { confirmedAt: new Date() } : {}),
-          ...(status === OrderStatusEnum.shipping ? { shippedAt: new Date() } : {}),
-          ...(status === OrderStatusEnum.delivered ? { deliveredAt: new Date() } : {}),
-          ...(status === OrderStatusEnum.completed ? { completedAt: new Date() } : {}),
-          ...(status === OrderStatusEnum.cancelled ? { cancelledAt: new Date() } : {}),
+          ...(nextStatus === OrderStatusEnum.confirmed ? { confirmedAt: new Date() } : {}),
+          ...(nextStatus === OrderStatusEnum.shipping ? { shippedAt: new Date() } : {}),
+          ...(nextStatus === OrderStatusEnum.delivered ? { deliveredAt: new Date() } : {}),
+          ...(nextStatus === OrderStatusEnum.completed ? { completedAt: new Date() } : {}),
+          ...(nextStatus === OrderStatusEnum.cancelled ? { cancelledAt: new Date() } : {}),
         },
       });
 
+      // 4. Audit Trail
       await tx.orderTimeline.create({
         data: {
           orderId: id,
-          action: `STATUS_UPDATE_${status.toUpperCase()}`,
+          action: `STATUS_TRANSITION_${nextStatus.toUpperCase()}`,
           fromStatus: order.status,
-          toStatus: status as OrderStatusEnum,
-          description: note || `Order status updated to ${status}`,
+          toStatus: nextStatus,
+          description: note || `Order status transitioned to ${nextStatus}`,
           actorId,
           actorType: actorId ? 'admin' : 'system',
+        },
+      });
+
+      // 5. Transactional Event Outbox (Consistency Guarantee)
+      await tx.domainEventOutbox.create({
+        data: {
+          eventType: 'order.status.updated',
+          payload: { orderId: id, oldStatus: order.status, newStatus: nextStatus, actorId },
+          status: 'PENDING',
         },
       });
 

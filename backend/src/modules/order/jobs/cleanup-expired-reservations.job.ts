@@ -1,8 +1,8 @@
+import { SystemAction } from '@common/decorators/system-action.decorator';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryService } from '../../inventory/inventory.service';
-import { SystemAction } from '@common/decorators/system-action.decorator';
 
 /**
  * Cleanup Expired Reservations Job
@@ -14,12 +14,12 @@ export class CleanupExpiredReservationsJob {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventoryService: InventoryService,
-  ) { }
+  ) {}
 
   /**
    * Cron job: Runs every minute
-   * 
-   * SE L8 Pattern: Use systemic @SystemAction decorator to authorize 
+   *
+   * SE L8 Pattern: Use systemic @SystemAction decorator to authorize
    * background mutations while maintaining strict audit boundaries.
    */
   @Cron(CronExpression.EVERY_MINUTE)

@@ -1,33 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Card, Typography, Divider, Table, Tag, Timeline,
+    Typography, Divider, Table, Tag, Timeline,
     Button, Descriptions, Avatar, Space, Modal, Input, Empty
 } from 'antd';
 import {
     CheckCircleOutlined, SyncOutlined, CarOutlined,
-    CloseCircleOutlined, WalletOutlined, UserOutlined
+    CloseCircleOutlined, WalletOutlined, UserOutlined,
+    CloseOutlined
 } from '@ant-design/icons';
 import type { Order, OrderTimeline, OrderStatus } from '@/entities/order/model/types';
 import { OrderStatus as OrderStatusEnum } from '@/entities/order/model/types';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
+import { colors } from '@/shared/design-system/colors';
+import { typography } from '@/shared/design-system/typography';
+import { radius } from '@/shared/design-system/radius';
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { useUpdateOrderStatus, useCancelOrder, useUpdateTracking } from '@/entities/order/model/queries';
+
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
-
-import { useUpdateOrderStatus, useCancelOrder, useUpdateTracking } from '@/entities/order/model/queries';
 
 const { Title, Text, Paragraph } = Typography;
 
 interface OrderDetailProps {
     order: Order | null;
     loading?: boolean;
+    onClose?: () => void;
 }
 
-export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
+export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading, onClose }) => {
     const [cancelModalVisible, setCancelModalVisible] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
-
     const [trackingModalVisible, setTrackingModalVisible] = useState(false);
     const [trackingCode, setTrackingCode] = useState('');
 
@@ -35,12 +40,49 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
     const cancelMutation = useCancelOrder();
     const trackingMutation = useUpdateTracking();
 
-    if (loading) return <Card loading />;
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && onClose) {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    if (loading) return <GlassCard loading variant="borderless" />;
+
     if (!order) return (
-        <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-            <Empty description="Chọn một đơn hàng để xem chi tiết" />
+        <div style={{
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: colors.background.body,
+            borderRadius: radius.lg,
+            border: `1px dashed ${colors.border.subtle}`
+        }}>
+            <Empty description={<span style={{ color: colors.neutral[400] }}>Select an order to view details</span>} />
         </div>
     );
+
+    const getStatusStyle = (status: OrderStatus) => {
+        switch (status) {
+            case OrderStatusEnum.COMPLETED:
+            case OrderStatusEnum.DELIVERED:
+                return { color: colors.success.main, bg: `${colors.success.main}12` };
+            case OrderStatusEnum.PENDING:
+            case OrderStatusEnum.CONFIRMED:
+            case OrderStatusEnum.PROCESSING:
+                return { color: colors.warning.main, bg: `${colors.warning.main}12` };
+            case OrderStatusEnum.CANCELLED:
+                return { color: colors.error.main, bg: `${colors.error.main}12` };
+            case OrderStatusEnum.SHIPPING:
+                return { color: colors.info.main, bg: `${colors.info.main}12` };
+            default:
+                return { color: colors.neutral[600], bg: colors.neutral[100] };
+        }
+    };
 
     const handleUpdateStatus = (newStatus: OrderStatus) => {
         statusMutation.mutate({ id: order.id, status: newStatus });
@@ -65,301 +107,427 @@ export const OrderDetail: React.FC<OrderDetailProps> = ({ order, loading }) => {
 
     const getTimelineIcon = (timeline: OrderTimeline) => {
         switch (timeline.toStatus) {
-            case OrderStatusEnum.CONFIRMED: return <CheckCircleOutlined className="text-blue-500" />;
-            case OrderStatusEnum.PROCESSING: return <SyncOutlined spin className="text-orange-500" />;
-            case OrderStatusEnum.SHIPPING: return <CarOutlined className="text-purple-500" />;
-            case OrderStatusEnum.DELIVERED: return <CheckCircleOutlined className="text-green-500" />;
-            case OrderStatusEnum.CANCELLED: return <CloseCircleOutlined className="text-red-500" />;
+            case OrderStatusEnum.CONFIRMED: return <CheckCircleOutlined style={{ color: colors.success.main }} />;
+            case OrderStatusEnum.PROCESSING: return <SyncOutlined spin style={{ color: colors.warning.main }} />;
+            case OrderStatusEnum.SHIPPING: return <CarOutlined style={{ color: colors.info.main }} />;
+            case OrderStatusEnum.DELIVERED: return <CheckCircleOutlined style={{ color: colors.success.main }} />;
+            case OrderStatusEnum.CANCELLED: return <CloseCircleOutlined style={{ color: colors.error.main }} />;
             default: return null;
         }
     };
 
+    const statusStyle = getStatusStyle(order.status);
+
     return (
-        <div className="flex flex-col gap-6 p-1 h-full overflow-y-auto bg-gray-50/30">
-            {/* Header / Sticky Bar */}
-            <div className="flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-10 py-4 px-6 border-b border-gray-100 -mx-1">
-                <Space direction="vertical" size={2}>
-                    <Space align="center">
-                        <Title level={4} style={{ margin: 0 }}>Đơn hàng #{order.code}</Title>
-                        <Tag color="blue" bordered={false} className="rounded-full">{order.status.toUpperCase()}</Tag>
-                    </Space>
-                    <Text type="secondary">{dayjs(order.createdAt).format('DD/MM/YYYY HH:mm')}</Text>
-                </Space>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
+            padding: '4px',
+            height: '100%',
+            overflowY: 'auto',
+            background: colors.background.body
+        }}>
+            {/* High-End Sticky Header */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                position: 'sticky',
+                top: 0,
+                backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                backdropFilter: 'blur(12px)',
+                zIndex: 10,
+                padding: '24px 32px',
+                borderBottom: `1px solid ${colors.neutral[100]}`,
+                margin: '0 -4px'
+            }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <Space align="center" size={16}>
+                            <Title level={4} style={{
+                                margin: 0,
+                                fontFamily: typography.fontFamily.serif,
+                                letterSpacing: '-0.01em',
+                                color: colors.primary.main
+                            }}>
+                                Order #{order.code}
+                            </Title>
+                            <Tag
+                                style={{
+                                    color: statusStyle.color,
+                                    background: statusStyle.bg,
+                                    border: `1px solid ${statusStyle.color}20`,
+                                    borderRadius: '100px',
+                                    padding: '2px 14px',
+                                    fontWeight: 700,
+                                    fontSize: '10px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.04em'
+                                }}
+                            >
+                                {order.status.replace('_', ' ')}
+                            </Tag>
+                        </Space>
 
-                <Space wrap>
-                    {order.status === OrderStatusEnum.PENDING && (
-                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatusEnum.CONFIRMED)}>Xác nhận đơn</Button>
-                    )}
-                    {order.status === OrderStatusEnum.CONFIRMED && (
-                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatusEnum.PROCESSING)}>Bắt đầu xử lý</Button>
-                    )}
-                    {order.status === OrderStatusEnum.PROCESSING && (
-                        <Button onClick={() => {
-                            setTrackingCode(order.trackingCode || '');
-                            setTrackingModalVisible(true);
-                        }}>Cập nhật vận đơn</Button>
-                    )}
-                    {order.status === OrderStatusEnum.PROCESSING && (
-                        <Button type="primary" onClick={() => handleUpdateStatus(OrderStatusEnum.SHIPPING)}>Bắt đầu giao hàng</Button>
-                    )}
-                    {order.status === OrderStatusEnum.SHIPPING && (
-                        <Button type="primary" className="bg-green-600 border-green-600" onClick={() => handleUpdateStatus(OrderStatusEnum.DELIVERED)}>Đã giao hàng</Button>
-                    )}
+                        {onClose && (
+                            <Button
+                                type="text"
+                                icon={<CloseOutlined style={{ fontSize: '16px' }} />}
+                                onClick={onClose}
+                                style={{ color: colors.neutral[400] }}
+                                className="hover-scale"
+                            />
+                        )}
+                    </div>
 
-                    {!([OrderStatusEnum.CANCELLED, OrderStatusEnum.DELIVERED, OrderStatusEnum.COMPLETED] as OrderStatus[]).includes(order.status) && (
-                        <Button danger onClick={() => setCancelModalVisible(true)}>Hủy đơn</Button>
-                    )}
-                </Space>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ color: colors.neutral[500], fontSize: '12px' }}>
+                            Created on {dayjs(order.createdAt).format('DD MMM, YYYY · HH:mm')}
+                        </Text>
+
+                        <Space wrap>
+                            {order.status === OrderStatusEnum.PENDING && (
+                                <Button
+                                    type="primary"
+                                    onClick={() => handleUpdateStatus(OrderStatusEnum.CONFIRMED)}
+                                    style={{ borderRadius: radius.xs, fontWeight: 600 }}
+                                >
+                                    Confirm Order
+                                </Button>
+                            )}
+                            {order.status === OrderStatusEnum.CONFIRMED && (
+                                <Button
+                                    type="primary"
+                                    onClick={() => handleUpdateStatus(OrderStatusEnum.PROCESSING)}
+                                    style={{ borderRadius: radius.xs, fontWeight: 600 }}
+                                >
+                                    Start Processing
+                                </Button>
+                            )}
+                            {order.status === OrderStatusEnum.PROCESSING && (
+                                <Button
+                                    onClick={() => {
+                                        setTrackingCode(order.trackingCode || '');
+                                        setTrackingModalVisible(true);
+                                    }}
+                                    style={{ borderRadius: radius.xs }}
+                                >
+                                    Update Tracking
+                                </Button>
+                            )}
+                            {order.status === OrderStatusEnum.PROCESSING && (
+                                <Button
+                                    type="primary"
+                                    onClick={() => handleUpdateStatus(OrderStatusEnum.SHIPPING)}
+                                    style={{ borderRadius: radius.xs, fontWeight: 600 }}
+                                >
+                                    Deploy Shipment
+                                </Button>
+                            )}
+                            {order.status === OrderStatusEnum.SHIPPING && (
+                                <Button
+                                    type="primary"
+                                    style={{ backgroundColor: colors.success.main, borderColor: colors.success.main, borderRadius: radius.xs, fontWeight: 600 }}
+                                    onClick={() => handleUpdateStatus(OrderStatusEnum.DELIVERED)}
+                                >
+                                    Mark Delivered
+                                </Button>
+                            )}
+
+                            {!([OrderStatusEnum.CANCELLED, OrderStatusEnum.DELIVERED, OrderStatusEnum.COMPLETED] as OrderStatus[]).includes(order.status) && (
+                                <Button
+                                    danger
+                                    onClick={() => setCancelModalVisible(true)}
+                                    style={{ borderRadius: radius.xs }}
+                                >
+                                    Cancel
+                                </Button>
+                            )}
+                        </Space>
+                    </div>
+                </div>
             </div>
 
-            <div className="px-5 pb-8 flex flex-col gap-6">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                    {/* Left Column: Items & Totals */}
-                    <div className="xl:col-span-2 flex flex-col gap-6">
-                        {/* Section: Sản phẩm */}
-                        <Card
-                            title={<Title level={5} style={{ margin: 0 }}>Sản phẩm ({order.items?.length || 0})</Title>}
-                            bordered={false}
-                            className="shadow-sm border border-gray-100 rounded-xl overflow-hidden"
+            <div style={{ padding: '0 32px 48px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+                    <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        {/* Section: Line Items */}
+                        <GlassCard
+                            title={<span style={{ fontFamily: typography.fontFamily.serif, color: colors.primary.main }}>Line Items</span>}
+                            variant="borderless"
                         >
                             <Table
                                 dataSource={order.items}
                                 rowKey="id"
                                 pagination={false}
-                                size="small"
+                                size="middle"
                                 columns={[
                                     {
-                                        title: 'Sản phẩm',
+                                        title: 'Product',
                                         key: 'product',
                                         render: (_, item) => (
-                                            <Space size="middle">
-                                                <Avatar shape="square" size={64} src={item.thumbnailUrl} icon={<UserOutlined />} className="bg-gray-100 border border-gray-50" />
-                                                <Space direction="vertical" size={0}>
-                                                    <Text strong className="line-clamp-1">{item.productName}</Text>
-                                                    <Text type="secondary" style={{ fontSize: '11px' }}>SKU: {item.sku}</Text>
+                                            <Space size="large">
+                                                <Avatar
+                                                    shape="square"
+                                                    size={72}
+                                                    src={item.thumbnailUrl}
+                                                    icon={<UserOutlined />}
+                                                    style={{
+                                                        border: `1px solid ${colors.border.subtle}`,
+                                                        borderRadius: radius.sm,
+                                                        background: colors.background.body
+                                                    }}
+                                                />
+                                                <Space orientation="vertical" size={2}>
+                                                    <Text strong style={{ color: colors.neutral[900], fontSize: '14px' }}>{item.productName}</Text>
+                                                    <Text style={{ fontSize: '12px', color: colors.neutral[500] }}>SKU: {item.sku}</Text>
                                                     {item.variantTitle && (
-                                                        <div className="flex gap-1 mt-1">
+                                                        <Space size={4} wrap style={{ marginTop: '4px' }}>
                                                             {Object.entries(item.variantTitle).map(([key, val]) => (
-                                                                <Tag key={key} style={{ fontSize: '10px', margin: 0 }} className="bg-gray-50 border-gray-100">{val as string}</Tag>
+                                                                <Tag key={key} style={{ fontSize: '10px', margin: 0, borderRadius: '4px' }} color="default">{val as string}</Tag>
                                                             ))}
-                                                        </div>
+                                                        </Space>
                                                     )}
                                                 </Space>
                                             </Space>
                                         ),
                                     },
                                     {
-                                        title: 'Giá',
+                                        title: 'Price',
                                         dataIndex: 'price',
                                         key: 'price',
                                         align: 'right',
-                                        render: (v) => `${v.toLocaleString()}đ`,
+                                        render: (v) => (
+                                            <Text style={{ color: colors.neutral[600] }}>
+                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)}
+                                            </Text>
+                                        ),
                                     },
                                     {
-                                        title: 'SL',
+                                        title: 'Qty',
                                         dataIndex: 'quantity',
                                         key: 'quantity',
                                         align: 'center',
+                                        render: (q) => <Text style={{ color: colors.neutral[900] }}>×{q}</Text>
                                     },
                                     {
-                                        title: 'Tổng',
+                                        title: 'Subtotal',
                                         dataIndex: 'totalLine',
                                         key: 'totalLine',
                                         align: 'right',
-                                        render: (v) => <Text strong>{v.toLocaleString()}đ</Text>,
+                                        render: (v) => <Text strong style={{ color: colors.primary.main }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)}</Text>,
                                     },
                                 ]}
                             />
 
-                            <Divider className="my-4" />
-
-                            <div className="flex justify-end pr-4">
-                                <Space direction="vertical" align="end" className="w-[300px]" size={4}>
-                                    <div className="flex justify-between w-full">
-                                        <Text type="secondary">Tạm tính:</Text>
-                                        <Text>{order.subTotal.toLocaleString()}đ</Text>
+                            <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <Space orientation="vertical" align="end" style={{ width: '300px' }} size={8}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                        <Text style={{ color: colors.neutral[500] }}>Subtotal</Text>
+                                        <Text>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.subTotal)}</Text>
                                     </div>
-                                    <div className="flex justify-between w-full">
-                                        <Text type="secondary">Phí vận chuyển:</Text>
-                                        <Text>{order.shippingFee.toLocaleString()}đ</Text>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                        <Text style={{ color: colors.neutral[500] }}>Shipping</Text>
+                                        <Text>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.shippingFee)}</Text>
                                     </div>
-                                    <div className="flex justify-between w-full">
-                                        <Text type="secondary">Giảm giá:</Text>
-                                        <Text className="text-red-500">-{order.discountAmount.toLocaleString()}đ</Text>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                        <Text style={{ color: colors.neutral[500] }}>Discounts</Text>
+                                        <Text style={{ color: colors.error.main }}>-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.discountAmount)}</Text>
                                     </div>
-                                    <Divider className="my-2" />
-                                    <div className="flex justify-between w-full items-baseline">
-                                        <Text strong>Tổng thanh toán:</Text>
-                                        <Title level={4} style={{ margin: 0, color: '#1677ff' }}>{order.totalAmount.toLocaleString()}đ</Title>
+                                    <Divider style={{ margin: '12px 0' }} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'baseline' }}>
+                                        <Text strong style={{ color: colors.primary.main, fontSize: '15px' }}>Total Amount</Text>
+                                        <Title level={3} style={{ margin: 0, color: colors.secondary.main, fontFamily: typography.fontFamily.sans }}>
+                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.totalAmount)}
+                                        </Title>
                                     </div>
                                 </Space>
                             </div>
-                        </Card>
+                        </GlassCard>
 
-                        {/* Section: Thanh toán (Professional Audit View) */}
-                        <Card title={<Title level={5} style={{ margin: 0 }}>Giao dịch thanh toán</Title>} bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
-                            <div className="flex flex-col gap-4">
-                                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-100">
-                                    <Space size="large">
-                                        <Space direction="vertical" size={0}>
-                                            <Text type="secondary" style={{ fontSize: '11px' }}>PHƯƠNG THỨC</Text>
-                                            <Space>
-                                                <WalletOutlined />
-                                                <Text strong>{order.paymentMethod}</Text>
+                        {/* Section: Financial Ledger */}
+                        <GlassCard
+                            title={<span style={{ fontFamily: typography.fontFamily.serif, color: colors.primary.main }}>Financial Ledger</span>}
+                            variant="borderless"
+                        >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    background: colors.background.surface,
+                                    padding: '20px 24px',
+                                    borderRadius: radius.md,
+                                    border: `1px solid ${colors.border.subtle}`
+                                }}>
+                                    <Space size={48}>
+                                        <Space orientation="vertical" size={2}>
+                                            <Text style={{ fontSize: '10px', color: colors.neutral[500], textTransform: 'uppercase', letterSpacing: '0.05em' }}>METHOD</Text>
+                                            <Space size={8}>
+                                                <WalletOutlined style={{ color: colors.primary.main }} />
+                                                <Text strong style={{ color: colors.primary.main }}>{order.paymentMethod}</Text>
                                             </Space>
                                         </Space>
                                         <Divider type="vertical" style={{ height: 32 }} />
-                                        <Space direction="vertical" size={0}>
-                                            <Text type="secondary" style={{ fontSize: '11px' }}>TRẠNG THÁI</Text>
-                                            <Tag color={order.paymentStatus === 'paid' ? 'green' : 'orange'} bordered={false} className="font-bold">
+                                        <Space orientation="vertical" size={2}>
+                                            <Text style={{ fontSize: '10px', color: colors.neutral[500], textTransform: 'uppercase', letterSpacing: '0.05em' }}>STATUS</Text>
+                                            <Tag color={order.paymentStatus === 'paid' ? 'success' : 'warning'} bordered={false} style={{ fontWeight: 700, borderRadius: '100px' }}>
                                                 {order.paymentStatus.toUpperCase()}
                                             </Tag>
                                         </Space>
                                     </Space>
 
                                     {order.paymentStatus === 'unpaid' && order.paymentMethod === 'COD' && (
-                                        <Button size="small" type="primary">Xác nhận thanh toán (COD)</Button>
+                                        <Button size="middle" type="primary" style={{ borderRadius: radius.sm }}>Log COD Receipt</Button>
                                     )}
                                 </div>
 
                                 {order.transactions && order.transactions.length > 0 ? (
-                                    <div className="mt-2">
-                                        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Lịch sử giao dịch:</Text>
-                                        <Table
-                                            dataSource={order.transactions}
-                                            rowKey="id"
-                                            pagination={false}
-                                            size="small"
-                                            columns={[
-                                                {
-                                                    title: 'Mã GD',
-                                                    dataIndex: 'transactionCode',
-                                                    key: 'transactionCode',
-                                                    render: (v) => <Text style={{ fontSize: '12px' }}>{v || 'N/A'}</Text>
-                                                },
-                                                {
-                                                    title: 'Loại',
-                                                    dataIndex: 'type',
-                                                    key: 'type',
-                                                    render: (v) => <Tag style={{ fontSize: '10px' }} color={v === 'payment' ? 'blue' : 'orange'}>{v.toUpperCase()}</Tag>
-                                                },
-                                                {
-                                                    title: 'Số tiền',
-                                                    dataIndex: 'amount',
-                                                    key: 'amount',
-                                                    align: 'right',
-                                                    render: (v) => <Text style={{ fontSize: '12px' }}>{v.toLocaleString()}đ</Text>
-                                                },
-                                                {
-                                                    title: 'Trạng thái',
-                                                    dataIndex: 'status',
-                                                    key: 'status',
-                                                    render: (v) => <Tag bordered={false} color={v === 'success' ? 'green' : 'red'} style={{ fontSize: '10px' }}>{v.toUpperCase()}</Tag>
-                                                },
-                                                {
-                                                    title: 'Thời gian',
-                                                    dataIndex: 'createdAt',
-                                                    key: 'createdAt',
-                                                    render: (v) => <Text type="secondary" style={{ fontSize: '11px' }}>{dayjs(v).format('DD/MM HH:mm')}</Text>
-                                                }
-                                            ]}
-                                        />
-                                    </div>
+                                    <Table
+                                        dataSource={order.transactions}
+                                        rowKey="id"
+                                        pagination={false}
+                                        size="small"
+                                        style={{ marginTop: '8px' }}
+                                        columns={[
+                                            {
+                                                title: 'Transaction Reference',
+                                                dataIndex: 'transactionCode',
+                                                key: 'transactionCode',
+                                                render: (v) => <Text style={{ fontSize: '12px', fontFamily: 'monospace', color: colors.neutral[600] }}>{v || 'N/A'}</Text>
+                                            },
+                                            {
+                                                title: 'Type',
+                                                dataIndex: 'type',
+                                                key: 'type',
+                                                render: (v) => <Tag style={{ fontSize: '10px', borderRadius: '4px' }} color={v === 'payment' ? 'processing' : 'warning'}>{v.toUpperCase()}</Tag>
+                                            },
+                                            {
+                                                title: 'Amount',
+                                                dataIndex: 'amount',
+                                                key: 'amount',
+                                                align: 'right',
+                                                render: (v) => <Text strong style={{ fontSize: '13px' }}>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v)}</Text>
+                                            },
+                                            {
+                                                title: 'Status',
+                                                dataIndex: 'status',
+                                                key: 'status',
+                                                render: (v) => <Tag bordered={false} color={v === 'success' ? 'success' : 'error'} style={{ fontSize: '10px', fontWeight: 600 }}>{v.toUpperCase()}</Tag>
+                                            },
+                                            {
+                                                title: 'Log Date',
+                                                dataIndex: 'createdAt',
+                                                key: 'createdAt',
+                                                render: (v) => <Text style={{ fontSize: '11px', color: colors.neutral[500] }}>{dayjs(v).format('DD MMM, HH:mm')}</Text>
+                                            }
+                                        ]}
+                                    />
                                 ) : (
-                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có lịch sử giao dịch" />
+                                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No financial events logged" />
                                 )}
                             </div>
-                        </Card>
+                        </GlassCard>
                     </div>
 
-                    {/* Right Column: Customer & Timeline */}
-                    <div className="flex flex-col gap-6 h-full">
-                        {/* Section: Khách hàng */}
-                        <Card title={<Title level={5} style={{ margin: 0 }}>Khách hàng</Title>} bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
-                            <Space align="center" style={{ marginBottom: 16 }}>
-                                <Avatar size={48} icon={<UserOutlined />} className="bg-blue-50 text-blue-500" />
-                                <Space direction="vertical" size={0}>
-                                    <Text strong>{order.shippingAddress.fullName}</Text>
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>{order.user?.email || 'Khách vãng lai'}</Text>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                        {/* Section: Customer Profile */}
+                        <GlassCard title={<span style={{ fontFamily: typography.fontFamily.serif, color: colors.primary.main }}>Customer Profile</span>} variant="borderless">
+                            <Space align="center" style={{ marginBottom: 24 }}>
+                                <Avatar size={56} icon={<UserOutlined />} style={{ backgroundColor: `${colors.primary.main}12`, color: colors.primary.main }} />
+                                <Space orientation="vertical" size={2}>
+                                    <Text strong style={{ fontSize: '16px', color: colors.neutral[900] }}>{order.shippingAddress.fullName}</Text>
+                                    <Text style={{ fontSize: '13px', color: colors.neutral[500] }}>{order.user?.email || 'Registered Guest'}</Text>
                                 </Space>
                             </Space>
-                            <Divider style={{ margin: '12px 0' }} />
-                            <Descriptions column={1} size="small" labelStyle={{ color: '#8c8c8c' }}>
-                                <Descriptions.Item label="Điện thoại">{order.shippingAddress.phone}</Descriptions.Item>
-                                <Descriptions.Item label="Địa chỉ">
-                                    <Paragraph className="mb-0 text-gray-600">
-                                        {order.shippingAddress.address}, {order.shippingAddress.ward}, {order.shippingAddress.district}, {order.shippingAddress.city}
+                            <Divider style={{ margin: '16px 0' }} />
+                            <Descriptions column={1} size="small" labelStyle={{ color: colors.neutral[500], width: '80px' }}>
+                                <Descriptions.Item label="Phone">{order.shippingAddress.phone}</Descriptions.Item>
+                                <Descriptions.Item label="Address">
+                                    <Paragraph style={{ marginBottom: 0, color: colors.neutral[700], fontSize: '13px', lineHeight: '1.6' }}>
+                                        {order.shippingAddress.address}, {order.shippingAddress.ward}<br />
+                                        {order.shippingAddress.district}, {order.shippingAddress.city}
                                     </Paragraph>
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Ghi chú">
-                                    <Text italic className="text-orange-400">{order.note || 'Không có ghi chú'}</Text>
+                                <Descriptions.Item label="Instructions">
+                                    <Text italic style={{ color: colors.secondary.main, fontSize: '13px' }}>{order.note || 'No specific instructions logged'}</Text>
                                 </Descriptions.Item>
                             </Descriptions>
-                        </Card>
+                        </GlassCard>
 
-                        {/* Section: Vận chuyển */}
-                        <Card title={<Title level={5} style={{ margin: 0 }}>Vận chuyển</Title>} bordered={false} className="shadow-sm border border-gray-100 rounded-xl">
-                            <div className="bg-gray-50 p-3 rounded-lg flex items-center justify-between mb-4">
+                        {/* Section: Operational Timeline */}
+                        <GlassCard title={<span style={{ fontFamily: typography.fontFamily.serif, color: colors.primary.main }}>Operations Log</span>} variant="borderless">
+                            <div style={{ background: colors.background.surface, padding: '16px', borderRadius: radius.md, border: `1px solid ${colors.border.subtle}`, marginBottom: '24px' }}>
                                 <Space>
-                                    <CarOutlined className="text-gray-400" />
-                                    <Text type="secondary">Mã vận đơn:</Text>
-                                    <Text strong>{order.trackingCode || 'Chưa cập nhật'}</Text>
+                                    <CarOutlined style={{ color: colors.neutral[400] }} />
+                                    <Text style={{ fontSize: '12px', color: colors.neutral[500], textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tracking Reference:</Text>
+                                    <Text strong style={{ color: colors.primary.main }}>{order.trackingCode || 'NOT_ASSIGNED'}</Text>
                                 </Space>
-                                {order.trackingCode && <Text copyable={{ text: order.trackingCode }} />}
                             </div>
                             <Timeline
                                 reverse={true}
                                 items={order.timelines?.map((t) => ({
                                     dot: getTimelineIcon(t),
                                     children: (
-                                        <div className="flex flex-col gap-0.5 mb-2">
-                                            <div className="flex justify-between items-start">
-                                                <Text strong style={{ fontSize: '13px' }}>{t.action.replace('STATUS_UPDATE_', '').replace('_', ' ')}</Text>
-                                                <Text type="secondary" style={{ fontSize: '10px' }}>{dayjs(t.createdAt).format('HH:mm')}</Text>
+                                        <div style={{ marginBottom: '16px' }}>
+                                            <div style={{ display: 'flex', justifySelf: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                                                <Text strong style={{ fontSize: '13px', color: colors.neutral[900] }}>
+                                                    {t.action.replace('STATUS_UPDATE_', '').replace('_', ' ')}
+                                                </Text>
+                                                <Text style={{ fontSize: '10px', color: colors.neutral[400], marginLeft: 'auto' }}>
+                                                    {dayjs(t.createdAt).format('HH:mm')}
+                                                </Text>
                                             </div>
-                                            <Text type="secondary" style={{ fontSize: '11px' }}>{t.description}</Text>
-                                            <Text type="secondary" style={{ fontSize: '10px' }}>{dayjs(t.createdAt).format('DD/MM/YYYY')}</Text>
+                                            <Paragraph style={{ fontSize: '12px', color: colors.neutral[500], margin: '4px 0' }}>{t.description}</Paragraph>
+                                            <Text style={{ fontSize: '10px', color: colors.neutral[400] }}>{dayjs(t.createdAt).format('DD MMM, YYYY')}</Text>
                                         </div>
                                     ),
                                 })) || []}
                             />
-                        </Card>
+                        </GlassCard>
                     </div>
                 </div>
             </div>
 
-            {/* Modals from before remain same */}
+            {/* Premium Decision Overlays */}
             <Modal
-                title="Lý do hủy đơn"
+                title="Authorization: Order Cancellation"
                 open={cancelModalVisible}
                 onOk={handleCancelOrder}
                 onCancel={() => setCancelModalVisible(false)}
-                okText="Xác nhận hủy"
-                cancelText="Bỏ qua"
+                okText="Revoke Order"
+                cancelText="Retain"
                 okButtonProps={{ danger: true, loading: cancelMutation.isPending }}
+                style={{ borderRadius: radius.lg }}
             >
+                <div style={{ marginBottom: '16px' }}>
+                    <Text type="secondary">Provide a detailed justification for the operational revocation of this order.</Text>
+                </div>
                 <Input.TextArea
-                    placeholder="Nhập lý do khách hủy hoặc shop hủy..."
+                    placeholder="Justification required for audit logs..."
                     rows={4}
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
+                    style={{ borderRadius: radius.sm }}
                 />
             </Modal>
+
             <Modal
-                title="Cập nhật thông tin vận chuyển"
+                title="Logistics: Tracking Assignment"
                 open={trackingModalVisible}
                 onOk={handleUpdateTracking}
                 onCancel={() => setTrackingModalVisible(false)}
                 okButtonProps={{ loading: trackingMutation.isPending }}
             >
-                <Space direction="vertical" className="w-full" size="middle">
+                <Space orientation="vertical" style={{ width: '100%' }} size="middle">
                     <div>
-                        <Text strong>Mã vận đơn</Text>
+                        <Text strong>Consignment Reference</Text>
                         <Input
-                            placeholder="Nhập mã từ đơn vị vận chuyển..."
+                            placeholder="Enter carrier reference number..."
                             value={trackingCode}
                             onChange={(e) => setTrackingCode(e.target.value)}
-                            className="mt-1"
+                            style={{ marginTop: '8px', borderRadius: radius.sm }}
                         />
                     </div>
                 </Space>

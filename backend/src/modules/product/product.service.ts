@@ -16,7 +16,7 @@ export class ProductService {
     private readonly paginationService: PaginationService,
     private readonly productStorageService: ProductStorageService,
     private readonly variantService: VariantService,
-  ) { }
+  ) {}
 
   // ---------------------------
   // GET ALL PRODUCTS (PAGINATED)
@@ -68,9 +68,7 @@ export class ProductService {
         // P0-5 FIX: Use Prisma AND operator instead of flat spread merge.
         // Flat spread (`{ ...baseWhere, ...args.where }`) would silently overwrite
         // top-level keys in baseWhere (e.g. deletedAt: null) if args.where shares the key.
-        const where: ProductWhereInput = args.where
-          ? { AND: [baseWhere, args.where] }
-          : baseWhere;
+        const where: ProductWhereInput = args.where ? { AND: [baseWhere, args.where] } : baseWhere;
 
         return this.prisma.product.findMany({
           where,
@@ -95,9 +93,7 @@ export class ProductService {
         });
       },
       count: (args) => {
-        const where: ProductWhereInput = args.where
-          ? { AND: [baseWhere, args.where] }
-          : baseWhere;
+        const where: ProductWhereInput = args.where ? { AND: [baseWhere, args.where] } : baseWhere;
         return this.prisma.product.count({ where });
       },
       dto,
@@ -358,20 +354,20 @@ export class ProductService {
     const variantsInput: VariantInput[] = hasVariants
       ? (dto.variants as VariantInput[]) || []
       : [
-        {
-          sku: undefined,
-          price: dto.basePrice!,
-          compareAtPrice: dto.baseCompareAtPrice,
-          costPrice: dto.baseCostPrice,
-          weightGram: dto.baseWeightGram,
-          variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
-          isDefault: true,
-          isActive: dto.isActive ?? true,
-          position: 0,
-          attributeValueIds: [],
-          mediaIndexes: [],
-        },
-      ];
+          {
+            sku: undefined,
+            price: dto.basePrice!,
+            compareAtPrice: dto.baseCompareAtPrice,
+            costPrice: dto.baseCostPrice,
+            weightGram: dto.baseWeightGram,
+            variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
+            isDefault: true,
+            isActive: dto.isActive ?? true,
+            position: 0,
+            attributeValueIds: [],
+            mediaIndexes: [],
+          },
+        ];
 
     const defaultIndexExplicit = variantsInput.findIndex((v) => v.isDefault);
     const defaultIndex = defaultIndexExplicit >= 0 ? defaultIndexExplicit : 0;

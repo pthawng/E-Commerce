@@ -16,7 +16,7 @@ export class RbacService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private permissionCacheService: PermissionCacheService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     this.logger.log('RbacService initialized. Seeding skip (handled by orchestrator).');

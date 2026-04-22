@@ -1,4 +1,6 @@
 import { SystemContextStore } from '@common/context/system-context.store';
+import { PaginationService } from '@common/pagination';
+import { Principal } from '@common/types/principal.types';
 import {
   BadRequestException,
   ConflictException,
@@ -19,9 +21,10 @@ import {
   TransactionStatusEnum,
   TransactionTypeEnum,
 } from '@prisma/client';
-import { Principal } from '@common/types/principal.types';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { OrderPaymentService } from '../order/services/order-payment.service';
+import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
 import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { VNPayProvider } from './providers/vnpay/vnpay.provider';
@@ -34,7 +37,6 @@ import {
   RefundResult,
   TransactionStatus,
 } from './types/payment.types';
-import { OrderPaymentService } from '../order/services/order-payment.service';
 
 /**
  * Payment Service
@@ -53,6 +55,7 @@ export class PaymentService {
     private readonly idempotencyService: IdempotencyService,
     private readonly stateMachine: PaymentStateMachine,
     private readonly inventoryService: InventoryService,
+    private readonly paginationService: PaginationService,
     @Inject(forwardRef(() => OrderPaymentService))
     private readonly orderPaymentService: OrderPaymentService,
   ) {
@@ -202,13 +205,59 @@ export class PaymentService {
       // 2. Acquire Distributed Lock for atomic execution
       const lockToken = await this.idempotencyService.acquireLock(executionKey);
       if (!lockToken) {
-        this.logger.warn(`Concurrent execution detected for transaction ${verifiedData.transactionId}`);
+        this.logger.warn(
+          `Concurrent execution detected for transaction ${verifiedData.transactionId}`,
+        );
         throw new ConflictException('Payment processing in progress. Please retry.');
       }
 
       try {
         await this.prisma.$transaction(async (tx) => {
-          // 1. Find Payment record (Database-level idempotency check with SELECT FOR UPDATE)
+          // 1. Handle Refund Reconciliation (New Stateful Flow)
+          if (verifiedData.transactionType === 'refund') {
+            const refund = await (tx as any).refund.findFirst({
+              where: {
+                OR: [
+                  { externalTransactionId: verifiedData.transactionId },
+                  { id: verifiedData.gatewayResponse?.internalRefundId as string }, // Fallback to metadata
+                ],
+              },
+            });
+
+            if (refund) {
+              const nextRefundStatus =
+                verifiedData.status === TransactionStatus.SUCCESS
+                  ? ('SUCCESS' as any)
+                  : ('FAILED' as any);
+
+              await (tx as any).refund.update({
+                where: { id: refund.id },
+                data: {
+                  status: nextRefundStatus,
+                  externalTransactionId: verifiedData.transactionId,
+                  metadata: {
+                    ...((refund.metadata as object) || {}),
+                    webhook: verifiedData.gatewayResponse,
+                  } as any,
+                },
+              });
+
+              if (nextRefundStatus === ('SUCCESS' as any)) {
+                await tx.orderTimeline.create({
+                  data: {
+                    orderId: refund.orderId,
+                    action: 'REFUND_RECONCILED',
+                    description: `Refund ${refund.id} confirmed via ${paymentMethod} webhook.`,
+                    actorType: 'system',
+                  },
+                });
+              }
+
+              return verifiedData;
+            }
+          }
+
+          // 2. Find Payment record (Standard Payment Flow)
           const [payment] = await tx.$queryRawUnsafe<any[]>(
             `SELECT * FROM "Payment" WHERE "providerTransactionId" = $1 FOR UPDATE NOWAIT`,
             verifiedData.transactionId,
@@ -241,14 +290,19 @@ export class PaymentService {
             payment.status === PaymentProcessingStatus.SUCCESS ||
             payment.status === PaymentProcessingStatus.FAILED
           ) {
-            this.logger.log(`Payment ${payment.id} already in terminal state: ${payment.status}. Returning current data.`);
+            this.logger.log(
+              `Payment ${payment.id} already in terminal state: ${payment.status}. Returning current data.`,
+            );
 
             // Reconstruct verifiedData from DB since we already did the work
             return {
               orderId: payment.orderId,
               transactionId: payment.providerTransactionId,
               amount: Number(payment.amount),
-              status: payment.status === PaymentProcessingStatus.SUCCESS ? TransactionStatus.SUCCESS : TransactionStatus.FAILED,
+              status:
+                payment.status === PaymentProcessingStatus.SUCCESS
+                  ? TransactionStatus.SUCCESS
+                  : TransactionStatus.FAILED,
               paymentMethod,
               gatewayResponse: payment.rawPayload,
             };
@@ -297,7 +351,9 @@ export class PaymentService {
           } else {
             // 7. Handle FAILURE flow
             const isMaxRetries = (order as any).retryCount >= 5;
-            const finalOrderStatus = isMaxRetries ? OrderStatusEnum.cancelled : OrderStatusEnum.pending_payment;
+            const finalOrderStatus = isMaxRetries
+              ? OrderStatusEnum.cancelled
+              : OrderStatusEnum.pending_payment;
 
             await tx.order.update({
               where: { id: payment.orderId },
@@ -445,6 +501,7 @@ export class PaymentService {
     amount: number,
     reason?: string,
     restoreInventory: boolean = true,
+    txClient?: Prisma.TransactionClient,
   ): Promise<RefundResult> {
     return SystemContextStore.asInternal('PaymentService', async () => {
       const idempotencyKey = this.idempotencyService.generatePaymentKey(orderId, 'refund');
@@ -455,7 +512,7 @@ export class PaymentService {
       if (!lockToken) throw new ConflictException('Refund already in progress. Please wait.');
 
       try {
-        return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const execute = async (tx: Prisma.TransactionClient) => {
           const order = await tx.order.findUnique({
             where: { id: orderId },
             include: { transactions: true, items: true },
@@ -464,31 +521,42 @@ export class PaymentService {
           if (!order) throw new NotFoundException(`Order ${orderId} not found`);
 
           const existingRefund = order.transactions.find(
-            (t) => t.type === TransactionTypeEnum.refund && t.status === TransactionStatusEnum.success,
+            (t) =>
+              t.type === TransactionTypeEnum.refund && t.status === TransactionStatusEnum.success,
           );
           if (existingRefund) throw new BadRequestException('Order already refunded');
 
           const payment = await tx.payment.findFirst({
             where: { orderId, status: PaymentProcessingStatus.SUCCESS },
           });
-          if (!payment) throw new BadRequestException('No successful payment record found for order');
+          if (!payment)
+            throw new BadRequestException('No successful payment record found for order');
 
           const paymentTransaction = order.transactions.find(
-            (t) => t.status === TransactionStatusEnum.success && t.type === TransactionTypeEnum.payment,
+            (t) =>
+              t.status === TransactionStatusEnum.success && t.type === TransactionTypeEnum.payment,
           );
-          if (!paymentTransaction) throw new BadRequestException('No successful payment transaction found for order');
+          if (!paymentTransaction)
+            throw new BadRequestException('No successful payment transaction found for order');
 
-          if (amount > Number(order.totalAmount)) throw new BadRequestException('Refund amount cannot exceed order total');
+          if (amount > Number(order.totalAmount))
+            throw new BadRequestException('Refund amount cannot exceed order total');
 
           const provider = this.getProvider(paymentTransaction.provider as PaymentMethodEnum);
-          const refundResult = await provider.processRefund(paymentTransaction.transactionCode || '', amount, reason);
+          const refundResult = await provider.processRefund(
+            paymentTransaction.transactionCode || '',
+            amount,
+            reason,
+          );
 
           await tx.paymentTransaction.create({
             data: {
               orderId,
               amount,
               type: TransactionTypeEnum.refund,
-              status: refundResult.success ? TransactionStatusEnum.success : TransactionStatusEnum.failed,
+              status: refundResult.success
+                ? TransactionStatusEnum.success
+                : TransactionStatusEnum.failed,
               provider: paymentTransaction.provider,
               method: paymentTransaction.method,
               transactionCode: refundResult.refundTransactionId,
@@ -497,7 +565,11 @@ export class PaymentService {
             },
           });
 
-          this.stateMachine.validateTransition(payment.id, payment.status, PaymentProcessingStatus.REFUNDED);
+          this.stateMachine.validateTransition(
+            payment.id,
+            payment.status,
+            PaymentProcessingStatus.REFUNDED,
+          );
           await tx.payment.update({
             where: { id: payment.id },
             data: {
@@ -526,7 +598,9 @@ export class PaymentService {
 
           await this.idempotencyService.storeResult(idempotencyKey, refundResult);
           return refundResult;
-        });
+        };
+
+        return txClient ? execute(txClient) : this.prisma.$transaction(execute);
       } finally {
         await this.idempotencyService.releaseLock(idempotencyKey, lockToken);
       }
@@ -560,7 +634,11 @@ export class PaymentService {
 
         if (!vietqrPayment) throw new BadRequestException('No pending VIETQR payment found');
 
-        this.stateMachine.validateTransition(vietqrPayment.id, vietqrPayment.status, PaymentProcessingStatus.SUCCESS);
+        this.stateMachine.validateTransition(
+          vietqrPayment.id,
+          vietqrPayment.status,
+          PaymentProcessingStatus.SUCCESS,
+        );
 
         await tx.payment.update({
           where: { id: vietqrPayment.id },
@@ -572,7 +650,8 @@ export class PaymentService {
         });
 
         const vietqrTransaction = order.transactions.find(
-          (t) => t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
+          (t) =>
+            t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
         );
 
         if (vietqrTransaction) {
@@ -587,7 +666,11 @@ export class PaymentService {
 
         await tx.order.update({
           where: { id: orderId },
-          data: { paymentStatus: PaymentStatusEnum.paid, status: OrderStatusEnum.confirmed, confirmedAt: new Date() },
+          data: {
+            paymentStatus: PaymentStatusEnum.paid,
+            status: OrderStatusEnum.confirmed,
+            confirmedAt: new Date(),
+          },
         });
 
         // Clear Cart (Only on success)
@@ -618,7 +701,10 @@ export class PaymentService {
   async getPaymentProcessingStatus(orderIdOrToken: string, principal?: Principal) {
     let order: any = null;
 
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orderIdOrToken);
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        orderIdOrToken,
+      );
 
     if (isUuid) {
       order = await this.prisma.order.findUnique({
@@ -821,22 +907,11 @@ export class PaymentService {
     return this.paypalProvider;
   }
 
-  /**
-   * Find all transactions for admin (paginated)
-   */
-  async findTransactions(filters: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    provider?: string;
-    orderCode?: string;
-  }) {
-    const { page = 1, limit = 10, status, provider, orderCode } = filters;
-    const skip = (Number(page) - 1) * Number(limit);
-    const take = Number(limit);
+  async findTransactions(query: TransactionQueryDto) {
+    const { status, provider, orderCode } = query;
 
     const where: Prisma.PaymentTransactionWhereInput = {};
-    if (status) where.status = status as TransactionStatus;
+    if (status) where.status = status as any;
     if (provider) where.provider = provider;
     if (orderCode) {
       where.order = {
@@ -847,32 +922,22 @@ export class PaymentService {
       };
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.paymentTransaction.findMany({
-        where,
-        skip,
-        take,
-        include: {
-          order: {
-            select: {
-              id: true,
-              code: true,
-            },
+    return this.paginationService.paginate({
+      findMany: (args) => this.prisma.paymentTransaction.findMany(args),
+      count: (args) => this.prisma.paymentTransaction.count(args),
+      dto: query,
+      where,
+      allowedSortFields: ['createdAt', 'amount', 'status'],
+      defaultSort: { field: 'createdAt', order: 'desc' },
+      basePath: '/api/payments/transactions',
+      include: {
+        order: {
+          select: {
+            id: true,
+            code: true,
           },
         },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.paymentTransaction.count({ where }),
-    ]);
-
-    return {
-      items,
-      meta: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / Number(limit)),
       },
-    };
+    });
   }
 }

@@ -1,60 +1,71 @@
 import React from 'react';
-import { Card, Table, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { GlassCard } from '@/shared/ui/GlassCard';
+import { useLowStockAlerts } from '@/entities/dashboard/model/queries';
+import { LuxuryTable } from '@/shared/ui/DataTable';
+import type { ColumnSchema } from '@/shared/ui/DataTable';
+import { colors } from '@/shared/design-system/colors';
 
 interface LowStockType {
-    key: string;
+    id: string;
     product: string;
     sku: string;
     stock: number;
     threshold: number;
+    status: string;
 }
 
-const lowStockData: LowStockType[] = [
-    { key: '1', product: 'Classic Gold Chain', sku: 'CGC-001', stock: 2, threshold: 5 },
-    { key: '2', product: 'Silver Charm Bracelet', sku: 'SCB-002', stock: 0, threshold: 10 },
-    { key: '3', product: 'Ruby Pendant', sku: 'RP-003', stock: 1, threshold: 3 },
-    { key: '4', product: 'Sapphire Ring Size 7', sku: 'SR-007', stock: 3, threshold: 5 },
-];
+export const LowStockAlerts: React.FC<{ hideTitle?: boolean }> = ({ hideTitle }) => {
+    const { data: rawData, isLoading } = useLowStockAlerts(5);
 
-const columns: ColumnsType<LowStockType> = [
-    {
-        title: 'Product',
-        dataIndex: 'product',
-        key: 'product',
-    },
-    {
-        title: 'SKU',
-        dataIndex: 'sku',
-        key: 'sku',
-        render: (sku) => <Text type="secondary">{sku}</Text>
-    },
-    {
-        title: 'Stock',
-        key: 'stock',
-        render: (_, record) => {
-            const isOutOfStock = record.stock === 0;
-            return (
-                <Tag color={isOutOfStock ? 'red' : 'warning'}>
-                    {record.stock} left (Min: {record.threshold})
-                </Tag>
-            );
+    const dataSource: LowStockType[] = (rawData || []).map(item => ({
+        id: item.id,
+        product: item.productVariant.product.name.vi || 'N/A',
+        sku: item.productVariant.sku,
+        stock: item.quantity,
+        status: item.quantity === 0 ? 'error' : 'warning',
+        threshold: 10,
+    }));
+
+    const schema: ColumnSchema<LowStockType & { status: string }>[] = [
+        {
+            title: 'Product',
+            key: 'product',
+            type: 'text',
         },
-    },
-];
+        {
+            title: 'SKU',
+            key: 'sku',
+            type: 'text',
+        },
+        {
+            title: 'Stock Status',
+            key: 'status',
+            type: 'status-badge',
+            renderOptions: {
+                statusMap: {
+                    error: {
+                        color: colors.error.main,
+                        bg: `${colors.error.main}12`,
+                        label: 'Out of Stock'
+                    } as any,
+                    warning: {
+                        color: colors.warning.main,
+                        bg: `${colors.warning.main}12`,
+                        label: 'Low Stock'
+                    } as any
+                }
+            }
+        }
+    ];
 
-import { Typography } from 'antd';
-const { Text } = Typography;
-
-export const LowStockAlerts: React.FC = () => {
     return (
-        <Card title="Low Stock Alerts" bordered={false}>
-            <Table
-                columns={columns}
-                dataSource={lowStockData}
+        <GlassCard title={hideTitle ? undefined : "Low Stock Alerts"} variant="borderless" loading={isLoading}>
+            <LuxuryTable<LowStockType & { status: string }>
+                schema={schema}
+                dataSource={dataSource}
+                rowKey="id"
                 pagination={false}
-                size="middle"
             />
-        </Card>
+        </GlassCard>
     );
 };

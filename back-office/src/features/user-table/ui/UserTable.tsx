@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
-import {
-    Table, Tag, Button, Space, Input, Select, Popconfirm, Descriptions,
-    Typography, Row, Col, Tooltip, message, Form, Avatar,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Space, Input, Select, Popconfirm, Descriptions, Typography, Row, Col, Tooltip, message, Avatar, Button, Tag } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUsersApi, deleteUserApi } from '@/entities/user/api';
 import type { User, UserQueryDto } from '@/entities/user/model/types';
-import {
-    DeleteOutlined, PlusOutlined, SearchOutlined, ReloadOutlined,
-    UserOutlined, EditOutlined,
-} from '@ant-design/icons';
+import { DeleteOutlined, ReloadOutlined, UserOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons';
 import { UserFormDialog } from '@/features/user-form/ui/UserFormDialog';
 import { useAuth } from '@/entities/user/hooks';
 import { SplitLayout } from '@/shared/ui/SplitLayout';
+import { LuxuryTable } from '@/shared/ui/DataTable';
+import type { ColumnSchema, RowActionConfig } from '@/shared/ui/DataTable';
+import { colors } from '@/shared/design-system/colors';
 
 const { Title, Text } = Typography;
 
@@ -71,13 +67,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, currentUserId, onClose, o
                         okButtonProps={{ danger: true }}
                         disabled={isSelf}
                     >
-                        <Button
-                            danger
-                            size="small"
-                            icon={<DeleteOutlined />}
-                            loading={deleteMutation.isPending}
-                            disabled={isSelf}
-                        >
+                        <Button danger size="small" icon={<DeleteOutlined />} loading={deleteMutation.isPending} disabled={isSelf}>
                             Delete
                         </Button>
                     </Popconfirm>
@@ -89,7 +79,7 @@ const UserDetail: React.FC<UserDetailProps> = ({ user, currentUserId, onClose, o
                 <Descriptions.Item label="Full Name">{user.fullName}</Descriptions.Item>
                 <Descriptions.Item label="Email">{user.email}</Descriptions.Item>
                 <Descriptions.Item label="Role">
-                    <Tag color={ROLE_COLORS[user.role] ?? 'default'}>{user.role}</Tag>
+                    <Tag color={ROLE_COLORS[user.role] ?? 'default'} style={{ textTransform: 'uppercase' }}>{user.role}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Status">
                     <Tag color={user.isActive ? 'success' : 'error'}>
@@ -127,46 +117,64 @@ export const UserTable: React.FC = () => {
         setIsFormVisible(true);
     };
 
-    const handleCreate = () => {
-        setEditingUser(undefined);
-        setIsFormVisible(true);
-    };
-
-    const columns: ColumnsType<User> = [
+    const schema: ColumnSchema<User>[] = [
         {
             title: 'User',
-            key: 'user',
-            render: (_, r) => (
-                <Space direction="vertical" size={0}>
-                    <Text strong>{r.fullName}</Text>
-                    <Text type="secondary" style={{ fontSize: 13 }}>{r.email}</Text>
-                </Space>
-            ),
+            key: 'fullName',
+            type: 'thumbnail-info',
+            renderOptions: {
+                imageKey: 'avatarUrl',
+                subKey: 'email',
+            }
         },
         {
             title: 'Role',
-            dataIndex: 'role',
-            width: 130,
-            render: (role: string) => (
-                <Tag color={ROLE_COLORS[role] ?? 'default'} style={{ textTransform: 'uppercase' }}>
-                    {role}
-                </Tag>
-            ),
+            key: 'role',
+            type: 'status-badge',
+            width: 140,
+            renderOptions: {
+                statusMap: {
+                    admin: { color: colors.warning.main, bg: `${colors.warning.main}12` },
+                    manager: { color: colors.info.main, bg: `${colors.info.main}12` },
+                    staff: { color: colors.success.main, bg: `${colors.success.main}12` },
+                }
+            }
         },
         {
             title: 'Status',
-            dataIndex: 'isActive',
-            width: 100,
-            render: (active: boolean) => (
-                <Tag color={active ? 'success' : 'error'}>{active ? 'Active' : 'Inactive'}</Tag>
-            ),
+            key: 'isActive',
+            type: 'status-badge',
+            width: 120,
+            renderOptions: {
+                statusMap: {
+                    true: { color: colors.success.main, bg: `${colors.success.main}12` },
+                    false: { color: colors.error.main, bg: `${colors.error.main}12` },
+                }
+            }
         },
+        {
+            title: 'Actions',
+            key: 'actions',
+            type: 'actions',
+            width: 100,
+            align: 'right',
+            renderOptions: {
+                actions: (record): RowActionConfig<User>[] => [
+                    {
+                        key: 'edit',
+                        label: 'Edit',
+                        icon: <EditOutlined />,
+                        onClick: () => handleEdit(record)
+                    }
+                ]
+            }
+        }
     ];
 
     return (
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
             {/* Toolbar */}
-            <Row justify="space-between" align="middle" gutter={[16, 16]}>
+            <Row justify="space-between" align="middle" gutter={[16, 16]} style={{ marginBottom: '16px' }}>
                 <Col xs={24} md={14}>
                     <Space size="middle" wrap>
                         <Input
@@ -176,11 +184,15 @@ export const UserTable: React.FC = () => {
                             onBlur={(e) => setQueryParams((p) => ({ ...p, search: e.target.value, page: 1 }))}
                             style={{ width: 260 }}
                             allowClear
+                            size="large"
+                            variant="filled"
                         />
                         <Select
                             placeholder="Filter Role"
                             style={{ width: 130 }}
                             allowClear
+                            size="large"
+                            variant="filled"
                             onChange={(v) => setQueryParams((p) => ({ ...p, role: v, page: 1 }))}
                             options={[
                                 { value: 'admin', label: 'Admin' },
@@ -193,38 +205,26 @@ export const UserTable: React.FC = () => {
                 <Col xs={24} md={10} style={{ textAlign: 'right' }}>
                     <Space>
                         <Tooltip title="Refresh">
-                            <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching} />
+                            <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isFetching} size="large" />
                         </Tooltip>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                            Add User
-                        </Button>
                     </Space>
                 </Col>
             </Row>
 
             <SplitLayout
                 table={
-                    <Table
-                        columns={columns}
+                    <LuxuryTable<User>
+                        schema={schema}
                         dataSource={data?.items ?? []}
-                        rowKey="id"
                         loading={isLoading}
-                        size="middle"
+                        selectedRowId={selected?.id}
+                        onRowClick={(r) => setSelected(r)}
                         pagination={{
                             current: data?.meta?.page ?? 1,
                             pageSize: data?.meta?.limit ?? 10,
-                            total: data?.meta?.total ?? 0,
-                            showSizeChanger: true,
-                            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
-                            onChange: (page, limit) => setQueryParams((p) => ({ ...p, page, limit })),
+                            total: data?.meta?.totalItems ?? 0,
                         }}
-                        onRow={(record) => ({
-                            onClick: () => setSelected(record),
-                            style: {
-                                cursor: 'pointer',
-                                background: selected?.id === record.id ? '#e6f4ff' : undefined,
-                            },
-                        })}
+                        onPageChange={(page, limit) => setQueryParams((p) => ({ ...p, page, limit }))}
                     />
                 }
                 detail={

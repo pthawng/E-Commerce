@@ -461,6 +461,7 @@ model Order {
   transactions        PaymentTransaction[]
   reviews             Review[]
   reservations        InventoryReservation[]
+  refunds             Refund[]
 
   @@index([userId])
   @@index([sessionId])
@@ -612,20 +613,43 @@ model Post {
 }
 
 model AuditLog {
-  /// @id @default(dbmanaged) -- TODO: Switch to UUID v7 for time-sortability
   id          String   @id @default(uuid()) @db.Uuid
   userId      String?  @db.Uuid
   action      String
   entityTable String
   entityId    String
-  changes     Json?
-  ipAddress   String?
-  userAgent   String?
+  before      Json? // State before mutation
+  after       Json? // State after mutation
+  metadata    Json? // Request context (IP, UA, RequestId)
   createdAt   DateTime @default(now())
   user        User?    @relation(fields: [userId], references: [id])
 
   @@index([entityTable, entityId], map: "idx_audit_entity")
   @@index([createdAt], map: "idx_audit_created")
+}
+
+model Refund {
+  id                    String       @id @default(uuid()) @db.Uuid
+  orderId               String       @db.Uuid
+  paymentId             String?      @db.Uuid
+  amount                Decimal      @db.Decimal(19, 2)
+  currency              String       @default("VND")
+  status                RefundStatus @default(PENDING)
+  externalTransactionId String?      @unique
+  reason                String?
+  metadata              Json?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  order                 Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([externalTransactionId])
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
 
 model Payment {
@@ -802,4 +826,25 @@ enum OutboxStatus {
   SPAM
   REJECTED
   FAILED
+}
+
+enum EventOutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model DomainEventOutbox {
+  id          String            @id @default(uuid()) @db.Uuid
+  eventType   String
+  payload     Json
+  status      EventOutboxStatus @default(PENDING)
+  retryCount  Int               @default(0)
+  lastError   String?
+  createdAt   DateTime          @default(now())
+  processedAt DateTime?
+
+  @@index([status, createdAt])
+  @@map("domain_event_outbox")
 }

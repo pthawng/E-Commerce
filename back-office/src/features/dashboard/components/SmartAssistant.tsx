@@ -1,8 +1,8 @@
 import React from 'react';
 import { List, Button, Badge, Typography, Space } from 'antd';
-import { 
-    RobotOutlined, 
-    BellOutlined, 
+import {
+    RobotOutlined,
+    BellOutlined,
     ArrowRightOutlined,
     WarningOutlined,
     CheckCircleOutlined
@@ -20,7 +20,7 @@ export const SmartAssistant: React.FC = () => {
     // Generate smart insights
     const insights = [];
 
-    const pendingOrdersCount = orders?.meta?.total ?? 0;
+    const pendingOrdersCount = (orders as any)?.meta?.totalItems ?? 0;
     if (pendingOrdersCount > 0) {
         insights.push({
             status: 'warning',
@@ -51,15 +51,15 @@ export const SmartAssistant: React.FC = () => {
     }
 
     return (
-        <GlassCard 
+        <GlassCard
             title={
                 <Space>
                     <RobotOutlined style={{ color: '#1890ff' }} />
-                    <span>AI Smart Assistant</span>
+                    <span style={{ fontWeight: 600 }}>AI Smart Assistant</span>
                 </Space>
             }
-            bordered={false}
-            style={{ height: '100%' }}
+            variant="borderless"
+            style={{ height: '100%', borderRadius: '16px' }}
         >
             <List
                 itemLayout="horizontal"
@@ -67,7 +67,7 @@ export const SmartAssistant: React.FC = () => {
                 renderItem={(item) => (
                     <List.Item
                         actions={[
-                            <Button type="link" size="small" icon={<ArrowRightOutlined />}>
+                            <Button type="link" size="small" icon={<ArrowRightOutlined />} style={{ fontWeight: 500 }}>
                                 {item.action}
                             </Button>
                         ]}

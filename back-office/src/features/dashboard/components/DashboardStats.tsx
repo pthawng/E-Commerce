@@ -1,12 +1,11 @@
 import React from 'react';
-import { Row, Col, Statistic } from 'antd';
 import {
     DollarOutlined,
     ShoppingCartOutlined,
     WarningOutlined,
     FundOutlined,
 } from '@ant-design/icons';
-import { GlassCard } from '@/shared/ui/GlassCard';
+import { DashboardGrid, HeroMetric } from '@/shared/ui';
 import { useDashboardStats } from '@/entities/dashboard/model/queries';
 
 export const DashboardStats: React.FC = () => {
@@ -20,79 +19,41 @@ export const DashboardStats: React.FC = () => {
     };
 
     return (
-        <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} lg={6}>
-                <GlassCard 
-                    bordered={false} 
-                    loading={isLoading}
-                    style={{ 
-                        background: 'linear-gradient(135deg, rgba(63, 134, 0, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
-                        borderLeft: '4px solid #3f8600'
-                    }}
-                >
-                    <Statistic
-                        title="Total Revenue (Today)"
-                        value={displayData.revenue}
-                        precision={2}
-                        valueStyle={{ color: '#3f8600', fontWeight: '800', fontSize: '24px' }}
-                        prefix={<DollarOutlined />}
-                        suffix="$"
-                    />
-                </GlassCard>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-                <GlassCard 
-                    bordered={false} 
-                    loading={isLoading}
-                    style={{ 
-                        background: 'linear-gradient(135deg, rgba(24, 144, 255, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
-                        borderLeft: '4px solid #1890ff'
-                    }}
-                >
-                    <Statistic
-                        title="Orders Today"
-                        value={displayData.ordersToday}
-                        valueStyle={{ color: '#1890ff', fontWeight: '800', fontSize: '24px' }}
-                        prefix={<ShoppingCartOutlined />}
-                    />
-                </GlassCard>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-                <GlassCard 
-                    bordered={false} 
-                    loading={isLoading}
-                    style={{ 
-                        background: 'linear-gradient(135deg, rgba(207, 19, 34, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
-                        borderLeft: '4px solid #cf1322'
-                    }}
-                >
-                    <Statistic
-                        title="Conversion Rate"
-                        value={displayData.conversionRate}
-                        precision={1}
-                        valueStyle={{ color: '#cf1322', fontWeight: '800', fontSize: '24px' }}
-                        prefix={<FundOutlined />}
-                        suffix="%"
-                    />
-                </GlassCard>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-                <GlassCard 
-                    bordered={false} 
-                    loading={isLoading}
-                    style={{ 
-                        background: 'linear-gradient(135deg, rgba(250, 173, 20, 0.05) 0%, rgba(255, 255, 255, 0.7) 100%)',
-                        borderLeft: '4px solid #faad14'
-                    }}
-                >
-                    <Statistic
-                        title="Low Stock Alerts"
-                        value={displayData.lowStockItems}
-                        valueStyle={{ color: '#faad14', fontWeight: '800', fontSize: '24px' }}
-                        prefix={<WarningOutlined />}
-                    />
-                </GlassCard>
-            </Col>
-        </Row>
+        <DashboardGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
+            <HeroMetric
+                label="Revenue Today"
+                value={displayData.revenue}
+                prefix="$"
+                icon={<DollarOutlined />}
+                loading={isLoading}
+                trend={displayData.revenueTrend?.value}
+                trendDirection={displayData.revenueTrend?.direction}
+            />
+            <HeroMetric
+                label="Orders Today"
+                value={displayData.ordersToday}
+                icon={<ShoppingCartOutlined />}
+                loading={isLoading}
+                trend={displayData.ordersTodayTrend?.value}
+                trendDirection={displayData.ordersTodayTrend?.direction}
+            />
+            <HeroMetric
+                label="Conversion"
+                value={displayData.conversionRate}
+                suffix="%"
+                icon={<FundOutlined />}
+                loading={isLoading}
+                trend={displayData.conversionRateTrend?.value}
+                trendDirection={displayData.conversionRateTrend?.direction}
+            />
+            <HeroMetric
+                label="Low Stock"
+                value={displayData.lowStockItems}
+                icon={<WarningOutlined />}
+                loading={isLoading}
+                trend={displayData.lowStockItemsTrend?.value}
+                trendDirection={displayData.lowStockItemsTrend?.direction}
+            />
+        </DashboardGrid>
     );
 };

@@ -1,10 +1,10 @@
+import { SystemAction } from '@common/decorators/system-action.decorator';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { OrderStatusEnum, PaymentProcessingStatus, ReservationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PaymentStateMachine } from './payment-state.machine';
 import { PaymentService } from '../payment.service';
-import { SystemAction } from '@common/decorators/system-action.decorator';
+import { PaymentStateMachine } from './payment-state.machine';
 
 /**
  * Payment Reconciliation Service
@@ -18,7 +18,7 @@ export class PaymentReconciliationService {
     private readonly prisma: PrismaService,
     private readonly stateMachine: PaymentStateMachine,
     private readonly paymentService: PaymentService,
-  ) { }
+  ) {}
 
   /**
    * Cron job to reconcile stale payments every 5 minutes
@@ -61,9 +61,9 @@ export class PaymentReconciliationService {
 
   /**
    * Reconcile a single stale payment
-   * 
+   *
    * SE L8 Pattern: Wrapping sensitive mutation logic in @SystemAction
-   * ensures background reconciliation is authorized while preserving 
+   * ensures background reconciliation is authorized while preserving
    * invariant protection for the rest of the app.
    */
   @SystemAction()

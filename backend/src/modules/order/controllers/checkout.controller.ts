@@ -3,13 +3,13 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { CurrentSession } from 'src/common/decorators/current-session.decorator';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
 import { RequestUserPayload } from 'src/common/types/jwt.types';
-import { OrderPaymentService } from '../services/order-payment.service';
 import { ValidateCheckoutDto } from '../dto/validate-checkout.dto';
+import { OrderPaymentService } from '../services/order-payment.service';
 
 @ApiTags('Checkout')
 @Controller('checkout')
 export class CheckoutController {
-  constructor(private readonly orderPaymentService: OrderPaymentService) { }
+  constructor(private readonly orderPaymentService: OrderPaymentService) {}
 
   @Post('validate')
   @OptionalAuth()

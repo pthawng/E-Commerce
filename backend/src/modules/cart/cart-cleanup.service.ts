@@ -6,7 +6,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class CartCleanupService {
   private readonly logger = new Logger(CartCleanupService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async cleanupExpiredCarts() {

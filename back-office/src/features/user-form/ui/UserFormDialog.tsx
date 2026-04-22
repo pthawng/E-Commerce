@@ -67,7 +67,7 @@ export const UserFormDialog = ({ visible, onClose, user }: UserFormDialogProps) 
             onOk={handleSubmit}
             onCancel={onClose}
             confirmLoading={mutation.isPending}
-            destroyOnClose
+            destroyOnHidden
             width={600}
             okText={isEditMode ? 'Save Changes' : 'Create Account'}
             maskClosable={false}

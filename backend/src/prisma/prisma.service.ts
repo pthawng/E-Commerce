@@ -12,6 +12,7 @@ import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { parse } from 'pg-connection-string';
 
+import { auditExtension } from './extensions/audit.extension';
 import { softDeleteExtension } from './extensions/soft-delete.extension';
 
 @Injectable()
@@ -33,38 +34,40 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       user: parsed.user ?? 'unknown',
     };
 
-    // Chain Extensions: Soft Delete + Invariant Guard
-    return this.$extends(softDeleteExtension).$extends({
-      query: {
-        $allModels: {
-          async $allOperations({ model, operation, args, query }) {
-            const sensitiveModels = ['InventoryItem', 'Order', 'Payment', 'InventoryReservation'];
-            const mutationActions = [
-              'create',
-              'update',
-              'upsert',
-              'delete',
-              'updateMany',
-              'deleteMany',
-            ];
+    // Chain Extensions: Soft Delete + Invariant Guard + Forensic Audit
+    return this.$extends(softDeleteExtension)
+      .$extends(auditExtension)
+      .$extends({
+        query: {
+          $allModels: {
+            async $allOperations({ model, operation, args, query }) {
+              const sensitiveModels = ['InventoryItem', 'Order', 'Payment', 'InventoryReservation'];
+              const mutationActions = [
+                'create',
+                'update',
+                'upsert',
+                'delete',
+                'updateMany',
+                'deleteMany',
+              ];
 
-            if (model && sensitiveModels.includes(model) && mutationActions.includes(operation)) {
-              if (!SystemContextStore.isInternalService) {
-                Logger.error(
-                  `❌ INVARIANT VIOLATION: Unauthorized mutation on ${model}.${operation} outside service layer!`,
-                  'PrismaService',
-                );
-                throw new BadRequestException(
-                  `System Invariant Violation: Direct mutation on ${model} is forbidden. Use the designated service layer.`,
-                );
+              if (model && sensitiveModels.includes(model) && mutationActions.includes(operation)) {
+                if (!SystemContextStore.isInternalService) {
+                  Logger.error(
+                    `❌ INVARIANT VIOLATION: Unauthorized mutation on ${model}.${operation} outside service layer!`,
+                    'PrismaService',
+                  );
+                  throw new BadRequestException(
+                    `System Invariant Violation: Direct mutation on ${model} is forbidden. Use the designated service layer.`,
+                  );
+                }
               }
-            }
 
-            return query(args);
+              return query(args);
+            },
           },
         },
-      },
-    }) as any;
+      }) as any;
   }
 
   async onModuleInit() {

@@ -67,7 +67,7 @@ export const RoleForm: React.FC = () => {
         >
             <Row gutter={24}>
                 <Col xs={24} lg={8}>
-                    <Card title="Role Details" bordered={false}>
+                    <Card title="Role Details" variant="borderless">
                         <Form.Item
                             name="name"
                             label="Role Name"
@@ -95,7 +95,7 @@ export const RoleForm: React.FC = () => {
                 </Col>
 
                 <Col xs={24} lg={16}>
-                    <Card title="Permissions" bordered={false}>
+                    <Card title="Permissions" variant="borderless">
                         <Form.Item name="permissionIds" valuePropName="value">
                             <Checkbox.Group style={{ width: '100%' }}>
                                 {(Object.entries(permissionsByModule) as [string, Permission[]][]).map(([module, perms]) => (
@@ -105,7 +105,7 @@ export const RoleForm: React.FC = () => {
                                             {perms.map((p: Permission) => (
                                                 <Col xs={24} sm={12} md={8} key={p.id} style={{ marginBottom: 8 }}>
                                                     <Checkbox value={p.id}>
-                                                        <Space direction="vertical" size={0}>
+                                                        <Space orientation="vertical" size={0}>
                                                             <span>{p.action}</span>
                                                             <Text type="secondary" style={{ fontSize: 12 }}>
                                                                 {p.name}

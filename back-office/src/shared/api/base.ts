@@ -26,10 +26,21 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 /**
+ * Cookie Helper: Extract specific cookie value
+ */
+const getCookie = (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+};
+
+/**
  * Centralized Axios Instance
  */
 export const api = axios.create({
     baseURL: BASE_URL,
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -41,6 +52,13 @@ export const api = axios.create({
  */
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
+        // 1. Double Submit Cookie Pattern: Inject CSRF Token
+        const csrfToken = getCookie('csrfToken');
+        if (csrfToken && ['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
+            config.headers['x-csrf-token'] = csrfToken;
+        }
+
+        // 2. JWT Authentication: Attach Access Token
         const token = localStorage.getItem('access_token');
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -56,7 +74,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => {
         const result = response.data;
-        
+
         // Handle pagination: If backend returns meta alongside data, 
         // we wrap it for PaginatedResponse compatibility.
         if (result?.meta && Array.isArray(result.data)) {
@@ -143,7 +161,7 @@ api.interceptors.response.use(
         // 3. Handle Other Errors (403, 400, etc.)
         const backendMessage = error.response.data?.message;
         const finalMessage = Array.isArray(backendMessage) ? backendMessage[0] : backendMessage;
-        
+
         if (error.response.status !== 401) {
             void message.error(finalMessage || 'Something went wrong');
         }

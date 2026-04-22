@@ -52,6 +52,7 @@ export interface CreateUserDto {
     role?: 'admin' | 'staff' | 'manager';
     isActive?: boolean;
     phone?: string;
+    avatarUrl?: string;
 }
 
 export interface UpdateUserDto extends Partial<CreateUserDto> { }

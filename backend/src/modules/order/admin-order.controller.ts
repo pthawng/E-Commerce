@@ -1,6 +1,7 @@
 import { Permission } from '@modules/rbac/decorators/permission.decorator';
 import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
 import { PERMISSIONS } from '@modules/rbac/permissions.constants';
+import { OwnershipRegistry } from '@modules/security/ownership.registry';
 import {
   Body,
   Controller,
@@ -17,14 +18,21 @@ import { CurrentUser } from '../../common/decorators/get-user.decorator';
 import { PaginationDto } from '../../common/pagination';
 import { RequestUserPayload } from '../../common/types/jwt.types';
 import { OrderService } from './order.service';
-import { PrincipalType } from '../../common/types/principal.types';
+
+import { CancelOrderDto } from './dto/cancel-order.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { RefundService } from './services/refund.service';
 
 @ApiTags('Admin Order')
 @Controller('admin/orders')
 @UseGuards(PermissionGuard)
 @ApiBearerAuth()
 export class AdminOrderController {
-  constructor(private readonly orderService: OrderService) { }
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly refundService: RefundService,
+    private readonly ownershipRegistry: OwnershipRegistry,
+  ) {}
 
   @Get()
   @Permission(PERMISSIONS.ORDER.READ)
@@ -36,14 +44,9 @@ export class AdminOrderController {
   @Get(':id')
   @Permission(PERMISSIONS.ORDER.READ)
   @ApiOperation({ summary: 'Chi tiết đơn hàng (Admin)' })
-  findOne(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() user: RequestUserPayload,
-  ) {
-    return this.orderService.getOrder(id, {
-      id: user.userId,
-      type: PrincipalType.USER,
-    });
+  findOne(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser() user: RequestUserPayload) {
+    const principal = this.ownershipRegistry.createPrincipal(user);
+    return this.orderService.getOrder(id, principal);
   }
 
   @Patch(':id')
@@ -51,10 +54,10 @@ export class AdminOrderController {
   @ApiOperation({ summary: 'Cập nhật trạng thái đơn hàng' })
   updateStatus(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() body: { status: string; note?: string },
+    @Body() dto: UpdateOrderStatusDto,
     @CurrentUser() user: RequestUserPayload,
   ) {
-    return this.orderService.updateStatus(id, body.status, user.userId, body.note);
+    return this.orderService.updateStatus(id, dto.status, user.userId, dto.note);
   }
 
   @Post(':id/actions/cancel')
@@ -62,10 +65,21 @@ export class AdminOrderController {
   @ApiOperation({ summary: 'Hủy đơn hàng và hoàn kho' })
   cancelOrder(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() body: { reason?: string },
+    @Body() dto: CancelOrderDto,
     @CurrentUser() user: RequestUserPayload,
   ) {
-    return this.orderService.updateStatus(id, 'cancelled', user.userId, body.reason);
+    return this.orderService.updateStatus(id, 'cancelled', user.userId, dto.reason);
+  }
+
+  @Post(':id/actions/refund')
+  @Permission(PERMISSIONS.ORDER.REFUND)
+  @ApiOperation({ summary: 'Hoàn tiền cho đơn hàng' })
+  async refundOrder(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: { amount: number; reason: string },
+    @CurrentUser() user: RequestUserPayload,
+  ) {
+    return this.refundService.processRefund(id, body.amount, body.reason, user.userId);
   }
 
   @Patch(':id/tracking')
@@ -83,6 +97,4 @@ export class AdminOrderController {
       user.userId,
     );
   }
-
-  // Future: @Post(':id/actions/refund')
 }

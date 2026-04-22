@@ -19,7 +19,7 @@ export class CartService {
     private readonly conflictCounter: Counter<string>,
     @InjectMetric('cart_operation_duration_seconds')
     private readonly durationHistogram: Histogram<string>,
-  ) { }
+  ) {}
 
   private readonly CART_TTL_DAYS = 30;
   private readonly IDEMPOTENCY_TTL_HOURS = 24;
@@ -607,10 +607,7 @@ export class CartService {
 
       // Defensive Image Mapping Strategy
       const image =
-        v.thumbnailUrl ||
-        v.media?.[0]?.url ||
-        v.product?.media?.[0]?.url ||
-        '/placeholder.svg';
+        v.thumbnailUrl || v.media?.[0]?.url || v.product?.media?.[0]?.url || '/placeholder.svg';
 
       mappedItems.push({
         id: item.id,

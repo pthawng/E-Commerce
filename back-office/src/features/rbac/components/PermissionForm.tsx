@@ -55,7 +55,7 @@ export const PermissionForm: React.FC = () => {
     }
 
     return (
-        <Card style={{ maxWidth: 600 }} bordered={false}>
+        <Card style={{ maxWidth: 600 }} variant="borderless">
             <Form form={form} layout="vertical" onFinish={onFinish}>
                 <Form.Item
                     name="slug"

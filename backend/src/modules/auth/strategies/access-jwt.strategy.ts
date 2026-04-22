@@ -2,7 +2,7 @@ import type { JwtAccessPayload, RequestUserPayload } from '@common/types/jwt.typ
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-jwt';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 /**
@@ -13,7 +13,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
  * - ABAC: Permissions có thể được lazy load từ DB khi cần (dynamic hơn)
  *
  * Flow:
- * 1. Extract JWT từ Authorization header
+ * 1. Extract JWT từ Authorization header HOẶC cookie
  * 2. Validate token type === 'access'
  * 3. Verify user tồn tại và active
  * 4. Extract roles từ JWT payload (không cần query DB - performance)
@@ -35,11 +35,12 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
     }
 
     super({
-      jwtFromRequest: (req: any) => {
-        return req?.cookies?.['accessToken'] || null;
-      },
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => req?.cookies?.['accessToken'] || null,
+      ]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_ACCESS_SECRET')!,
+      secretOrKey: secret,
     });
   }
 

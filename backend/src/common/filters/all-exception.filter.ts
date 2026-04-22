@@ -37,7 +37,9 @@ export class AllExceptionFilter implements ExceptionFilter {
       }
     } else {
       // Log non-HttpExceptions as errors
-      this.logger.error(`Unhandled Exception: ${exception instanceof Error ? exception.message : exception}`);
+      this.logger.error(
+        `Unhandled Exception: ${exception instanceof Error ? exception.message : exception}`,
+      );
       if (exception instanceof Error && exception.stack) {
         this.logger.error(exception.stack);
       }

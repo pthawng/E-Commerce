@@ -1,48 +1,42 @@
 import React from 'react';
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-} from 'recharts';
-import { GlassCard } from '@/shared/ui/GlassCard';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ChartCard } from '@/shared/ui';
+import { chartTheme, chartGradients } from '@/shared/design-system/ChartTheme';
 import { useRevenueData } from '@/entities/dashboard/model/queries';
 
 export const RevenueChart: React.FC = () => {
     const { data: revenueData, isLoading } = useRevenueData();
 
-    // Map backend data to recharts format
     const chartData = revenueData?.map(item => ({
-        name: item.date, // or format it if needed, e.g. .split('T')[0]
+        name: item.date,
         revenue: item.amount
     })) || [];
 
     return (
-        <GlassCard title="Revenue Flow (Today)" bordered={false} style={{ height: '100%' }} loading={isLoading}>
-            <div style={{ width: '100%', height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                        data={chartData}
-                        margin={{
-                            top: 10,
-                            right: 30,
-                            left: 0,
-                            bottom: 0,
-                        }}
-                    >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: '#6B7280' }} />
-                        <YAxis tickLine={false} axisLine={false} tick={{ fill: '#6B7280' }} tickFormatter={(value) => `$${value}`} />
-                        <Tooltip
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Area type="monotone" dataKey="revenue" stroke="#1890ff" fill="#e6f7ff" strokeWidth={3} />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
-        </GlassCard>
+        <ChartCard title="Revenue Flow" loading={isLoading}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                    <linearGradient id={chartGradients.primary.id} x1="0" y1="0" x2="0" y2="1">
+                        {chartGradients.primary.stops.map((stop, i) => (
+                            <stop key={i} offset={stop.offset} stopColor={stop.color} stopOpacity={stop.opacity} />
+                        ))}
+                    </linearGradient>
+                </defs>
+                <CartesianGrid {...chartTheme.grid} />
+                <XAxis dataKey="name" {...chartTheme.xAxis} />
+                <YAxis {...chartTheme.yAxis} tickFormatter={(value) => `$${value.toLocaleString('en-US')}`} />
+                <Tooltip
+                    {...chartTheme.tooltip}
+                    formatter={(value?: number) => [value !== undefined ? `$${value.toLocaleString('en-US')}` : '—', 'Revenue']}
+                />
+                <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke={chartGradients.primary.stops[0].color}
+                    fill={`url(#${chartGradients.primary.id})`}
+                    {...chartTheme.area}
+                />
+            </AreaChart>
+        </ChartCard>
     );
 };

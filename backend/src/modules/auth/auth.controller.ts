@@ -28,8 +28,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
-import { randomUUID } from 'crypto';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 
 import {
@@ -41,6 +40,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { clearAuthCookies, setAuthCookies } from './utils/auth-cookie.helper';
+
 @ApiTags('Authentication')
 @Throttle({ strict: { limit: 5, ttl: 60000 } })
 @Controller('auth')
@@ -49,61 +50,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly permissionCacheService: PermissionCacheService,
-  ) { }
-
-  private setAuthCookies(
-    req: any,
-    res: Response,
-    tokens: { accessToken: string; refreshToken: string },
-  ) {
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    // Rotating CSRF Token: Generate new one on each auth event
-    const csrfToken = randomUUID();
-
-    const cookieOptions = {
-      secure: isProduction,
-      sameSite: 'lax' as const,
-      path: '/',
-    };
-
-    // 1. Access Token (HttpOnly)
-    res.cookie('accessToken', tokens.accessToken, {
-      ...cookieOptions,
-      httpOnly: true,
-      maxAge: 15 * 60 * 1000, // 15 mins
-    });
-
-    // 2. Refresh Token (HttpOnly)
-    res.cookie('refreshToken', tokens.refreshToken, {
-      ...cookieOptions,
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    // 3. CSRF Token (Double Submit Pattern)
-    res.cookie('csrfToken', csrfToken, {
-      ...cookieOptions,
-      httpOnly: false, // Must be accessible to frontend JS to send as header
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    // 4. UA Binding for soft validation
-    const ua = req.headers['user-agent'] || 'unknown';
-    res.cookie('ua_binding', ua, {
-      ...cookieOptions,
-      httpOnly: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return csrfToken;
-  }
-
-  private clearAuthCookies(res: Response) {
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
-    res.clearCookie('csrfToken');
-  }
+  ) {}
 
   @Public()
   @UseGuards(ThrottlerGuard)
@@ -120,7 +67,7 @@ export class AuthController {
     const ip = req.ip;
     const ua = req.headers['user-agent'] as string | undefined;
     const result = await this.authService.register(dto, ip, ua);
-    this.setAuthCookies(req, res, result.tokens);
+    setAuthCookies(req, res, result.tokens);
     return result;
   }
 
@@ -158,7 +105,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.login(dto);
-    this.setAuthCookies(req, res, result.tokens);
+    setAuthCookies(req, res, result.tokens);
     return result;
   }
 
@@ -221,7 +168,7 @@ export class AuthController {
     }
 
     const result = await this.authService.refreshToken({ refreshToken: token }, ip, ua);
-    this.setAuthCookies(req, res, result.tokens);
+    setAuthCookies(req, res, result.tokens);
     return result;
   }
 
@@ -231,7 +178,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Đăng xuất (Thu hồi refresh token)' })
   @ApiOkResponse({ description: 'Đăng xuất thành công' })
   async logout(@Body() dto: LogoutDto, @Res({ passthrough: true }) res: Response) {
-    this.clearAuthCookies(res);
+    clearAuthCookies(res);
     return this.authService.logout(dto);
   }
 
@@ -254,7 +201,7 @@ export class AuthController {
 
     // Auto-login security logic applied
     if (result.auth) {
-      this.setAuthCookies(req, res, result.auth.tokens);
+      setAuthCookies(req, res, result.auth.tokens);
     }
 
     return result;

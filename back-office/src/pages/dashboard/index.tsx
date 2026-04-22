@@ -1,5 +1,10 @@
 import React from 'react';
-import { Typography, Row, Col } from 'antd';
+import { PageContainer } from '@/app/layout/PageContainer';
+import {
+    LayoutStack,
+    DashboardGrid,
+    SectionBlock
+} from '@/shared/ui';
 import {
     DashboardStats,
     RevenueChart,
@@ -9,41 +14,38 @@ import {
     SmartAssistant,
 } from '@/features/dashboard';
 
-const { Title } = Typography;
-
 export const DashboardPage: React.FC = () => {
     return (
-        <div style={{ padding: '0 24px 24px 24px', maxWidth: '1600px', margin: '0 auto' }}>
-            <div style={{ marginBottom: 24 }}>
-                <Title level={2} style={{ margin: 0, color: '#0B2545' }}>Dashboard</Title>
-            </div>
-
-            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                <Col span={24}>
+        <PageContainer>
+            <LayoutStack gap="var(--space-xl)">
+                {/* P0: Command & Insights */}
+                <SectionBlock title="Smart Assistant" description="AI-driven insights and pending actions.">
                     <SmartAssistant />
-                </Col>
-            </Row>
+                </SectionBlock>
 
-            <DashboardStats />
+                {/* P1: Key Business Metrics */}
+                <SectionBlock title="Performance Overview">
+                    <DashboardStats />
+                </SectionBlock>
 
-            <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-                <Col xs={24} lg={16}>
-                    <RevenueChart />
-                </Col>
-                <Col xs={24} lg={8}>
-                    <TopProducts />
-                </Col>
-            </Row>
+                {/* P2: In-depth Analytics */}
+                <SectionBlock title="Revenue & Sales Insights">
+                    <DashboardGrid columns={{ xs: 1, lg: 2 }}>
+                        <RevenueChart />
+                        <TopProducts />
+                    </DashboardGrid>
+                </SectionBlock>
 
-            <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-                <Col xs={24} lg={12}>
-                    <RecentOrders />
-                </Col>
-                <Col xs={24} lg={12}>
-                    <LowStockAlerts />
-                </Col>
-            </Row>
-        </div>
+                {/* P3: Operational Pulse */}
+                <SectionBlock title="Recent Transactions">
+                    <RecentOrders hideTitle />
+                </SectionBlock>
+
+                <SectionBlock title="Inventory Health">
+                    <LowStockAlerts hideTitle />
+                </SectionBlock>
+            </LayoutStack>
+        </PageContainer>
     );
 };
 
