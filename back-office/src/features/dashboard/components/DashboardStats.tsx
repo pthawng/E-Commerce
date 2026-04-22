@@ -22,7 +22,7 @@ export const DashboardStats: React.FC = () => {
         <DashboardGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
             <HeroMetric
                 label="Revenue Today"
-                value={displayData.revenue}
+                value={displayData.revenue.toLocaleString()}
                 prefix="$"
                 icon={<DollarOutlined />}
                 loading={isLoading}

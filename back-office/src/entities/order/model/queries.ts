@@ -79,3 +79,33 @@ export const useCancelOrder = () => {
         },
     });
 };
+
+/**
+ * Mutation for refunding an order
+ */
+export const useRefundOrder = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, amount, reason }: { id: string; amount: number; reason: string }) =>
+            orderApi.refundOrder(id, { amount, reason }),
+        onSuccess: (order: Order) => {
+            void message.success('Refund processed successfully');
+            void queryClient.invalidateQueries({ queryKey: orderKeys.details(order.id) });
+            void queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+        },
+    });
+};
+/**
+ * Mutation for bulk updating order status
+ */
+export const useBulkUpdateOrderStatus = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ ids, status }: { ids: string[]; status: string }) =>
+            orderApi.bulkUpdateStatus(ids, status),
+        onSuccess: () => {
+            void message.success('Bulk status update successful');
+            void queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+        },
+    });
+};

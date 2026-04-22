@@ -30,14 +30,21 @@ export const orderApi = {
      * Update order status (Admin action)
      */
     updateStatus: async (id: string, data: { status: string; note?: string }): Promise<Order> => {
-        return axiosClient.patch(`/admin/orders/${id}/status`, data);
+        return axiosClient.patch(`/admin/orders/${id}`, data);
     },
 
     /**
      * Cancel an order
      */
     cancelOrder: async (id: string, reason?: string): Promise<Order> => {
-        return axiosClient.post(`/admin/orders/${id}/cancel`, { reason });
+        return axiosClient.post(`/admin/orders/${id}/actions/cancel`, { reason });
+    },
+
+    /**
+     * Refund an order
+     */
+    refundOrder: async (id: string, data: { amount: number; reason: string }): Promise<Order> => {
+        return axiosClient.post(`/admin/orders/${id}/actions/refund`, data);
     },
 
     /**
@@ -45,5 +52,13 @@ export const orderApi = {
      */
     updateTracking: async (id: string, data: { trackingCode: string; estimatedDeliveryAt?: string }): Promise<Order> => {
         return axiosClient.patch(`/admin/orders/${id}/tracking`, data);
-    }
+    },
+    /**
+     * Bulk Update status for multiple orders
+     */
+    bulkUpdateStatus: async (ids: string[], status: string): Promise<void> => {
+        // Implementation could be a single bulk endpoint or parallel calls
+        // For standard REST patterns without a dedicated bulk endpoint, we use parallelization:
+        await Promise.all(ids.map(id => axiosClient.patch(`/admin/orders/${id}`, { status })));
+    },
 };

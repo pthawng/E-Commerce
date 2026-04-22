@@ -75,6 +75,7 @@ interface LuxuryTableProps<T> extends Omit<TableProps<T>, 'columns'> {
     selectedRowId?: string;
     onPageChange?: (page: number, pageSize: number) => void;
     bulkActions?: BulkAction<T>[];
+    getRowPriority?: (record: T) => 'high' | 'medium' | 'low' | undefined;
     strict?: boolean;
 }
 
@@ -87,6 +88,7 @@ export function LuxuryTable<T extends { id: string | number }>({
     selectedRowId,
     onPageChange,
     bulkActions,
+    getRowPriority,
     strict,
     ...rest
 }: LuxuryTableProps<T>) {
@@ -137,9 +139,13 @@ export function LuxuryTable<T extends { id: string | number }>({
         return schema
             .filter(col => !col.requiredPermission || can(col.requiredPermission))
             .map((col) => {
+                const dataIndex = typeof col.key === 'string' && col.key.includes('.')
+                    ? col.key.split('.')
+                    : col.key;
+
                 const baseCol: any = {
                     title: col.title,
-                    dataIndex: col.key,
+                    dataIndex,
                     key: col.key as string,
                     width: col.width,
                     align: col.align,
@@ -148,54 +154,74 @@ export function LuxuryTable<T extends { id: string | number }>({
 
                 switch (col.type) {
                     case 'id':
-                        baseCol.render = (val: string) => (
-                            <Text strong style={{ color: 'var(--color-primary)', letterSpacing: '0.02em', fontSize: '13px' }}>
-                                #{val}
-                            </Text>
-                        );
+                        baseCol.render = (val: string, record: T) => {
+                            const displayVal = val || getValue(record, col.key as string);
+                            const idStr = String(displayVal);
+                            const truncated = idStr.length > 12 ? `${idStr.substring(0, 6)}...${idStr.substring(idStr.length - 4)}` : idStr;
+                            return (
+                                <Text strong style={{
+                                    color: 'var(--color-primary)',
+                                    letterSpacing: '0.04em',
+                                    fontSize: '12px',
+                                    fontFamily: 'monospace'
+                                }}>
+                                    #{truncated.toUpperCase()}
+                                </Text>
+                            );
+                        };
                         break;
 
                     case 'currency':
-                        baseCol.render = (val: number) => {
+                        baseCol.render = (val: number, record: T) => {
+                            const displayVal = val !== undefined && val !== null ? val : getValue(record, col.key as string);
                             const currencyCode = col.renderOptions?.currencyCode || 'VND';
                             const locale = currencyCode === 'USD' ? 'en-US' : 'vi-VN';
+                            const isHighValue = displayVal > 5000000;
                             return (
-                                <Text strong style={{ color: 'var(--color-neutral-900)', fontSize: '14px' }}>
-                                    {val !== undefined && val !== null ? new Intl.NumberFormat(locale, {
+                                <Text strong style={{
+                                    color: isHighValue ? 'var(--color-neutral-900)' : 'var(--color-neutral-700)',
+                                    fontSize: isHighValue ? '15px' : '14px',
+                                    fontWeight: isHighValue ? 700 : 500
+                                }}>
+                                    {displayVal !== undefined && displayVal !== null ? new Intl.NumberFormat(locale, {
                                         style: 'currency',
                                         currency: currencyCode
-                                    }).format(val) : '—'}
+                                    }).format(displayVal) : '—'}
                                 </Text>
                             );
                         };
                         break;
 
                     case 'date':
-                        baseCol.render = (val: string) => (
-                            <Text style={{ color: 'var(--color-neutral-600)', fontSize: '13px' }}>
-                                {val ? dayjs(val).format(col.renderOptions?.dateFormat || 'DD MMM, YYYY HH:mm') : '—'}
-                            </Text>
-                        );
+                        baseCol.render = (val: string, record: T) => {
+                            const displayVal = val || getValue(record, col.key as string);
+                            return (
+                                <Text style={{ color: 'var(--color-neutral-500)', fontSize: '13px' }}>
+                                    {displayVal ? dayjs(displayVal).format(col.renderOptions?.dateFormat || 'DD MMM, YYYY HH:mm') : '—'}
+                                </Text>
+                            );
+                        };
                         break;
 
                     case 'status-badge':
-                        baseCol.render = (val: string) => {
-                            const style = getStatusStyle(val, col.renderOptions?.statusMap);
+                        baseCol.render = (val: string, record: T) => {
+                            const displayVal = val || getValue(record, col.key as string);
+                            const style = getStatusStyle(displayVal, col.renderOptions?.statusMap);
                             return (
                                 <Tag
                                     style={{
                                         color: style.color,
                                         background: style.bg,
                                         border: `1px solid ${style.border}`,
-                                        borderRadius: '100px',
-                                        padding: '2px 12px',
-                                        fontWeight: 600,
-                                        fontSize: '11px',
+                                        borderRadius: '6px',
+                                        padding: '2px 10px',
+                                        fontWeight: 700,
+                                        fontSize: '10px',
                                         textTransform: 'uppercase',
-                                        letterSpacing: '0.04em'
+                                        letterSpacing: '0.05em'
                                     }}
                                 >
-                                    {String(val ?? '—').toUpperCase().replace('_', ' ')}
+                                    {String(displayVal ?? '—').toUpperCase().replace('_', ' ')}
                                 </Tag>
                             );
                         };
@@ -299,7 +325,7 @@ export function LuxuryTable<T extends { id: string | number }>({
                             if (visibleActions.length === 0) return null;
                             if (visibleActions.length <= 2) {
                                 return (
-                                    <Space split={<Divider type="vertical" />}>
+                                    <Space split={<Divider type="vertical" />} className="row-actions">
                                         {visibleActions.map(action => (
                                             <Button
                                                 key={action.key}
@@ -375,20 +401,21 @@ export function LuxuryTable<T extends { id: string | number }>({
         >
             {selectedRowKeys.length > 0 && bulkActions && (
                 <div style={{
-                    position: 'absolute',
-                    top: -64,
-                    left: 0,
-                    right: 0,
+                    position: 'fixed',
+                    bottom: 32,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     height: 56,
                     background: 'var(--color-primary)',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: '16px',
                     display: 'flex',
                     alignItems: 'center',
                     padding: '0 24px',
                     justifyContent: 'space-between',
-                    zIndex: 'var(--z-action-bar)' as any,
-                    boxShadow: 'var(--shadow-lg)',
-                    animation: 'slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    zIndex: 1000,
+                    boxShadow: '0 20px 40px -10px rgba(0,0,0,0.4)',
+                    animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    minWidth: '500px'
                 }}>
                     <Space size={24}>
                         <Text style={{ color: '#fff', fontWeight: 600 }}>
@@ -425,20 +452,25 @@ export function LuxuryTable<T extends { id: string | number }>({
                 rowSelection={rowSelection}
                 virtual
                 scroll={{ x: 'max-content', y: 600 }}
-                onRow={(record) => ({
-                    onClick: (e) => {
-                        if ((e.target as any).closest('.ant-table-selection-column')) return;
-                        if ((e.target as any).closest('.ant-btn')) return;
-                        if ((e.target as any).closest('.ant-dropdown-trigger')) return;
-                        onRowClick?.(record);
-                    },
-                    style: {
-                        cursor: onRowClick ? 'pointer' : 'default',
-                        borderLeft: selectedRowId === String(record.id) ? `4px solid var(--color-secondary)` : '4px solid transparent',
-                        background: selectedRowId === String(record.id) ? 'var(--table-row-selected-bg)' : 'transparent'
-                    },
-                    className: `luxury-table-row ${selectedRowId === String(record.id) ? 'active' : ''}`
-                })}
+                onRow={(record) => {
+                    const priority = getRowPriority?.(record);
+                    const priorityColor = priority === 'high' ? 'var(--color-status-error-text)' : priority === 'medium' ? 'var(--color-status-warning-text)' : 'transparent';
+
+                    return {
+                        onClick: (e) => {
+                            if ((e.target as any).closest('.ant-table-selection-column')) return;
+                            if ((e.target as any).closest('.ant-btn')) return;
+                            if ((e.target as any).closest('.ant-dropdown-trigger')) return;
+                            onRowClick?.(record);
+                        },
+                        style: {
+                            cursor: onRowClick ? 'pointer' : 'default',
+                            borderLeft: `4px solid ${selectedRowId === String(record.id) ? 'var(--color-secondary)' : priorityColor}`,
+                            background: selectedRowId === String(record.id) ? 'var(--table-row-selected-bg)' : 'transparent'
+                        },
+                        className: `luxury-table-row ${selectedRowId === String(record.id) ? 'active' : ''}`
+                    };
+                }}
                 pagination={pagination && {
                     ...pagination,
                     showSizeChanger: true,
