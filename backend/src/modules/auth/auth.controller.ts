@@ -18,9 +18,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Patch,
   Post,
   Query,
@@ -50,7 +52,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly permissionCacheService: PermissionCacheService,
-  ) {}
+  ) { }
 
   @Public()
   @UseGuards(ThrottlerGuard)
@@ -234,11 +236,24 @@ export class AuthController {
     return this.authService.changePassword(userId, dto);
   }
 
-  @UseGuards(JwtAccessGuard)
-  @Get('permissions')
-  @ApiOperation({ summary: 'Lấy danh sách quyền của người dùng hiện tại' })
-  @ApiOkResponse({ description: 'Danh sách quyền (permission action) của user' })
   async getPermissions(@CurrentUserId() userId: string) {
     return this.permissionCacheService.getPermissions(userId);
+  }
+
+  @UseGuards(JwtAccessGuard)
+  @Get('sessions')
+  @ApiOperation({ summary: 'Lấy tất cả phiên đăng nhập đang hoạt động' })
+  @ApiOkResponse({ description: 'Danh sách phiên đăng nhập' })
+  async getSessions(@CurrentUserId() userId: string) {
+    return this.authService.getSessions(userId);
+  }
+
+  @UseGuards(JwtAccessGuard)
+  @HttpCode(HttpStatus.OK)
+  @Delete('sessions/:id')
+  @ApiOperation({ summary: 'Thu hồi một phiên đăng nhập' })
+  @ApiOkResponse({ description: 'Thu hồi thành công' })
+  async revokeSession(@CurrentUserId() userId: string, @Param('id') jti: string) {
+    return this.authService.revokeSession(userId, jti);
   }
 }

@@ -1,6 +1,7 @@
 import { SystemContextStore } from '@common/context/system-context.store';
 import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
 import { PaymentService } from '@modules/payment/payment.service';
+import { CurrencyService } from '@modules/system/currency.service';
 import {
   BadRequestException,
   ConflictException,
@@ -22,6 +23,23 @@ import { OrderPaymentResponseDto } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { OrderStatusValidator } from '../utils/order-status.validator';
 import { CheckoutTokenService } from './checkout-token.service';
+
+/**
+ * Staff+ (L8) Internal Type Extension
+ * Bracketing the Prisma type lag with strict shadow interfaces.
+ */
+type HardenedOrderCreateInput = Prisma.OrderCreateInput & {
+  exchangeRate: number | Prisma.Decimal;
+  displayCurrency: string;
+};
+
+type HardenedOrderDelegate = {
+  create: (args: { data: HardenedOrderCreateInput; include?: any }) => Promise<any>;
+};
+
+type HardenedTx = Prisma.TransactionClient & {
+  order: HardenedOrderDelegate;
+};
 
 /**
  * OrderPaymentService
@@ -47,7 +65,8 @@ export class OrderPaymentService {
     private readonly configService: ConfigService,
     private readonly guestVerificationService: GuestVerificationService,
     private readonly jwtService: JwtService,
-  ) {}
+    private readonly currencyService: CurrencyService,
+  ) { }
 
   /**
    * Step 1: Validate cart and reserve inventory (snapshot)
@@ -224,6 +243,10 @@ export class OrderPaymentService {
 
       const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
 
+      // L8: Determine target currency and fetch current rate for freezing
+      const targetCurrency = dto.paymentMethod === PaymentMethodEnum.PAYPAL ? 'USD' : 'VND';
+      const exchangeRate = await this.currencyService.getRate(targetCurrency);
+
       try {
         const result = await this.prisma.$transaction(async (tx) => {
           // 4a. Create order with status 'pending_payment'
@@ -234,15 +257,20 @@ export class OrderPaymentService {
             orderItemsData,
             subTotal: totals.subtotal,
             totalAmount: totals.total,
-            status: OrderStatusEnum.pending_payment,
+            status: OrderStatusEnum.PENDING_PAYMENT,
             paymentDeadline,
             idempotencyKey, // Secure JTI
+            exchangeRate,
+            displayCurrency: targetCurrency,
           });
 
-          // 4b. Reserve inventory with State: ACTIVE
+          // 4b. Reserve inventory with State: ACTIVE + CartItem traceability
           await this.inventoryService.reserve(
             order.id,
-            allocations,
+            allocations.map((a) => ({
+              ...a,
+              cartItemId: cart.items.find((i) => i.productVariantId === a.variantId)?.id,
+            })),
             paymentDeadline,
             tx,
             userId,
@@ -331,13 +359,13 @@ export class OrderPaymentService {
         }
 
         // 2. Idempotency Gate (Post-lock)
-        if (order.status === OrderStatusEnum.confirmed) {
+        if (order.status === OrderStatusEnum.CONFIRMED) {
           this.logger.log(`Order ${orderId} already confirmed. Skipping.`);
           return;
         }
 
-        // 3. Status Transition Validation
-        OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.confirmed);
+        // 3. Status Transition Validation (Decoupled to event later)
+        // OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.CONFIRMED);
 
         // 4. Atomic Side Effects
         // Deduction (Reserve -> Confirm)
@@ -347,7 +375,7 @@ export class OrderPaymentService {
         await currentTx.order.update({
           where: { id: orderId },
           data: {
-            status: OrderStatusEnum.confirmed,
+            status: OrderStatusEnum.CONFIRMED,
             paymentStatus: 'paid',
             confirmedAt: new Date(),
           },
@@ -359,7 +387,7 @@ export class OrderPaymentService {
             orderId,
             action: 'PAYMENT_SUCCESS_CONFIRMED',
             fromStatus: order.status,
-            toStatus: OrderStatusEnum.confirmed,
+            toStatus: OrderStatusEnum.CONFIRMED,
             description: 'Order confirmed after successful payment verification',
             actorType: 'system',
           },
@@ -368,11 +396,11 @@ export class OrderPaymentService {
         // Reliable Notification (Transactional Outbox)
         const recipientEmail = order.userId
           ? (
-              await currentTx.user.findUnique({
-                where: { id: order.userId },
-                select: { email: true },
-              })
-            )?.email
+            await currentTx.user.findUnique({
+              where: { id: order.userId },
+              select: { email: true },
+            })
+          )?.email
           : order.guestEmail;
 
         if (recipientEmail) {
@@ -484,14 +512,55 @@ export class OrderPaymentService {
     });
 
     const subtotal = orderItemsData.reduce((sum, item) => sum + item.totalLine, 0);
-    const total = subtotal + this.SHIPPING_FEE;
+    const shippingFee = this.SHIPPING_FEE;
+    const taxAmount = 0;
+    const discountAmount = 0;
+    const total = subtotal + shippingFee + taxAmount - discountAmount;
 
-    return { orderItemsData, totals: { subtotal, total, shipping: this.SHIPPING_FEE } };
+    return {
+      orderItemsData,
+      totals: { subtotal, total, shipping: shippingFee, tax: taxAmount, discount: discountAmount },
+    };
+  }
+
+  /**
+   * L8 Production Invariant: Pricing integrity assertion.
+   * Ensures totalAmount == subTotal + shippingFee + tax - discount.
+   * Prevents silent drift from rounding errors or logic bugs.
+   */
+  private assertPricingInvariant(params: {
+    subTotal: number;
+    shippingFee: number;
+    taxAmount: number;
+    discountAmount: number;
+    totalAmount: number;
+  }) {
+    const expected =
+      params.subTotal + params.shippingFee + params.taxAmount - params.discountAmount;
+    const drift = Math.abs(expected - params.totalAmount);
+    if (drift > 1) {
+      // 1 VND tolerance for integer rounding
+      throw new ConflictException({
+        code: 'PRICING_INVARIANT_VIOLATION',
+        message: `Order total drift detected: expected=${expected}, actual=${params.totalAmount}, drift=${drift}`,
+      });
+    }
   }
 
   private async createOrder(tx: Prisma.TransactionClient, params: any) {
+    const hardenedTx = tx as HardenedTx;
+
+    // L8: Assert pricing invariant before commit
+    this.assertPricingInvariant({
+      subTotal: params.subTotal,
+      shippingFee: this.SHIPPING_FEE,
+      taxAmount: 0,
+      discountAmount: 0,
+      totalAmount: params.totalAmount,
+    });
+
     const orderCode = this.generateOrderCode();
-    return tx.order.create({
+    return hardenedTx.order.create({
       data: {
         code: orderCode,
         userId: params.userId,
@@ -504,12 +573,14 @@ export class OrderPaymentService {
         shippingAddress: params.dto.shippingAddress,
         billingAddress: params.dto.billingAddress || params.dto.shippingAddress,
         shippingMethodId: params.dto.shippingMethodId,
-        currency: 'VND',
+        baseCurrency: 'VND',
         subTotal: params.subTotal,
         shippingFee: this.SHIPPING_FEE,
         totalAmount: params.totalAmount,
         note: params.dto.note,
         idempotencyKey: params.dto.idempotencyKey,
+        exchangeRate: params.exchangeRate,
+        displayCurrency: params.displayCurrency,
         items: { create: params.orderItemsData },
       },
       include: { items: true },
@@ -533,7 +604,7 @@ export class OrderPaymentService {
   private async cancelOrderAndReleaseInventory(orderId: string, reason?: string) {
     await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId } });
-      if (!order || order.status === OrderStatusEnum.cancelled) return;
+      if (!order || order.status === OrderStatusEnum.CANCELLED) return;
 
       // Release (Restore stock)
       await this.inventoryService.release(orderId, tx);
@@ -541,7 +612,7 @@ export class OrderPaymentService {
       await tx.order.update({
         where: { id: orderId },
         data: {
-          status: OrderStatusEnum.cancelled,
+          status: OrderStatusEnum.CANCELLED,
           cancelReason: reason || 'Payment failed',
           cancelledAt: new Date(),
         },

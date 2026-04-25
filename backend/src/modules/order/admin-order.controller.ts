@@ -22,6 +22,8 @@ import { OrderService } from './order.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { RefundService } from './services/refund.service';
+import { OrderStatusEnum } from '@prisma/client';
+import { OrderStateMachine } from './utils/order-state-machine';
 
 @ApiTags('Admin Order')
 @Controller('admin/orders')
@@ -32,12 +34,12 @@ export class AdminOrderController {
     private readonly orderService: OrderService,
     private readonly refundService: RefundService,
     private readonly ownershipRegistry: OwnershipRegistry,
-  ) {}
+  ) { }
 
   @Get()
   @Permission(PERMISSIONS.ORDER.READ)
   @ApiOperation({ summary: 'Lấy tất cả đơn hàng (Admin)' })
-  findAll(@Query() dto: PaginationDto & { status?: string }) {
+  findAll(@Query() dto: PaginationDto & { status?: string; customerId?: string; guestEmail?: string }) {
     return this.orderService.findAllPaginated(dto);
   }
 
@@ -57,7 +59,7 @@ export class AdminOrderController {
     @Body() dto: UpdateOrderStatusDto,
     @CurrentUser() user: RequestUserPayload,
   ) {
-    return this.orderService.updateStatus(id, dto.status, user.userId, dto.note);
+    return this.orderService.transitionTo(id, dto.status as OrderStatusEnum, user.userId, dto.note);
   }
 
   @Post(':id/actions/cancel')
@@ -68,7 +70,7 @@ export class AdminOrderController {
     @Body() dto: CancelOrderDto,
     @CurrentUser() user: RequestUserPayload,
   ) {
-    return this.orderService.updateStatus(id, 'cancelled', user.userId, dto.reason);
+    return this.orderService.transitionTo(id, OrderStatusEnum.CANCELLED, user.userId, dto.reason);
   }
 
   @Post(':id/actions/refund')

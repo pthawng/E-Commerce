@@ -18,7 +18,7 @@ export class PermissionGuard implements CanActivate {
     private reflector: Reflector,
     // [CHANGE] Thay RbacService bằng PermissionCacheService để dùng Redis
     private permissionCacheService: PermissionCacheService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // 1. Lấy Metadata từ Decorator (Giữ nguyên logic của bạn - rất tốt)
@@ -43,10 +43,9 @@ export class PermissionGuard implements CanActivate {
       throw new UnauthorizedException('User not found in request');
     }
 
-    // [OPTIMIZATION 1] Super Admin Bypass
-    // Nếu trong JWT Payload đã có flag isSystem hoặc role SUPER_ADMIN -> Cho qua luôn
-    // Giúp Admin không bao giờ bị chặn và giảm tải check quyền
-    if (user.roles?.includes('SUPER_ADMIN') || user.isSystem) return true;
+    // [OPTIMIZATION 1] System/Internal Bypass
+    // We only bypass if user.isSystem is true (for internal non-user operations)
+    if (user.isSystem) return true;
 
     // [OPTIMIZATION 2] Bỏ check `ensureActiveUser` thừa thãi
     // Lý do: Nếu user bị khóa, ta sẽ xóa cache permissions của họ.

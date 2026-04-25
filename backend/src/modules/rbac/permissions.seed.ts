@@ -55,4 +55,7 @@ export const PERMISSION_SEEDS: PermissionSeed[] = [
   { action: PERMISSIONS.INVENTORY.MANAGE, name: 'Quản lý kho hàng', module: 'INVENTORY' },
   { action: PERMISSIONS.INVENTORY.TRANSFER, name: 'Điều chuyển kho', module: 'INVENTORY' },
   { action: PERMISSIONS.INVENTORY.ADJUST, name: 'Điều chỉnh kho', module: 'INVENTORY' },
+  // LEDGER
+  { action: PERMISSIONS.LEDGER.READ, name: 'Xem sổ cái', module: 'LEDGER' },
+  { action: PERMISSIONS.LEDGER.MANAGE, name: 'Quản lý sổ cái', module: 'LEDGER' },
 ];

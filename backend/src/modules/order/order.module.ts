@@ -8,6 +8,7 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { MailModule } from '../mail/mail.module';
 import { PaymentModule } from '../payment/payment.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { SystemModule } from '../system/system.module';
 import { AdminOrderController } from './admin-order.controller';
 import { CheckoutController } from './controllers/checkout.controller';
 import { OrderRecoveryController } from './controllers/order-recovery.controller';
@@ -17,6 +18,7 @@ import { OrderService } from './order.service';
 import { CheckoutTokenService } from './services/checkout-token.service';
 import { OrderPaymentService } from './services/order-payment.service';
 import { RefundService } from './services/refund.service';
+import { OrderEventConsumer } from './services/order-event.consumer';
 
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { RefundService } from './services/refund.service';
     CartModule,
     InventoryModule,
     MailModule,
+    SystemModule,
     forwardRef(() => PaymentModule),
     forwardRef(() => AuthModule),
     JwtModule.registerAsync({
@@ -45,7 +48,8 @@ import { RefundService } from './services/refund.service';
     CheckoutTokenService,
     RefundService,
     CleanupExpiredReservationsJob,
+    OrderEventConsumer,
   ],
   exports: [OrderService, OrderPaymentService, CheckoutTokenService, RefundService],
 })
-export class OrderModule {}
+export class OrderModule { }

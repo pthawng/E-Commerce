@@ -32,7 +32,7 @@ import { UserService } from './user.service';
 @Controller('admin/rbac/users')
 @UseGuards(AdminJwtAccessGuard, PermissionGuard)
 export class AdminUserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Get()
   @UseGuards(PaginationRateLimitGuard)
@@ -52,7 +52,16 @@ export class AdminUserController {
     return this.userService.create(dto);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Lấy chi tiết user quản trị' })
+  @ApiResponse({ status: 200, description: 'Chi tiết user' })
+  @Permission(PERMISSIONS.AUTH.USER.READ)
+  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.userService.findOne(id);
+  }
+
   @Patch(':id')
+
   @ApiOperation({ summary: 'Cập nhật user quản trị' })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   @Permission(PERMISSIONS.AUTH.USER.UPDATE)

@@ -1,48 +1,43 @@
 {
-  "name": "@ray-paradis/admin",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@ant-design/icons": "^6.1.0",
-    "@ecommerce/shared": "file:../shared",
-    "@hookform/resolvers": "^5.2.2",
-    "@tanstack/react-query": "^5.90.20",
-    "antd": "^6.2.3",
-    "axios": "^1.13.4",
-    "clsx": "^2.1.1",
-    "dayjs": "^1.11.19",
-    "jwt-decode": "^4.0.0",
-    "lucide-react": "^1.8.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-hook-form": "^7.71.1",
-    "react-router-dom": "^7.13.1",
-    "recharts": "^3.7.0",
-    "zod": "^4.3.6",
-    "zustand": "^5.0.11"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.11",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.46.4",
-    "vite": "npm:rolldown-vite@7.2.5"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.2.5"
-  }
+    "name": "@ray-paradis/back-office",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@ant-design/icons": "^5.3.1",
+        "@hookform/resolvers": "^3.3.4",
+        "@tanstack/react-query": "^5.25.0",
+        "antd": "^5.15.0",
+        "axios": "^1.6.7",
+        "clsx": "^2.1.0",
+        "framer-motion": "^11.0.8",
+        "i18next": "^26.0.7",
+        "i18next-browser-languagedetector": "^8.2.1",
+        "lucide-react": "^0.358.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-hook-form": "^7.51.1",
+        "react-i18next": "^17.0.4",
+        "react-router-dom": "^6.22.3",
+        "recharts": "^2.12.2",
+        "tailwind-merge": "^2.2.1",
+        "zod": "^3.22.4",
+        "zustand": "^4.5.2"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.64",
+        "@types/react-dom": "^18.2.21",
+        "@vitejs/plugin-react-swc": "^3.5.0",
+        "autoprefixer": "^10.4.18",
+        "postcss": "^8.4.35",
+        "tailwindcss": "^3.4.1",
+        "typescript": "^5.2.2",
+        "vite": "^5.1.6"
+    }
 }

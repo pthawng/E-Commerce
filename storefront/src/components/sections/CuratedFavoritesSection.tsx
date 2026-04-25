@@ -22,7 +22,7 @@ export const CuratedFavoritesSection = () => {
   const [pages, setPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(0);
 
-  const { language, formatPrice } = useStore();
+  const { language, currency, exchangeRatesUpdatedAt, formatPrice } = useStore();
   const { t } = useTranslation();
 
   // Fetch Featured Products (Real Backend Data)
@@ -34,7 +34,7 @@ export const CuratedFavoritesSection = () => {
   const products = useMemo(() => {
     const allProducts = productResponse?.pages.flatMap(page => page.data) || [];
     return allProducts.map(p => mapProductToCardProps(p, language, formatPrice));
-  }, [productResponse?.pages, language, formatPrice]);
+  }, [productResponse?.pages, language, currency, exchangeRatesUpdatedAt, formatPrice]);
 
   useEffect(() => {
     const el = scrollRef.current;

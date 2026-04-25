@@ -10,7 +10,7 @@ export class PermissionCacheService {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Lấy quyền của User (Ưu tiên Cache -> Fallback DB)
@@ -56,7 +56,6 @@ export class PermissionCacheService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        // 1. Lấy quyền từ Role
         userRoles: {
           include: {
             role: {
@@ -66,31 +65,41 @@ export class PermissionCacheService {
             },
           },
         },
-        // 2. Lấy quyền lẻ (UserPermission)
         userPermissions: { include: { permission: true } },
       },
     });
 
     if (!user) return [];
 
-    const permissionSet = new Set<string>();
-
-    // Gộp quyền từ Roles
+    // 1. Roles baseline
+    const rolePermissions = new Set<string>();
     user.userRoles.forEach((ur) => {
       ur.role.rolePermissions.forEach((rp) => {
         if (rp.permission.action) {
-          permissionSet.add(rp.permission.action);
+          rolePermissions.add(rp.permission.action);
         }
       });
     });
 
-    // Gộp quyền lẻ
-    user.userPermissions.forEach((up) => {
-      if (up.permission.action) {
-        permissionSet.add(up.permission.action);
-      }
-    });
+    // 2. Resolve Overrides (ALLOW / DENY)
+    const allowOverrides = user.userPermissions
+      .filter((up) => up.effect === 'ALLOW')
+      .map((up) => up.permission.action)
+      .filter((a): a is string => Boolean(a));
 
-    return Array.from(permissionSet);
+    const denyOverrides = new Set(
+      user.userPermissions
+        .filter((up) => up.effect === 'DENY')
+        .map((up) => up.permission.action)
+        .filter((a): a is string => Boolean(a)),
+    );
+
+    // 3. Final Composite: (Roles + ALLOW) - DENY
+    const effectiveSet = new Set([...rolePermissions, ...allowOverrides]);
+    for (const denied of denyOverrides) {
+      effectiveSet.delete(denied);
+    }
+
+    return Array.from(effectiveSet);
   }
 }

@@ -44,6 +44,12 @@ export class SessionMiddleware implements NestMiddleware {
       req.headers['x-client-session-id'] = sessionId;
     }
 
+    // Always expose the current CSRF token in the response header for the client to capture
+    const currentCsrfToken = req.cookies?.['csrfToken'];
+    if (currentCsrfToken) {
+      res.setHeader('x-csrf-token', currentCsrfToken);
+    }
+
     next();
   }
 }

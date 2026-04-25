@@ -1,0 +1,190 @@
+{
+    "common": {
+        "dashboard": "Dashboard",
+        "ledger": "Ledger",
+        "orders": "Orders",
+        "catalog": "Catalog",
+        "clients": "Clients",
+        "analytics": "Analytics",
+        "settings": "Settings",
+        "search_placeholder": "Search assets, orders or artisans...",
+        "quick_action": "Quick Actions",
+        "forge_order": "Forge Order",
+        "intake_material": "Intake Material",
+        "qc_approval": "QC Approval",
+        "live": "Live",
+        "inventory": "Inventory",
+        "cancel": "Cancel",
+        "save": "Save",
+        "edit": "Edit",
+        "view": "View",
+        "delete": "Delete",
+        "actions": "Actions",
+        "status": "Status"
+    },
+    "dashboard": {
+        "title": "Atelier Control Plane",
+        "hero_title": "Digital Atelier",
+        "hero_subtitle": "Atelier Control Plane",
+        "currency_symbol": "$",
+        "vault_liquidity": "Vault Liquidity",
+        "atelier_load": "Atelier Load",
+        "pipeline_cycle": "Pipeline Cycle",
+        "total_aum": "Total Jewelry AUM",
+        "pulse": "Atelier Pulse",
+        "financial_integrity": "Financial Integrity",
+        "live": "Live",
+        "active_work_orders": "Active Work Orders",
+        "performance": "Total Performance",
+        "pipeline_alerts": "Pipeline Alerts",
+        "status_mapping": {
+            "PENDING_PAYMENT": "Pending Payment",
+            "CONFIRMED": "Atelier Intake",
+            "IN_PRODUCTION": "Crafting",
+            "SHIPPED": "In Transit",
+            "DELIVERED": "Acquired",
+            "CANCELLED": "Terminated"
+        },
+        "archival_intelligence": "Archival Intelligence",
+        "ai_prediction": "Our AI engine predicts a 15% increase in Platinum bespoke inquiries for the upcoming gala season.",
+        "recommendation": "Recommendation: Buffer raw asset reserves by 20% in the Central Vault.",
+        "ledger_active": "Ledger Continuity Active",
+        "craftsmanship": "Active Craftsmanship",
+        "criticality": "Inventory Criticality",
+        "system_conversion": "System-wide Conversion",
+        "issues": "Issues",
+        "under_24h": "Under 24h",
+        "n_a": "N/A",
+        "patron_default": "Distinguished Patron",
+        "table": {
+            "reference": "Reference",
+            "patron": "Patron",
+            "phase": "Phase",
+            "load": "Load",
+            "sla": "SLA Status"
+        },
+        "integrity": {
+            "title": "Financial Integrity",
+            "physical_status": "Physical Audit Status",
+            "discrepancy_found": "{{count}} Discrepancy Found",
+            "match_confirmed": "Match Confirmed",
+            "mismatch_desc": "The digital ledger indicates a mismatch between recorded orders and received payments. Deep rotation required.",
+            "healthy_desc": "Last full forensic audit of the Primary Vault vs Digital Ledger completed recently.",
+            "discrepancy_rate": "Discrepancy Rate",
+            "auditing_engine": "Auditing Engine...",
+            "run_audit": "Run Forensic Check",
+            "audit_success_healthy": "Forensic audit complete: All systems healthy and balanced.",
+            "audit_success_issues": "Forensic audit complete: Found {{count}} discrepancies.",
+            "audit_failed": "Forensic audit failed to execute."
+        }
+    },
+    "inventory": {
+        "title": "Inventory",
+        "subtitle": "Manage your exquisite jewelry collection and stock levels.",
+        "add_product": "Add New Product",
+        "search_placeholder": "Search by name or SKU...",
+        "products_found": "{{count}} Products Found",
+        "category": "Category",
+        "table": {
+            "product": "Product",
+            "category": "Category",
+            "variants": "Variants",
+            "price": "Display Price",
+            "status": "Status",
+            "actions": "Actions"
+        },
+        "status": {
+            "active": "Active",
+            "draft": "Draft"
+        }
+    },
+    "orders": {
+        "title": "Order Pipeline",
+        "orchestrator": "ORCHESTRATOR",
+        "atelier": "ATELIER",
+        "filter_stage": "Filter By Stage",
+        "create_bespoke": "Create Bespoke Order",
+        "stats": {
+            "efficiency": "Cycle Efficiency",
+            "days_mean": "Days Mean",
+            "backlog_valuation": "Backlog Valuation",
+            "atelier_load": "Atelier Load"
+        },
+        "kanban": {
+            "items_count": "{{count}} items",
+            "draft_interaction": "Draft Interaction",
+            "atelier_lead": "Atelier Lead"
+        }
+    },
+    "profile": {
+        "title": "Member Profile",
+        "basic_info": "Basic Info",
+        "activity_log": "Activity Log",
+        "security_status": "Security Status",
+        "preferences": "Preferences",
+        "full_name": "Full Name",
+        "nickname": "Public Nickname",
+        "email": "Contact Email",
+        "phone": "Phone Number",
+        "bio": "Biography",
+        "save_changes": "Save Changes",
+        "edit_profile": "Edit Profile",
+        "cancel": "Cancel",
+        "email_verified": "Email Verified",
+        "verified": "Verified",
+        "not_verified": "Unverified",
+        "2fa_status": "2FA Status",
+        "not_configured": "Not Configured",
+        "change_password": "Change Password",
+        "security_settings": "Security Settings",
+        "view_all_preferences": "View all preferences"
+    },
+    "settings": {
+        "title": "System Configuration",
+        "subtitle": "Atelier Control & Personal Preferences",
+        "sync": "Sync",
+        "tabs": {
+            "atelier": "Atelier Profile",
+            "security": "Security",
+            "notifications": "Intelligence Center"
+        },
+        "atelier": {
+            "identity_region": "Identity & Region",
+            "name": "Atelier Name",
+            "currency": "Base Currency",
+            "timezone": "Timezone",
+            "operational_standards": "Operational Standards",
+            "ledger_precision": "Ledger Precision",
+            "ledger_precision_help": "Defines the decimal points for material weight tracking.",
+            "auto_reconciliation": "Automated Reconciliation",
+            "reconciliation_desc": "Run nightly forensic check on all vault entries."
+        },
+        "security": {
+            "access_sessions": "Access Control & Sessions",
+            "integrity": "Account Integrity",
+            "integrity_desc": "Your sessions are monitored by the Ray Paradis Security Orchestrator (L8).",
+            "log": "Security Log",
+            "active_sessions": "Active Sessions",
+            "active_devices": "{{count}} active devices",
+            "revoke": "Revoke",
+            "active_now": "Active Now",
+            "session_opened": "Opened {{date}}",
+            "revoke_confirm": "Are you sure you want to terminate this access session?",
+            "revoke_yes": "Yes, Terminate"
+        },
+        "notifications": {
+            "protocols": "Notification Protocols",
+            "ledger": "Ledger Discrepancy",
+            "ledger_desc": "Critical alerts when vault vs digital ledger doesn't match.",
+            "qc": "QC Bottleneck",
+            "qc_desc": "Alert when orders spend > 48h in casting or setting.",
+            "material": "Material Scarcity",
+            "material_desc": "Notification when gold/stone reserves fall below 15%."
+        },
+        "footer": {
+            "reset": "Reset Changes",
+            "save": "Save Configuration",
+            "saving": "Synchronizing Atelier Config..."
+        }
+    }
+}

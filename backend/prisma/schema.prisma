@@ -57,12 +57,14 @@ model UserRole {
 }
 
 model UserPermission {
-  userId       String     @db.Uuid
-  permissionId String     @db.Uuid
-  assignedAt   DateTime   @default(now())
+  userId       String           @db.Uuid
+  permissionId String           @db.Uuid
+  assignedAt   DateTime         @default(now())
   assignedBy   String?
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  effect       PermissionEffect @default(ALLOW)
+  reason       String?
+  permission   Permission       @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, permissionId])
   @@index([permissionId], map: "idx_user_permissions_perm")
@@ -81,13 +83,19 @@ model User {
   updatedAt           DateTime             @updatedAt
   deletedAt           DateTime?
   userType            UserType             @default(CUSTOMER)
+  avatarUrl           String?
+  bio                 String?
+  nickName            String?
+  segment             LuxurySegment?       @default(PROSPECT)
   auditLogs           AuditLog[]
+  preferences         ClientPreference[]
   discountUsages      DiscountUsage[]
   orders              Order[]
   posts               Post[]
   refreshTokens       RefreshToken[]
   resetPasswordTokens ResetPasswordToken[]
   reviews             Review[]
+  lifeEvents          UserLifeEvent[]
   userPermissions     UserPermission[]
   userRoles           UserRole[]
   verifyEmailTokens   VerifyEmailToken[]
@@ -95,8 +103,6 @@ model User {
   @@index([email], map: "idx_users_active_email")
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model RefreshToken {
   id            String    @id @default(uuid()) @db.Uuid
   userId        String    @db.Uuid
@@ -111,10 +117,38 @@ model RefreshToken {
   riskScore     Float     @default(0)
   version       Int       @default(1)
   revokedAt     DateTime?
+  deviceName    String?
+  deviceType    String?
+  userAgent     String?
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([parentJti])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?  @db.Uuid
+
+  @@index([key])
+  @@map("system_settings")
+}
+
+model CurrencyRate {
+  id             String   @id @default(uuid()) @db.Uuid
+  baseCurrency   String   @default("VND")
+  targetCurrency String
+  rate           Decimal  @db.Decimal(19, 6)
+  source         String?
+  fetchedAt      DateTime @default(now())
+
+  @@index([baseCurrency, targetCurrency])
+  @@index([fetchedAt])
+  @@map("currency_rates")
 }
 
 model VerifyEmailToken {
@@ -139,8 +173,6 @@ model ResetPasswordToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model Category {
   id           String            @id @default(uuid()) @db.Uuid
   parentId     String?           @db.Uuid
@@ -239,6 +271,7 @@ model ProductVariant {
   inventoryLogs  InventoryLog[]
   transfers      InventoryTransfer[]
   orderItems     OrderItem[]
+  physicalItems  PhysicalItem[]
   product        Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
   attributes     VariantAttributeValue[]
   cartItems      CartItem[]
@@ -275,8 +308,6 @@ model ProductMedia {
   @@index([productId, order], map: "idx_product_media_product")
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model Warehouse {
   id            String              @id @default(uuid()) @db.Uuid
   name          String
@@ -284,9 +315,45 @@ model Warehouse {
   address       Json?
   isActive      Boolean             @default(true)
   inventory     InventoryItem[]
+  locations     InventoryLocation[]
   inventoryLogs InventoryLog[]
   transfersFrom InventoryTransfer[] @relation("TransferFrom")
   transfersTo   InventoryTransfer[] @relation("TransferTo")
+}
+
+model InventoryLocation {
+  id            String              @id @default(uuid()) @db.Uuid
+  warehouseId   String              @db.Uuid
+  name          String
+  code          String              @unique
+  type          LocationType        @default(SHELF)
+  parentId      String?             @db.Uuid
+  parent        InventoryLocation?  @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children      InventoryLocation[] @relation("LocationHierarchy")
+  warehouse     Warehouse           @relation(fields: [warehouseId], references: [id])
+  physicalItems PhysicalItem[]
+
+  @@index([warehouseId])
+}
+
+model PhysicalItem {
+  id               String             @id @default(uuid()) @db.Uuid
+  productVariantId String             @db.Uuid
+  locationId       String?            @db.Uuid
+  serialNumber     String?            @unique
+  rfidTag          String?            @unique
+  status           ItemStatus         @default(AVAILABLE)
+  integrityHash    String?
+  metadata         Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  orderItemId      String?            @db.Uuid
+  location         InventoryLocation? @relation(fields: [locationId], references: [id])
+  orderItem        OrderItem?         @relation(fields: [orderItemId], references: [id])
+  productVariant   ProductVariant     @relation(fields: [productVariantId], references: [id])
+
+  @@index([productVariantId])
+  @@index([status])
 }
 
 model InventoryItem {
@@ -338,6 +405,7 @@ model InventoryReservation {
   warehouseId String            @db.Uuid
   sessionId   String?           @db.VarChar(100)
   userId      String?           @db.Uuid
+  cartItemId  String?           @db.Uuid
   order       Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt, status], map: "idx_reservation_cleanup")
@@ -361,8 +429,6 @@ model InventoryTransfer {
   productVariant  ProductVariant @relation(fields: [variantId], references: [id])
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model Cart {
   id        String     @id @default(uuid()) @db.Uuid
   userId    String?    @db.Uuid
@@ -405,8 +471,6 @@ model IdempotencyRecord {
   @@map("idempotency_records")
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model ShippingMethod {
   id           String  @id @default(uuid()) @db.Uuid
   name         String
@@ -423,7 +487,7 @@ model Order {
   id                  String                 @id @default(uuid()) @db.Uuid
   code                String                 @unique
   userId              String?                @db.Uuid
-  status              OrderStatusEnum        @default(pending)
+  status              OrderStatusEnum        @default(PENDING_PAYMENT)
   paymentStatus       PaymentStatusEnum      @default(unpaid)
   shippingAddress     Json
   billingAddress      Json?
@@ -431,7 +495,7 @@ model Order {
   shippingMethodName  String?
   trackingCode        String?
   estimatedDeliveryAt DateTime?
-  currency            String                 @default("VND")
+  baseCurrency        String                 @default("VND") @map("currency")
   subTotal            Decimal                @db.Decimal(19, 2)
   shippingFee         Decimal                @default(0) @db.Decimal(19, 2)
   discountAmount      Decimal                @default(0) @db.Decimal(19, 2)
@@ -449,9 +513,12 @@ model Order {
   paymentDeadline     DateTime?
   paymentMethod       PaymentMethodEnum?
   sessionId           String?                @db.VarChar(100)
-  guestEmail          String?                @db.VarChar(255)
   idempotencyKey      String?                @unique @db.VarChar(100)
   retryCount          Int                    @default(0)
+  guestEmail          String?                @db.VarChar(255)
+  stateMetadata       Json?
+  displayCurrency     String                 @default("VND")
+  exchangeRate        Decimal                @default(1.0) @db.Decimal(19, 6)
   discountUsages      DiscountUsage[]
   shippingMethod      ShippingMethod?        @relation(fields: [shippingMethodId], references: [id])
   user                User?                  @relation(fields: [userId], references: [id])
@@ -459,9 +526,9 @@ model Order {
   timelines           OrderTimeline[]
   payments            Payment[]
   transactions        PaymentTransaction[]
+  refunds             Refund[]
   reviews             Review[]
   reservations        InventoryReservation[]
-  refunds             Refund[]
 
   @@index([userId])
   @@index([sessionId])
@@ -482,28 +549,38 @@ model OrderItem {
   totalLine        Decimal         @default(0) @db.Decimal(19, 2)
   order            Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  physicalItems    PhysicalItem[]
 
   @@index([orderId])
 }
 
 model PaymentTransaction {
-  id              String                @id @default(uuid()) @db.Uuid
-  orderId         String                @db.Uuid
-  amount          Decimal               @db.Decimal(19, 2)
-  currency        String                @default("VND")
-  type            TransactionTypeEnum
-  status          TransactionStatusEnum @default(pending)
-  provider        String
-  method          String?
-  transactionCode String?               @unique
-  gatewayResponse Json?
-  note            String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @default(now())
-  order           Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id                    String                @id @default(uuid()) @db.Uuid
+  orderId               String                @db.Uuid
+  amount                Decimal               @db.Decimal(19, 2)
+  currency              String                @default("VND")
+  type                  TransactionTypeEnum
+  status                TransactionStatusEnum @default(pending)
+  provider              String
+  method                String?
+  transactionCode       String?               @unique
+  gatewayResponse       Json?
+  note                  String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @default(now())
+  reconciliationStatus  ReconciliationStatus  @default(UNVERIFIED)
+  amountUsd             Decimal?              @db.Decimal(19, 2)
+  captureId             String?               @unique
+  exchangeRate          Decimal?              @db.Decimal(19, 6)
+  paymentId             String?               @db.Uuid
+  providerTransactionId String?               @unique
+  rawPayload            Json?
+  order                 Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment               Payment?              @relation(fields: [paymentId], references: [id])
 
   @@index([orderId])
   @@index([transactionCode])
+  @@index([paymentId])
 }
 
 model OrderTimeline {
@@ -522,8 +599,6 @@ model OrderTimeline {
   @@index([orderId, createdAt])
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model Review {
   id           String        @id @default(uuid()) @db.Uuid
   productId    String        @db.Uuid
@@ -555,8 +630,6 @@ model ReviewMedia {
   review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model Discount {
   id                String          @id @default(uuid()) @db.Uuid
   code              String          @unique
@@ -593,8 +666,6 @@ model DiscountUsage {
   @@index([userId, discountId], map: "idx_discount_usage_check")
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 model Post {
   id              String    @id @default(uuid()) @db.Uuid
   slug            String    @unique
@@ -618,10 +689,10 @@ model AuditLog {
   action      String
   entityTable String
   entityId    String
-  before      Json? // State before mutation
-  after       Json? // State after mutation
-  metadata    Json? // Request context (IP, UA, RequestId)
   createdAt   DateTime @default(now())
+  after       Json?
+  before      Json?
+  metadata    Json?
   user        User?    @relation(fields: [userId], references: [id])
 
   @@index([entityTable, entityId], map: "idx_audit_entity")
@@ -646,33 +717,18 @@ model Refund {
   @@index([externalTransactionId])
 }
 
-enum RefundStatus {
-  PENDING
-  SUCCESS
-  FAILED
-}
-
 model Payment {
-  id                    String                  @id @default(uuid()) @db.Uuid
-  orderId               String                  @db.Uuid
-  provider              PaymentGatewayProvider
-  providerTransactionId String                  @unique
-  captureId             String?                 @unique
-  amount                Decimal                 @db.Decimal(19, 2)
-  amountUsd             Decimal?                @db.Decimal(19, 2)
-  exchangeRate          Decimal?                @db.Decimal(19, 2)
-  currency              String                  @default("VND")
-  status                PaymentProcessingStatus @default(INIT)
-  rawPayload            Json?
-  verifiedAt            DateTime?
-  errorLog              String?
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  order                 Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id           String                  @id @default(uuid()) @db.Uuid
+  orderId      String                  @db.Uuid
+  status       PaymentProcessingStatus @default(INIT)
+  verifiedAt   DateTime?
+  errorLog     String?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  order        Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transactions PaymentTransaction[]
 
   @@index([orderId])
-  @@index([providerTransactionId])
-  @@index([captureId])
 }
 
 model DataSeedHistory {
@@ -686,7 +742,6 @@ model DataSeedHistory {
 }
 
 model EmailOutbox {
-  /// @id @default(dbmanaged) -- TODO: Switch to UUID v7 for time-sortability
   id                String        @id @default(uuid()) @db.Uuid
   eventType         String
   recipient         String
@@ -709,6 +764,102 @@ model EmailOutbox {
 
   @@index([status, scheduledAt])
   @@map("email_outbox")
+}
+
+model DomainEventOutbox {
+  id          String            @id @default(uuid()) @db.Uuid
+  eventType   String
+  payload     Json
+  status      EventOutboxStatus @default(PENDING)
+  retryCount  Int               @default(0)
+  lastError   String?
+  createdAt   DateTime          @default(now())
+  processedAt DateTime?
+
+  @@index([status, createdAt])
+  @@map("domain_event_outbox")
+}
+
+model LedgerAccount {
+  id           String              @id @default(uuid()) @db.Uuid
+  code         String              @unique
+  name         String
+  type         AccountType
+  currency     String              @default("VND")
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  transactions LedgerTransaction[]
+}
+
+model JournalEntry {
+  id            String              @id @default(uuid()) @db.Uuid
+  code          String              @unique
+  description   String?
+  referenceId   String?
+  referenceType String?
+  status        JournalStatus       @default(DRAFT)
+  postedAt      DateTime?
+  createdBy     String?             @db.Uuid
+  createdAt     DateTime            @default(now())
+  lines         LedgerTransaction[]
+}
+
+model LedgerTransaction {
+  id        String        @id @default(uuid()) @db.Uuid
+  journalId String        @db.Uuid
+  accountId String        @db.Uuid
+  debit     Decimal       @default(0) @db.Decimal(19, 2)
+  credit    Decimal       @default(0) @db.Decimal(19, 2)
+  note      String?
+  createdAt DateTime      @default(now())
+  account   LedgerAccount @relation(fields: [accountId], references: [id])
+  journal   JournalEntry  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+
+  @@index([journalId])
+  @@index([accountId])
+}
+
+model TransactionAuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @db.Uuid
+  action        String
+  beforeStatus  String?
+  afterStatus   String?
+  actorId       String?  @db.Uuid
+  actorType     String   @default("system")
+  reason        String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+}
+
+model ClientPreference {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  category  String
+  value     String
+  intensity Int      @default(5)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserLifeEvent {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  eventType        String
+  eventDate        DateTime
+  remindDaysBefore Int      @default(7)
+  metadata         Json?
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, eventDate])
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
 
 enum AttributeInputType {
@@ -738,16 +889,19 @@ enum ActionType {
 }
 
 enum OrderStatusEnum {
-  pending
-  confirmed
-  processing
-  shipping
-  delivered
-  completed
-  cancelled
-  returned
-  refunded
-  pending_payment
+  DRAFT
+  PENDING_PAYMENT
+  CONFIRMED
+  MATERIAL_RESERVED
+  IN_PRODUCTION
+  QC
+  READY_TO_SHIP
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  RETURNED
+  REFUNDED
 }
 
 enum PaymentStatusEnum {
@@ -799,8 +953,6 @@ enum ReservationStatus {
   expired
 }
 
-/// ///////////////////////////////////
-/// ///////////////////////////////////
 enum PermissionModule {
   AUTH
   PRODUCT
@@ -835,16 +987,58 @@ enum EventOutboxStatus {
   FAILED
 }
 
-model DomainEventOutbox {
-  id          String            @id @default(uuid()) @db.Uuid
-  eventType   String
-  payload     Json
-  status      EventOutboxStatus @default(PENDING)
-  retryCount  Int               @default(0)
-  lastError   String?
-  createdAt   DateTime          @default(now())
-  processedAt DateTime?
+enum ReconciliationStatus {
+  MATCHED
+  MISMATCH
+  UNVERIFIED
+  RECONCILED
+}
 
-  @@index([status, createdAt])
-  @@map("domain_event_outbox")
+enum LocationType {
+  SHELF
+  BIN
+  VAULT
+  QC_STATION
+  CONSULTATION_ROOM
+  TRANSIT
+}
+
+enum ItemStatus {
+  AVAILABLE
+  RESERVED
+  IN_TRANSIT
+  SOLD
+  DAMAGED
+  LOST
+  QC_HOLD
+  CONSULTATION
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+enum LuxurySegment {
+  PROSPECT
+  ACTIVE
+  LOYAL
+  VIP
+  VVIP
+  VIC
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+  VOIDED
 }

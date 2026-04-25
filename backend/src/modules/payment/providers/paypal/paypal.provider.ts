@@ -1,3 +1,4 @@
+import { CurrencyService } from '@modules/system/currency.service';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as paypal from '@paypal/checkout-server-sdk';
@@ -18,9 +19,11 @@ import { BasePaymentProvider } from '../base-payment.provider';
 export class PayPalProvider extends BasePaymentProvider {
   private client: paypal.core.PayPalHttpClient;
   private readonly mode: 'sandbox' | 'production';
-  private readonly EXCHANGE_RATE = 25000; // 1 USD = 25,000 VND
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly currencyService: CurrencyService
+  ) {
     super('PayPalProvider');
 
     const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID') || '';
@@ -58,7 +61,17 @@ export class PayPalProvider extends BasePaymentProvider {
     const cancelUrl = metadata?.cancelUrl || 'http://localhost:8080/payment-result?status=failed';
 
     // Currency conversion: VND -> USD
-    const amountUsd = parseFloat((amount / this.EXCHANGE_RATE).toFixed(2));
+    // L8: Use frozen exchange rate from metadata (preferred) or dynamic service fallback
+    let rate: number;
+    if (metadata?.exchangeRate) {
+      rate = Number(metadata.exchangeRate);
+    } else {
+      // Dynamic fallback from CurrencyService if metadata is missing (defensive)
+      const currentVndToUsdRate = await this.currencyService.getRate('USD');
+      rate = currentVndToUsdRate;
+    }
+
+    const amountUsd = parseFloat((amount * rate).toFixed(2));
 
     // Create PayPal order request
     const request = new paypal.orders.OrdersCreateRequest();
@@ -104,7 +117,7 @@ export class PayPalProvider extends BasePaymentProvider {
           paypalOrderId: paypalOrder.id,
           status: paypalOrder.status,
           amountUsd: amountUsd,
-          exchangeRate: this.EXCHANGE_RATE,
+          exchangeRate: rate,
         },
       };
     } catch (error) {

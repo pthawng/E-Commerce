@@ -15,4 +15,16 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsString()
   @MinLength(6)
   password?: string; // client gửi → BE hash → passwordHash
+
+  @IsOptional()
+  @IsString()
+  nickName?: string;
+
+  @IsOptional()
+  @IsString()
+  bio?: string;
+
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
 }

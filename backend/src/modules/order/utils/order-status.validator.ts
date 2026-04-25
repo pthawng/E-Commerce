@@ -1,52 +1,29 @@
-import { BadRequestException } from '@nestjs/common';
 import { OrderStatusEnum } from '@prisma/client';
 
 export class OrderStatusValidator {
-  private static readonly VALID_TRANSITIONS: Record<OrderStatusEnum, OrderStatusEnum[]> = {
-    [OrderStatusEnum.pending_payment]: [OrderStatusEnum.confirmed, OrderStatusEnum.cancelled],
-    [OrderStatusEnum.pending]: [OrderStatusEnum.confirmed, OrderStatusEnum.cancelled],
-    [OrderStatusEnum.confirmed]: [
-      OrderStatusEnum.processing,
-      OrderStatusEnum.cancelled,
-      OrderStatusEnum.refunded,
-    ],
-    [OrderStatusEnum.processing]: [
-      OrderStatusEnum.shipping,
-      OrderStatusEnum.cancelled,
-      OrderStatusEnum.refunded,
-    ],
-    [OrderStatusEnum.shipping]: [
-      OrderStatusEnum.delivered,
-      OrderStatusEnum.refunded,
-      OrderStatusEnum.cancelled,
-    ],
-    [OrderStatusEnum.delivered]: [OrderStatusEnum.completed, OrderStatusEnum.returned],
-    [OrderStatusEnum.returned]: [OrderStatusEnum.refunded],
-    [OrderStatusEnum.completed]: [OrderStatusEnum.refunded], // Allow refunds after completion (customer support)
-    [OrderStatusEnum.cancelled]: [],
-    [OrderStatusEnum.refunded]: [],
+  private static readonly VALID_TRANSITIONS: Record<string, OrderStatusEnum[]> = {
+    [OrderStatusEnum.PENDING_PAYMENT]: [OrderStatusEnum.CONFIRMED, OrderStatusEnum.CANCELLED],
+    [OrderStatusEnum.CONFIRMED]: [OrderStatusEnum.MATERIAL_RESERVED, OrderStatusEnum.CANCELLED],
+    [OrderStatusEnum.MATERIAL_RESERVED]: [OrderStatusEnum.IN_PRODUCTION, OrderStatusEnum.CANCELLED],
+    [OrderStatusEnum.IN_PRODUCTION]: [OrderStatusEnum.QC, OrderStatusEnum.CANCELLED],
+    [OrderStatusEnum.QC]: [OrderStatusEnum.READY_TO_SHIP, OrderStatusEnum.CANCELLED],
+    [OrderStatusEnum.READY_TO_SHIP]: [OrderStatusEnum.SHIPPED, OrderStatusEnum.CANCELLED],
+    [OrderStatusEnum.SHIPPED]: [OrderStatusEnum.DELIVERED, OrderStatusEnum.CANCELLED],
+    [OrderStatusEnum.DELIVERED]: [OrderStatusEnum.COMPLETED, OrderStatusEnum.RETURNED],
+    [OrderStatusEnum.RETURNED]: [OrderStatusEnum.REFUNDED],
+    [OrderStatusEnum.COMPLETED]: [OrderStatusEnum.REFUNDED],
+    [OrderStatusEnum.CANCELLED]: [],
+    [OrderStatusEnum.REFUNDED]: [],
+    [OrderStatusEnum.DRAFT]: [OrderStatusEnum.PENDING_PAYMENT],
   };
 
-  /**
-   * Validates if a transition from currentStatus to nextStatus is allowed.
-   * Throws BadRequestException if the transition is invalid.
-   */
-  static validate(
-    orderId: string,
-    currentStatus: OrderStatusEnum,
-    nextStatus: OrderStatusEnum,
-  ): void {
-    if (currentStatus === nextStatus) {
-      return; // No change needed
-    }
+  static isValidTransition(currentStatus: OrderStatusEnum, nextStatus: OrderStatusEnum): boolean {
+    const transitions = this.VALID_TRANSITIONS[currentStatus];
+    if (!transitions) return false;
+    return transitions.includes(nextStatus);
+  }
 
-    const allowedNextStatuses = this.VALID_TRANSITIONS[currentStatus];
-
-    if (!allowedNextStatuses || !allowedNextStatuses.includes(nextStatus)) {
-      throw new BadRequestException(
-        `Invalid status transition for order ${orderId}: ${currentStatus} -> ${nextStatus}. ` +
-          `Allowed transitions: [${allowedNextStatuses?.join(', ') || 'none'}]`,
-      );
-    }
+  static getNextStatuses(currentStatus: OrderStatusEnum): OrderStatusEnum[] {
+    return this.VALID_TRANSITIONS[currentStatus] || [];
   }
 }

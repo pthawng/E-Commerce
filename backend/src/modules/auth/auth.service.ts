@@ -56,7 +56,7 @@ export class AuthService {
     private readonly forgotPassEmailService: ForgotPassEmailService,
     private readonly riskScoreService: RiskScoreService,
     private readonly eventBus: SecurityEventBus,
-  ) {}
+  ) { }
 
   // ---------------------------
   // PUBLIC API
@@ -114,6 +114,7 @@ export class AuthService {
   private async handleLogin(dto: LoginDto, requiredRole: string): Promise<AuthResponse> {
     const user = await this.prismaService.user.findFirst({
       where: dto.email ? { email: dto.email } : { phone: dto.phone },
+      include: this.userInclude,
     });
 
     if (!user || !user.passwordHash) {
@@ -151,6 +152,7 @@ export class AuthService {
   async getMe(userId: string): Promise<any> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
+      include: this.userInclude,
     });
 
     if (!user) {
@@ -164,32 +166,14 @@ export class AuthService {
     userId: string,
     dto: import('@modules/auth/dto/update-me.dto').UpdateMeDto,
   ): Promise<any> {
-    const user = await this.prismaService.user.findUnique({ where: { id: userId } });
-    if (!user) throw new UnauthorizedException('User not found');
-
-    // Check unique email if changed
-    if (dto.email && dto.email !== user.email) {
-      const exists = await this.prismaService.user.findUnique({ where: { email: dto.email } });
-      if (exists) throw new BadRequestException('Email already in use');
-    }
-
-    // Check unique phone if changed
-    if (dto.phone && dto.phone !== user.phone) {
-      const exists = await this.prismaService.user.findUnique({ where: { phone: dto.phone } });
-      if (exists) throw new BadRequestException('Phone number already in use');
-    }
-
-    const updated = await this.prismaService.user.update({
-      where: { id: userId },
-      data: {
-        fullName: dto.fullName ?? user.fullName,
-        phone: dto.phone ?? user.phone,
-        email: dto.email ?? user.email,
-        updatedAt: new Date(),
-      },
+    const updatedUser = await this.userService.update(userId, {
+      fullName: dto.fullName,
+      email: dto.email,
+      phone: dto.phone,
     });
 
-    return sanitizeUser(updated);
+    this.logger.log(`User profile updated via unified UserService (Auth context) for ID: ${userId}`);
+    return updatedUser;
   }
 
   // ---------------------------
@@ -311,9 +295,7 @@ export class AuthService {
   ): Promise<AuthResponse> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
-      include: {
-        userRoles: { include: { role: true } },
-      },
+      include: this.userInclude,
     });
 
     if (!user) throw new UnauthorizedException('User not found');
@@ -359,6 +341,26 @@ export class AuthService {
     userAgent?: string;
   }) {
     const tokenHash = await this.hashPassword(params.rawToken);
+
+    // L8 Device Signature Parsing
+    let deviceName = 'Unknown Device';
+    let deviceType = 'desktop';
+
+    if (params.userAgent) {
+      if (params.userAgent.includes('Windows')) deviceName = 'Windows PC';
+      else if (params.userAgent.includes('Macintosh')) deviceName = 'Mac';
+      else if (params.userAgent.includes('iPhone')) {
+        deviceName = 'iPhone';
+        deviceType = 'mobile';
+      } else if (params.userAgent.includes('Android')) {
+        deviceName = 'Android Device';
+        deviceType = 'mobile';
+      } else if (params.userAgent.includes('iPad')) {
+        deviceName = 'iPad';
+        deviceType = 'tablet';
+      }
+    }
+
     await this.prismaService.refreshToken.create({
       data: {
         id: params.jti,
@@ -367,6 +369,9 @@ export class AuthService {
         parentJti: params.parentJti,
         version: params.version ?? 1,
         ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+        deviceName,
+        deviceType,
         expiresAt: new Date(Date.now() + TOKEN_EXPIRY.REFRESH_DB_MS),
       },
     });
@@ -402,13 +407,7 @@ export class AuthService {
     // Kiểm tra user tồn tại và active
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
-      include: {
-        userRoles: {
-          include: {
-            role: true,
-          },
-        },
-      },
+      include: this.userInclude,
     });
 
     if (!user || !user.isActive) {
@@ -546,5 +545,68 @@ export class AuthService {
     await this.prismaService.refreshToken.deleteMany({ where: { userId } });
 
     return { message: 'Password changed successfully' };
+  }
+
+  async getSessions(userId: string) {
+    return this.prismaService.refreshToken.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        ipAddress: true,
+        userAgent: true,
+        deviceName: true,
+        deviceType: true,
+        createdAt: true,
+        riskScore: true,
+      },
+    });
+  }
+
+  async revokeSession(userId: string, jti: string) {
+    const session = await this.prismaService.refreshToken.findFirst({
+      where: { id: jti, userId },
+    });
+
+    if (!session) {
+      throw new BadRequestException('Session not found or already revoked');
+    }
+
+    await this.prismaService.refreshToken.update({
+      where: { id: jti },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: 'MANUAL_REVOCATION',
+      },
+    });
+
+    return { message: 'Session revoked successfully' };
+  }
+
+  private get userInclude() {
+    return {
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              rolePermissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      userPermissions: {
+        include: {
+          permission: true,
+        },
+      },
+    };
   }
 }

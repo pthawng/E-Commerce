@@ -91,18 +91,23 @@ export abstract class BasePolicy<TResource = unknown> {
   }
 
   /**
-   * Check if user has permission
+   * Check if user has permission (L8 RBAC Precedence)
+   * Rule: DENY > user ALLOW > role permission
    */
   protected hasPermission(user: PolicyContext['user'], permission: string): boolean {
+    // 1. Explicit DENY always wins (highest priority)
+    if (user.deniedPermissions?.includes(permission)) return false;
+    // 2. Explicit user-level ALLOW (overrides role)
+    if (user.allowedPermissions?.includes(permission)) return true;
+    // 3. Fallback to role-inherited permissions
     return user.permissions?.includes(permission) ?? false;
   }
 
   /**
-   * Check if user has any of the permissions
+   * Check if user has any of the permissions (L8 RBAC Precedence)
    */
   protected hasAnyPermission(user: PolicyContext['user'], permissions: string[]): boolean {
-    if (!user.permissions) return false;
-    return permissions.some((permission) => user.permissions!.includes(permission));
+    return permissions.some((permission) => this.hasPermission(user, permission));
   }
 
   /**

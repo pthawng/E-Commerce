@@ -19,6 +19,8 @@ import { IdempotencyService } from './services/idempotency.service';
 import { PaymentStateMachine } from './services/payment-state.machine';
 import { PaymentReconciliationService } from './services/reconciliation.service';
 import { VietQRMatchingService } from './services/vietqr-matching.service';
+import { LedgerModule } from '../ledger/ledger.module';
+import { SystemModule } from '../system/system.module';
 
 @Module({
   imports: [
@@ -28,13 +30,15 @@ import { VietQRMatchingService } from './services/vietqr-matching.service';
     InventoryModule,
     PaginationModule,
     RbacModule,
+    LedgerModule,
+    SystemModule,
     BullModule.registerQueue({
       name: 'payment_status',
       defaultJobOptions: {
         attempts: 5,
         backoff: { type: 'exponential', delay: 2000 },
         removeOnComplete: true,
-        removeOnFail: false, // Ensures failed jobs go to DLQ
+        removeOnFail: false,
       },
     }),
     BullBoardModule.forFeature({
@@ -56,4 +60,4 @@ import { VietQRMatchingService } from './services/vietqr-matching.service';
   ],
   exports: [PaymentService],
 })
-export class PaymentModule {}
+export class PaymentModule { }

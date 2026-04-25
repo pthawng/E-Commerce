@@ -162,6 +162,10 @@ export const API_ENDPOINTS = {
     VIETQR_WEBHOOK: '/api/payment/vietqr/webhook',
     VIETQR_CONFIRM: '/api/payment/vietqr/confirm',
   },
+
+  SYSTEM: {
+    CURRENCY_RATES: '/api/system/currency/rates',
+  },
 } as const;
 
 /**

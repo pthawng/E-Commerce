@@ -1,6 +1,7 @@
 import { SystemAction } from '@common/decorators/system-action.decorator';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { OrderStatusEnum } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryService } from '../../inventory/inventory.service';
 
@@ -14,7 +15,7 @@ export class CleanupExpiredReservationsJob {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventoryService: InventoryService,
-  ) {}
+  ) { }
 
   /**
    * Cron job: Runs every minute
@@ -29,7 +30,7 @@ export class CleanupExpiredReservationsJob {
     try {
       const expiredOrders = await this.prisma.order.findMany({
         where: {
-          status: 'pending_payment',
+          status: OrderStatusEnum.PENDING_PAYMENT,
           paymentDeadline: { lt: now },
         },
         include: { items: true },
@@ -60,7 +61,7 @@ export class CleanupExpiredReservationsJob {
       await tx.order.update({
         where: { id: order.id },
         data: {
-          status: 'cancelled',
+          status: OrderStatusEnum.CANCELLED,
           paymentStatus: 'unpaid',
           cancelReason: 'Payment timeout (15 minutes expired)',
           cancelledAt: new Date(),
@@ -77,10 +78,10 @@ export class CleanupExpiredReservationsJob {
       await tx.orderTimeline.create({
         data: {
           orderId: order.id,
-          action: 'order_cancelled',
-          fromStatus: 'pending_payment',
-          toStatus: 'cancelled',
-          description: 'System automatically cancelled order due to payment timeout',
+          action: 'RESERVATION_EXPIRED',
+          fromStatus: OrderStatusEnum.PENDING_PAYMENT,
+          toStatus: OrderStatusEnum.CANCELLED,
+          description: 'Order reservation expired due to payment timeout.',
           actorType: 'system',
         },
       });

@@ -1,5 +1,6 @@
 import { CurrentUser } from '@common/decorators/get-user.decorator';
 import { BadRequestException, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { OrderStatusEnum } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtAccessGuard } from '../../auth/guard/access-jwt.guard';
 import { MailService } from '../../mail/mail.service';
@@ -9,7 +10,7 @@ export class OrderRecoveryController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   @Post(':id/resend-confirmation')
   @UseGuards(JwtAccessGuard)
@@ -24,7 +25,7 @@ export class OrderRecoveryController {
 
     if (!order) throw new BadRequestException('Order not found or access denied');
 
-    if (order.status === 'pending_payment') {
+    if (order.status === OrderStatusEnum.PENDING_PAYMENT) {
       throw new BadRequestException('Confirmation cannot be sent for unpaid orders');
     }
 

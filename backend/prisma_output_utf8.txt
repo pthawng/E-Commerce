@@ -1,0 +1,12 @@
+﻿Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "ecommerce", schema "public" at "localhost:5432"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GEPERM: operation not permitted, rename 'E:\Ray Paradis\backend\node_modules\.pri
+sma\client\query_engine-windows.dll.node.tmp7548' -> 'E:\Ray Paradis\backend\nod
+e_modules\.prisma\client\query_engine-windows.dll.node'
+

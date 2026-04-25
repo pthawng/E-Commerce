@@ -50,6 +50,14 @@ async function bootstrap() {
 
   app.useLogger(isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose']);
   app.use(cookieParser());
+
+  // 🔍 Request Tracepoint
+  app.use((req: any, res: any, next: any) => {
+    if (req.method !== 'OPTIONS') {
+      Logger.log(`[INCOMING] ${req.method} ${req.url}`, 'NetworkTrace');
+    }
+    next();
+  });
   app.setGlobalPrefix('api', {
     exclude: ['/'],
   });
@@ -62,7 +70,8 @@ async function bootstrap() {
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
-      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token, x-order-access-token',
+      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token, x-order-access-token, x-client-timestamp, x-client-signature',
+    exposedHeaders: ['x-csrf-token'],
   });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )

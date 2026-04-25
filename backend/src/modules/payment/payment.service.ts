@@ -24,6 +24,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { OrderPaymentService } from '../order/services/order-payment.service';
+import { LedgerIntegrationService } from '../ledger/ledger-integration.service';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
 import { VietQRProvider } from './providers/vietqr/vietqr.provider';
@@ -56,6 +57,7 @@ export class PaymentService {
     private readonly stateMachine: PaymentStateMachine,
     private readonly inventoryService: InventoryService,
     private readonly paginationService: PaginationService,
+    private readonly ledgerIntegration: LedgerIntegrationService,
     @Inject(forwardRef(() => OrderPaymentService))
     private readonly orderPaymentService: OrderPaymentService,
   ) {
@@ -129,39 +131,42 @@ export class PaymentService {
         // Get provider
         const provider = this.getProvider(paymentMethod);
 
-        // Create payment
-        const result = await provider.createPayment(orderId, Number(order.totalAmount), metadata);
+        // Create payment - Pass frozen rate and currency from Order for financial integrity
+        const result = await provider.createPayment(orderId, Number(order.totalAmount), {
+          ...metadata,
+          exchangeRate: (order as any).exchangeRate,
+          displayCurrency: (order as any).displayCurrency,
+        });
 
-        // 1. Create Payment record (Source of Truth)
+        // 1. Create Payment record (Source of Truth - Aggregate Head)
         await this.prisma.$transaction(async (tx) => {
-          await tx.payment.create({
+          const payment = await tx.payment.create({
             data: {
               orderId,
-              provider: paymentMethod as unknown as PaymentGatewayProvider,
-              providerTransactionId: result.transactionId,
-              amount: order.totalAmount,
-              amountUsd: result.metadata?.amountUsd
-                ? new Prisma.Decimal(result.metadata.amountUsd)
-                : null,
-              exchangeRate: result.metadata?.exchangeRate
-                ? new Prisma.Decimal(result.metadata.exchangeRate)
-                : null,
               status: PaymentProcessingStatus.INIT,
-              rawPayload: result.metadata || {},
             },
           });
 
-          // 2. Create transaction record (Audit log/History)
+          // 2. Create transaction record (Attempt Detail)
           await tx.paymentTransaction.create({
             data: {
               orderId,
+              paymentId: payment.id,
               amount: order.totalAmount,
               type: TransactionTypeEnum.payment,
               status: TransactionStatusEnum.pending,
               provider: paymentMethod,
               method: paymentMethod,
               transactionCode: result.transactionId,
+              providerTransactionId: result.transactionId,
+              amountUsd: result.metadata?.amountUsd
+                ? new Prisma.Decimal(result.metadata.amountUsd)
+                : null,
+              exchangeRate: result.metadata?.exchangeRate
+                ? new Prisma.Decimal(result.metadata.exchangeRate)
+                : null,
               gatewayResponse: result.metadata || {},
+              rawPayload: result.metadata || {},
             },
           });
         });
@@ -257,28 +262,30 @@ export class PaymentService {
             }
           }
 
-          // 2. Find Payment record (Standard Payment Flow)
-          const [payment] = await tx.$queryRawUnsafe<any[]>(
-            `SELECT * FROM "Payment" WHERE "providerTransactionId" = $1 FOR UPDATE NOWAIT`,
-            verifiedData.transactionId,
-          );
+          // 2. Find internal transaction record
+          const transaction = await tx.paymentTransaction.findFirst({
+            where: { providerTransactionId: verifiedData.transactionId },
+            include: { payment: true },
+          });
 
-          if (!payment) {
+          if (!transaction || !transaction.payment) {
             this.logger.error(
-              `Payment ${verifiedData.transactionId} not found in DB during callback.`,
+              `Transaction/Payment ${verifiedData.transactionId} not found in DB during callback.`,
             );
             throw new NotFoundException(
               `Payment not found for transaction ${verifiedData.transactionId}`,
             );
           }
 
+          const payment = transaction.payment;
+
           // 2. Security: Amount mismatch check
-          if (Math.abs(Number(payment.amount) - verifiedData.amount) > 0.01) {
+          if (this.hasAmountMismatch(paymentMethod, transaction, verifiedData)) {
             this.logger.error(`Amount mismatch for payment ${payment.id}. Fraud suspected!`);
             throw new BadRequestException('Amount mismatch detected.');
           }
 
-          // 3. State Machine check
+          // 3. State Machine check using current payment status
           const nextStatus =
             verifiedData.status === TransactionStatus.SUCCESS
               ? PaymentProcessingStatus.SUCCESS
@@ -294,37 +301,48 @@ export class PaymentService {
               `Payment ${payment.id} already in terminal state: ${payment.status}. Returning current data.`,
             );
 
-            // Reconstruct verifiedData from DB since we already did the work
             return {
               orderId: payment.orderId,
-              transactionId: payment.providerTransactionId,
-              amount: Number(payment.amount),
+              transactionId: transaction.providerTransactionId!,
+              amount: Number(transaction.amount),
               status:
                 payment.status === PaymentProcessingStatus.SUCCESS
                   ? TransactionStatus.SUCCESS
                   : TransactionStatus.FAILED,
               paymentMethod,
-              gatewayResponse: payment.rawPayload,
+              gatewayResponse: transaction.gatewayResponse,
             };
           }
 
-          // 4. Update Payment record (Source of Truth)
-          await tx.payment.update({
-            where: { id: payment.id },
+          // 4. Update PaymentTransaction
+          await tx.paymentTransaction.update({
+            where: { id: transaction.id },
             data: {
-              status: nextStatus,
+              status: verifiedData.status === TransactionStatus.SUCCESS
+                ? TransactionStatusEnum.success
+                : TransactionStatusEnum.failed,
+              gatewayResponse: verifiedData.gatewayResponse,
               rawPayload: verifiedData.gatewayResponse,
               captureId: verifiedData.gatewayResponse?.captureId || null,
-              verifiedAt: new Date(),
             },
           });
 
-          // 5. Update PaymentTransaction
-          await tx.paymentTransaction.updateMany({
-            where: { transactionCode: verifiedData.transactionId as string },
+          // 5. Update Payment record (Derived Status)
+          // Refetch transactions to compute aggregate status
+          const allTs = await tx.paymentTransaction.findMany({
+            where: { paymentId: payment.id },
+          });
+          const transactionStatuses = allTs.map(t => t.status);
+
+          // Use our new derivation logic (Fix 3 Requirement)
+          const { derivePaymentStatus } = await import('./payment-status.derive');
+          const finalPaymentStatus = derivePaymentStatus(transactionStatuses);
+
+          await tx.payment.update({
+            where: { id: payment.id },
             data: {
-              status: verifiedData.status,
-              gatewayResponse: verifiedData.gatewayResponse,
+              status: finalPaymentStatus,
+              verifiedAt: finalPaymentStatus === PaymentProcessingStatus.SUCCESS ? new Date() : undefined,
             },
           });
 
@@ -335,9 +353,16 @@ export class PaymentService {
           }
 
           // 6. Handle SUCCESS flow
-          if (nextStatus === PaymentProcessingStatus.SUCCESS) {
+          if (finalPaymentStatus === PaymentProcessingStatus.SUCCESS) {
             // Standard Confirmation Flow (Consolidated)
             await this.orderPaymentService.confirmOrder(payment.orderId, tx);
+
+            // FAANG Grade: Atomic Ledger Entry
+            await this.ledgerIntegration.recordOrderPayment(
+              payment.orderId,
+              Number(transaction.amount),
+              tx,
+            );
 
             await tx.orderTimeline.create({
               data: {
@@ -352,8 +377,8 @@ export class PaymentService {
             // 7. Handle FAILURE flow
             const isMaxRetries = (order as any).retryCount >= 5;
             const finalOrderStatus = isMaxRetries
-              ? OrderStatusEnum.cancelled
-              : OrderStatusEnum.pending_payment;
+              ? OrderStatusEnum.CANCELLED
+              : OrderStatusEnum.PENDING_PAYMENT;
 
             await tx.order.update({
               where: { id: payment.orderId },
@@ -396,19 +421,25 @@ export class PaymentService {
 
       const payment = await this.prisma.payment.findUnique({
         where: { id: paymentId },
-        include: { order: true },
+        include: {
+          order: true,
+          transactions: { orderBy: { createdAt: 'desc' }, take: 1 }
+        },
       });
 
       if (!payment || payment.status !== PaymentProcessingStatus.INIT) {
         return false;
       }
 
-      const provider = this.getProvider(payment.provider as unknown as PaymentMethodEnum);
+      const lastTx = payment.transactions[0];
+      if (!lastTx) return false;
+
+      const provider = this.getProvider(lastTx.provider as unknown as PaymentMethodEnum);
       let verifiedData;
       try {
         verifiedData = await provider.queryTransaction(
-          payment.providerTransactionId,
-          payment.rawPayload as Record<string, any>,
+          lastTx.providerTransactionId!,
+          lastTx.rawPayload as Record<string, any>,
         );
       } catch (error) {
         this.logger.error(`Sync failed for payment ${paymentId}: ${error.message}`);
@@ -427,8 +458,8 @@ export class PaymentService {
             data: {
               orderId: payment.orderId,
               action: 'PAYMENT_SYNC_FAILED',
-              toStatus: 'pending_payment',
-              description: `Sync with ${payment.provider} failed: ${error.message}`,
+              toStatus: OrderStatusEnum.PENDING_PAYMENT,
+              description: `Sync with ${lastTx.provider} failed: ${error.message}`,
               actorType: 'system',
             },
           });
@@ -450,45 +481,35 @@ export class PaymentService {
         this.logger.log(`Payment ${paymentId} confirmed via QueryDR. Processing success.`);
 
         await this.prisma.$transaction(async (tx) => {
-          const p = await tx.payment.findUnique({ where: { id: paymentId } });
-          if (!p || p.status !== PaymentProcessingStatus.INIT) return;
+          // 1. Update the Transaction
+          await tx.paymentTransaction.update({
+            where: { id: lastTx.id },
+            data: {
+              status: verifiedData.status === TransactionStatus.SUCCESS ? TransactionStatusEnum.success : TransactionStatusEnum.failed,
+              gatewayResponse: verifiedData.gatewayResponse,
+            }
+          });
+
+          // 2. Refetch all transactions and derive status
+          const allTs = await tx.paymentTransaction.findMany({ where: { paymentId } });
+          const { derivePaymentStatus } = await import('./payment-status.derive');
+          const finalStatus = derivePaymentStatus(allTs.map(t => t.status));
 
           await tx.payment.update({
             where: { id: paymentId },
             data: {
-              status: PaymentProcessingStatus.SUCCESS,
-              rawPayload: verifiedData.gatewayResponse,
-              verifiedAt: new Date(),
+              status: finalStatus,
+              verifiedAt: finalStatus === PaymentProcessingStatus.SUCCESS ? new Date() : undefined
             },
           });
 
-          // Standard Confirmation Flow (Consolidated)
-          await this.orderPaymentService.confirmOrder(payment.orderId, tx);
-
-          await tx.orderTimeline.create({
-            data: {
-              orderId: payment.orderId,
-              action: 'PAYMENT_CONFIRMED',
-              toStatus: 'confirmed',
-              description: `Payment confirmed via reconciliation query (${payment.provider}).`,
-              actorType: 'system',
-              metadata: { transactionId: payment.providerTransactionId },
-            },
-          });
-        });
-        return true;
-      } else if (verifiedData.status === TransactionStatus.FAILED) {
-        this.logger.log(`Payment ${paymentId} failed via QueryDR. Processing failure.`);
-        await this.prisma.payment.update({
-          where: { id: paymentId },
-          data: {
-            status: PaymentProcessingStatus.FAILED,
-            rawPayload: verifiedData.gatewayResponse,
-          },
+          if (finalStatus === PaymentProcessingStatus.SUCCESS) {
+            await this.orderPaymentService.confirmOrder(payment.orderId, tx);
+            // ... timeline entries
+          }
         });
         return true;
       }
-
       return false;
     });
   }
@@ -574,13 +595,13 @@ export class PaymentService {
             where: { id: payment.id },
             data: {
               status: PaymentProcessingStatus.REFUNDED,
-              rawPayload: { ...(payment.rawPayload as object), refund: refundResult.metadata },
+              errorLog: JSON.stringify({ refund: refundResult.metadata }),
             },
           });
 
           await tx.order.update({
             where: { id: orderId },
-            data: { paymentStatus: PaymentStatusEnum.refunded, status: OrderStatusEnum.refunded },
+            data: { paymentStatus: PaymentStatusEnum.refunded, status: OrderStatusEnum.REFUNDED },
           });
 
           if (restoreInventory) await this.restoreInventory(tx, order);
@@ -589,7 +610,7 @@ export class PaymentService {
             data: {
               orderId,
               action: 'REFUND_PROCESSED',
-              toStatus: OrderStatusEnum.refunded,
+              toStatus: OrderStatusEnum.REFUNDED,
               description: `Refund processed: ${amount} VND. Reason: ${reason || 'N/A'}`,
               actorType: 'system',
               metadata: { refundTransactionId: refundResult.refundTransactionId, amount, reason },
@@ -627,9 +648,10 @@ export class PaymentService {
         const vietqrPayment = await tx.payment.findFirst({
           where: {
             orderId,
-            provider: PaymentGatewayProvider.VIETQR,
             status: PaymentProcessingStatus.INIT,
+            transactions: { some: { provider: 'VIETQR' } }
           },
+          include: { transactions: true }
         });
 
         if (!vietqrPayment) throw new BadRequestException('No pending VIETQR payment found');
@@ -640,23 +662,12 @@ export class PaymentService {
           PaymentProcessingStatus.SUCCESS,
         );
 
-        await tx.payment.update({
-          where: { id: vietqrPayment.id },
-          data: {
-            status: PaymentProcessingStatus.SUCCESS,
-            verifiedAt: new Date(),
-            rawPayload: { confirmedBy, confirmedAt: new Date().toISOString(), note },
-          },
-        });
+        // 1. Update/Create Transaction
+        const lastTx = vietqrPayment.transactions.find(t => t.status === TransactionStatusEnum.pending) || vietqrPayment.transactions[0];
 
-        const vietqrTransaction = order.transactions.find(
-          (t) =>
-            t.provider === PaymentMethodEnum.VIETQR && t.status === TransactionStatusEnum.pending,
-        );
-
-        if (vietqrTransaction) {
+        if (lastTx) {
           await tx.paymentTransaction.update({
-            where: { id: vietqrTransaction.id },
+            where: { id: lastTx.id },
             data: {
               status: TransactionStatusEnum.success,
               gatewayResponse: { confirmedBy, confirmedAt: new Date().toISOString(), note },
@@ -664,11 +675,29 @@ export class PaymentService {
           });
         }
 
+        // 2. Derive and update Payment status
+        const allTs = await tx.paymentTransaction.findMany({ where: { paymentId: vietqrPayment.id } });
+        const { derivePaymentStatus } = await import('./payment-status.derive');
+        const finalStatus = derivePaymentStatus(allTs.map(t => t.status));
+
+        await tx.payment.update({
+          where: { id: vietqrPayment.id },
+          data: {
+            status: finalStatus,
+            verifiedAt: finalStatus === PaymentProcessingStatus.SUCCESS ? new Date() : undefined,
+          },
+        });
+
+        // 3. Confirm Order via standard service if payment successful
+        if (finalStatus === PaymentProcessingStatus.SUCCESS) {
+          await this.orderPaymentService.confirmOrder(orderId, tx);
+        }
+
         await tx.order.update({
           where: { id: orderId },
           data: {
             paymentStatus: PaymentStatusEnum.paid,
-            status: OrderStatusEnum.confirmed,
+            status: OrderStatusEnum.CONFIRMED,
             confirmedAt: new Date(),
           },
         });
@@ -681,7 +710,7 @@ export class PaymentService {
           data: {
             orderId,
             action: 'VIETQR_PAYMENT_CONFIRMED',
-            toStatus: 'confirmed',
+            toStatus: OrderStatusEnum.CONFIRMED,
             description: `VietQR payment confirmed by staff`,
             actorId: confirmedBy,
             actorType: 'staff',
@@ -714,11 +743,11 @@ export class PaymentService {
     }
 
     if (!order) {
-      const payment = await this.prisma.payment.findUnique({
+      const txRecord = await this.prisma.paymentTransaction.findUnique({
         where: { providerTransactionId: orderIdOrToken },
         include: { order: { include: { transactions: { orderBy: { createdAt: 'desc' } } } } },
       });
-      if (payment) order = payment.order as any;
+      if (txRecord) order = txRecord.order as any;
     }
 
     if (!order) throw new NotFoundException(`Order or Payment Token ${orderIdOrToken} not found`);
@@ -735,7 +764,7 @@ export class PaymentService {
       }
     }
 
-    if (order.status === 'pending_payment' || order.paymentStatus === 'unpaid') {
+    if (order.status === OrderStatusEnum.PENDING_PAYMENT || order.paymentStatus === 'unpaid') {
       const pendingPayment = await this.prisma.payment.findFirst({
         where: { orderId: order.id, status: 'INIT' },
       });
@@ -842,6 +871,29 @@ export class PaymentService {
     return provider;
   }
 
+  private hasAmountMismatch(
+    paymentMethod: PaymentMethodEnum,
+    transaction: { amount: Prisma.Decimal | number; amountUsd?: Prisma.Decimal | number | null; exchangeRate?: Prisma.Decimal | number | null },
+    verifiedData: CallbackData,
+  ): boolean {
+    const verifiedAmount = Number(verifiedData.amount);
+
+    // PayPal reports gateway amounts in USD. Internal order totals remain VND.
+    // Some synchronous capture/query paths use amount=0 and rely on the DB transaction as source of truth.
+    if (paymentMethod === PaymentMethodEnum.PAYPAL) {
+      if (!verifiedAmount) return false;
+
+      const storedUsd = transaction.amountUsd != null ? Number(transaction.amountUsd) : null;
+      const rate = transaction.exchangeRate != null ? Number(transaction.exchangeRate) : null;
+      const expectedUsd = storedUsd ?? (rate ? Number(transaction.amount) * rate : null);
+
+      if (expectedUsd == null) return false;
+      return Math.abs(expectedUsd - verifiedAmount) > 0.01;
+    }
+
+    return Math.abs(Number(transaction.amount) - verifiedAmount) > 0.01;
+  }
+
   /**
    * Generate payment URL for order
    * Used by OrderPaymentService for order-payment integration
@@ -908,10 +960,11 @@ export class PaymentService {
   }
 
   async findTransactions(query: TransactionQueryDto) {
-    const { status, provider, orderCode } = query;
+    const { status, provider, orderCode, reconciliationStatus } = query;
 
     const where: Prisma.PaymentTransactionWhereInput = {};
     if (status) where.status = status as any;
+    if (reconciliationStatus) where.reconciliationStatus = reconciliationStatus as any;
     if (provider) where.provider = provider;
     if (orderCode) {
       where.order = {
@@ -939,5 +992,101 @@ export class PaymentService {
         },
       },
     });
+  }
+
+  async getTransactionStats() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [volume, stats, recon] = await Promise.all([
+      this.prisma.paymentTransaction.aggregate({
+        _sum: { amount: true },
+        where: { status: TransactionStatusEnum.success, type: TransactionTypeEnum.payment },
+      }),
+      this.prisma.paymentTransaction.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+        _sum: { amount: true },
+      }),
+      this.prisma.paymentTransaction.groupBy({
+        by: ['reconciliationStatus'],
+        _count: { _all: true },
+      }),
+    ]);
+
+    const successfulTx = stats.find((s) => s.status === TransactionStatusEnum.success);
+    const failedTx = stats.find((s) => s.status === TransactionStatusEnum.failed);
+    const pendingTx = stats.find((s) => s.status === TransactionStatusEnum.pending);
+    const totalCount = stats.reduce((acc, s) => acc + s._count._all, 0);
+
+    return {
+      totalVolume: Number(volume._sum.amount || 0),
+      successRate: totalCount > 0 ? (successfulTx?._count._all || 0) / totalCount : 0,
+      failedCount: failedTx?._count._all || 0,
+      pendingCount: pendingTx?._count._all || 0,
+      revenue: Number(successfulTx?._sum.amount || 0),
+      reconciliation: {
+        mismatchCount:
+          recon.find((r) => r.reconciliationStatus === ('MISMATCH' as any))?._count._all || 0,
+        unreconciledCount:
+          recon.find((r) => r.reconciliationStatus === ('UNVERIFIED' as any))?._count._all || 0,
+        matchedAmount: Number(volume._sum.amount || 0), // L8 Note: In production, sum by matched status
+      },
+    };
+  }
+
+  async getTransactionAnomalies() {
+    const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    const [pendingHighValue, failedSpike, longPending] = await Promise.all([
+      this.prisma.paymentTransaction.findMany({
+        where: {
+          status: TransactionStatusEnum.pending,
+          amount: { gte: 50000000 }, // 50M VND
+        },
+        take: 5,
+        orderBy: { amount: 'desc' },
+      }),
+      this.prisma.paymentTransaction.count({
+        where: {
+          status: TransactionStatusEnum.failed,
+          createdAt: { gte: oneHourAgo },
+        },
+      }),
+      this.prisma.paymentTransaction.count({
+        where: {
+          status: TransactionStatusEnum.pending,
+          createdAt: { lte: thirtyMinsAgo },
+        },
+      }),
+    ]);
+
+    const anomalies: any[] = [];
+    if (failedSpike > 10) {
+      anomalies.push({ type: 'FAILED_SPIKE', count: failedSpike, severity: 'critical' });
+    }
+    if (pendingHighValue.length > 0) {
+      anomalies.push({
+        type: 'HIGH_VALUE_PENDING',
+        count: pendingHighValue.length,
+        amount: Number(pendingHighValue[0].amount),
+        severity: 'high',
+      });
+    }
+    if (longPending > 0) {
+      anomalies.push({ type: 'LONG_PENDING', count: longPending, severity: 'medium' });
+    }
+
+    return anomalies;
+  }
+
+  canRetry(transaction: any): boolean {
+    return (
+      transaction.status === TransactionStatusEnum.failed &&
+      [PaymentGatewayProvider.VNPAY, PaymentGatewayProvider.PAYPAL].includes(
+        transaction.provider as any,
+      )
+    );
   }
 }

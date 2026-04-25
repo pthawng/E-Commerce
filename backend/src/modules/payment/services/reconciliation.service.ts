@@ -1,8 +1,9 @@
 import { SystemAction } from '@common/decorators/system-action.decorator';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { OrderStatusEnum, PaymentProcessingStatus, ReservationStatus } from '@prisma/client';
+import { OrderStatusEnum, PaymentProcessingStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { OrderService } from '../../order/order.service';
 import { PaymentService } from '../payment.service';
 import { PaymentStateMachine } from './payment-state.machine';
 
@@ -18,7 +19,8 @@ export class PaymentReconciliationService {
     private readonly prisma: PrismaService,
     private readonly stateMachine: PaymentStateMachine,
     private readonly paymentService: PaymentService,
-  ) {}
+    private readonly orderService: OrderService,
+  ) { }
 
   /**
    * Cron job to reconcile stale payments every 5 minutes
@@ -88,45 +90,23 @@ export class PaymentReconciliationService {
           where: { id: payment.id },
           data: {
             status: PaymentProcessingStatus.FAILED,
-            rawPayload: {
-              ...(payment.rawPayload || {}),
+            errorLog: JSON.stringify({
               reconciliationNote: 'Marked as FAILED due to timeout (15 mins)',
-            },
+            }),
           },
         });
 
         const order = payment.order;
-        if (order.status === OrderStatusEnum.pending_payment) {
-          await tx.order.update({
-            where: { id: order.id },
-            data: { status: OrderStatusEnum.cancelled },
-          });
+        if (order.status === OrderStatusEnum.PENDING_PAYMENT) {
+          this.logger.log(`Cancelling unpaid order ${order.id} during reconciliation`);
 
-          const reservations = await tx.inventoryReservation.findMany({
-            where: { orderId: order.id, status: ReservationStatus.active },
-          });
-
-          for (const res of reservations) {
-            await tx.inventoryItem.updateMany({
-              where: { productVariantId: res.variantId, warehouseId: res.warehouseId },
-              data: { reservedQuantity: { decrement: res.quantity } },
-            });
-
-            await tx.inventoryReservation.update({
-              where: { id: res.id },
-              data: { status: ReservationStatus.released },
-            });
-          }
-
-          await tx.orderTimeline.create({
-            data: {
-              orderId: order.id,
-              action: 'ORDER_CANCELLED',
-              toStatus: 'cancelled',
-              description: 'Order automatically cancelled due to payment timeout.',
-              actorType: 'system',
-            },
-          });
+          await this.orderService.transitionTo(
+            order.id,
+            OrderStatusEnum.CANCELLED,
+            'Order automatically cancelled due to payment timeout (Reconciliation).',
+            undefined, // System action
+            tx,
+          );
         }
       });
 

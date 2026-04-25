@@ -1,131 +1,72 @@
-export const OrderStatus = {
-    PENDING_PAYMENT: 'pending_payment',
-    PENDING: 'pending',
-    CONFIRMED: 'confirmed',
-    PROCESSING: 'processing',
-    SHIPPING: 'shipping',
-    DELIVERED: 'delivered',
-    COMPLETED: 'completed',
-    CANCELLED: 'cancelled',
-    RETURNED: 'returned',
-    REFUNDED: 'refunded',
-} as const;
-
-export type OrderStatus = typeof OrderStatus[keyof typeof OrderStatus];
-
-export const PaymentStatus = {
-    UNPAID: 'unpaid',
-    PARTIALLY_PAID: 'partially_paid',
-    PAID: 'paid',
-    REFUNDED: 'refunded',
-} as const;
-
-export type PaymentStatus = typeof PaymentStatus[keyof typeof PaymentStatus];
-
-export const PaymentMethod = {
-    COD: 'COD',
-    VNPAY: 'VNPAY',
-    PAYPAL: 'PAYPAL',
-} as const;
-
-export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
-
-export interface OrderItem {
-    id: string;
-    orderId: string;
-    productVariantId: string | null;
-    productName: string;
-    sku: string;
-    variantTitle?: Record<string, string>; // Multilingual record
-    thumbnailUrl: string | null;
-    quantity: number;
-    price: number;
-    totalLine: number;
-}
-
-export interface OrderTimeline {
-    id: string;
-    orderId: string;
-    action: string;
-    fromStatus: OrderStatus | null;
-    toStatus: OrderStatus | null;
-    description: string | null;
-    actorId: string | null;
-    actorType: 'system' | 'admin' | 'user';
-    metadata?: Record<string, any>;
-    createdAt: string;
-}
-
-export interface PaymentTransaction {
-    id: string;
-    orderId: string;
-    amount: number;
-    currency: string;
-    type: 'payment' | 'refund';
-    status: 'pending' | 'success' | 'failed' | 'reversed';
-    provider: string;
-    method: string | null;
-    transactionCode: string | null;
-    gatewayResponse?: Record<string, any>;
-    createdAt: string;
-}
+import { JewelryProduct, JewelryVariant } from '../../product/model/types';
 
 export interface Order {
     id: string;
-    code: string;
-    userId: string | null;
-    user?: {
-        id: string;
-        email: string;
-        fullName: string | null;
-    };
+    orderNumber: string;
+    customerId: string;
+    customerName: string;
     status: OrderStatus;
     paymentStatus: PaymentStatus;
-    paymentMethod: PaymentMethod | null;
-    shippingAddress: {
-        fullName: string;
-        phone: string;
-        address: string;
-        city?: string;
-        district?: string;
-        ward?: string;
-    };
-    billingAddress: Record<string, any> | null;
-    subTotal: number;
-    shippingFee: number;
-    discountAmount: number;
-    taxAmount: number;
-    totalAmount: number;
-    note: string | null;
-    cancelReason: string | null;
-    trackingCode: string | null;
-    estimatedDeliveryAt: string | null;
+    items: OrderItem[];
+    totals: OrderTotals;
+    shippingAddress: Address;
+    billingAddress: Address;
+    paymentMethod: 'vnpay' | 'paypal' | 'bank_transfer';
+    timeline: OrderTimelineEvent[];
+    productionStage?: 'design' | 'casting' | 'setting' | 'polishing' | 'engraving';
+    priority?: 'normal' | 'high' | 'vip';
     createdAt: string;
     updatedAt: string;
-    confirmedAt: string | null;
-    shippedAt: string | null;
-    deliveredAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
-
-    items?: OrderItem[];
-    timelines?: OrderTimeline[];
-    transactions?: PaymentTransaction[];
-    _count?: {
-        items: number;
-    };
 }
 
-export interface OrderFilters {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: OrderStatus;
-    sort?: string;
+export type OrderStatus =
+    | 'pending'
+    | 'confirmed'
+    | 'in_production'
+    | 'quality_control'
+    | 'shipped'
+    | 'delivered'
+    | 'cancelled'
+    | 'refunded';
+
+export type PaymentStatus = 'unpaid' | 'paid' | 'partially_paid' | 'failed' | 'refunded';
+
+export interface OrderItem {
+    id: string;
+    productId: string;
+    variantId: string;
+    productName: string;
+    variantDescription: string;
+    unitPrice: number;
+    quantity: number;
+    totalPrice: number;
+    metadata?: Record<string, any>;
 }
 
-export type OrderSort = 
-    | 'createdAt_desc'
-    | 'createdAt_asc'
-    | 'totalAmount_desc'
-    | 'totalAmount_asc';
+export interface OrderTotals {
+    subtotal: number;
+    shipping: number;
+    tax: number;
+    discount: number;
+    total: number;
+    currency: string;
+}
+
+export interface Address {
+    fullName: string;
+    phone: string;
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    country: string;
+    postalCode: string;
+}
+
+export interface OrderTimelineEvent {
+    id: string;
+    status: OrderStatus;
+    description: string;
+    timestamp: string;
+    userId?: string; // Admin who triggered the change
+}

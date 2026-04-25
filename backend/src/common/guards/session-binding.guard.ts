@@ -38,8 +38,10 @@ export class SessionBindingGuard implements CanActivate {
       this.logger.warn(`Expected: ${sessionUA}`);
       this.logger.warn(`Received: ${currentUA}`);
 
-      // In production, we'd clear cookies here.
-      throw new UnauthorizedException('Session binding mismatch. Please login again.');
+      // L8 Loosen Security for Dev/Testing: Only throw if in production
+      if (process.env.NODE_ENV === 'production') {
+        throw new UnauthorizedException('Session binding mismatch. Please login again.');
+      }
     }
 
     return true;

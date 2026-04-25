@@ -17,7 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AuditLogInterceptor implements NestInterceptor {
   private readonly logger = new Logger('AuditLog');
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -39,7 +39,7 @@ export class AuditLogInterceptor implements NestInterceptor {
 
         // Only audit state-changing mutations for important domains
         const isMutation = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method);
-        const isSensitive = url.match(/\/(orders|payments|inventory|auth|cart)/);
+        const isSensitive = url.match(/\/(orders|payments|inventory|auth|cart|profile)/);
 
         if (isMutation && isSensitive && response.statusCode < 400) {
           try {
@@ -52,9 +52,9 @@ export class AuditLogInterceptor implements NestInterceptor {
                 requestId,
                 durationMs: duration,
                 statusCode: response.statusCode,
+                ipAddress: ip,
+                userAgent,
               },
-              ipAddress: ip,
-              userAgent,
             };
 
             if (userId) {

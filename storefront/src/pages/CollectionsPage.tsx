@@ -19,7 +19,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 export const CollectionsPage = () => {
-    const { language, formatPrice } = useStore();
+    const { language, currency, exchangeRatesUpdatedAt, formatPrice } = useStore();
     const { t } = useTranslation();
 
     useEffect(() => {
@@ -60,7 +60,7 @@ export const CollectionsPage = () => {
                 index: pageIndex * 12 + itemInPageIndex // For LCP prioritization
             }))
         );
-    }, [data?.pages, language, formatPrice]);
+    }, [data?.pages, language, currency, exchangeRatesUpdatedAt, formatPrice]);
 
     // L7 Optimization: Automated Infinite Scroll
     const { targetRef: loadMoreRef } = useInfiniteScroll({

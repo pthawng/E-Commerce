@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Order } from '@prisma/client';
+import { Order, OrderStatusEnum } from '@prisma/client';
 import { BasePolicy } from '../base/base-policy';
 import type { PolicyContext, PolicyResult } from '../types/policy.types';
 import { PolicyAction } from '../types/policy.types';
@@ -107,7 +107,7 @@ export class OrderPolicy extends BasePolicy<Order> {
 
     // Staff can update non-completed orders
     if (this.hasRole(user, 'staff')) {
-      if (order.status === 'completed') {
+      if (order.status === OrderStatusEnum.COMPLETED) {
         return this.deny('Không thể cập nhật đơn hàng đã hoàn thành');
       }
       return this.allow();
@@ -116,7 +116,7 @@ export class OrderPolicy extends BasePolicy<Order> {
     // User can only update own pending orders
     const orderUserId = order.userId ?? undefined;
     if (this.isOwner(user, { ...order, userId: orderUserId })) {
-      if (order.status === 'pending' || order.status === 'processing') {
+      if (order.status === OrderStatusEnum.PENDING_PAYMENT || order.status === OrderStatusEnum.CONFIRMED) {
         return this.allow();
       }
       return this.deny('Chỉ có thể cập nhật đơn hàng đang chờ xử lý');

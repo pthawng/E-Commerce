@@ -19,13 +19,27 @@ import { PaymentService } from './payment.service';
 @UseGuards(AdminJwtAccessGuard, PermissionGuard)
 @UseInterceptors(AuditLogInterceptor)
 export class AdminPaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(private readonly paymentService: PaymentService) { }
 
   @Get('transactions')
   @ApiOperation({ summary: 'Lấy danh sách giao dịch thanh toán (Admin)' })
   @ApiResponse({ status: 200, description: 'Danh sách giao dịch thành công' })
-  @Permission(PERMISSIONS.ORDER.READ) // Using ORDER.READ as it covers financial history
+  @Permission(PERMISSIONS.ORDER.READ)
   async findAllTransactions(@Query() query: TransactionQueryDto) {
     return await this.paymentService.findTransactions(query);
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Lấy thống kê tài chính & đối soát' })
+  @Permission(PERMISSIONS.ORDER.READ)
+  async getStats() {
+    return await this.paymentService.getTransactionStats();
+  }
+
+  @Get('anomalies')
+  @ApiOperation({ summary: 'Lấy các bất thường tài chính' })
+  @Permission(PERMISSIONS.ORDER.READ)
+  async getAnomalies() {
+    return await this.paymentService.getTransactionAnomalies();
   }
 }

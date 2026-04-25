@@ -126,7 +126,7 @@ export class VietQRMatchingService {
     );
 
     // ── Idempotency check ─────────────────────────────────────────────
-    const alreadyProcessed = await this.prisma.payment.findFirst({
+    const alreadyProcessed = await this.prisma.paymentTransaction.findFirst({
       where: { providerTransactionId: bankTxId },
     });
     if (alreadyProcessed) {
@@ -168,7 +168,7 @@ export class VietQRMatchingService {
     if (!isAmountMatch) {
       this.logger.warn(
         `[CONFLICT] transferCode=${transferCode} matched but amount mismatch: ` +
-          `expected ${payment.amount}, got ${bankTx.amount}. Marking CONFLICT.`,
+        `expected ${payment.amount}, got ${bankTx.amount}. Marking CONFLICT.`,
       );
       await this.prisma.payment.update({
         where: { id: payment.id },

@@ -18,12 +18,16 @@ import { RbacModule } from '@modules/rbac/rbac.module';
 import { SecurityModule } from '@modules/security/security.module';
 import { StorageModule } from '@modules/storage/storage.module';
 import { UserModule } from '@modules/user/user.module';
+import { SystemModule } from '@modules/system/system.module';
+import { ProfileModule } from '@modules/profile/profile.module';
+import { LedgerModule } from '@modules/ledger/ledger.module';
 import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
@@ -47,6 +51,7 @@ import { JwtModule } from '@nestjs/jwt';
     CommonModule,
     JwtModule.register({}),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     PrometheusModule.register({
       path: '/metrics',
     }),
@@ -89,6 +94,9 @@ import { JwtModule } from '@nestjs/jwt';
     HealthModule,
     DashboardModule,
     DomainEventsModule,
+    SystemModule,
+    ProfileModule,
+    LedgerModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: bullConfigFactory,

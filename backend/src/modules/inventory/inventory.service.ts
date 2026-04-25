@@ -17,6 +17,7 @@ export interface AllocationItem {
   variantId: string;
   warehouseId: string;
   quantity: number;
+  cartItemId?: string; // Atomic link to source CartItem
 }
 
 /**
@@ -29,7 +30,7 @@ export interface AllocationItem {
 export class InventoryService {
   private readonly logger = new Logger(InventoryService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // ============================================
   // CHECK AVAILABILITY
@@ -129,6 +130,7 @@ export class InventoryService {
               status: ReservationStatus.active,
               userId,
               sessionId,
+              cartItemId: alloc.cartItemId,
             },
           });
 

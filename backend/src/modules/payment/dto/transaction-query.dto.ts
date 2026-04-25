@@ -8,6 +8,11 @@ export class TransactionQueryDto extends PaginationDto {
   @IsString()
   status?: string;
 
+  @ApiPropertyOptional({ description: 'Trạng thái đối soát' })
+  @IsOptional()
+  @IsString()
+  reconciliationStatus?: string;
+
   @ApiPropertyOptional({ description: 'Cổng thanh toán (VNPAY, PAYPAL, VIETQR)' })
   @IsOptional()
   @IsString()

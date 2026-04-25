@@ -11,12 +11,17 @@ export interface User {
   email: string;
   phone?: string;
   fullName?: string;
+  nickName?: string;
+  avatarUrl?: string;
+  bio?: string;
   isActive: boolean;
   isEmailVerified: boolean;
   lastLoginAt?: Date | string;
   createdAt: Date | string;
   updatedAt: Date | string;
   deletedAt?: Date | string;
+  roles?: string[];
+  permissions?: string[];
 }
 
 /**
@@ -31,11 +36,11 @@ export interface UserSummary {
 }
 
 /**
- * User with Roles
+ * User with Full Role/Permission Objects (Relational)
  */
-export interface UserWithRoles extends User {
-  roles?: Role[];
-  permissions?: Permission[];
+export interface UserWithRelations extends User {
+  userRoles?: any[]; // Prisma relation
+  userPermissions?: any[]; // Prisma relation
 }
 
 /**

@@ -30,7 +30,7 @@ import { LocalizedString, AttributeValue } from "@/features/products/types";
 export const ProductDetailPage = () => {
     const { slug } = useParams<{ slug: string }>();
     const { language, t } = useTranslation();
-    const { formatPrice } = useStore();
+    const { currency, exchangeRatesUpdatedAt, formatPrice } = useStore();
     const { addItem } = useCartStore();
 
     const [activeAccordion, setActiveAccordion] = useState<string | null>("craftsmanship");
@@ -53,7 +53,7 @@ export const ProductDetailPage = () => {
             .filter(p => p.id !== product?.id)
             .slice(0, 4)
             .map(p => mapProductToCardProps(p, language, formatPrice));
-    }, [recommendationsRes?.pages, product?.id, language, formatPrice]);
+    }, [recommendationsRes?.pages, product?.id, language, currency, exchangeRatesUpdatedAt, formatPrice]);
 
     // --- Senior Variant Selection Logic ---
 

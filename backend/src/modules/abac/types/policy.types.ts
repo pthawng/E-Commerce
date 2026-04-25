@@ -18,8 +18,12 @@ export interface PolicyContext<TResource = unknown> {
     email?: string;
     /** User roles - từ JWT (RBAC) */
     roles: string[];
-    /** User permissions - lazy loaded từ DB (RBAC) */
+    /** Role-inherited permissions (RBAC baseline) */
     permissions?: string[];
+    /** User-level ALLOW overrides (takes priority over role) */
+    allowedPermissions?: string[];
+    /** User-level DENY overrides (highest priority — always wins) */
+    deniedPermissions?: string[];
     /** Additional user attributes */
     attributes?: Record<string, unknown>;
   };

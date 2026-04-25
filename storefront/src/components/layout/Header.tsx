@@ -241,6 +241,9 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
               </button>
 
               <div className="hidden sm:flex items-center gap-2 sm:gap-4">
+                <div className="hidden md:block">
+                  <CurrencySelector isOpaque={shouldUsePrimaryColor} />
+                </div>
                 <LocaleSelector isOpaque={shouldUsePrimaryColor} />
                 <ThemeToggle />
               </div>

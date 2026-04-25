@@ -16,7 +16,7 @@ export class RbacService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private permissionCacheService: PermissionCacheService,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     this.logger.log('RbacService initialized. Seeding skip (handled by orchestrator).');
@@ -45,27 +45,59 @@ export class RbacService implements OnModuleInit {
     return user;
   }
 
-  /** Lấy tất cả permission của user (role + user-specific) */
+  /**
+   * Hydrate user permissions with precedence.
+   * Rule: DENY > ALLOW > ROLE FALLBACK
+   */
   async getUserPermissions(userId: string): Promise<string[]> {
     const rolePermissions = await this.prisma.userRole.findMany({
       where: { userId },
-      include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
+      include: {
+        role: {
+          include: {
+            rolePermissions: {
+              include: { permission: true },
+            },
+          },
+        },
+      },
     });
-    const userPermissions = await this.prisma.userPermission.findMany({
+
+    const userSpecificOverrides = await this.prisma.userPermission.findMany({
       where: { userId },
       include: { permission: true },
     });
 
-    const permissionsFromRoles = rolePermissions
-      .flatMap((ur) => ur.role.rolePermissions)
-      .map((rp) => rp.permission.action)
-      .filter((slug): slug is string => Boolean(slug));
+    // 1. Base set from Roles
+    const roleSlugs = new Set<string>(
+      rolePermissions
+        .flatMap((ur) => ur.role.rolePermissions)
+        .map((rp) => rp.permission.action)
+        .filter((slug): slug is string => Boolean(slug)),
+    );
 
-    const permissionsFromUser = userPermissions
+    // 2. Map overrides
+    const allowOverrides = userSpecificOverrides
+      .filter((up) => up.effect === 'ALLOW')
       .map((up) => up.permission.action)
-      .filter((slug): slug is string => Boolean(slug));
+      .filter((a): a is string => !!a);
 
-    return [...new Set([...permissionsFromRoles, ...permissionsFromUser])];
+    const denyOverrides = new Set(
+      userSpecificOverrides
+        .filter((up) => up.effect === 'DENY')
+        .map((up) => up.permission.action)
+        .filter((a): a is string => !!a),
+    );
+
+    // 3. Composite logic: (Roles + ALLOW) - DENY
+    const effectivePermissions = new Set([...roleSlugs, ...allowOverrides]);
+
+    // Explicit DENY always wins
+    for (const denied of denyOverrides) {
+      effectivePermissions.delete(denied);
+    }
+
+    return Array.from(effectivePermissions);
   }
 
   /** Gán role cho user */
@@ -470,23 +502,47 @@ export class RbacService implements OnModuleInit {
       ),
     );
 
-    // Auto-assign all permissions to the 'admin' role if it exists
-    const adminRole = await this.prisma.role.findUnique({ where: { slug: 'admin' } });
-    if (adminRole) {
-      for (const p of permissions) {
-        await this.prisma.rolePermission.upsert({
-          where: {
-            roleId_permissionId: {
-              roleId: adminRole.id,
+    // Auto-assign all permissions to the 'admin' and 'super_admin' roles
+    const masterRoles = await Promise.all([
+      this.prisma.role.upsert({
+        where: { slug: 'super_admin' },
+        update: {},
+        create: {
+          slug: 'super_admin',
+          name: 'Super Administrator',
+          description: 'Hệ thống tối cao - Toàn quyền điều khiển',
+          isSystem: true,
+        },
+      }),
+      this.prisma.role.upsert({
+        where: { slug: 'admin' },
+        update: {},
+        create: {
+          slug: 'admin',
+          name: 'Administrator',
+          description: 'Quản trị viên hệ thống',
+          isSystem: true,
+        },
+      }),
+    ]);
+
+    for (const role of masterRoles) {
+      if (role) {
+        for (const p of permissions) {
+          await this.prisma.rolePermission.upsert({
+            where: {
+              roleId_permissionId: {
+                roleId: role.id,
+                permissionId: p.id,
+              },
+            },
+            update: {},
+            create: {
+              roleId: role.id,
               permissionId: p.id,
             },
-          },
-          update: {},
-          create: {
-            roleId: adminRole.id,
-            permissionId: p.id,
-          },
-        });
+          });
+        }
       }
     }
   }

@@ -6,13 +6,14 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ActionType, OrderStatusEnum, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { IOwnable } from 'src/common/interfaces/ownable.interface';
 import { Principal, PrincipalType } from 'src/common/types/principal.types';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderStatusValidator } from './utils/order-status.validator';
+import { OrderStateMachine } from './utils/order-state-machine';
 
 @Injectable()
 export class OrderService {
@@ -23,7 +24,8 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ownershipRegistry: OwnershipRegistry,
-  ) {}
+    private readonly eventEmitter: EventEmitter2,
+  ) { }
 
   // ============================================
   // PUBLIC API
@@ -62,6 +64,7 @@ export class OrderService {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
+        user: { select: { id: true, email: true, fullName: true } },
         items: {
           include: { productVariant: true },
         },
@@ -76,7 +79,8 @@ export class OrderService {
     // Stateless order access claim override
     if (principal.type === PrincipalType.ORDER_ACCESS) {
       if (principal.id === id) {
-        return order;
+        const sa = order.shippingAddress as any;
+        return { ...order, guestFullName: sa?.fullName || null };
       }
       throw new ForbiddenException('Access Denied: Invalid order access token for this resource.');
     }
@@ -97,7 +101,8 @@ export class OrderService {
 
     this.ownershipRegistry.verify(principal, orderOwnable, `OrderDetailAccess:${id}`);
 
-    return order;
+    const sa = order.shippingAddress as any;
+    return { ...order, guestFullName: sa?.fullName || null };
   }
 
   // ============================================
@@ -110,17 +115,27 @@ export class OrderService {
     search?: string;
     status?: string;
     sort?: string;
+    customerId?: string;
+    guestEmail?: string;
   }) {
     try {
       const page = Number(dto.page || 1);
       const limit = Number(dto.limit || 20);
-      const { search, status, sort } = dto;
+      const { search, status, sort, customerId, guestEmail } = dto;
       const skip = (page - 1) * limit;
 
       const where: Prisma.OrderWhereInput = {};
 
-      if (status) {
-        where.status = status as any;
+      if (customerId) {
+        where.userId = customerId;
+      }
+
+      if (guestEmail) {
+        where.guestEmail = guestEmail;
+      }
+
+      if (status && status !== 'all') {
+        where.status = status.toUpperCase() as OrderStatusEnum;
       }
 
       if (search) {
@@ -151,8 +166,16 @@ export class OrderService {
         this.prisma.order.count({ where }),
       ]);
 
+      const mappedItems = items.map((item) => {
+        const shippingAddress = item.shippingAddress as any;
+        return {
+          ...item,
+          guestFullName: shippingAddress?.fullName || null,
+        };
+      });
+
       return {
-        items,
+        items: mappedItems,
         meta: {
           total,
           page,
@@ -168,68 +191,85 @@ export class OrderService {
     }
   }
 
-  async updateStatus(id: string, status: string, actorId?: string, note?: string) {
-    return this.transitionTo(id, status as OrderStatusEnum, actorId, note);
-  }
-
   /**
-   * Principal-Grade State Transition
+   * Elite State Transition (FAANG-Grade)
    * 1. Acquire row-level lock (FOR UPDATE)
-   * 2. Validate against State Machine matrix
-   * 3. Atomic update of status and timeline
+   * 2. Validate against OrderStateMachine (Fail-Closed)
+   * 3. Capture before/after state snapshots for immutable audit
+   * 4. Atomic update of status, metadata, and timeline
+   * 5. Transactional Events (Outbox Pattern)
    */
-  private async transitionTo(
+  public async transitionTo(
     id: string,
     nextStatus: OrderStatusEnum,
     actorId?: string,
     note?: string,
+    sessionMetadata: any = {},
   ) {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Acquire row lock (Concurrency Safety)
-      // We use raw SQL because Prisma 5 findUnique with select for update is limited
+      // 1. Acquire row lock + Capture Before State
       const [order]: any[] = await tx.$queryRaw`
-        SELECT id, status FROM "Order" WHERE id = ${id}::uuid FOR UPDATE
+        SELECT * FROM "Order" WHERE id = ${id}::uuid FOR UPDATE
       `;
 
       if (!order) throw new NotFoundException('Order not found');
 
-      // 2. Validate transition (Fail-Closed)
-      OrderStatusValidator.validate(id, order.status, nextStatus);
+      // 2. Validate transition + Prerequisites (Fail-Closed)
+      OrderStateMachine.validate(id, order.status, nextStatus, (order as any).stateMetadata);
 
-      // 3. Atomic Update
+      // 3. Atomic Status & Metadata Update
       const updatedOrder = await tx.order.update({
         where: { id },
         data: {
           status: nextStatus,
-          // Auto-set timestamps based on status
-          ...(nextStatus === OrderStatusEnum.confirmed ? { confirmedAt: new Date() } : {}),
-          ...(nextStatus === OrderStatusEnum.shipping ? { shippedAt: new Date() } : {}),
-          ...(nextStatus === OrderStatusEnum.delivered ? { deliveredAt: new Date() } : {}),
-          ...(nextStatus === OrderStatusEnum.completed ? { completedAt: new Date() } : {}),
-          ...(nextStatus === OrderStatusEnum.cancelled ? { cancelledAt: new Date() } : {}),
+          updatedAt: new Date(),
+          // Standardized timestamps
+          ...(nextStatus === ('CONFIRMED' as any) ? { confirmedAt: new Date() } : {}),
+          ...(nextStatus === ('SHIPPED' as any) ? { shippedAt: new Date() } : {}),
+          ...(nextStatus === ('DELIVERED' as any) ? { deliveredAt: new Date() } : {}),
+          ...(nextStatus === ('COMPLETED' as any) ? { completedAt: new Date() } : {}),
+          ...(nextStatus === ('CANCELLED' as any) ? { cancelledAt: new Date() } : {}),
         },
       });
 
-      // 4. Audit Trail
+      // 4. Immutable Financial-Grade Audit Log
       await tx.orderTimeline.create({
         data: {
           orderId: id,
-          action: `STATUS_TRANSITION_${nextStatus.toUpperCase()}`,
+          action: `STATE_TRANSITION_${nextStatus}`,
           fromStatus: order.status,
           toStatus: nextStatus,
-          description: note || `Order status transitioned to ${nextStatus}`,
+          beforeState: order as any, // Full snapshot
+          afterState: updatedOrder as any,
+          description: note || `Order transitioned from ${order.status} to ${nextStatus}`,
           actorId,
           actorType: actorId ? 'admin' : 'system',
+          metadata: sessionMetadata,
+        } as any,
+      });
+
+      // 5. Transactional Event Outbox (Decoupling)
+      await tx.domainEventOutbox.create({
+        data: {
+          eventType: 'order.status.changed',
+          payload: {
+            orderId: id,
+            oldStatus: order.status,
+            newStatus: nextStatus,
+            actorId,
+            stateMetadata: (updatedOrder as any).stateMetadata
+          },
+          status: 'PENDING',
         },
       });
 
-      // 5. Transactional Event Outbox (Consistency Guarantee)
-      await tx.domainEventOutbox.create({
-        data: {
-          eventType: 'order.status.updated',
-          payload: { orderId: id, oldStatus: order.status, newStatus: nextStatus, actorId },
-          status: 'PENDING',
-        },
+      // 6. Emit Real-time Event (Post-Transaction)
+      this.eventEmitter.emit('order.status.changed', {
+        orderId: id,
+        oldStatus: order.status,
+        newStatus: nextStatus,
+        actorId,
+        stateMetadata: (updatedOrder as any).stateMetadata,
       });
 
       return updatedOrder;

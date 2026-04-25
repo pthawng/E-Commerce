@@ -1,0 +1,190 @@
+{
+    "common": {
+        "dashboard": "Bảng điều khiển",
+        "ledger": "Sổ cái",
+        "orders": "Đơn hàng",
+        "catalog": "Danh mục",
+        "clients": "Khách hàng",
+        "analytics": "Phân tích",
+        "settings": "Cài đặt",
+        "search_placeholder": "Tìm kiếm tài sản, đơn hàng hoặc nghệ nhân...",
+        "quick_action": "Thao tác nhanh",
+        "forge_order": "Tạo đơn hàng",
+        "intake_material": "Nhập nguyên liệu",
+        "qc_approval": "Phê duyệt QC",
+        "live": "Trực tiếp",
+        "inventory": "Kho hàng",
+        "cancel": "Hủy",
+        "save": "Lưu",
+        "edit": "Sửa",
+        "view": "Xem",
+        "delete": "Xóa",
+        "actions": "Thao tác",
+        "status": "Trạng thái"
+    },
+    "dashboard": {
+        "title": "Trung tâm Điều phối Xưởng",
+        "hero_title": "Digital Atelier",
+        "hero_subtitle": "Pane Điều khiển Atelier",
+        "currency_symbol": "₫",
+        "vault_liquidity": "Thanh khoản Vault",
+        "atelier_load": "Công suất Xưởng",
+        "pipeline_cycle": "Chu kỳ Vận hành",
+        "total_aum": "Tổng tài sản Trang sức",
+        "pulse": "Nhịp đập Xưởng",
+        "financial_integrity": "Chỉnh trực Tài chính",
+        "live": "Trực tiếp",
+        "active_work_orders": "Đơn hàng Đang xử lý",
+        "performance": "Hiệu suất Tổng thể",
+        "pipeline_alerts": "Cảnh báo Chuỗi cung ứng",
+        "status_mapping": {
+            "PENDING_PAYMENT": "Chờ Thanh toán",
+            "CONFIRMED": "Tiếp nhận Xưởng",
+            "IN_PRODUCTION": "Đang Chế tác",
+            "SHIPPED": "Đang Vận chuyển",
+            "DELIVERED": "Đã Bàn giao",
+            "CANCELLED": "Đã Hủy"
+        },
+        "archival_intelligence": "Trí tuệ Lưu trữ",
+        "ai_prediction": "Công cụ AI dự đoán mức tăng 15% nhu cầu chế tác Bạch kim bespoke cho mùa lễ hội tới.",
+        "recommendation": "Khuyến nghị: Tăng dự trữ nguyên liệu thô thêm 20% trong Kho trung tâm.",
+        "ledger_active": "Duy trì Sổ cái Trực tiếp",
+        "craftsmanship": "Nghệ thuật Chế tác Đang hoạt động",
+        "criticality": "Mức độ Nguy cấp Kho hàng",
+        "system_conversion": "Chuyển đổi Toàn hệ thống",
+        "issues": "Sự cố",
+        "under_24h": "Dưới 24 giờ",
+        "n_a": "K/A",
+        "patron_default": "Khách hàng Danh dự",
+        "table": {
+            "reference": "Mã tham chiếu",
+            "patron": "Khách hàng",
+            "phase": "Giai đoạn",
+            "load": "Tải trọng",
+            "sla": "Trạng thái SLA"
+        },
+        "integrity": {
+            "title": "Chỉnh trực Tài chính",
+            "physical_status": "Trạng thái Kiểm kê Vật lý",
+            "discrepancy_found": "Tìm thấy {{count}} Sai lệch",
+            "match_confirmed": "Xác nhận Khớp lệnh",
+            "mismatch_desc": "Sổ cái kỹ thuật số cho thấy sự sai lệch giữa đơn hàng và thanh toán. Yêu cầu kiểm soát chuyên sâu.",
+            "healthy_desc": "Kiểm tra pháp y giữa Kho Vật lý và Sổ cái Kỹ thuật số hoàn tất.",
+            "discrepancy_rate": "Tỷ lệ Sai lệch",
+            "auditing_engine": "Đang Kiểm toán...",
+            "run_audit": "Chạy Kiểm tra Pháp y",
+            "audit_success_healthy": "Kiểm toán hoàn tất: Hệ thuật cân bằng.",
+            "audit_success_issues": "Kiểm toán hoàn tất: Tìm thấy {{count}} sai lệch.",
+            "audit_failed": "Lỗi thực thi kiểm toán pháp y."
+        }
+    },
+    "inventory": {
+        "title": "Kho hàng",
+        "subtitle": "Quản lý bộ sưu tập trang sức tinh xảo và mức tồn kho.",
+        "add_product": "Thêm Sản phẩm Mới",
+        "search_placeholder": "Tìm kiếm theo tên hoặc SKU...",
+        "products_found": "Tìm thấy {{count}} Sản phẩm",
+        "category": "Danh mục",
+        "table": {
+            "product": "Sản phẩm",
+            "category": "Danh mục",
+            "variants": "Biến thể",
+            "price": "Giá hiển thị",
+            "status": "Trạng thái",
+            "actions": "Thao tác"
+        },
+        "status": {
+            "active": "Đang hoạt động",
+            "draft": "Bản nháp"
+        }
+    },
+    "orders": {
+        "title": "Luồng Đơn hàng",
+        "orchestrator": "ĐIỀU PHỐI",
+        "atelier": "XƯỞNG CHẾ TÁC",
+        "filter_stage": "Lọc theo Giai đoạn",
+        "create_bespoke": "Tạo Đơn Bespoke",
+        "stats": {
+            "efficiency": "Hiệu suất Chu kỳ",
+            "days_mean": "Ngày (Trung bình)",
+            "backlog_valuation": "Định giá Tồn đọng",
+            "atelier_load": "Công suất Xưởng"
+        },
+        "kanban": {
+            "items_count": "{{count}} mục",
+            "draft_interaction": "Tương tác Nháp",
+            "atelier_lead": "Quản đốc Xưởng"
+        }
+    },
+    "profile": {
+        "title": "Hồ sơ Thành viên",
+        "basic_info": "Thông tin Cơ bản",
+        "activity_log": "Nhật ký Hoạt động",
+        "security_status": "Trạng thái Bảo mật",
+        "preferences": "Tùy chỉnh",
+        "full_name": "Họ và tên",
+        "nickname": "Tên hiển thị",
+        "email": "Email liên hệ",
+        "phone": "Số điện thoại",
+        "bio": "Giới thiệu",
+        "save_changes": "Lưu Thay đổi",
+        "edit_profile": "Chỉnh sửa Hồ sơ",
+        "cancel": "Hủy",
+        "email_verified": "Email đã xác minh",
+        "verified": "Đã xác minh",
+        "not_verified": "Chưa xác minh",
+        "2fa_status": "Trạng thái 2FA",
+        "not_configured": "Chưa cấu hình",
+        "change_password": "Đổi mật khẩu",
+        "security_settings": "Cài đặt Bảo mật",
+        "view_all_preferences": "Xem tất cả tùy chỉnh"
+    },
+    "settings": {
+        "title": "Cấu hình Hệ thống",
+        "subtitle": "Điều khiển Atelier & Tùy chỉnh Cá nhân",
+        "sync": "Đồng bộ",
+        "tabs": {
+            "atelier": "Hồ sơ Atelier",
+            "security": "Bảo mật",
+            "notifications": "Trung tâm Trí tuệ"
+        },
+        "atelier": {
+            "identity_region": "Định danh & Khu vực",
+            "name": "Tên Atelier",
+            "currency": "Tiền tệ Cơ bản",
+            "timezone": "Múi giờ",
+            "operational_standards": "Tiêu chuẩn Vận hành",
+            "ledger_precision": "Độ chính xác Sổ cái",
+            "ledger_precision_help": "Xác định số chữ số thập phân để theo dõi trọng lượng nguyên liệu.",
+            "auto_reconciliation": "Đối soát Tự động",
+            "reconciliation_desc": "Chạy kiểm tra pháp y hàng đêm trên tất cả các mục kho."
+        },
+        "security": {
+            "access_sessions": "Kiểm soát Truy cập & Phiên",
+            "integrity": "Chỉnh trực Tài khoản",
+            "integrity_desc": "Các phiên làm việc của bạn được giám sát bởi Ray Paradis Security Orchestrator (L8).",
+            "log": "Nhật ký Bảo mật",
+            "active_sessions": "Phiên hoạt động",
+            "active_devices": "{{count}} thiết bị hoạt động",
+            "revoke": "Thu hồi",
+            "active_now": "Đang hoạt động",
+            "session_opened": "Đã mở {{date}}",
+            "revoke_confirm": "Bạn có chắc chắn muốn chấm dứt phiên truy cập này không?",
+            "revoke_yes": "Có, Chấm dứt"
+        },
+        "notifications": {
+            "protocols": "Giao thức Thông báo",
+            "ledger": "Sai lệch Sổ cái",
+            "ledger_desc": "Cảnh báo nghiêm trọng khi kho vật lý và sổ cái kỹ thuật số không khớp.",
+            "qc": "Nghẽn cổ chai QC",
+            "qc_desc": "Cảnh báo khi đơn hàng dành > 48 giờ trong giai đoạn đúc hoặc gắn đá.",
+            "material": "Khan hiếm Nguyên liệu",
+            "material_desc": "Thông báo khi dự trữ vàng/đá quý giảm xuống dưới 15%."
+        },
+        "footer": {
+            "reset": "Đặt lại Thay đổi",
+            "save": "Lưu Cấu hình",
+            "saving": "Đang đồng bộ cấu hình Atelier..."
+        }
+    }
+}

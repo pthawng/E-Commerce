@@ -27,6 +27,6 @@ export type {
   // User Types
   User,
   UserSummary,
-  UserWithRoles,
+  UserWithRelations,
   VerifyEmailPayload,
 } from '@shared';
