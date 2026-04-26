@@ -20,7 +20,14 @@
         "view": "View",
         "delete": "Delete",
         "actions": "Actions",
-        "status": "Status"
+        "status": "Status",
+        "loading": "Intelligence Synchronizing...",
+        "coming_soon": "Feature arriving soon...",
+        "draft": "Draft",
+        "inactive": "Inactive",
+        "no_data": "No records found in the archive.",
+        "error_boundary_title": "Module Offline",
+        "error_boundary_desc": "The intelligence layer encountered a localized failure."
     },
     "dashboard": {
         "title": "Atelier Control Plane",
@@ -78,24 +85,48 @@
             "audit_failed": "Forensic audit failed to execute."
         }
     },
-    "inventory": {
-        "title": "Inventory",
-        "subtitle": "Manage your exquisite jewelry collection and stock levels.",
-        "add_product": "Add New Product",
-        "search_placeholder": "Search by name or SKU...",
-        "products_found": "{{count}} Products Found",
-        "category": "Category",
-        "table": {
-            "product": "Product",
-            "category": "Category",
-            "variants": "Variants",
-            "price": "Display Price",
-            "status": "Status",
-            "actions": "Actions"
+    "crm": {
+        "title": "Patron Intelligence",
+        "subtitle": "Guest & Client Relationship Management",
+        "tabs": {
+            "directory": "Client Directory",
+            "guests": "Guest Registry",
+            "intelligence": "Lifecycle Intelligence",
+            "feedback": "Feedback Hub"
         },
-        "status": {
-            "active": "Active",
-            "draft": "Draft"
+        "directory": {
+            "title": "Distinguished Client Directory",
+            "search": "Search patrons by name, email or VIP status...",
+            "new_client": "Invite New Patron",
+            "table": {
+                "patron": "Patron",
+                "loyalty": "Loyalty Tier",
+                "ltv": "Lifetime Valuation",
+                "engagement": "Engagement",
+                "privacy": "Privacy Mask Active"
+            }
+        },
+        "guests": {
+            "title": "Ephemeral Guest Registry",
+            "subtitle": "Unauthenticated access logs and conversion opportunities.",
+            "table": {
+                "guest": "Anonymous Guest",
+                "orders": "Orders",
+                "last_active": "Last Active",
+                "view_orders": "View Order History"
+            }
+        },
+        "intelligence": {
+            "title": "Patron Lifecycle & Engagement",
+            "active_clients": "Active Clients",
+            "guest_conversion": "Guest Conversion",
+            "avg_ltv": "Average LTV",
+            "retention": "Retention Rate",
+            "segments": "Customer Segments",
+            "high_net_worth": "High Net Worth",
+            "rising_stars": "Rising Stars",
+            "dormant": "Dormant",
+            "new_leads": "New Leads"
         }
     },
     "orders": {
@@ -104,23 +135,199 @@
         "atelier": "ATELIER",
         "filter_stage": "Filter By Stage",
         "create_bespoke": "Create Bespoke Order",
+        "command_center": "Command Center",
+        "queue": {
+            "smart": "Smart Queue",
+            "live_feed": "Live Feed",
+            "critical": "Critical",
+            "production": "Production"
+        },
         "stats": {
             "efficiency": "Cycle Efficiency",
             "days_mean": "Days Mean",
             "backlog_valuation": "Backlog Valuation",
-            "atelier_load": "Atelier Load"
+            "atelier_load": "Atelier Load",
+            "delivery_sla": "Delivery SLA"
         },
         "kanban": {
             "items_count": "{{count}} items",
             "draft_interaction": "Draft Interaction",
             "atelier_lead": "Atelier Lead"
+        },
+        "drawer": {
+            "title": "Order Integrity Details",
+            "identity": "Identity",
+            "financials": "Financials",
+            "timeline": "Chronological Timeline",
+            "order_id": "Order ID",
+            "customer": "Customer",
+            "date": "Date",
+            "valuation": "Valuation",
+            "paid": "Paid",
+            "balance": "Balance"
+        }
+    },
+    "products": {
+        "title": "Catalog of Excellence",
+        "subtitle": "Product Intelligence Management",
+        "tabs": {
+            "catalog": "Products",
+            "categories": "Collections",
+            "attributes": "Attributes",
+            "ledger": "Material Ledger"
+        },
+        "catalog": {
+            "title": "Masterpiece Inventory",
+            "search": "Search by name, SKU, or collection...",
+            "create": "Create Masterpiece",
+            "table": {
+                "piece": "Piece",
+                "collection": "Collection",
+                "material": "Material",
+                "variants": "Variants",
+                "valuation": "Valuation",
+                "bespoke": "Bespoke"
+            },
+            "drawer": {
+                "identity": "Identity",
+                "variants_count": "Variants ({{count}})",
+                "gallery": "Media Gallery"
+            }
+        },
+        "categories": {
+            "title": "Category Taxonomy & Collections",
+            "new": "New Category",
+            "create_modal": "Create New Category",
+            "name_vi": "Name (Vietnamese)",
+            "name_en": "Name (English)",
+            "parent": "Parent Category",
+            "order": "Order",
+            "active": "Active Status"
+        },
+        "attributes": {
+            "title": "Semantic Attribute Registry",
+            "seed": "Seed Jewelry Attributes",
+            "new": "New Attribute",
+            "technical": "Technical Specifications",
+            "marketing": "Marketing & Classification",
+            "create_modal": "Create New Attribute"
+        },
+        "ledger": {
+            "title": "Material Inventory Sync",
+            "total_value": "Total Material Value",
+            "skus": "Material SKUs",
+            "alerts": "Low Stock Alerts",
+            "warnings": "Low Stock Warnings"
+        }
+    },
+    "nerve_center": {
+        "title": "Nerve Center",
+        "subtitle": "System Observability & Operational Resilience",
+        "health": "System Intact",
+        "matrix": "Core Operations Matrix",
+        "worker": "Worker Status",
+        "drift": "Ledger Drift",
+        "tabs": {
+            "events": "Domain Events",
+            "email": "Email Queue",
+            "audit": "Audit History"
+        },
+        "events": {
+            "backlog": "Event Backlog",
+            "failure_rate": "Failure Rate (24h)",
+            "table": {
+                "type": "Event Type",
+                "retries": "Retries",
+                "timestamp": "Timestamp"
+            }
+        },
+        "email": {
+            "coming_soon": "Communication Queue Monitor Coming Soon"
+        }
+    },
+    "inventory": {
+        "status": {
+            "active": "Active"
+        },
+        "title": "The Vault",
+        "subtitle": "High-Precision Inventory Management",
+        "tabs": {
+            "stock": "Stock Master",
+            "transfers": "Transfer Logistics",
+            "warehouses": "Vault Management",
+            "logs": "Audit Logs"
+        },
+        "transfers": {
+            "title": "Transfer Logistics",
+            "search": "Search Transfer ID or SKU...",
+            "initiate": "Initiate Secure Transfer",
+            "from": "From Vault",
+            "to": "To Vault",
+            "ship_now": "Ship Now",
+            "confirm_receipt": "Confirm Receipt",
+            "success_init": "Transfer initiated (PENDING)",
+            "success_ship": "Stock SHIPPED. In-transit pool updated.",
+            "success_receive": "Stock RECEIVED. Destination on-hand updated.",
+            "table": {
+                "id": "TRANSFER ID",
+                "route": "ROUTE",
+                "qty": "QTY"
+            },
+            "form": {
+                "variant": "Product Variant",
+                "note": "Security Note",
+                "note_placeholder": "Reason for transfer..."
+            }
+        },
+        "stock": {
+            "title": "Live Inventory Assets",
+            "search": "Search SKU or product...",
+            "all_warehouses": "All Warehouses",
+            "advanced_analysis": "Advanced Analysis",
+            "salable_total": "Total Salable Inventory",
+            "reconciliation_alert": "System automatically reconciles physical vault items every 10 minutes.",
+            "view_drift": "View Drift Report",
+            "table": {
+                "product_sku": "Product & SKU",
+                "vault": "Vault (Warehouse)",
+                "reserved": "Reserved",
+                "damaged": "Damaged",
+                "available": "Available",
+                "in_transit": "In-Transit",
+                "shelf": "Shelf"
+            }
+        },
+        "warehouses": {
+            "title": "Vault System Management",
+            "search": "Search by name or code...",
+            "add": "Add New Vault",
+            "edit": "Edit Vault",
+            "table": {
+                "name": "Vault Name",
+                "code": "Identifier Code",
+                "address": "Address / Coordinates",
+                "status": "Status"
+            },
+            "form": {
+                "name": "Vault Name",
+                "code": "Vault Code (e.g., WH-LON-01)",
+                "address": "Physical Address",
+                "active": "Active Status"
+            },
+            "success": {
+                "create": "New vault created successfully.",
+                "update": "Vault information updated."
+            }
+        },
+        "logs": {
+            "placeholder": "Audit Log module coming soon to the Secure Ledger..."
         }
     },
     "profile": {
         "title": "Member Profile",
         "basic_info": "Basic Info",
         "activity_log": "Activity Log",
-        "security_status": "Security Status",
+        "security_status": "Trạng thái Bảo mật",
         "preferences": "Preferences",
         "full_name": "Full Name",
         "nickname": "Public Nickname",
@@ -128,7 +335,7 @@
         "phone": "Phone Number",
         "bio": "Biography",
         "save_changes": "Save Changes",
-        "edit_profile": "Edit Profile",
+        "edit_profile": "Chỉnh sửa Hồ sơ",
         "cancel": "Cancel",
         "email_verified": "Email Verified",
         "verified": "Verified",
@@ -183,8 +390,42 @@
         },
         "footer": {
             "reset": "Reset Changes",
-            "save": "Save Configuration",
             "saving": "Synchronizing Atelier Config..."
+        }
+    },
+    "analytics": {
+        "title": "Business Intelligence & Analytics",
+        "subtitle": "Data Forensics & Strategic Forecasting",
+        "tabs": {
+            "overview": "Executive Overview",
+            "customers": "Customer Intelligence",
+            "products": "Product Performance",
+            "operations": "Operational Pulse"
+        },
+        "metrics": {
+            "revenue": "Revenue",
+            "profit": "Gross Profit",
+            "aov": "Average Order Value",
+            "volume": "Order Volume",
+            "growth": "Growth"
+        },
+        "customers": {
+            "segmentation": "Luxury Segmentation",
+            "clv": "Customer Lifetime Value",
+            "retention": "Retention Rate",
+            "matrix_desc": "Analyze contribution value across all loyalty tiers."
+        },
+        "products": {
+            "margin_analysis": "Margin Analysis Matrix",
+            "velocity": "Sales Velocity",
+            "top_performers": "Top Performing Assets",
+            "margin_help": "Comparative analysis between Revenue and Gross Profit Margin."
+        },
+        "operations": {
+            "cycle_time": "Manufacturing Cycle Time",
+            "bottlenecks": "Bottleneck Analysis",
+            "avg_hours": "Average Hours",
+            "efficiency_target": "Efficiency Target"
         }
     }
 }

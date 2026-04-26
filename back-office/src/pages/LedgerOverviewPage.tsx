@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Statistic, Table, Typography, Space, Button, Tabs, Card, Badge, Modal, message, Tag } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { Row, Col, Statistic, Table, Typography, Space, Button, Tabs, Card, Badge, Modal, message, Tag, Input } from 'antd';
 import {
     SafetyCertificateOutlined,
     DollarCircleOutlined,
     SolutionOutlined,
     CheckCircleOutlined,
     ExclamationCircleOutlined,
-    SyncOutlined
+    SyncOutlined,
+    SearchOutlined
 } from '@ant-design/icons';
 import { ledgerApi, LedgerBalance, LedgerKPIs, FinancialFlow } from '../shared/api/ledgerApi';
 import { usePageHeader } from '@/shared/lib/PageHeaderContext';
@@ -16,6 +18,7 @@ const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 export const LedgerOverviewPage: React.FC = () => {
+    const navigate = useNavigate();
     const [kpis, setKpis] = useState<LedgerKPIs | null>(null);
     const [balances, setBalances] = useState<LedgerBalance[]>([]);
     const [flows, setFlows] = useState<FinancialFlow[]>([]);
@@ -66,7 +69,11 @@ export const LedgerOverviewPage: React.FC = () => {
             title: 'Material Name',
             dataIndex: 'name',
             key: 'name',
-            render: (name: any) => <Text className="font-serif font-bold">{name.en || name.vi || 'N/A'}</Text>
+            render: (name: any) => (
+                <Text className="font-serif font-bold">
+                    {typeof name === 'string' ? name : (name?.vi || name?.en || 'N/A')}
+                </Text>
+            )
         },
         { title: 'SKU', dataIndex: 'sku', key: 'sku', render: (s: string) => <Tag color="blue">{s}</Tag> },
         {
@@ -130,58 +137,88 @@ export const LedgerOverviewPage: React.FC = () => {
                             Verify
                         </Button>
                     )}
-                    <Button size="small" icon={<SolutionOutlined />}>View Order</Button>
+                    <Button 
+                        size="small" 
+                        icon={<SolutionOutlined />}
+                        onClick={() => {
+                            const orderId = (r as any).orderId || (r as any).order?.id;
+                            if (orderId) navigate(`/orders/${orderId}`);
+                        }}
+                    >
+                        View Order
+                    </Button>
                 </Space>
             )
         }
     ];
 
     return (
-        <div className="space-y-12 py-8 animate-in fade-in duration-1000">
-            {/* Main Tabs */}
-            <Tabs activeKey={activeTab} onChange={setActiveTab} className="luxury-tabs">
-                <TabPane
-                    tab={
-                        <Space>
-                            <SafetyCertificateOutlined />
-                            <span>Material Integrity</span>
-                        </Space>
-                    }
-                    key="materials"
+        <div className="pb-8 animate-in fade-in duration-1000">
+            {/* Action Bar - Consistent with CRM/PIM */}
+            <div className="flex justify-between items-center mb-8">
+                <Input 
+                    prefix={<SearchOutlined className="text-gray-300" />} 
+                    placeholder="Search transactions or assets..." 
+                    className="h-10 w-80 border-gray-100 bg-transparent rounded-none text-[11px]"
+                />
+                <Button 
+                    icon={<SyncOutlined />} 
+                    onClick={fetchData} 
+                    loading={loading}
+                    className="h-10 px-6 bg-black text-white border-none uppercase tracking-widest text-[9px] font-bold"
                 >
-                    <Card className="border-none shadow-sm mt-4">
-                        <Title level={4} className="font-serif mb-6">Foundational Assets</Title>
-                        <Table
-                            loading={loading}
-                            columns={materialColumns}
-                            dataSource={balances}
-                            rowKey="id"
-                            className="luxury-table"
-                        />
-                    </Card>
-                </TabPane>
+                    Refresh Intelligence
+                </Button>
+            </div>
 
-                <TabPane
-                    tab={
-                        <Space>
-                            <DollarCircleOutlined />
-                            <span>Financial Reconciliation</span>
-                        </Space>
+            {/* Main Tabs */}
+            <Tabs 
+                activeKey={activeTab} 
+                onChange={setActiveTab} 
+                className="luxury-tabs"
+                items={[
+                    {
+                        key: 'materials',
+                        label: (
+                            <Space size={6}>
+                                <SafetyCertificateOutlined />
+                                <span className="text-[10px] uppercase tracking-widest font-bold">Material Integrity</span>
+                            </Space>
+                        ),
+                        children: (
+                            <div className="mt-4">
+                                <Table
+                                    loading={loading}
+                                    columns={materialColumns}
+                                    dataSource={balances}
+                                    rowKey="id"
+                                    className="luxury-table"
+                                />
+                            </div>
+                        )
+                    },
+                    {
+                        key: 'finance',
+                        label: (
+                            <Space size={6}>
+                                <DollarCircleOutlined />
+                                <span className="text-[10px] uppercase tracking-widest font-bold">Financial Flows</span>
+                            </Space>
+                        ),
+                        children: (
+                            <div className="mt-4">
+                                <Table
+                                    loading={loading}
+                                    columns={flowColumns}
+                                    dataSource={flows}
+                                    rowKey="id"
+                                    className="luxury-table"
+                                />
+                            </div>
+                        )
                     }
-                    key="finance"
-                >
-                    <Card className="border-none shadow-sm mt-4">
-                        <Title level={4} className="font-serif mb-6">Payment Stream Audit</Title>
-                        <Table
-                            loading={loading}
-                            columns={flowColumns}
-                            dataSource={flows}
-                            rowKey="id"
-                            className="luxury-table"
-                        />
-                    </Card>
-                </TabPane>
-            </Tabs>
+                ]}
+            />
 
             {/* Legend / Advisory */}
             <Row gutter={48} className="mt-12 bg-gray-50/50 dark:bg-white/5 p-8 rounded-lg">

@@ -1,5 +1,6 @@
 import { RbacModule } from '@modules/rbac/rbac.module';
 import { Module } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PaginationModule } from 'src/common/pagination';
 import { AbacModule } from 'src/modules/abac/abac.module';
 import { PrismaModule } from 'src/prisma/prisma.module';
@@ -11,7 +12,7 @@ import { VariantPolicy } from './variants/variant.policy';
 import { VariantService } from './variants/variant.service';
 
 @Module({
-  imports: [PrismaModule, PaginationModule, AbacModule, ProductStorageModule, RbacModule],
+  imports: [PrismaModule, PaginationModule, AbacModule, ProductStorageModule, RbacModule, EventEmitterModule],
   controllers: [ProductController, VariantController],
   providers: [ProductService, VariantService, VariantPolicy],
   exports: [ProductService, VariantService],

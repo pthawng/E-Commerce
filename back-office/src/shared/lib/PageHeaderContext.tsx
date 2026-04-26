@@ -48,14 +48,13 @@ export const usePageHeader = (config?: PageHeaderState) => {
     }
 
     const { setHeader, resetHeader, header } = context;
+    const { title, subtitle, breadcrumbs, actions, isLoading } = config || {};
 
     React.useEffect(() => {
         if (config) {
-            setHeader(config);
+            setHeader({ title, subtitle, breadcrumbs, actions, isLoading });
         }
-        // No cleanup here to avoid flickering on fast transitions
-        // Resetting is handled by the next page's usePageHeader or manually
-    }, [config, setHeader]);
+    }, [title, subtitle, breadcrumbs, actions, isLoading, setHeader]);
 
     return { setHeader, resetHeader, currentHeader: header };
 };

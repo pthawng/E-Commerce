@@ -3,23 +3,46 @@ import { AdminJwtAccessGuard } from '@modules/auth/guard/admin-access-jwt.guard'
 import { Permission } from '@modules/rbac/decorators/permission.decorator';
 import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
 import { PERMISSIONS } from '@modules/rbac/permissions.constants';
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Logger, Query, ServiceUnavailableException, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrencyService } from './currency.service';
 
 const DEFAULT_TARGET_CURRENCIES = ['USD', 'CNY', 'EUR', 'JPY'];
+const logger = new Logger('CurrencyController');
 
 async function resolveRates(currencyService: CurrencyService, targets?: string) {
-  const targetList = targets ? targets.split(',') : DEFAULT_TARGET_CURRENCIES;
+  const targetList = (targets ? targets.split(',') : DEFAULT_TARGET_CURRENCIES)
+    .map((target) => target.trim().toUpperCase())
+    .filter(Boolean)
+    .filter((target, index, list) => list.indexOf(target) === index);
+  const settled = await Promise.allSettled(
+    targetList.map(async (target) => ({
+      target,
+      rate: await currencyService.getRate(target),
+    })),
+  );
   const rates: Record<string, number> = {};
+  const unavailable: string[] = [];
 
-  for (const target of targetList) {
-    rates[target] = await currencyService.getRate(target);
+  settled.forEach((result, index) => {
+    const target = targetList[index];
+    if (result.status === 'fulfilled') {
+      rates[result.value.target] = result.value.rate;
+      return;
+    }
+
+    unavailable.push(target);
+    logger.warn(`Exchange rate unavailable for ${target}: ${result.reason?.message ?? 'unknown error'}`);
+  });
+
+  if (Object.keys(rates).length === 0) {
+    throw new ServiceUnavailableException('Exchange rates unavailable');
   }
 
   return {
     base: 'VND',
     rates,
+    unavailable,
     timestamp: new Date(),
   };
 }

@@ -44,9 +44,9 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
 
             {/* Info Container */}
             <div className="flex flex-col flex-grow min-w-0">
-                <div className="flex justify-between items-start mb-1">
+                <div className="flex justify-between items-start gap-3 mb-1">
                     <h3 className={cn(
-                        "font-display text-primary truncate pr-4 italic",
+                        "font-display text-primary min-w-0 pr-2 italic break-words",
                         isPage ? "text-lg sm:text-xl" : "text-sm sm:text-base leading-tight"
                     )}>
                         {typeof item.name === 'string' ? item.name : (item.name[language] || item.name['en'])}
@@ -69,7 +69,10 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                 </div>
 
                 {/* Price & Quantity Area */}
-                <div className="mt-auto flex justify-between items-center pt-2">
+                <div className={cn(
+                    "mt-auto pt-2",
+                    isPage ? "flex justify-between items-center gap-4" : "flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                )}>
                     <div className="flex items-center border border-hairline overflow-hidden bg-background shadow-sm hover:border-primary/20 transition-colors">
                         <button
                             onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
@@ -90,8 +93,10 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                     </div>
 
                     <p className={cn(
-                        "font-body font-medium tabular-nums",
-                        isPage ? "text-base text-primary" : "text-xs text-primary/80"
+                        "font-body font-medium tabular-nums whitespace-nowrap",
+                        isPage
+                            ? "text-base text-primary text-right"
+                            : "text-[13px] sm:text-xs text-primary/80 text-right"
                     )}>
                         {formatPrice(item.price * item.quantity)}
                     </p>

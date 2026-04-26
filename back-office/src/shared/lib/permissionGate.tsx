@@ -6,6 +6,14 @@ export const usePermission = () => {
 
     const can = (permission: string) => {
         if (!user) return false;
+        
+        // Super Admin Bypass
+        const isSuperAdmin = user.roles?.some(role => 
+            role.toUpperCase() === 'SUPER_ADMIN'
+        );
+        
+        if (isSuperAdmin) return true;
+
         if (!Array.isArray(user.permissions)) return false;
 
         return user.permissions.includes(permission);
@@ -13,7 +21,7 @@ export const usePermission = () => {
 
     const hasRole = (role: string) => {
         if (!user || !Array.isArray(user.roles)) return false;
-        return user.roles.includes(role);
+        return user.roles.some(r => r.toUpperCase() === role.toUpperCase());
     };
 
     return { can, hasRole };

@@ -291,7 +291,7 @@ export class OrderPaymentService {
               orderId: order.id,
               action: 'ORDER_INITIATED',
               description: `Order created with payment method ${dto.paymentMethod}`,
-              metadata: { idempotencyKey },
+              metadata: { idempotencyKey, version: 1 },
             },
           });
 
@@ -364,24 +364,25 @@ export class OrderPaymentService {
           return;
         }
 
-        // 3. Status Transition Validation (Decoupled to event later)
+        // 3. Status Transition Validation
         // OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.CONFIRMED);
 
         // 4. Atomic Side Effects
         // Deduction (Reserve -> Confirm)
         await this.inventoryService.deduct(orderId, currentTx);
 
-        // Update Order Status
-        await currentTx.order.update({
+        // Update Order Status and Version
+        const updatedOrder = await currentTx.order.update({
           where: { id: orderId },
           data: {
             status: OrderStatusEnum.CONFIRMED,
             paymentStatus: 'paid',
             confirmedAt: new Date(),
+            version: { increment: 1 },
           },
         });
 
-        // Audit Trail
+        // Audit Trail with Sequence Version
         await currentTx.orderTimeline.create({
           data: {
             orderId,
@@ -390,6 +391,7 @@ export class OrderPaymentService {
             toStatus: OrderStatusEnum.CONFIRMED,
             description: 'Order confirmed after successful payment verification',
             actorType: 'system',
+            metadata: { version: updatedOrder.version },
           },
         });
 
@@ -404,7 +406,6 @@ export class OrderPaymentService {
           : order.guestEmail;
 
         if (recipientEmail) {
-          // Fetch items for template context within the lock
           const items = await currentTx.orderItem.findMany({ where: { orderId } });
 
           await this.mailService.sendMail(
@@ -413,7 +414,7 @@ export class OrderPaymentService {
               subject: `Order Confirmation - ${order.code}`,
               template: 'order-confirmation',
               eventType: 'order.confirmed',
-              idempotencyKey: `order_confirm_${order.id}`,
+              idempotencyKey: `order_confirm_${order.id}_v${updatedOrder.version}`,
               context: {
                 orderCode: order.code,
                 customerName: (order.shippingAddress as any)?.fullName || 'Valued Customer',
@@ -431,9 +432,6 @@ export class OrderPaymentService {
                   .filter(Boolean)
                   .join(', '),
                 customerPhone: (order.shippingAddress as any)?.phone || 'N/A',
-                companyName: this.configService.get('COMPANY_NAME', 'Ray Paradis'),
-                supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@rayparadis.com'),
-                supportPhone: this.configService.get('SUPPORT_PHONE', '0123 456 789'),
                 items: items.map((item) => ({
                   name: item.productName,
                   quantity: item.quantity,
@@ -451,7 +449,7 @@ export class OrderPaymentService {
           );
         }
 
-        // Clear Cart (Only on success)
+        // Clear Cart
         await currentTx.cart.deleteMany({
           where: order.userId ? { userId: order.userId } : { sessionId: order.sessionId },
         });
@@ -513,21 +511,14 @@ export class OrderPaymentService {
 
     const subtotal = orderItemsData.reduce((sum, item) => sum + item.totalLine, 0);
     const shippingFee = this.SHIPPING_FEE;
-    const taxAmount = 0;
-    const discountAmount = 0;
-    const total = subtotal + shippingFee + taxAmount - discountAmount;
+    const total = subtotal + shippingFee;
 
     return {
       orderItemsData,
-      totals: { subtotal, total, shipping: shippingFee, tax: taxAmount, discount: discountAmount },
+      totals: { subtotal, total, shipping: shippingFee, tax: 0, discount: 0 },
     };
   }
 
-  /**
-   * L8 Production Invariant: Pricing integrity assertion.
-   * Ensures totalAmount == subTotal + shippingFee + tax - discount.
-   * Prevents silent drift from rounding errors or logic bugs.
-   */
   private assertPricingInvariant(params: {
     subTotal: number;
     shippingFee: number;
@@ -539,7 +530,6 @@ export class OrderPaymentService {
       params.subTotal + params.shippingFee + params.taxAmount - params.discountAmount;
     const drift = Math.abs(expected - params.totalAmount);
     if (drift > 1) {
-      // 1 VND tolerance for integer rounding
       throw new ConflictException({
         code: 'PRICING_INVARIANT_VIOLATION',
         message: `Order total drift detected: expected=${expected}, actual=${params.totalAmount}, drift=${drift}`,
@@ -550,7 +540,6 @@ export class OrderPaymentService {
   private async createOrder(tx: Prisma.TransactionClient, params: any) {
     const hardenedTx = tx as HardenedTx;
 
-    // L8: Assert pricing invariant before commit
     this.assertPricingInvariant({
       subTotal: params.subTotal,
       shippingFee: this.SHIPPING_FEE,
@@ -563,7 +552,7 @@ export class OrderPaymentService {
     return hardenedTx.order.create({
       data: {
         code: orderCode,
-        userId: params.userId,
+        user: params.userId ? { connect: { id: params.userId } } : undefined,
         sessionId: params.sessionId,
         guestEmail: params.dto.guestEmail,
         status: params.status,
@@ -572,8 +561,7 @@ export class OrderPaymentService {
         paymentDeadline: params.paymentDeadline,
         shippingAddress: params.dto.shippingAddress,
         billingAddress: params.dto.billingAddress || params.dto.shippingAddress,
-        shippingMethodId: params.dto.shippingMethodId,
-        baseCurrency: 'VND',
+        currency: 'VND',
         subTotal: params.subTotal,
         shippingFee: this.SHIPPING_FEE,
         totalAmount: params.totalAmount,
@@ -581,6 +569,7 @@ export class OrderPaymentService {
         idempotencyKey: params.dto.idempotencyKey,
         exchangeRate: params.exchangeRate,
         displayCurrency: params.displayCurrency,
+        version: 1,
         items: { create: params.orderItemsData },
       },
       include: { items: true },
@@ -606,15 +595,15 @@ export class OrderPaymentService {
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order || order.status === OrderStatusEnum.CANCELLED) return;
 
-      // Release (Restore stock)
       await this.inventoryService.release(orderId, tx);
 
-      await tx.order.update({
+      const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: {
           status: OrderStatusEnum.CANCELLED,
           cancelReason: reason || 'Payment failed',
           cancelledAt: new Date(),
+          version: { increment: 1 },
         },
       });
 
@@ -623,6 +612,7 @@ export class OrderPaymentService {
           orderId,
           action: 'ORDER_CANCELLED',
           description: reason || 'Order cancelled by system flow',
+          metadata: { version: updatedOrder.version },
         },
       });
 

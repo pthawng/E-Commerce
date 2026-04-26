@@ -49,7 +49,7 @@ export class InventoryService {
     const items = await this.prisma.inventoryItem.findMany({ where });
 
     const totalAvailable = items.reduce(
-      (sum, item) => sum + item.quantity - item.reservedQuantity,
+      (sum, item) => sum + (item.quantity || 0) - (item.reservedQuantity || 0) - (item.damagedQuantity || 0),
       0,
     );
 
@@ -418,7 +418,10 @@ export class InventoryService {
 
         const updated = await tx.inventoryItem.update({
           where: { id: inventoryItem.id },
-          data: { quantity: { decrement: quantity } },
+          data: { 
+            quantity: { decrement: quantity },
+            damagedQuantity: { increment: quantity },
+          },
         });
 
         await tx.inventoryLog.create({
@@ -431,7 +434,7 @@ export class InventoryService {
             beforeQuantity,
             afterQuantity: beforeQuantity - quantity,
             actorId,
-            note: reason || 'Damage report',
+            note: reason || 'Damage reported (Moved to damaged pool)',
           },
         });
 

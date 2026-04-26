@@ -89,59 +89,62 @@ export const CartDrawer = () => {
 
                 {/* Footer Center - High Aligned Layout */}
                 {!isEmpty && (
-                    <SheetFooter className="mt-auto p-5 sm:p-7 border-t border-hairline bg-secondary/[0.01] flex-col space-y-0">
-                        <div className={cn("flex items-start justify-between gap-6 transition-opacity duration-300", isSyncing && "opacity-60")}>
-                            {/* Left: Primary Action & Confidence */}
-                            <div className="flex-[3] space-y-4">
-                                <Button
-                                    asChild
-                                    className="w-full bg-primary hover:bg-primary/95 text-primary-foreground h-16 rounded-none group shadow-luxury-soft"
-                                    onClick={() => setOpen(false)}
-                                >
-                                    <Link to="/checkout" className="flex items-center justify-center gap-3">
-                                        <span className="font-body text-[11px] uppercase tracking-[0.25em] font-medium truncate">
-                                            {t('common.actions.checkout')}
-                                        </span>
-                                        <ArrowRight size={14} className="shrink-0 transition-transform group-hover:translate-x-1" strokeWidth={1.5} />
-                                    </Link>
-                                </Button>
-
-                                <div className="pl-1 opacity-80">
-                                    <CartConfidence />
-                                </div>
-                            </div>
-
-                            {/* Right: Full Pricing Lifecycle */}
-                            <div className="flex-[2] flex flex-col items-end text-right">
+                    <SheetFooter className="mt-auto p-6 sm:p-8 border-t border-hairline bg-secondary/[0.02]">
+                        <div className={cn("w-full space-y-8 transition-opacity duration-300", isSyncing && "opacity-60")}>
+                            {/* Pricing Lifecycle */}
+                            <div className="space-y-4">
                                 {/* Sub-breakdown */}
-                                <div className="space-y-1 mb-6">
-                                    <div className="flex flex-col items-end">
-                                        <span className="font-body text-muted-foreground uppercase tracking-[0.15em] text-[8px] leading-none mb-1">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-body text-muted-foreground uppercase tracking-[0.2em] text-[9px]">
                                             {t('cart.subtotal')}
                                         </span>
-                                        <span className="font-body text-primary tabular-nums text-sm font-medium leading-none">
+                                        <span className="font-body text-primary tabular-nums text-sm font-medium">
                                             {formatPrice(subtotal)}
                                         </span>
                                     </div>
-                                    <div className="flex flex-col items-end pt-2">
-                                        <span className="font-body text-muted-foreground uppercase tracking-[0.15em] text-[8px] leading-none mb-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-body text-muted-foreground uppercase tracking-[0.2em] text-[9px]">
                                             {t('cart.shipping')}
                                         </span>
-                                        <span className={isFreeShipping ? "text-gold font-body text-[8px] uppercase tracking-[0.1em] font-medium leading-none" : "font-body text-primary tabular-nums text-sm font-medium leading-none"}>
+                                        <span className={isFreeShipping ? "text-gold font-body text-[9px] uppercase tracking-[0.1em] font-medium" : "font-body text-primary tabular-nums text-sm font-medium"}>
                                             {isFreeShipping ? t('cart.complimentary') : formatPrice(shipping)}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Divider Line (Minimal) */}
-                                <div className="w-8 h-px bg-hairline mb-4" />
+                                {/* Divider Line */}
+                                <div className="h-px bg-hairline/50 w-full" />
 
                                 {/* Grand Total */}
-                                <div className="flex flex-col items-end">
-                                    <p className="font-display text-xs italic text-muted-foreground mb-1 leading-none">{t('cart.total')}</p>
-                                    <p className="font-body text-3xl font-semibold text-primary tabular-nums tracking-tighter leading-none">
+                                <div className="flex items-end justify-between pt-1">
+                                    <div className="flex flex-col gap-1">
+                                        <p className="font-display text-xs italic text-muted-foreground">{t('cart.total')}</p>
+                                        <p className="font-body text-[10px] text-muted-foreground/60 uppercase tracking-widest leading-none">Tax included</p>
+                                    </div>
+                                    <p className="font-body text-3xl sm:text-4xl font-semibold text-primary tabular-nums leading-none tracking-tight">
                                         {formatPrice(total)}
                                     </p>
+                                </div>
+                            </div>
+
+                            {/* Primary Action & Confidence */}
+                            <div className="space-y-6">
+                                <Button
+                                    asChild
+                                    className="w-full bg-primary hover:bg-primary/95 text-primary-foreground h-16 rounded-none group shadow-luxury-soft transition-all duration-500"
+                                    onClick={() => setOpen(false)}
+                                >
+                                    <Link to="/checkout" className="flex items-center justify-center gap-4">
+                                        <span className="font-body text-[11px] uppercase tracking-[0.3em] font-medium">
+                                            {t('common.actions.checkout')}
+                                        </span>
+                                        <ArrowRight size={16} className="shrink-0 transition-transform duration-500 group-hover:translate-x-2" strokeWidth={1} />
+                                    </Link>
+                                </Button>
+
+                                <div className="opacity-70">
+                                    <CartConfidence />
                                 </div>
                             </div>
                         </div>

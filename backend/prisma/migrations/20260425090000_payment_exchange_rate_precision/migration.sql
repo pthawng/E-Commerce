@@ -1,2 +1,2 @@
-ALTER TABLE "PaymentTransaction"
+ALTER TABLE "Payment"
 ALTER COLUMN "exchangeRate" TYPE DECIMAL(19, 6);

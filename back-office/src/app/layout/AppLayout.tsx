@@ -17,7 +17,8 @@ import {
     LogoutOutlined,
     SecurityScanOutlined,
     SafetyCertificateOutlined,
-    BugOutlined
+    BugOutlined,
+    BankOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +27,7 @@ import { useAuthStore } from '@/features/auth/model/authStore';
 import { GlobalOutlined, DollarOutlined, RightOutlined } from '@ant-design/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePageHeader } from '@/shared/lib/PageHeaderContext';
+import { NotificationCenter } from '@/widgets/notifications/NotificationCenter';
 
 const { Header, Sider, Content } = Layout;
 const { Text, Title } = Typography;
@@ -42,37 +44,42 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         {
             key: '/',
             icon: <DashboardOutlined />,
-            label: t('common.dashboard'),
+            label: 'Dashboard',
         },
         {
             key: '/ledger',
             icon: <AuditOutlined />,
-            label: t('common.ledger'),
+            label: 'Ledger',
         },
         {
             key: '/orders',
             icon: <ShoppingOutlined />,
-            label: t('common.orders'),
+            label: 'Orders',
         },
         {
             key: '/products',
             icon: <ProductOutlined />,
-            label: t('common.catalog'),
+            label: 'Catalog',
+        },
+        {
+            key: '/inventory',
+            icon: <BankOutlined />,
+            label: 'Vault',
         },
         {
             key: '/customers',
             icon: <TeamOutlined />,
-            label: t('common.clients'),
+            label: 'Clients',
         },
         {
             key: '/analytics',
             icon: <LineChartOutlined />,
-            label: t('common.analytics'),
+            label: 'Analytics',
         },
         {
             key: '/health',
             icon: <BugOutlined />,
-            label: t('common.nerve_center', { defaultValue: 'Nerve Center' }),
+            label: 'Nerve Center',
         },
     ];
 
@@ -193,7 +200,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
             <Layout className="!bg-white dark:!bg-[#050505]">
                 {/* Topbar - The Control Layer */}
-                <Header className="!bg-white border-b border-gray-100 h-24 px-8 flex items-center justify-between sticky top-0 z-50 overflow-hidden">
+                <Header className="!bg-white border-b border-gray-200 shadow-sm h-24 px-8 flex items-center justify-between sticky top-0 z-50 overflow-hidden">
                     {/* Left: System Control */}
                     <div className="flex items-center gap-4">
                         <Button
@@ -267,9 +274,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                     </div>
 
                     {/* Right: Actions & Profile */}
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-6 h-full">
                         {/* Compact Search */}
-                        <div className="relative flex items-center group">
+                        <div className="relative flex items-center group h-full">
                             <SearchOutlined className="absolute left-3 text-gray-400 group-focus-within:text-black transition-colors z-10 text-sm" />
                             <Input
                                 placeholder={t('common.search_placeholder')}
@@ -277,38 +284,33 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             />
                         </div>
 
-                        <Space size="middle">
+                        <div className="flex items-center gap-6 h-full">
                             <Dropdown menu={{ items: regionalItems }}>
-                                <Button type="text" className="text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 p-0">
-                                    <GlobalOutlined className="text-gray-400" />
-                                    <span>{locale}</span>
+                                <Button type="text" className="text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 p-0 hover:bg-transparent">
+                                    <GlobalOutlined className="text-gray-400 text-sm" />
+                                    <span className="leading-none mt-[1px]">{locale}</span>
                                 </Button>
                             </Dropdown>
 
-                            <Badge count={3} offset={[-2, 4]} size="small">
-                                <Button
-                                    type="text"
-                                    icon={<BellOutlined className="text-gray-400 hover:text-black transition-colors" />}
-                                />
-                            </Badge>
+                            <NotificationCenter />
 
-                            <div className="h-4 w-px bg-gray-100 mx-1" />
+                            <div className="h-4 w-px bg-gray-100" />
 
                             <Dropdown menu={{ items: profileItems }} placement="bottomRight">
-                                <Space className="cursor-pointer group">
+                                <div className="cursor-pointer group flex items-center h-full">
                                     <Avatar
                                         size="small"
                                         icon={<UserOutlined />}
-                                        className="bg-black border border-black group-hover:opacity-80 transition-all scale-110"
+                                        className="bg-black border border-black group-hover:opacity-80 transition-all scale-110 flex items-center justify-center"
                                     />
-                                </Space>
+                                </div>
                             </Dropdown>
-                        </Space>
+                        </div>
                     </div>
                 </Header>
 
                 {/* Content Area */}
-                <Content className="p-12 overflow-auto">
+                <Content className="px-12 pb-12 pt-4 overflow-auto">
                     <div className="max-w-[1400px] mx-auto min-h-full">
                         {children}
                     </div>

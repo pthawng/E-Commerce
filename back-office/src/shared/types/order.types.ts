@@ -45,3 +45,35 @@ export const VALID_TRANSITIONS: Record<OrderStatusEnum, OrderStatusEnum[]> = {
     [OrderStatusEnum.CANCELLED]: [],
     [OrderStatusEnum.REFUNDED]: [],
 };
+
+export enum PaymentStatusEnum {
+    unpaid = 'unpaid',
+    partially_paid = 'partially_paid',
+    paid = 'paid',
+    refunded = 'refunded',
+}
+
+export const PAYMENT_STATUS_CONFIG: Record<PaymentStatusEnum, { color: string; label: string }> = {
+    [PaymentStatusEnum.unpaid]: { color: 'error', label: 'Chưa thanh toán' },
+    [PaymentStatusEnum.partially_paid]: { color: 'warning', label: 'Thanh toán một phần' },
+    [PaymentStatusEnum.paid]: { color: 'success', label: 'Đã thanh toán' },
+    [PaymentStatusEnum.refunded]: { color: 'default', label: 'Đã hoàn tiền' },
+};
+
+export enum LuxurySegment {
+    PROSPECT = 'PROSPECT',
+    ACTIVE = 'ACTIVE',
+    LOYAL = 'LOYAL',
+    VIP = 'VIP',
+    VVIP = 'VVIP',
+    VIC = 'VIC',
+}
+
+export const LUXURY_SEGMENT_CONFIG: Record<LuxurySegment, { color: string; label: string; icon?: string }> = {
+    [LuxurySegment.PROSPECT]: { color: 'default', label: 'Tiềm năng' },
+    [LuxurySegment.ACTIVE]: { color: 'blue', label: 'Năng động' },
+    [LuxurySegment.LOYAL]: { color: 'cyan', label: 'Thân thiết' },
+    [LuxurySegment.VIP]: { color: 'gold', label: 'VIP' },
+    [LuxurySegment.VVIP]: { color: 'purple', label: 'VVIP' },
+    [LuxurySegment.VIC]: { color: 'red', label: 'VIC' },
+};

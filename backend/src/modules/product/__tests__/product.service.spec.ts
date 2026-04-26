@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaginationService } from 'src/common/pagination';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -48,6 +49,10 @@ describe('ProductService', () => {
     recalculateDisplayPrice: jest.fn(),
   };
 
+  const mockEventEmitter = {
+    emitAsync: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -56,6 +61,7 @@ describe('ProductService', () => {
         { provide: PaginationService, useValue: mockPaginationService },
         { provide: ProductStorageService, useValue: mockProductStorageService },
         { provide: VariantService, useValue: mockVariantService },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
 

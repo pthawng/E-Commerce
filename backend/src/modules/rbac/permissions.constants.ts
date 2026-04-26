@@ -83,6 +83,11 @@ export const PERMISSIONS = {
       UPDATE: 'system.setting.update',
     },
   },
+  CRM: {
+    GUEST: {
+      READ: 'crm.guest.read',
+    }
+  },
 } as const;
 
 type NestedValues<T> = T extends string

@@ -41,7 +41,13 @@ export const useCurrencyConverter = () => {
         const fractionDigits = (activeCurrency === 'VND' || activeCurrency === 'JPY') ? 0 : 2;
 
         try {
-            return new Intl.NumberFormat(i18n.language, {
+            // L8 Formatting Logic: Use standard currency locales for international currencies
+            // USD -> en-US (standard $ placement)
+            // CNY -> zh-CN (standard ¥ placement)
+            // Others -> Current language locale
+            const formattingLocale = activeCurrency === 'USD' ? 'en-US' : (activeCurrency === 'CNY' ? 'zh-CN' : i18n.language);
+
+            return new Intl.NumberFormat(formattingLocale, {
                 style: 'currency',
                 currency: activeCurrency,
                 minimumFractionDigits: fractionDigits,

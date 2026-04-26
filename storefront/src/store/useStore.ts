@@ -6,6 +6,10 @@ type Theme = 'light' | 'dark';
 type Language = 'en' | 'vi' | 'zh';
 type Currency = 'USD' | 'VND' | 'CNY';
 type ExchangeRates = Partial<Record<Currency, number>>;
+type CurrencyRatesPayload = {
+  base: string;
+  rates?: Partial<Record<Currency, number>>;
+};
 
 interface CurrencyConfig {
   code: Currency;
@@ -45,7 +49,7 @@ interface AppState {
   toggleTheme: () => void;
   setLanguage: (language: Language) => void;
   setCurrency: (currency: Currency) => void;
-  hydrateExchangeRates: (options?: { force?: boolean }) => Promise<void>;
+  hydrateExchangeRates: (options?: { force?: boolean; targets?: Currency[] }) => Promise<void>;
   formatPrice: (priceInVND: number) => string;
 }
 
@@ -76,7 +80,7 @@ export const useStore = create<AppState>()(
       },
       setCurrency: (currency) => {
         set({ currency });
-        void get().hydrateExchangeRates({ force: true });
+        void get().hydrateExchangeRates({ force: true, targets: [currency, 'USD', 'CNY'] });
       },
       hydrateExchangeRates: async (options) => {
         const { exchangeRatesUpdatedAt } = get();
@@ -89,27 +93,41 @@ export const useStore = create<AppState>()(
         }
 
         try {
+          const targets = Array.from(
+            new Set((options?.targets ?? ['USD', 'CNY']).filter((target) => target !== 'VND')),
+          );
           const url = buildApiUrl(
-            `${API_ENDPOINTS.SYSTEM.CURRENCY_RATES}?targetCurrencies=USD,CNY`,
+            `${API_ENDPOINTS.SYSTEM.CURRENCY_RATES}?targetCurrencies=${targets.join(',')}`,
           );
           const response = await fetch(url, { credentials: 'include' });
           if (!response.ok) return;
 
-          const data = (await response.json()) as {
-            base: string;
-            rates?: Partial<Record<Currency, number>>;
-          };
+          const payload = (await response.json()) as
+            | CurrencyRatesPayload
+            | {
+                data?: CurrencyRatesPayload | null;
+              };
+          const data = (
+            payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
+          ) as CurrencyRatesPayload | null;
 
-          if (data.base !== 'VND' || !data.rates) return;
+          if (!data || data.base !== 'VND' || !data.rates) return;
 
-          set({
+          const nextRates = Object.fromEntries(
+            Object.entries(data.rates).filter(([, rate]) => typeof rate === 'number' && rate > 0),
+          ) as Partial<Record<Currency, number>>;
+
+          if (Object.keys(nextRates).length === 0) return;
+
+          set((state) => ({
             exchangeRates: {
               ...baseExchangeRates,
-              ...data.rates,
+              ...state.exchangeRates,
+              ...nextRates,
               VND: 1,
             },
             exchangeRatesUpdatedAt: Date.now(),
-          });
+          }));
         } catch {
           // Keep fallback rates when backend rates are temporarily unavailable.
         }

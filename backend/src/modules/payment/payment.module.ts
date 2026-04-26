@@ -19,6 +19,7 @@ import { IdempotencyService } from './services/idempotency.service';
 import { PaymentStateMachine } from './services/payment-state.machine';
 import { PaymentReconciliationService } from './services/reconciliation.service';
 import { VietQRMatchingService } from './services/vietqr-matching.service';
+import { WebhookIdempotencyService } from './services/webhook-idempotency.service';
 import { LedgerModule } from '../ledger/ledger.module';
 import { SystemModule } from '../system/system.module';
 
@@ -57,6 +58,7 @@ import { SystemModule } from '../system/system.module';
     PaymentProcessor,
     PaymentReconciliationService,
     VietQRMatchingService,
+    WebhookIdempotencyService,
   ],
   exports: [PaymentService],
 })

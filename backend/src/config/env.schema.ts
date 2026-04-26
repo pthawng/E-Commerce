@@ -70,6 +70,12 @@ export const envSchema = z.object({
   PAYPAL_MODE: z.enum(['sandbox', 'live']).default('sandbox'),
   PAYPAL_WEBHOOK_ID: z.string().optional(),
 
+  // AI
+  AI_SERVICE_URL: z.string().url().default('http://localhost:4100'),
+  AI_QUERY_TIMEOUT_MS: z.coerce.number().default(500),
+  AI_EMBED_TIMEOUT_MS: z.coerce.number().default(3000),
+  AI_RECOMMENDATION_CACHE_TTL_MS: z.coerce.number().default(600000),
+
   // Operational Hardening
   TRUST_PROXY_DEPTH: z.coerce.number().default(1),
   SEED_ADMIN_PASSWORD: z.string().min(8),

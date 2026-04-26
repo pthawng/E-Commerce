@@ -1,5 +1,5 @@
-import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Expose, Transform } from 'class-transformer';
+import { Allow, IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 import { PaginationDto } from 'src/common/pagination';
 
 export class ProductQueryDto extends PaginationDto {
@@ -20,4 +20,10 @@ export class ProductQueryDto extends PaginationDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isActive?: boolean;
+
+  @Allow()
+  @Expose()
+  @IsOptional()
+  @IsUUID()
+  excludeCategoryId?: string;
 }

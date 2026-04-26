@@ -119,6 +119,7 @@ export interface ProductQueryParams {
     categoryId?: string;
     isFeatured?: boolean;
     isActive?: boolean;
+    excludeCategoryId?: string;
 }
 
 // ============================================

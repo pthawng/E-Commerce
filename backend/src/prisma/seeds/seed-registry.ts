@@ -4,6 +4,7 @@ import { v2_logistics } from './versions/v2_logistics';
 import { v3_catalog_foundation } from './versions/v3_catalog_foundation';
 import { v4_initial_admin } from './versions/v4_initial_admin';
 import { v5_materials } from './versions/v5_materials';
+import { v6_crm_permissions } from './versions/v6_crm_permissions';
 
 /**
  * SYSTEM_REGISTRY
@@ -15,4 +16,5 @@ export const SYSTEM_REGISTRY: SeedScript[] = [
   v3_catalog_foundation,
   v4_initial_admin,
   v5_materials,
+  v6_crm_permissions,
 ];

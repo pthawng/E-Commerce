@@ -5,7 +5,7 @@ const { Title } = Typography;
 
 export const LogisticsPage: React.FC = () => {
     return (
-        <div className="py-8">
+        <div className="pb-8">
             <Title level={1} className="font-light text-5xl">Logistics & Vault</Title>
             <Result
                 status="info"

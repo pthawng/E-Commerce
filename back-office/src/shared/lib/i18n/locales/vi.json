@@ -20,7 +20,14 @@
         "view": "Xem",
         "delete": "Xóa",
         "actions": "Thao tác",
-        "status": "Trạng thái"
+        "status": "Trạng thái",
+        "loading": "Đang đồng bộ trí tuệ...",
+        "coming_soon": "Tính năng sắp ra mắt...",
+        "draft": "Bản nháp",
+        "inactive": "Ngừng hoạt động",
+        "no_data": "Không tìm thấy bản ghi nào trong kho lưu trữ.",
+        "error_boundary_title": "Module Ngoại tuyến",
+        "error_boundary_desc": "Lớp trí tuệ gặp sự cố cục bộ."
     },
     "dashboard": {
         "title": "Trung tâm Điều phối Xưởng",
@@ -78,24 +85,48 @@
             "audit_failed": "Lỗi thực thi kiểm toán pháp y."
         }
     },
-    "inventory": {
-        "title": "Kho hàng",
-        "subtitle": "Quản lý bộ sưu tập trang sức tinh xảo và mức tồn kho.",
-        "add_product": "Thêm Sản phẩm Mới",
-        "search_placeholder": "Tìm kiếm theo tên hoặc SKU...",
-        "products_found": "Tìm thấy {{count}} Sản phẩm",
-        "category": "Danh mục",
-        "table": {
-            "product": "Sản phẩm",
-            "category": "Danh mục",
-            "variants": "Biến thể",
-            "price": "Giá hiển thị",
-            "status": "Trạng thái",
-            "actions": "Thao tác"
+    "crm": {
+        "title": "Trí tuệ Khách hàng",
+        "subtitle": "Quản lý Quan hệ Khách hàng & Thành viên",
+        "tabs": {
+            "directory": "Danh mục Khách hàng",
+            "guests": "Sổ đăng ký Khách vãng lai",
+            "intelligence": "Trí tuệ Vòng đời",
+            "feedback": "Trung tâm Phản hồi"
         },
-        "status": {
-            "active": "Đang hoạt động",
-            "draft": "Bản nháp"
+        "directory": {
+            "title": "Danh mục Khách hàng Ưu tú",
+            "search": "Tìm kiếm khách hàng theo tên, email hoặc hạng VIP...",
+            "new_client": "Mời Khách hàng mới",
+            "table": {
+                "patron": "Khách hàng",
+                "loyalty": "Hạng Thành viên",
+                "ltv": "Định giá Vòng đời",
+                "engagement": "Mức độ Tương tác",
+                "privacy": "Đang kích hoạt Mặt nạ Quyền riêng tư"
+            }
+        },
+        "guests": {
+            "title": "Sổ đăng ký Khách vãng lai",
+            "subtitle": "Nhật ký truy cập chưa định danh và cơ hội chuyển đổi.",
+            "table": {
+                "guest": "Khách ẩn danh",
+                "orders": "Đơn hàng",
+                "last_active": "Hoạt động Cuối",
+                "view_orders": "Xem Lịch sử Đơn hàng"
+            }
+        },
+        "intelligence": {
+            "title": "Vòng đời & Tương tác Khách hàng",
+            "active_clients": "Khách hàng Hoạt động",
+            "guest_conversion": "Chuyển đổi Khách vãng lai",
+            "avg_ltv": "LTV Trung bình",
+            "retention": "Tỷ lệ Giữ chân",
+            "segments": "Phân khúc Khách hàng",
+            "high_net_worth": "Tài sản ròng Cao",
+            "rising_stars": "Ngôi sao Đang lên",
+            "dormant": "Ngủ đông",
+            "new_leads": "Tiềm năng Mới"
         }
     },
     "orders": {
@@ -104,16 +135,192 @@
         "atelier": "XƯỞNG CHẾ TÁC",
         "filter_stage": "Lọc theo Giai đoạn",
         "create_bespoke": "Tạo Đơn Bespoke",
+        "command_center": "Trung tâm Điều hành",
+        "queue": {
+            "smart": "Hàng đợi Thông minh",
+            "live_feed": "Luồng Trực tiếp",
+            "critical": "Khẩn cấp",
+            "production": "Sản xuất"
+        },
         "stats": {
             "efficiency": "Hiệu suất Chu kỳ",
             "days_mean": "Ngày (Trung bình)",
             "backlog_valuation": "Định giá Tồn đọng",
-            "atelier_load": "Công suất Xưởng"
+            "atelier_load": "Công suất Xưởng",
+            "delivery_sla": "SLA Bàn giao"
         },
         "kanban": {
             "items_count": "{{count}} mục",
             "draft_interaction": "Tương tác Nháp",
             "atelier_lead": "Quản đốc Xưởng"
+        },
+        "drawer": {
+            "title": "Chi tiết Chỉnh trực Đơn hàng",
+            "identity": "Định danh",
+            "financials": "Tài chính",
+            "timeline": "Dòng thời gian Sự kiện",
+            "order_id": "Mã Đơn hàng",
+            "customer": "Khách hàng",
+            "date": "Ngày tạo",
+            "valuation": "Định giá",
+            "paid": "Đã thanh toán",
+            "balance": "Còn lại"
+        }
+    },
+    "products": {
+        "title": "Danh mục Kiệt tác",
+        "subtitle": "Quản lý Trí tuệ Sản phẩm",
+        "tabs": {
+            "catalog": "Sản phẩm",
+            "categories": "Bộ sưu tập",
+            "attributes": "Thuộc tính",
+            "ledger": "Sổ cái Vật liệu"
+        },
+        "catalog": {
+            "title": "Kho hàng Kiệt tác",
+            "search": "Tìm kiếm theo tên, SKU, hoặc bộ sưu tập...",
+            "create": "Tạo Kiệt tác Mới",
+            "table": {
+                "piece": "Tác phẩm",
+                "collection": "Bộ sưu tập",
+                "material": "Chất liệu",
+                "variants": "Biến thể",
+                "valuation": "Định giá",
+                "bespoke": "Bespoke"
+            },
+            "drawer": {
+                "identity": "Định danh",
+                "variants_count": "Biến thể ({{count}})",
+                "gallery": "Bộ sưu tập Ảnh"
+            }
+        },
+        "categories": {
+            "title": "Phân loại Danh mục & Bộ sưu tập",
+            "new": "Danh mục Mới",
+            "create_modal": "Tạo Danh mục Mới",
+            "name_vi": "Tên (Tiếng Việt)",
+            "name_en": "Tên (Tiếng Anh)",
+            "parent": "Danh mục Cha",
+            "order": "Thứ tự",
+            "active": "Trạng thái Hoạt động"
+        },
+        "attributes": {
+            "title": "Sổ đăng ký Thuộc tính Ngữ nghĩa",
+            "seed": "Khởi tạo Thuộc tính Trang sức",
+            "new": "Thuộc tính Mới",
+            "technical": "Thông số Kỹ thuật",
+            "marketing": "Phân loại & Tiếp thị",
+            "create_modal": "Tạo Thuộc tính Mới"
+        },
+        "ledger": {
+            "title": "Đồng bộ Sổ cái Vật liệu",
+            "total_value": "Tổng Giá trị Vật liệu",
+            "skus": "SKU Vật liệu",
+            "alerts": "Cảnh báo Tồn kho thấp",
+            "warnings": "Cảnh báo Tồn kho thấp"
+        }
+    },
+    "nerve_center": {
+        "title": "Trung tâm Điều não",
+        "subtitle": "Khả năng Quan sát Hệ thống & Khả năng Phục hồi Vận hành",
+        "health": "Hệ thống Nguyên vẹn",
+        "matrix": "Ma trận Vận hành Cốt lõi",
+        "worker": "Trạng thái Worker",
+        "drift": "Sai lệch Sổ cái",
+        "tabs": {
+            "events": "Sự kiện Domain",
+            "email": "Hàng đợi Email",
+            "audit": "Lịch sử Kiểm toán"
+        },
+        "events": {
+            "backlog": "Tồn đọng Sự kiện",
+            "failure_rate": "Tỷ lệ Lỗi (24h)",
+            "table": {
+                "type": "Loại Sự kiện",
+                "retries": "Thử lại",
+                "timestamp": "Thời gian"
+            }
+        },
+        "email": {
+            "coming_soon": "Trình giám sát Hàng đợi Truyền thông sắp ra mắt"
+        }
+    },
+    "inventory": {
+        "status": {
+            "active": "Đang Hoạt động"
+        },
+        "title": "The Vault",
+        "subtitle": "Quản lý Kho hàng Độ chính xác cao",
+        "tabs": {
+            "stock": "Quản lý Tồn kho",
+            "transfers": "Logistics Luân chuyển",
+            "warehouses": "Quản lý Kho",
+            "logs": "Nhật ký Kiểm toán"
+        },
+        "transfers": {
+            "title": "Logistics Luân chuyển",
+            "search": "Tìm kiếm Mã Luân chuyển hoặc SKU...",
+            "initiate": "Khởi tạo Luân chuyển Bảo mật",
+            "from": "Từ Kho",
+            "to": "Đến Kho",
+            "ship_now": "Vận chuyển Ngay",
+            "confirm_receipt": "Xác nhận Biên nhận",
+            "success_init": "Luân chuyển đã khởi tạo (CHỜ DUYỆT)",
+            "success_ship": "Hàng đã VẬN CHUYỂN. Cập nhật nhóm đang vận chuyển.",
+            "success_receive": "Hàng đã NHẬN. Cập nhật tồn kho đích.",
+            "table": {
+                "id": "MÃ LUÂN CHUYỂN",
+                "route": "LỘ TRÌNH",
+                "qty": "SL"
+            },
+            "form": {
+                "variant": "Biến thể Sản phẩm",
+                "note": "Ghi chú Bảo mật",
+                "note_placeholder": "Lý do luân chuyển..."
+            }
+        },
+        "stock": {
+            "title": "Tài sản Tồn kho Trực tiếp",
+            "search": "Tìm kiếm SKU hoặc sản phẩm...",
+            "all_warehouses": "Tất cả các Kho",
+            "advanced_analysis": "Phân tích Nâng cao",
+            "salable_total": "Tổng Tồn kho có thể Bán",
+            "reconciliation_alert": "Hệ thống tự động đối soát tài sản trong kho sau mỗi 10 phút.",
+            "view_drift": "Xem Báo cáo Sai lệch",
+            "table": {
+                "product_sku": "Sản phẩm & SKU",
+                "vault": "Kho (Warehouse)",
+                "reserved": "Đã đặt trước",
+                "damaged": "Hư hỏng",
+                "available": "Có sẵn",
+                "in_transit": "Đang vận chuyển",
+                "shelf": "Kệ/Vị trí"
+            }
+        },
+        "warehouses": {
+            "title": "Hệ thống Kho (Vaults)",
+            "search": "Tìm kiếm theo tên hoặc mã kho...",
+            "add": "Thêm Kho mới",
+            "edit": "Chỉnh sửa Kho",
+            "table": {
+                "name": "Tên Kho",
+                "code": "Mã nhận diện",
+                "address": "Địa chỉ / Tọa độ",
+                "status": "Trạng thái"
+            },
+            "form": {
+                "name": "Tên Kho",
+                "code": "Mã Kho (Ví dụ: WH-HCM-01)",
+                "address": "Địa chỉ",
+                "active": "Đang hoạt động"
+            },
+            "success": {
+                "create": "Đã tạo kho mới thành công.",
+                "update": "Đã cập nhật thông tin kho."
+            }
+        },
+        "logs": {
+            "placeholder": "Module Nhật ký Kiểm toán sắp ra mắt trên Sổ cái Bảo mật..."
         }
     },
     "profile": {
@@ -183,8 +390,42 @@
         },
         "footer": {
             "reset": "Đặt lại Thay đổi",
-            "save": "Lưu Cấu hình",
             "saving": "Đang đồng bộ cấu hình Atelier..."
+        }
+    },
+    "analytics": {
+        "title": "Trí tuệ Kinh doanh & Phân tích",
+        "subtitle": "Pháp y Dữ liệu & Dự báo Chiến lược",
+        "tabs": {
+            "overview": "Tổng quan Điều hành",
+            "customers": "Trí tuệ Khách hàng",
+            "products": "Hiệu suất Sản phẩm",
+            "operations": "Nhịp độ Vận hành"
+        },
+        "metrics": {
+            "revenue": "Doanh thu",
+            "profit": "Lợi nhuận Gộp",
+            "aov": "Giá trị Đơn hàng Trung bình",
+            "volume": "Sản lượng Đơn hàng",
+            "growth": "Tăng trưởng"
+        },
+        "customers": {
+            "segmentation": "Phân khúc Khách hàng Luxury",
+            "clv": "Giá trị Vòng đời (CLV)",
+            "retention": "Tỷ lệ Giữ chân",
+            "matrix_desc": "Phân tích giá trị đóng góp theo từng hạng phân khúc khách hàng."
+        },
+        "products": {
+            "margin_analysis": "Ma trận Biên lợi nhuận",
+            "velocity": "Tốc độ Bán hàng",
+            "top_performers": "Sản phẩm Hiệu suất cao",
+            "margin_help": "So sánh giữa Doanh thu và Biên lợi nhuận gộp."
+        },
+        "operations": {
+            "cycle_time": "Thời gian Chu kỳ Chế tác",
+            "bottlenecks": "Phân tích Điểm nghẽn",
+            "avg_hours": "Giờ Trung bình",
+            "efficiency_target": "Mục tiêu Hiệu suất"
         }
     }
 }

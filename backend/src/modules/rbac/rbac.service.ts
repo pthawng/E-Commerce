@@ -505,20 +505,20 @@ export class RbacService implements OnModuleInit {
     // Auto-assign all permissions to the 'admin' and 'super_admin' roles
     const masterRoles = await Promise.all([
       this.prisma.role.upsert({
-        where: { slug: 'super_admin' },
+        where: { slug: 'SUPER_ADMIN' },
         update: {},
         create: {
-          slug: 'super_admin',
+          slug: 'SUPER_ADMIN',
           name: 'Super Administrator',
           description: 'Hệ thống tối cao - Toàn quyền điều khiển',
           isSystem: true,
         },
       }),
       this.prisma.role.upsert({
-        where: { slug: 'admin' },
+        where: { slug: 'ADMIN' },
         update: {},
         create: {
-          slug: 'admin',
+          slug: 'ADMIN',
           name: 'Administrator',
           description: 'Quản trị viên hệ thống',
           isSystem: true,

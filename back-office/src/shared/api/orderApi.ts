@@ -1,16 +1,18 @@
 import api from './apiInstance';
-import { OrderStatusEnum } from '../types/order.types';
+import { OrderStatusEnum, PaymentStatusEnum, LuxurySegment } from '../types/order.types';
 
 export interface OrderListItem {
     id: string;
     code: string;
     totalAmount: number;
     status: OrderStatusEnum;
-    paymentStatus: string;
+    paymentStatus: PaymentStatusEnum;
     createdAt: string;
+    paymentDeadline?: string;
     user?: {
         fullName: string;
         email: string;
+        segment?: LuxurySegment;
     };
     guestEmail?: string;
     guestFullName?: string;
@@ -44,9 +46,19 @@ export interface OrderDetails extends OrderListItem {
 export interface PaginatedResponse<T> {
     items: T[];
     meta: {
-        total: number;
-        page: number;
-        lastPage: number;
+        totalItems?: number;
+        totalPages?: number;
+        page?: number;
+        limit: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+        nextCursor?: string | null;
+        prevCursor?: string | null;
+    };
+    links?: {
+        self: string;
+        next: string | null;
+        prev: string | null;
     };
 }
 

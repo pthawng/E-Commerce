@@ -18,10 +18,12 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
+import { useRecommendations } from "@/features/ai/hooks/useRecommendations";
 import { useProduct, useProducts } from "@/features/products/hooks/useProducts";
 import { useCartStore } from '@/features/cart/store/useCartStore';
 import { useStore } from "@/store/useStore";
 import { useTranslation } from "@/hooks/useTranslation";
+import { ProductCardSkeleton } from "@/features/products/components/ProductCardSkeleton";
 import { getLocalized, mapProductToCardProps } from "@/features/products/utils/productMapper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -46,14 +48,34 @@ export const ProductDetailPage = () => {
     }), [categoryId]);
 
     const { data: recommendationsRes } = useProducts(recommendationsParams);
+    const { data: aiRecommendationsRes, isLoading: isRecommendationsLoading } = useRecommendations(product?.id, 4);
 
-    const recommendations = useMemo(() => {
+    const fallbackRecommendations = useMemo(() => {
         const allProducts = recommendationsRes?.pages?.flatMap(page => page.data) || [];
         return allProducts
             .filter(p => p.id !== product?.id)
             .slice(0, 4)
             .map(p => mapProductToCardProps(p, language, formatPrice));
     }, [recommendationsRes?.pages, product?.id, language, currency, exchangeRatesUpdatedAt, formatPrice]);
+
+    const aiRecommendations = useMemo(() => {
+        return (aiRecommendationsRes?.items || [])
+            .filter((item) => item.productId !== product?.id)
+            .filter((item) => !!item.slug)
+            .slice(0, 4)
+            .map((item) => ({
+                id: item.productId,
+                variantId: item.productId,
+                name: item.name || '',
+                price: formatPrice(item.price || 0),
+                rawPrice: item.price || 0,
+                category: item.category || 'Curated',
+                image: item.imageUrl || '',
+                slug: item.slug || '',
+            }));
+    }, [aiRecommendationsRes?.items, product?.id, formatPrice]);
+
+    const recommendations = aiRecommendations.length > 0 ? aiRecommendations : fallbackRecommendations;
 
     // --- Senior Variant Selection Logic ---
 
@@ -396,7 +418,7 @@ export const ProductDetailPage = () => {
                 </Section>
 
                 {/* Recommendation Section */}
-                {recommendations.length > 0 && (
+                {(isRecommendationsLoading || recommendations.length > 0) && (
                     <Section padding="lg" withHairline="top" className="bg-secondary/5">
                         <Container>
                             <div className="flex items-end justify-between mb-16">
@@ -410,9 +432,13 @@ export const ProductDetailPage = () => {
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                                {recommendations.map((p) => (
-                                    <ProductCard key={p.id} {...p} />
-                                ))}
+                                {isRecommendationsLoading && recommendations.length === 0
+                                    ? Array.from({ length: 4 }).map((_, index) => (
+                                        <ProductCardSkeleton key={index} />
+                                    ))
+                                    : recommendations.map((p) => (
+                                        <ProductCard key={p.id} {...p} />
+                                    ))}
                             </div>
                         </Container>
                     </Section>

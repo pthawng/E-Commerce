@@ -51,5 +51,40 @@
         "change_password": "修改密码",
         "security_settings": "安全设置",
         "view_all_preferences": "查看所有偏好"
+    },
+    "analytics": {
+        "title": "业务智能与分析",
+        "subtitle": "数据鉴证与战略预测",
+        "tabs": {
+            "overview": "经营概览",
+            "customers": "客户洞察",
+            "products": "产品绩效",
+            "operations": "运营脉动"
+        },
+        "metrics": {
+            "revenue": "营收",
+            "profit": "毛利",
+            "aov": "平均订单价值",
+            "volume": "订单量",
+            "growth": "增长"
+        },
+        "customers": {
+            "segmentation": "奢侈品客群分析",
+            "clv": "客户终身价值 (CLV)",
+            "retention": "留存率",
+            "matrix_desc": "分析各层级忠诚度客户的贡献价值。"
+        },
+        "products": {
+            "margin_analysis": "利润率矩阵",
+            "velocity": "动销速度",
+            "top_performers": "高绩效产品",
+            "margin_help": "营收与毛利率的对比分析。"
+        },
+        "operations": {
+            "cycle_time": "制造周期时间",
+            "bottlenecks": "瓶颈分析",
+            "avg_hours": "平均小时数",
+            "efficiency_target": "效率目标"
+        }
     }
 }

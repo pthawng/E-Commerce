@@ -1,55 +1,60 @@
-import React, { useState } from 'react';
-import {
-    Typography,
-    Table,
-    Tag,
-    Space,
-    Button,
-    Card,
-    Row,
-    Col,
-    Statistic,
-    Drawer,
-    Descriptions,
-    Divider,
-    Timeline,
-    message,
-    Popconfirm,
-    Tabs
-} from 'antd';
-import {
-    ShoppingOutlined,
-    LoadingOutlined,
-    EyeOutlined,
-    ArrowRightOutlined
-} from '@ant-design/icons';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Input, Button, message } from 'antd';
+import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { orderApi, OrderListItem } from '../shared/api/orderApi';
-import { ORDER_STATUS_CONFIG, VALID_TRANSITIONS, OrderStatusEnum } from '../shared/types/order.types';
-import { usePageHeader } from '@/shared/lib/PageHeaderContext';
-import { useCurrencyConverter } from '@/shared/lib/hooks/useCurrencyConverter';
+import { useTranslation } from 'react-i18next';
+import { useParams, useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 
-const { Title, Text } = Typography;
+import { useCurrencyConverter } from '@/shared/lib/hooks/useCurrencyConverter';
+import { orderApi } from '@/shared/api/orderApi';
+import { 
+    OrderStatusEnum, 
+    LuxurySegment,
+    PaymentStatusEnum
+} from '@/shared/types/order.types';
+import { usePageHeader } from '@/shared/lib/PageHeaderContext';
+import { WidgetErrorBoundary } from '@/shared/ui/ErrorBoundary/WidgetErrorBoundary';
+
+// Widgets
+import { OrderFulfillmentPulse } from '@/widgets/orders/ui/OrderFulfillmentPulse';
+import { OrderOrchestrator } from '@/widgets/orders/ui/OrderOrchestrator';
+import { OrderIntegrityDrawer } from '@/widgets/orders/ui/OrderIntegrityDrawer';
+
+dayjs.extend(relativeTime);
 
 export const OMSPage: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const { t } = useTranslation();
     const queryClient = useQueryClient();
-    const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-    const [isDrawerVisible, setIsDrawerVisible] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [currentStatus, setCurrentStatus] = useState<string>('all');
     const { convertAndFormat } = useCurrencyConverter();
+    const [activeQueue, setActiveQueue] = useState('all');
+    const [searchText, setSearchText] = useState('');
+    const [selectedOrderId, setSelectedOrderId] = useState<string | null>(id || null);
+    const [isDrawerVisible, setIsDrawerVisible] = useState(!!id);
 
-    // 1. Fetch Orders with Pagination & Filtering
-    const { data: orders, isLoading } = useQuery({
-        queryKey: ['admin-orders', currentPage, currentStatus],
-        queryFn: () => orderApi.getOrders({
-            page: currentPage,
-            limit: 10,
-            status: currentStatus === 'all' ? undefined : currentStatus
-        }),
+    // Sync state with URL params
+    useEffect(() => {
+        if (id) {
+            setSelectedOrderId(id);
+            setIsDrawerVisible(true);
+        }
+    }, [id]);
+
+    const handleCloseDrawer = () => {
+        setIsDrawerVisible(false);
+        setSelectedOrderId(null);
+        navigate('/orders');
+    };
+
+    // Data Fetching
+    const { data: ordersData, isLoading } = useQuery({
+        queryKey: ['admin-orders', activeQueue],
+        queryFn: () => orderApi.getOrders({ limit: 100 }),
     });
 
-    // 2. Fetch Single Order Details
     const { data: orderDetails, isLoading: isDetailsLoading } = useQuery({
         queryKey: ['admin-order', selectedOrderId],
         queryFn: () => orderApi.getOrder(selectedOrderId!),
@@ -57,229 +62,102 @@ export const OMSPage: React.FC = () => {
     });
 
     usePageHeader({
-        title: isDrawerVisible && orderDetails ? `Order ${orderDetails.code}` : 'Order Management',
-        subtitle: isDrawerVisible && orderDetails ? `Command Center · ORD-INTEGRITY` : 'Command Center · Standardized State Machine',
-        isLoading: isDrawerVisible && isDetailsLoading
+        title: t('orders.title'),
+        subtitle: t('orders.title') + ' · ' + t('orders.orchestrator'),
     });
 
-    // 3. Status Transition Mutation
+    // Mutations
     const transitionMutation = useMutation({
-        mutationFn: ({ id, status }: { id: string; status: OrderStatusEnum }) =>
-            orderApi.transitionStatus(id, status, 'Bản cập nhật từ Admin Console'),
+        mutationFn: ({ id, status }: { id: string, status: OrderStatusEnum }) => 
+            orderApi.transitionStatus(id, status, 'Command Center Sync'),
         onSuccess: () => {
-            message.success('Cập nhật trạng thái thành công');
+            message.success(t('dashboard.integrity.match_confirmed'));
             queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
             queryClient.invalidateQueries({ queryKey: ['admin-order', selectedOrderId] });
         },
-        onError: (error: any) => {
-            message.error(error.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
-        }
+        onError: () => message.error(t('dashboard.integrity.audit_failed'))
     });
 
-    const handleTableChange = (pagination: any) => {
-        setCurrentPage(pagination.current);
-    };
+    // Business Logic - Filtering
+    const filteredOrders = useMemo(() => {
+        if (!ordersData?.items) return [];
+        let items = ordersData.items;
 
-    const columns = [
-        {
-            title: 'Mã đơn',
-            dataIndex: 'code',
-            key: 'code',
-            render: (text: string) => <Text strong className="font-mono">{text}</Text>,
-        },
-        {
-            title: 'Khách hàng',
-            key: 'customer',
-            render: (record: OrderListItem) => (
-                <Space direction="vertical" size={0}>
-                    <Text>{record.user?.fullName || record.guestFullName || 'Khách vãng lai'}</Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{record.user?.email || record.guestEmail}</Text>
-                </Space>
-            ),
-        },
-        {
-            title: 'Giá trị',
-            dataIndex: 'totalAmount',
-            key: 'totalAmount',
-            render: (amount: number) => <Text>{convertAndFormat(amount)}</Text>,
-        },
-        {
-            title: 'Trạng thái',
-            dataIndex: 'status',
-            key: 'status',
-            render: (status: OrderStatusEnum) => (
-                <Tag color={ORDER_STATUS_CONFIG[status]?.color}>
-                    {ORDER_STATUS_CONFIG[status]?.label}
-                </Tag>
-            ),
-        },
-        {
-            title: 'Ngày tạo',
-            dataIndex: 'createdAt',
-            key: 'createdAt',
-            render: (date: string) => new Date(date).toLocaleDateString('vi-VN'),
-        },
-        {
-            title: 'Thao tác',
-            key: 'actions',
-            render: (record: OrderListItem) => (
-                <Button
-                    icon={<EyeOutlined />}
-                    onClick={() => {
-                        setSelectedOrderId(record.id);
-                        setIsDrawerVisible(true);
-                    }}
-                >
-                    Chi tiết
-                </Button>
-            ),
-        },
-    ];
+        if (searchText) {
+            items = items.filter(o => 
+                o.code.toLowerCase().includes(searchText.toLowerCase()) ||
+                o.user?.fullName.toLowerCase().includes(searchText.toLowerCase())
+            );
+        }
 
-    const renderTransitionButtons = (currentStatus: OrderStatusEnum) => {
-        const nextStatuses = VALID_TRANSITIONS[currentStatus] || [];
-        return (
-            <Space wrap>
-                {nextStatuses.map(status => (
-                    <Popconfirm
-                        key={status}
-                        title="Xác nhận chuyển trạng thái?"
-                        description={`Bạn có chắc chắn muốn chuyển sang "${ORDER_STATUS_CONFIG[status]?.label}"?`}
-                        onConfirm={() => transitionMutation.mutate({ id: selectedOrderId!, status })}
-                        okText="Xác nhận"
-                        cancelText="Hủy"
-                    >
-                        <Button
-                            type="primary"
-                            ghost
-                            icon={<ArrowRightOutlined />}
-                            loading={transitionMutation.isPending}
-                        >
-                            Chuyển sang {ORDER_STATUS_CONFIG[status]?.label}
-                        </Button>
-                    </Popconfirm>
-                ))}
-            </Space>
-        );
-    };
+        switch (activeQueue) {
+            case 'critical':
+                return items.filter(o => {
+                    const isVip = o.user?.segment === LuxurySegment.VIP || o.user?.segment === LuxurySegment.VVIP || o.user?.segment === LuxurySegment.VIC;
+                    const isOld = dayjs().diff(dayjs(o.createdAt), 'day') > 2;
+                    return (isVip && o.paymentStatus === PaymentStatusEnum.unpaid) || (isOld && o.status !== OrderStatusEnum.COMPLETED);
+                });
+            case 'production':
+                return items.filter(o => [OrderStatusEnum.CONFIRMED, OrderStatusEnum.MATERIAL_RESERVED, OrderStatusEnum.IN_PRODUCTION, OrderStatusEnum.QC].includes(o.status));
+            case 'ready':
+                return items.filter(o => o.status === OrderStatusEnum.READY_TO_SHIP);
+            default:
+                return items;
+        }
+    }, [ordersData, activeQueue, searchText]);
+
+    // Stats Preparation
+    const stats = useMemo(() => [
+        { title: t('orders.stats.efficiency'), value: '94%', icon: <PlusOutlined />, color: 'text-green-500' },
+        { title: t('orders.stats.backlog_valuation'), value: convertAndFormat(filteredOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0)), icon: <PlusOutlined />, color: 'text-amber-600' },
+        { title: t('dashboard.active_work_orders'), value: filteredOrders.filter(o => o.status !== OrderStatusEnum.COMPLETED).length, icon: <PlusOutlined />, color: 'text-blue-500' },
+        { title: t('orders.stats.delivery_sla'), value: filteredOrders.filter(o => dayjs().diff(dayjs(o.createdAt), 'hour') > 24).length, icon: <PlusOutlined />, color: 'text-red-500' },
+    ], [filteredOrders, convertAndFormat, t]);
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
-            <Tabs
-                activeKey={currentStatus}
-                onChange={(key) => {
-                    setCurrentStatus(key);
-                    setCurrentPage(1);
-                }}
-                className="luxury-tabs mb-6"
-                items={[
-                    { key: 'all', label: 'TẤT CẢ' },
-                    { key: 'PENDING_PAYMENT', label: 'CHỜ THANH TOÁN' },
-                    { key: 'CONFIRMED', label: 'ĐÃ XÁC NHẬN' },
-                    { key: 'IN_PRODUCTION', label: 'ĐANG CHẾ TÁC' },
-                    { key: 'SHIPPED', label: 'ĐANG GIAO' },
-                    { key: 'DELIVERED', label: 'ĐÃ GIAO' },
-                    { key: 'CANCELLED', label: 'ĐÃ HỦY' },
-                ]}
-            />
-
-            <Card className="shadow-sm border-gray-100 italic-shadow">
-                <Table
-                    columns={columns}
-                    dataSource={orders?.items || []}
-                    loading={isLoading}
-                    rowKey="id"
-                    pagination={{
-                        current: currentPage,
-                        pageSize: 10,
-                        total: orders?.meta?.total || 0,
-                        showSizeChanger: false
-                    }}
-                    onChange={handleTableChange}
+        <div className="space-y-8 pb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            {/* Header Actions */}
+            <div className="flex justify-between items-center mb-8">
+                <Input 
+                    prefix={<SearchOutlined className="text-gray-300" />} 
+                    placeholder={t('common.search_placeholder')} 
+                    className="h-10 w-80 border-gray-100 bg-transparent rounded-none text-[11px]"
+                    onChange={e => setSearchText(e.target.value)}
                 />
-            </Card>
+                <Button type="primary" icon={<PlusOutlined />} className="h-10 px-8 bg-black dark:bg-[#d4af37] border-none uppercase tracking-widest text-[9px] font-bold">
+                    {t('orders.create_bespoke')}
+                </Button>
+            </div>
 
-            <Drawer
-                title={<Title level={4} className="!mb-0">Chi tiết đơn hàng {orderDetails?.code}</Title>}
-                placement="right"
-                width={800}
-                onClose={() => setIsDrawerVisible(false)}
+            {/* Pulse Stats */}
+            <WidgetErrorBoundary fallbackTitle={t('common.error_boundary_title')}>
+                <OrderFulfillmentPulse stats={stats} />
+            </WidgetErrorBoundary>
+
+            {/* Main Orchestrator */}
+            <WidgetErrorBoundary fallbackTitle={t('common.error_boundary_title')}>
+                <OrderOrchestrator 
+                    orders={filteredOrders}
+                    activeQueue={activeQueue}
+                    onQueueChange={setActiveQueue}
+                    isLoading={isLoading}
+                    onViewOrder={(id) => { setSelectedOrderId(id); setIsDrawerVisible(true); navigate(`/orders/${id}`); }}
+                    onTransition={(id, status) => transitionMutation.mutate({ id, status })}
+                    convertAndFormat={convertAndFormat}
+                />
+            </WidgetErrorBoundary>
+
+            {/* Integrity Drawer */}
+            <OrderIntegrityDrawer 
+                orderId={selectedOrderId}
                 open={isDrawerVisible}
-                extra={
-                    <Space>
-                        <Button onClick={() => setIsDrawerVisible(false)}>Đóng</Button>
-                    </Space>
-                }
-            >
-                {isDetailsLoading ? (
-                    <div className="flex justify-center py-20"><LoadingOutlined style={{ fontSize: 40 }} /></div>
-                ) : orderDetails && (
-                    <div className="space-y-8 pb-20">
-                        <Descriptions title="Thông tin cơ bản" bordered column={2}>
-                            <Descriptions.Item label="Mã đơn">{orderDetails.code}</Descriptions.Item>
-                            <Descriptions.Item label="Ngày tạo">{new Date(orderDetails.createdAt).toLocaleString('vi-VN')}</Descriptions.Item>
-                            <Descriptions.Item label="Khách hàng">{orderDetails.user?.fullName || orderDetails.guestFullName || 'Khách vãng lai'}</Descriptions.Item>
-                            <Descriptions.Item label="Email">{orderDetails.user?.email || orderDetails.guestEmail}</Descriptions.Item>
-                            <Descriptions.Item label="Tổng tiền">
-                                <Text strong type="danger">{orderDetails.totalAmount.toLocaleString('vi-VN')} VND</Text>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Thanh toán">
-                                <Tag color={orderDetails.paymentStatus === 'PAID' ? 'green' : 'orange'}>
-                                    {orderDetails.paymentStatus}
-                                </Tag>
-                            </Descriptions.Item>
-                        </Descriptions>
-
-                        <Divider orientation="left">Sản phẩm</Divider>
-                        <Table
-                            dataSource={orderDetails.items}
-                            pagination={false}
-                            rowKey="id"
-                            size="small"
-                            columns={[
-                                { title: 'Sản phẩm', dataIndex: 'productName' },
-                                { title: 'Phân loại', dataIndex: 'variantName' },
-                                { title: 'SL', dataIndex: 'quantity' },
-                                { title: 'Giá', dataIndex: 'price', render: (v) => v.toLocaleString('vi-VN') },
-                                { title: 'Tổng', dataIndex: 'totalLine', render: (v) => v.toLocaleString('vi-VN'), className: 'font-bold' },
-                            ]}
-                        />
-
-                        <Divider orientation="left">Quản lý trạng thái</Divider>
-                        <Card className="bg-gray-50 border-none">
-                            <div className="space-y-4">
-                                <div>
-                                    <Text type="secondary">Trạng thái hiện tại: </Text>
-                                    <Tag color={ORDER_STATUS_CONFIG[orderDetails.status]?.color} className="ml-2">
-                                        {ORDER_STATUS_CONFIG[orderDetails.status]?.label}
-                                    </Tag>
-                                </div>
-                                {renderTransitionButtons(orderDetails.status)}
-                            </div>
-                        </Card>
-
-                        <Divider orientation="left">Lịch sử xử lý (Timeline)</Divider>
-                        <Timeline
-                            items={orderDetails.timelines?.map(event => ({
-                                color: event.action === 'ORDER_CANCELLED' ? 'red' : 'green',
-                                children: (
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between">
-                                            <Text strong>{event.action.replace(/_/g, ' ')}</Text>
-                                            <Text type="secondary" style={{ fontSize: 12 }}>{new Date(event.createdAt).toLocaleString('vi-VN')}</Text>
-                                        </div>
-                                        <Text type="secondary" italic>{event.description}</Text>
-                                        <div className="mt-1">
-                                            <Tag>{event.fromStatus} → {event.toStatus}</Tag>
-                                            <Text type="secondary" style={{ fontSize: 10 }} className="ml-2">Actor: {event.actorType}</Text>
-                                        </div>
-                                    </div>
-                                ),
-                            }))}
-                        />
-                    </div>
-                )}
-            </Drawer>
+                onClose={handleCloseDrawer}
+                orderDetails={orderDetails}
+                isLoading={isDetailsLoading}
+                onTransition={(status) => transitionMutation.mutate({ id: selectedOrderId!, status })}
+                isTransitioning={transitionMutation.isPending}
+                convertAndFormat={convertAndFormat}
+            />
         </div>
     );
 };

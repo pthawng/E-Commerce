@@ -30,6 +30,7 @@ import { PayPalProvider } from './providers/paypal/paypal.provider';
 import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { VNPayProvider } from './providers/vnpay/vnpay.provider';
 import { IdempotencyService } from './services/idempotency.service';
+import { WebhookIdempotencyService } from './services/webhook-idempotency.service';
 import { PaymentStateMachine } from './services/payment-state.machine';
 import {
   CallbackData,
@@ -54,6 +55,7 @@ export class PaymentService {
     private readonly paypalProvider: PayPalProvider,
     private readonly vietqrProvider: VietQRProvider,
     private readonly idempotencyService: IdempotencyService,
+    private readonly webhookIdempotency: WebhookIdempotencyService,
     private readonly stateMachine: PaymentStateMachine,
     private readonly inventoryService: InventoryService,
     private readonly paginationService: PaginationService,
@@ -207,12 +209,25 @@ export class PaymentService {
         return cachedResult;
       }
 
-      // 2. Acquire Distributed Lock for atomic execution
+      // 2. Hard Persistent Idempotency (DB-level Source of Truth)
+      const isNew = await this.webhookIdempotency.startProcessing(
+        paymentMethod,
+        verifiedData.transactionId,
+        callbackData,
+      );
+      if (!isNew) {
+        this.logger.warn(`Webhook ${verifiedData.transactionId} already processed or processing (DB).`);
+        return verifiedData;
+      }
+
+      // 3. Acquire Distributed Lock for atomic execution
       const lockToken = await this.idempotencyService.acquireLock(executionKey);
       if (!lockToken) {
         this.logger.warn(
           `Concurrent execution detected for transaction ${verifiedData.transactionId}`,
         );
+        // If we can't get the lock, we must fail the idempotency record so it can be retried
+        await this.webhookIdempotency.fail(paymentMethod, verifiedData.transactionId, 'Concurrent lock timeout');
         throw new ConflictException('Payment processing in progress. Please retry.');
       }
 
@@ -385,6 +400,7 @@ export class PaymentService {
               data: {
                 status: finalOrderStatus,
                 retryCount: { increment: 1 },
+                version: { increment: 1 },
               } as any,
             });
 
@@ -408,7 +424,11 @@ export class PaymentService {
           `Payment processed: Order=${verifiedData.orderId}, Status=${verifiedData.status}`,
         );
         await this.idempotencyService.storeResult(executionKey, verifiedData);
+        await this.webhookIdempotency.complete(paymentMethod, verifiedData.transactionId);
         return verifiedData;
+      } catch (error) {
+        await this.webhookIdempotency.fail(paymentMethod, verifiedData.transactionId, error.message);
+        throw error;
       } finally {
         await this.idempotencyService.releaseLock(executionKey, lockToken);
       }
@@ -601,7 +621,11 @@ export class PaymentService {
 
           await tx.order.update({
             where: { id: orderId },
-            data: { paymentStatus: PaymentStatusEnum.refunded, status: OrderStatusEnum.REFUNDED },
+            data: {
+              paymentStatus: PaymentStatusEnum.refunded,
+              status: OrderStatusEnum.REFUNDED,
+              version: { increment: 1 },
+            },
           });
 
           if (restoreInventory) await this.restoreInventory(tx, order);
@@ -699,6 +723,7 @@ export class PaymentService {
             paymentStatus: PaymentStatusEnum.paid,
             status: OrderStatusEnum.CONFIRMED,
             confirmedAt: new Date(),
+            version: { increment: 1 },
           },
         });
 

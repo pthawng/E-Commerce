@@ -115,4 +115,35 @@ export class InventoryController {
   async getMovementHistory(@Query() query: StockQueryDto) {
     return this.stockMovementService.getMovementHistory(query);
   }
+
+  // ============================================
+  // TRANSFER LIFECYCLE
+  // ============================================
+
+  @Get('transfers')
+  async getTransfers() {
+    return this.stockMovementService.getTransfers();
+  }
+
+  @Post('transfers')
+  async initiateTransfer(@Body() dto: TransferStockDto) {
+    return this.stockMovementService.createTransfer(
+      dto.variantId,
+      dto.fromWarehouseId,
+      dto.toWarehouseId,
+      dto.quantity,
+      undefined,
+      dto.note,
+    );
+  }
+
+  @Post('transfers/:id/ship')
+  async shipTransfer(@Param('id') id: string) {
+    return this.stockMovementService.shipTransfer(id);
+  }
+
+  @Post('transfers/:id/receive')
+  async receiveTransfer(@Param('id') id: string) {
+    return this.stockMovementService.receiveTransfer(id);
+  }
 }

@@ -40,7 +40,7 @@ const TOKEN_EXPIRY = {
 
 const USER_ROLES = {
   CUSTOMER: 'CUSTOMER',
-  ADMIN: 'admin',
+  ADMIN: 'ADMIN',
 };
 
 @Injectable()

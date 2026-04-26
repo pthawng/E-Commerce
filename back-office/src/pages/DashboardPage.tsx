@@ -1,6 +1,5 @@
 import React from 'react';
-import { Row, Col, Typography, Space, Button } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Row, Col, Typography } from 'antd';
 import { StrategicKPIs } from '@/widgets/dashboard/ui/StrategicKPIs';
 import { AtelierPulse } from '@/widgets/dashboard/ui/AtelierPulse';
 import { FinancialIntegrity } from '@/widgets/dashboard/ui/FinancialIntegrity';
@@ -8,7 +7,9 @@ import { FinancialIntegrity } from '@/widgets/dashboard/ui/FinancialIntegrity';
 import { useTranslation } from 'react-i18next';
 import { usePageHeader } from '@/shared/lib/PageHeaderContext';
 
-const { Title, Text } = Typography;
+import { WidgetErrorBoundary } from '@/shared/ui/ErrorBoundary/WidgetErrorBoundary';
+
+const { Text } = Typography;
 
 export const DashboardPage: React.FC = () => {
     const { t } = useTranslation();
@@ -19,15 +20,21 @@ export const DashboardPage: React.FC = () => {
     });
 
     return (
-        <div className="space-y-16 py-8 px-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <StrategicKPIs />
+        <div className="space-y-12 pb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <WidgetErrorBoundary fallbackTitle={t('common.error_boundary_title')}>
+                <StrategicKPIs />
+            </WidgetErrorBoundary>
 
             <Row gutter={[48, 48]}>
                 <Col xs={24} lg={16}>
-                    <AtelierPulse />
+                    <WidgetErrorBoundary fallbackTitle={t('common.error_boundary_title')}>
+                        <AtelierPulse />
+                    </WidgetErrorBoundary>
                 </Col>
                 <Col xs={24} lg={8}>
-                    <FinancialIntegrity />
+                    <WidgetErrorBoundary fallbackTitle={t('common.error_boundary_title')}>
+                        <FinancialIntegrity />
+                    </WidgetErrorBoundary>
                 </Col>
             </Row>
 

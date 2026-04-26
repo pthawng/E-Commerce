@@ -38,7 +38,7 @@ export const ConciergePage: React.FC = () => {
     };
 
     return (
-        <div className="space-y-12 py-8 animate-in fade-in duration-1000">
+        <div className="space-y-12 pb-8 animate-in fade-in duration-1000">
             {/* Header */}
             <div className="flex justify-between items-end border-b border-gray-100 dark:border-gray-900 pb-8">
                 <div className="space-y-1">

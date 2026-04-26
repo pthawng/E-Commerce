@@ -3,8 +3,8 @@ import api from './apiInstance';
 export interface LedgerBalance {
     id: string;
     sku: string;
-    name: any;
-    variantTitle: any;
+    name: string;
+    variantTitle: string;
     quantity: number;
     reserved: number;
     available: number;
@@ -28,6 +28,7 @@ export interface FinancialFlow {
     paymentMethod: string;
     createdAt: string;
     order?: {
+        id: string;
         orderNumber: string;
         totalAmount: number;
         user?: {

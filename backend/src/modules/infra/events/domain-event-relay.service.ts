@@ -59,7 +59,7 @@ export class DomainEventRelayService {
           await this.prisma.domainEventOutbox.update({
             where: { id: event.id },
             data: {
-              status: event.retryCount >= 5 ? 'FAILED' : 'PENDING',
+              status: (event.retryCount || 0) >= 5 ? 'FAILED' : 'PENDING',
               retryCount: { increment: 1 },
               lastError: err.message,
             },
@@ -70,6 +70,26 @@ export class DomainEventRelayService {
       this.logger.error('Outbox Relay Engine Frame Error', error);
     } finally {
       this.isPolling = false;
+    }
+  }
+
+  /**
+   * P1 Resilience: Outbox Lag Detection
+   * Monitors for events stuck in non-terminal states.
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async monitorLag() {
+    const threshold = new Date(Date.now() - 5 * 60 * 1000); // 5 minutes
+    const stuckEvents = await this.prisma.domainEventOutbox.count({
+      where: {
+        status: { in: ['PENDING', 'PROCESSING'] },
+        createdAt: { lt: threshold },
+      },
+    });
+
+    if (stuckEvents > 0) {
+      this.logger.error(`[CRITICAL] OUTBOX LAG DETECTED: ${stuckEvents} events stuck > 5m!`);
+      // FAANG Grade: Here we would trigger an incident alert (PagerDuty/Slack)
     }
   }
 }

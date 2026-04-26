@@ -36,18 +36,26 @@ export class LedgerService {
             },
         });
 
-        return materialItems.map((item) => ({
-            id: item.id,
-            sku: item.productVariant.sku,
-            name: item.productVariant.product.name,
-            variantTitle: item.productVariant.variantTitle,
-            quantity: item.quantity,
-            reserved: item.reservedQuantity,
-            available: item.quantity - item.reservedQuantity,
-            warehouse: item.warehouse.name,
-            lastUpdated: item.updatedAt,
-            costPrice: item.productVariant.costPrice || item.productVariant.price,
-        }));
+        return materialItems.map((item) => {
+            const nameObj = item.productVariant?.product?.name as any;
+            const displayName = nameObj?.vi || nameObj?.en || Object.values(nameObj || {})[0] || 'Unknown Material';
+
+            const variantTitleObj = item.productVariant?.variantTitle as any;
+            const displayVariantTitle = variantTitleObj?.vi || variantTitleObj?.en || Object.values(variantTitleObj || {})[0] || '';
+
+            return {
+                id: item.id,
+                sku: item.productVariant?.sku || 'N/A',
+                name: displayName,
+                variantTitle: displayVariantTitle,
+                quantity: item.quantity || 0,
+                reserved: item.reservedQuantity || 0,
+                available: (item.quantity || 0) - (item.reservedQuantity || 0),
+                warehouse: item.warehouse?.name || 'Unknown Warehouse',
+                lastUpdated: item.updatedAt,
+                costPrice: Number(item.productVariant?.costPrice || item.productVariant?.price || 0),
+            };
+        });
     }
 
     /**
@@ -106,8 +114,9 @@ export class LedgerService {
         });
 
         const totalMaterialValue = materialItems.reduce((sum, item) => {
+            if (!item.productVariant) return sum;
             const price = Number(item.productVariant.costPrice || item.productVariant.price || 0);
-            return sum + price * item.quantity;
+            return sum + price * (item.quantity || 0);
         }, 0);
 
         // 2. Unverified Revenue
@@ -121,7 +130,7 @@ export class LedgerService {
             },
         });
 
-        // 3. Recent Discrepancies (Logic can be expanded)
+        // 3. Recent Discrepancies
         const discrepancyCount = await this.prisma.paymentTransaction.count({
             where: {
                 reconciliationStatus: ReconciliationStatus.MISMATCH,
@@ -130,8 +139,8 @@ export class LedgerService {
 
         return {
             totalMaterialValue,
-            unverifiedRevenue: Number(unverifiedTransactions._sum.amount || 0),
-            activeDiscrepancies: discrepancyCount,
+            unverifiedRevenue: Number(unverifiedTransactions?._sum?.amount || 0),
+            activeDiscrepancies: discrepancyCount || 0,
         };
     }
 

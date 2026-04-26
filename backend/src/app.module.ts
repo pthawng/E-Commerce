@@ -1,5 +1,6 @@
 import { ExpressAdapter } from '@bull-board/express';
 import { BullBoardModule } from '@bull-board/nestjs';
+import { AiModule } from '@modules/ai/ai.module';
 import { AttributeModule } from '@modules/attribute/attribute.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
@@ -21,6 +22,8 @@ import { UserModule } from '@modules/user/user.module';
 import { SystemModule } from '@modules/system/system.module';
 import { ProfileModule } from '@modules/profile/profile.module';
 import { LedgerModule } from '@modules/ledger/ledger.module';
+import { AnalyticsModule } from '@modules/analytics/analytics.module';
+import { NotificationModule } from '@modules/notification/notification.module';
 import { BullModule } from '@nestjs/bull';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
@@ -77,6 +80,7 @@ import { JwtModule } from '@nestjs/jwt';
       ],
     }),
     PrismaModule,
+    AiModule,
     UserModule,
     AuthModule,
     MailModule,
@@ -97,6 +101,8 @@ import { JwtModule } from '@nestjs/jwt';
     SystemModule,
     ProfileModule,
     LedgerModule,
+    AnalyticsModule,
+    NotificationModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: bullConfigFactory,
@@ -112,6 +118,7 @@ import { JwtModule } from '@nestjs/jwt';
       },
     }),
     CacheModule.registerAsync({
+      isGlobal: true,
       imports: [ConfigModule],
       useFactory: cacheConfigFactory,
       inject: [ConfigService],

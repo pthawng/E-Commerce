@@ -166,6 +166,10 @@ export const API_ENDPOINTS = {
   SYSTEM: {
     CURRENCY_RATES: '/api/system/currency/rates',
   },
+
+  AI: {
+    RECOMMENDATIONS: '/api/ai/recommendations',
+  },
 } as const;
 
 /**

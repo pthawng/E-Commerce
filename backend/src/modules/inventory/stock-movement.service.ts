@@ -20,9 +20,8 @@ export class StockMovementService {
   // ============================================
 
   /**
-   * Transfer stock between two warehouses.
-   * Both deduction and addition happen in a single transaction
-   * with row-level locking to prevent data corruption.
+   * Quick Transfer (Atomic)
+   * Deprecated in favor of lifecycle-based transfers but kept for backward compatibility.
    */
   async transfer(
     variantId: string,
@@ -32,137 +31,159 @@ export class StockMovementService {
     actorId?: string,
     note?: string,
   ): Promise<void> {
+    const transfer = await this.createTransfer(variantId, fromWarehouseId, toWarehouseId, quantity, actorId, note);
+    await this.shipTransfer(transfer.id, actorId);
+    await this.receiveTransfer(transfer.id, actorId);
+  }
+
+  async createTransfer(
+    variantId: string,
+    fromWarehouseId: string,
+    toWarehouseId: string,
+    quantity: number,
+    actorId?: string,
+    note?: string,
+  ) {
     if (fromWarehouseId === toWarehouseId) {
       throw new BadRequestException('Cannot transfer to the same warehouse');
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      // Row-level lock on source warehouse
-      const [fromItem] = await tx.$queryRawUnsafe<
-        Array<{ id: string; quantity: number; reservedQuantity: number }>
-      >(
-        `SELECT id, quantity, "reservedQuantity"
-         FROM "InventoryItem"
-         WHERE "productVariantId" = $1 AND "warehouseId" = $2
-         FOR UPDATE`,
+    return this.prisma.inventoryTransfer.create({
+      data: {
         variantId,
         fromWarehouseId,
-      );
-
-      if (!fromItem) {
-        throw new NotFoundException(
-          `No inventory found in source warehouse for variant=${variantId}`,
-        );
-      }
-
-      const availableInSource = fromItem.quantity - fromItem.reservedQuantity;
-      if (availableInSource < quantity) {
-        throw new BadRequestException(
-          `Insufficient available stock in source warehouse: ` +
-            `available=${availableInSource}, requested=${quantity}`,
-        );
-      }
-
-      // Row-level lock on destination warehouse (upsert if doesn't exist)
-      let toItem: { id: string; quantity: number; reservedQuantity: number } | null = null;
-
-      const [existingToItem] = await tx.$queryRawUnsafe<
-        Array<{ id: string; quantity: number; reservedQuantity: number }>
-      >(
-        `SELECT id, quantity, "reservedQuantity"
-         FROM "InventoryItem"
-         WHERE "productVariantId" = $1 AND "warehouseId" = $2
-         FOR UPDATE`,
-        variantId,
         toWarehouseId,
-      );
+        quantity,
+        status: 'PENDING',
+        actorId,
+        note,
+      },
+    });
+  }
 
-      if (existingToItem) {
-        toItem = existingToItem;
-      } else {
-        // Create inventory item in destination warehouse
-        const created = await tx.inventoryItem.create({
-          data: {
-            productVariantId: variantId,
-            warehouseId: toWarehouseId,
-            quantity: 0,
-            reservedQuantity: 0,
-          },
-        });
-        toItem = { id: created.id, quantity: 0, reservedQuantity: 0 };
+  async shipTransfer(transferId: string, actorId?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const transfer = await tx.inventoryTransfer.findUnique({
+        where: { id: transferId },
+        include: { fromWarehouse: true, toWarehouse: true }
+      });
+
+      if (!transfer || transfer.status !== 'PENDING') {
+        throw new BadRequestException('Transfer not found or not in PENDING status');
       }
 
-      // Deduct from source
-      const fromBefore = fromItem.quantity;
-      const fromAfter = fromBefore - quantity;
+      // Lock source inventory
+      const [fromItem] = await tx.$queryRawUnsafe<any>(
+        `SELECT id, quantity, "reservedQuantity", "damagedQuantity" FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE`,
+        transfer.variantId,
+        transfer.fromWarehouseId,
+      );
 
+      if (!fromItem || (fromItem.quantity - fromItem.reservedQuantity - fromItem.damagedQuantity) < transfer.quantity) {
+        throw new BadRequestException('Insufficient available stock in source warehouse');
+      }
+
+      // 1. Deduct from source on-hand
       await tx.inventoryItem.update({
         where: { id: fromItem.id },
-        data: { quantity: fromAfter },
+        data: { quantity: { decrement: transfer.quantity } },
       });
 
-      // Add to destination
-      const toBefore = toItem.quantity;
-      const toAfter = toBefore + quantity;
-
-      await tx.inventoryItem.update({
-        where: { id: toItem.id },
-        data: { quantity: toAfter },
-      });
-
-      // Create InventoryTransfer record
-      const transfer = await tx.inventoryTransfer.create({
-        data: {
-          variantId,
-          fromWarehouseId,
-          toWarehouseId,
-          quantity,
-          status: 'completed',
-          actorId,
-          note,
+      // 2. Increment destination in-transit
+      await tx.inventoryItem.upsert({
+        where: { productVariantId_warehouseId: { productVariantId: transfer.variantId, warehouseId: transfer.toWarehouseId } },
+        create: {
+          productVariantId: transfer.variantId,
+          warehouseId: transfer.toWarehouseId,
+          quantity: 0,
+          inTransitQuantity: transfer.quantity,
         },
+        update: { inTransitQuantity: { increment: transfer.quantity } },
       });
 
-      const transferRefId = transfer.id;
+      // 3. Update transfer status
+      const updated = await tx.inventoryTransfer.update({
+        where: { id: transferId },
+        data: { status: 'SHIPPED', actorId },
+      });
 
-      // Log TRANSFER_OUT
+      // Log movement
       await tx.inventoryLog.create({
         data: {
           inventoryItemId: fromItem.id,
-          productVariantId: variantId,
-          warehouseId: fromWarehouseId,
+          productVariantId: transfer.variantId,
+          warehouseId: transfer.fromWarehouseId,
           actionType: 'TRANSFER_OUT',
-          quantityChange: -quantity,
-          beforeQuantity: fromBefore,
-          afterQuantity: fromAfter,
+          quantityChange: -transfer.quantity,
+          beforeQuantity: fromItem.quantity,
+          afterQuantity: fromItem.quantity - transfer.quantity,
           referenceType: 'TRANSFER',
-          referenceId: transferRefId,
+          referenceId: transferId,
           actorId,
-          note: note || `Transfer out ${quantity} units to warehouse ${toWarehouseId}`,
+          note: `Shipped to ${transfer.toWarehouse.name}`,
         },
       });
 
-      // Log TRANSFER_IN
+      return updated;
+    });
+  }
+
+  async receiveTransfer(transferId: string, actorId?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const transfer = await tx.inventoryTransfer.findUnique({
+        where: { id: transferId },
+        include: { toWarehouse: true }
+      });
+
+      if (!transfer || transfer.status !== 'SHIPPED') {
+        throw new BadRequestException('Transfer not found or not in SHIPPED status');
+      }
+
+      // Lock destination inventory
+      const [toItem] = await tx.$queryRawUnsafe<any>(
+        `SELECT id, quantity, "inTransitQuantity" FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE`,
+        transfer.variantId,
+        transfer.toWarehouseId,
+      );
+
+      if (!toItem || toItem.inTransitQuantity < transfer.quantity) {
+        throw new BadRequestException('In-transit quantity mismatch in destination');
+      }
+
+      // 1. Move from in-transit to on-hand
+      await tx.inventoryItem.update({
+        where: { id: toItem.id },
+        data: { 
+          inTransitQuantity: { decrement: transfer.quantity },
+          quantity: { increment: transfer.quantity }
+        },
+      });
+
+      // 2. Update transfer status
+      const updated = await tx.inventoryTransfer.update({
+        where: { id: transferId },
+        data: { status: 'COMPLETED', actorId },
+      });
+
+      // Log movement
       await tx.inventoryLog.create({
         data: {
           inventoryItemId: toItem.id,
-          productVariantId: variantId,
-          warehouseId: toWarehouseId,
+          productVariantId: transfer.variantId,
+          warehouseId: transfer.toWarehouseId,
           actionType: 'TRANSFER_IN',
-          quantityChange: quantity,
-          beforeQuantity: toBefore,
-          afterQuantity: toAfter,
+          quantityChange: transfer.quantity,
+          beforeQuantity: toItem.quantity,
+          afterQuantity: toItem.quantity + transfer.quantity,
           referenceType: 'TRANSFER',
-          referenceId: transferRefId,
+          referenceId: transferId,
           actorId,
-          note: note || `Transfer in ${quantity} units from warehouse ${fromWarehouseId}`,
+          note: `Received at ${transfer.toWarehouse.name}`,
         },
       });
-    });
 
-    this.logger.log(
-      `Transferred ${quantity} units: variant=${variantId} ${fromWarehouseId} → ${toWarehouseId}`,
-    );
+      return updated;
+    });
   }
 
   // ============================================
@@ -224,5 +245,16 @@ export class StockMovementService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getTransfers() {
+    return this.prisma.inventoryTransfer.findMany({
+      include: {
+        fromWarehouse: { select: { name: true } },
+        toWarehouse: { select: { name: true } },
+        productVariant: { select: { sku: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }

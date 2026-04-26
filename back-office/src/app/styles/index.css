@@ -68,3 +68,39 @@ h6 {
   font-family: var(--font-serif) !important;
   font-weight: 400 !important;
 }
+
+/* Order Command Center Styles */
+.luxury-table-command .ant-table-thead > tr > th {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(0,0,0,0.04) !important;
+    padding: 16px 8px !important;
+}
+
+.luxury-table-command .ant-table-tbody > tr > td {
+    padding: 20px 8px !important;
+    border-bottom: 1px solid rgba(0,0,0,0.02) !important;
+}
+
+.luxury-tabs-alt .ant-tabs-nav {
+    margin-bottom: 32px !important;
+}
+
+.luxury-tabs-alt .ant-tabs-tab {
+    padding: 12px 0 !important;
+    margin: 0 32px 0 0 !important;
+    opacity: 0.4;
+    transition: all 0.3s ease;
+}
+
+.luxury-tabs-alt .ant-tabs-tab-active {
+    opacity: 1;
+}
+
+.luxury-tabs-alt .ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: black !important;
+}
+
+.luxury-tabs-alt .ant-tabs-ink-bar {
+    background: black !important;
+    height: 1px !important;
+}

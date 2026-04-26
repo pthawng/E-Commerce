@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Prisma } from '@prisma/client';
+import type { ProductEmbeddingPayload } from '@shared';
 import { PaginationService, type PaginatedResult } from 'src/common/pagination';
 import { slugify } from 'src/common/utils/string.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -16,6 +18,7 @@ export class ProductService {
     private readonly paginationService: PaginationService,
     private readonly productStorageService: ProductStorageService,
     private readonly variantService: VariantService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ---------------------------
@@ -38,6 +41,10 @@ export class ProductService {
       baseWhere.categories = {
         some: { categoryId: dto.categoryId },
       };
+    } else if (dto.excludeCategoryId) {
+      baseWhere.categories = {
+        none: { categoryId: dto.excludeCategoryId },
+      };
     }
 
     if (dto.isFeatured !== undefined) {
@@ -59,15 +66,13 @@ export class ProductService {
       ];
     }
 
-    if (dto.categoryId) filterComplexity += 1;
+    if (dto.categoryId || dto.excludeCategoryId) filterComplexity += 1;
     if (dto.isFeatured !== undefined) filterComplexity += 1;
     if (dto.isActive !== undefined) filterComplexity += 1;
 
     const result = await this.paginationService.paginate<PrismaProduct>({
       findMany: (args) => {
         // P0-5 FIX: Use Prisma AND operator instead of flat spread merge.
-        // Flat spread (`{ ...baseWhere, ...args.where }`) would silently overwrite
-        // top-level keys in baseWhere (e.g. deletedAt: null) if args.where shares the key.
         const where: ProductWhereInput = args.where ? { AND: [baseWhere, args.where] } : baseWhere;
 
         return this.prisma.product.findMany({
@@ -102,8 +107,6 @@ export class ProductService {
       defaultSort: { field: 'createdAt', order: 'desc' },
       basePath: '/products',
       filterComplexity,
-      // P1-2 FIX: Declare actual eager-loaded join count so QueryCostService
-      // correctly gates expensive queries. Previously always 0 (unenforced).
       joinCount: 3, // variants + media + categories
     });
 
@@ -194,21 +197,16 @@ export class ProductService {
   // CREATE PRODUCT
   // ---------------------------
   async createProduct(dto: CreateProductDto, files?: Express.Multer.File[]) {
-    // 1. Initial Validation & Defaults
     const hasVariants = dto.hasVariants ?? false;
     this.validateProductBasics(dto, hasVariants);
 
-    // 2. Prepare Data
     const baseSlug = dto.slug ? slugify(dto.slug) : slugify(this.getMainName(dto) || '');
     const mediaUrlPayload = dto.mediaUrls || [];
 
-    // 3. Execution
-    return this.prisma.$transaction(async (tx) => {
-      // 3.1 Uniqueness & Existence Checks
+    const created = await this.prisma.$transaction(async (tx) => {
       const finalSlug = await this.generateUniqueSlug(baseSlug, tx);
       await this.validateRelations(dto, tx);
 
-      // 3.2 Create Parent Product
       const product = await tx.product.create({
         data: {
           name: dto.name,
@@ -220,7 +218,6 @@ export class ProductService {
         },
       });
 
-      // 3.3 Link Categories
       if (dto.categoryIds?.length) {
         await tx.productCategory.createMany({
           data: dto.categoryIds.map((categoryId) => ({
@@ -231,16 +228,10 @@ export class ProductService {
         });
       }
 
-      // 3.4 Process Media
       const mediaRecords = await this.processMediaCreation(product.id, mediaUrlPayload, files, tx);
-
-      // 3.5 Process Variants
       await this.processVariantCreation(product.id, dto, hasVariants, finalSlug, mediaRecords, tx);
-
-      // 3.6 Recalculate Prices
       await this.variantService.recalculateDisplayPrice(product.id, tx);
 
-      // 3.7 Return Result
       return tx.product.findUniqueOrThrow({
         where: { id: product.id },
         include: {
@@ -257,9 +248,10 @@ export class ProductService {
         },
       });
     });
-  }
 
-  // ==================== PRIVATE HELPERS: CREATE ==================== //
+    this.emitAiSync(created);
+    return created;
+  }
 
   private validateProductBasics(dto: CreateProductDto, hasVariants: boolean) {
     const mainName = this.getMainName(dto);
@@ -303,7 +295,6 @@ export class ProductService {
     const mediaRecords: Array<{ id: string; order: number }> = [];
     let currentOrder = 0;
 
-    // A. URL Media
     for (const url of mediaUrls) {
       const media = await tx.productMedia.create({
         data: {
@@ -318,7 +309,6 @@ export class ProductService {
       currentOrder++;
     }
 
-    // B. File Media
     if (files?.length) {
       for (const file of files) {
         const media = await this.productStorageService.uploadMedia(
@@ -401,8 +391,6 @@ export class ProductService {
     }
   }
 
-  // ==================== PRIVATE HELPERS: UTILS ==================== //
-
   private async generateUniqueSlug(
     baseSlug: string,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
@@ -460,21 +448,11 @@ export class ProductService {
     return parts.join('-').toUpperCase();
   }
 
-  // ---------------------------
-  // UPDATE PRODUCT
-  // ---------------------------
-  // ---------------------------
-  // UPDATE PRODUCT
-  // ---------------------------
   async updateProduct(id: string, dto: UpdateProductDto, files?: Express.Multer.File[]) {
-    // 1. Check Existence
     const existing = await this.getProductOrThrow(id);
-
-    // 2. Prepare Data
     const finalSlug = await this.resolveUpdatedSlug(existing, dto);
     const categoryConnection = await this.resolveUpdatedCategories(dto);
 
-    // 3. Update Product
     const updated = await this.prisma.product.update({
       where: { id },
       data: {
@@ -492,15 +470,24 @@ export class ProductService {
       },
     });
 
-    // 4. Handle New Files
     if (files && files.length > 0) {
       await this.handlePostUpdateMedia(id, files);
     }
 
-    return updated;
-  }
+    const productForSync =
+      files && files.length > 0
+        ? await this.prisma.product.findUniqueOrThrow({
+            where: { id },
+            include: {
+              categories: { include: { category: true } },
+              media: { orderBy: { order: 'asc' } },
+            },
+          })
+        : updated;
 
-  // ==================== PRIVATE HELPERS: UPDATE ==================== //
+    this.emitAiSync(productForSync);
+    return productForSync;
+  }
 
   private async getProductOrThrow(id: string) {
     const existing = await this.prisma.product.findUnique({ where: { id } });
@@ -511,22 +498,16 @@ export class ProductService {
   private async resolveUpdatedSlug(existing: { id: string; slug: string }, dto: UpdateProductDto) {
     let finalSlug = existing.slug;
 
-    // Determine target slug base
     if (dto.slug) {
       finalSlug = slugify(dto.slug);
     } else if (dto.name) {
-      // Auto-generate from new name if slug not provided but name changed
       const mainName = dto.name.vi || dto.name.en || Object.values(dto.name)[0];
       finalSlug = slugify(mainName);
     }
 
-    // If slug hasn't changed effectively, return early
     if (finalSlug === existing.slug) return existing.slug;
 
-    // Ensure uniqueness if changed
     const slugExists = await this.prisma.product.findUnique({ where: { slug: finalSlug } });
-
-    // If conflict found (and it's not the same product), append counter
     if (slugExists && slugExists.id !== existing.id) {
       return this.generateUniqueSlug(finalSlug);
     }
@@ -540,7 +521,7 @@ export class ProductService {
     await this.validateCategories(dto.categoryIds);
 
     return {
-      set: [], // Clear old relations
+      set: [],
       create: dto.categoryIds.map((categoryId) => ({
         categoryId,
       })),
@@ -563,5 +544,45 @@ export class ProductService {
     );
 
     await Promise.all(uploadPromises);
+  }
+
+  private emitAiSync(product: any) {
+    const payload = this.toEmbeddingPayload(product);
+    void this.eventEmitter.emitAsync('product.ai.sync.requested', payload).catch(() => undefined);
+  }
+
+  private toEmbeddingPayload(product: any): ProductEmbeddingPayload {
+    const thumbnail = product.media?.find((media: any) => media.isThumbnail) ?? product.media?.[0];
+
+    return {
+      id: product.id,
+      name: this.getLocalizedString(product.name),
+      description: this.getLocalizedString(product.description),
+      category: this.getLocalizedString(product.categories?.[0]?.category?.name),
+      slug: product.slug,
+      imageUrl: thumbnail?.url,
+      price: Number(product.displayPriceMin ?? product.displayPriceMax ?? 0),
+      locale: 'vi',
+      updatedAt: product.updatedAt ? new Date(product.updatedAt).toISOString() : undefined,
+      isActive: product.isActive ?? true,
+      isFeatured: product.isFeatured ?? false,
+    };
+  }
+
+  private getLocalizedString(value: unknown): string {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+
+    if (typeof value === 'object') {
+      const localized = value as Record<string, unknown>;
+      return (
+        (typeof localized.vi === 'string' && localized.vi) ||
+        (typeof localized.en === 'string' && localized.en) ||
+        Object.values(localized).find((item): item is string => typeof item === 'string') ||
+        ''
+      );
+    }
+
+    return '';
   }
 }
