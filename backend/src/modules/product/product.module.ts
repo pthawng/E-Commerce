@@ -4,6 +4,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PaginationModule } from 'src/common/pagination';
 import { AbacModule } from 'src/modules/abac/abac.module';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { AdminProductController } from './admin-product.controller';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
 import { ProductStorageModule } from './product.storage/product-storage.module';
@@ -13,7 +14,7 @@ import { VariantService } from './variants/variant.service';
 
 @Module({
   imports: [PrismaModule, PaginationModule, AbacModule, ProductStorageModule, RbacModule, EventEmitterModule],
-  controllers: [ProductController, VariantController],
+  controllers: [ProductController, AdminProductController, VariantController],
   providers: [ProductService, VariantService, VariantPolicy],
   exports: [ProductService, VariantService],
 })

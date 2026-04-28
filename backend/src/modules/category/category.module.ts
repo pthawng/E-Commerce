@@ -2,11 +2,12 @@ import { RbacModule } from '@modules/rbac/rbac.module';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { CategoryController } from './category.controller';
+import { AdminCategoryController } from './admin-category.controller';
 import { CategoryService } from './category.service';
 
 @Module({
   imports: [PrismaModule, RbacModule],
-  controllers: [CategoryController],
+  controllers: [CategoryController, AdminCategoryController],
   providers: [CategoryService],
   exports: [CategoryService],
 })

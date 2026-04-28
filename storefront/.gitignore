@@ -1,19 +1,14 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ==============================================================================
+# Storefront Gitignore
+# ==============================================================================
 
 # Dependencies
-node_modules
-dist
-dist-ssr
+node_modules/
+dist/
+dist-ssr/
 *.local
 
-# Environment Variables (Bảo mật - QUAN TRỌNG)
+# Environment Variables (CRITICAL)
 .env
 .env.local
 .env.development.local
@@ -23,29 +18,39 @@ dist-ssr
 !.env.example
 !.env.template
 
-# TypeScript Cache
+# TypeScript
 *.tsbuildinfo
-
-# ESLint Cache
 .eslintcache
 
-# Testing coverage
+# Testing
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
 
-# Cloud Deployments (Vercel, Netlify)
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Cloud
 .vercel/
 .netlify/
 
-# Editor directories and files
-.vscode/*
+# IDE
+.vscode/
 !.vscode/extensions.json
-.idea
-.DS_Store
-Thumbs.db
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.DS_Store
+Thumbs.db
 
+# Build
+build/
+.vite/
+.cache/

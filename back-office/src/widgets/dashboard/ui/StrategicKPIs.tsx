@@ -2,7 +2,7 @@ import React from 'react';
 import { Row, Col, Statistic, Typography, Skeleton } from 'antd';
 import { GoldOutlined, RiseOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { dashboardApi } from '@/shared/api/dashboardApi';
+import { dashboardApi } from '@/entities/dashboard/api/dashboardApi';
 import { useTranslation } from 'react-i18next';
 import { useCurrencyConverter } from '@/shared/lib/hooks/useCurrencyConverter';
 
@@ -15,7 +15,7 @@ export const StrategicKPIs: React.FC = () => {
     const { data: stats, isLoading } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: dashboardApi.getStats,
-        refetchInterval: 60000, // Refresh every minute
+        refetchInterval: 60000,
     });
 
     if (isLoading) {
@@ -40,7 +40,12 @@ export const StrategicKPIs: React.FC = () => {
                     <Statistic
                         value={convert(stats?.revenue || 0)}
                         formatter={(val: any) => format(Number(val))}
-                        valueStyle={{ fontSize: '38px', letterSpacing: '-0.04em', fontWeight: 300, fontFamily: 'Playfair Display, serif' }}
+                        valueStyle={{
+                            fontSize: '38px',
+                            letterSpacing: '-0.04em',
+                            fontWeight: 300,
+                            fontFamily: 'Playfair Display, serif',
+                        }}
                     />
                     <div className="flex items-center gap-2 text-[#b45309] text-[10px] tracking-tight uppercase font-black">
                         <GoldOutlined /> {t('dashboard.ledger_active')}
@@ -55,7 +60,11 @@ export const StrategicKPIs: React.FC = () => {
                     </Text>
                     <Statistic
                         value={stats?.activeOrders || 0}
-                        suffix={<span className="text-lg ml-1 font-serif text-gray-400">{t('dashboard.active_work_orders')}</span>}
+                        suffix={
+                            <span className="text-lg ml-1 font-serif text-gray-400">
+                                {t('dashboard.active_work_orders')}
+                            </span>
+                        }
                         valueStyle={{ fontSize: '38px', fontWeight: 300, fontFamily: 'Playfair Display, serif' }}
                     />
                     <div className="flex items-center gap-2 text-[#0e2258] dark:text-[#d4af37] text-[10px] tracking-tight uppercase font-black">
@@ -71,7 +80,11 @@ export const StrategicKPIs: React.FC = () => {
                     </Text>
                     <Statistic
                         value={stats?.lowStockItems || 0}
-                        suffix={<span className="text-lg ml-1 font-serif text-gray-400">{t('dashboard.issues')}</span>}
+                        suffix={
+                            <span className="text-lg ml-1 font-serif text-gray-400">
+                                {t('dashboard.issues')}
+                            </span>
+                        }
                         valueStyle={{ fontSize: '38px', fontWeight: 300, fontFamily: 'Playfair Display, serif' }}
                     />
                     <div className="flex items-center gap-2 text-red-700 dark:text-red-400 text-[10px] tracking-tight uppercase font-black">

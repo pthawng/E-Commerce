@@ -23,6 +23,7 @@ import { OrderPaymentResponseDto } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { OrderStatusValidator } from '../utils/order-status.validator';
 import { CheckoutTokenService } from './checkout-token.service';
+import { AdminCreateOrderDto } from '../dto/admin-create-order.dto';
 
 /**
  * Staff+ (L8) Internal Type Extension
@@ -660,6 +661,127 @@ export class OrderPaymentService {
       message: 'Order created. Please complete payment.',
       orderAccessToken,
     };
+  }
+
+  async adminCreateOrder(dto: AdminCreateOrderDto, actorId?: string) {
+    return SystemContextStore.asInternal('OrderPaymentService', async () => {
+      this.logger.log(`Admin creating order for customer=${dto.customerId || dto.customerEmail}`);
+
+      // 1. Allocate inventory
+      const allocations = await this.inventoryAllocator.allocate(
+        dto.items.map((item) => ({
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+      );
+
+      // 2. Fetch variants for mapping
+      const variantIds = dto.items.map((item) => item.variantId);
+      const variants = await this.prisma.productVariant.findMany({
+        where: { id: { in: variantIds } },
+        include: { product: true },
+      });
+
+      // 3. Calculate totals
+      const subTotal = dto.items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
+      const totalAmount = subTotal + this.SHIPPING_FEE;
+      const orderCode = this.generateOrderCode();
+      const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+
+      // 4. Save order & reserve stock atomically
+      const order = await this.prisma.$transaction(async (tx) => {
+        const hardenedTx = tx as HardenedTx;
+        const createdOrder = await hardenedTx.order.create({
+          data: {
+            code: orderCode,
+            user: dto.customerId ? { connect: { id: dto.customerId } } : undefined,
+            guestEmail: dto.customerEmail,
+            status: OrderStatusEnum.PENDING_PAYMENT,
+            paymentStatus: 'unpaid',
+            paymentMethod: 'VIETQR',
+            paymentDeadline,
+            shippingAddress: {
+              fullName: dto.shippingName,
+              phone: dto.shippingPhone,
+              addressDetail: dto.shippingAddress.detail,
+              wardName: dto.shippingAddress.ward,
+              districtName: dto.shippingAddress.district,
+              provinceName: dto.shippingAddress.city,
+            } as any,
+            billingAddress: {
+              fullName: dto.shippingName,
+              phone: dto.shippingPhone,
+              addressDetail: dto.shippingAddress.detail,
+              wardName: dto.shippingAddress.ward,
+              districtName: dto.shippingAddress.district,
+              provinceName: dto.shippingAddress.city,
+            } as any,
+            currency: 'VND',
+            subTotal,
+            shippingFee: this.SHIPPING_FEE,
+            totalAmount,
+            note: dto.note,
+            exchangeRate: 1,
+            displayCurrency: 'VND',
+            version: 1,
+            items: {
+              create: dto.items.map((item) => {
+                const variant = variants.find((v) => v.id === item.variantId);
+                return {
+                  productVariantId: item.variantId,
+                  productName: typeof variant?.product?.name === 'string'
+                    ? variant.product.name
+                    : (variant?.product?.name as any)?.vi || (variant?.product?.name as any)?.en || 'Sản phẩm',
+                  sku: variant?.sku || '',
+                  variantTitle: variant?.variantTitle || {},
+                  quantity: item.quantity,
+                  price: item.price,
+                  totalLine: item.price * item.quantity,
+                };
+              }),
+            },
+          },
+          include: { items: true },
+        });
+
+        // 5. Reserve stock
+        await this.inventoryService.reserve(
+          createdOrder.id,
+          allocations,
+          paymentDeadline,
+          tx,
+          dto.customerId,
+        );
+
+        // 6. Audit Trail
+        await tx.orderTimeline.create({
+          data: {
+            orderId: createdOrder.id,
+            action: 'ADMIN_ORDER_CREATED',
+            description: `Order created by Admin ${actorId || ''}`,
+            actorId,
+            actorType: 'admin',
+          },
+        });
+
+        return createdOrder;
+      });
+
+      // 7. Send Confirmation Email
+      const recipientEmail = dto.customerEmail || 
+        (dto.customerId ? (await this.prisma.user.findUnique({ where: { id: dto.customerId }, select: { email: true } }))?.email : null);
+
+      if (recipientEmail) {
+        try {
+          await this.mailService.sendAdminOrderConfirmation(recipientEmail, order, dto);
+        } catch (mailError) {
+          this.logger.error(`Failed to send order confirmation email to ${recipientEmail}`, mailError);
+          // We intentionally swallow the error here so the order creation API succeeds
+        }
+      }
+
+      return order;
+    });
   }
 
   private generateOrderCode() {

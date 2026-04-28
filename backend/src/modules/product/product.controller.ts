@@ -59,45 +59,4 @@ export class ProductController {
     return this.productService.findBySlug(slug);
   }
 
-  // CREATE PRODUCT
-  // [SECURE] Remove @Public() -> Require Login + Permission
-  @Post()
-  @Permission(PERMISSIONS.PRODUCT.ITEM.CREATE)
-  @UseInterceptors(FilesInterceptor('images', 10))
-  @ApiOperation({ summary: 'Tạo mới sản phẩm (có thể upload nhiều ảnh)' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Sản phẩm mới được tạo kèm ảnh (nếu có)',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Dữ liệu không hợp lệ hoặc file ảnh không hợp lệ',
-  })
-  createProduct(@Body() dto: CreateProductDto, @UploadedFiles() files?: Express.Multer.File[]) {
-    return this.productService.createProduct(dto, files);
-  }
-
-  // UPDATE PRODUCT
-  @Patch(':id')
-  @Permission(PERMISSIONS.PRODUCT.ITEM.UPDATE)
-  @UseInterceptors(FilesInterceptor('images', 10))
-  @ApiOperation({ summary: 'Cập nhật sản phẩm (có thể upload thêm ảnh)' })
-  @ApiConsumes('multipart/form-data')
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Sản phẩm sau khi cập nhật kèm ảnh mới (nếu có)',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Dữ liệu không hợp lệ hoặc file ảnh không hợp lệ',
-  })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Sản phẩm không tồn tại' })
-  updateProduct(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: UpdateProductDto,
-    @UploadedFiles() files?: Express.Multer.File[],
-  ) {
-    return this.productService.updateProduct(id, dto, files);
-  }
 }

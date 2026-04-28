@@ -232,6 +232,16 @@ export class CreateProductDto {
     description: 'Danh sách biến thể (bắt buộc nếu hasVariants = true)',
     type: [CreateProductVariantInputDto],
   })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  })
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantInputDto)
   @IsOptional()
@@ -276,4 +286,18 @@ export class CreateProductDto {
   })
   @IsOptional()
   baseVariantTitle?: any;
+
+  @ApiPropertyOptional({
+    description: 'Danh sách attributeValueId cho sản phẩm không biến thể',
+    type: [String],
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return value;
+    if (Array.isArray(value)) return value;
+    return [value];
+  })
+  @IsArray({ message: 'baseAttributeValueIds phải là mảng' })
+  @IsUUID('4', { each: true, message: 'Mỗi baseAttributeValueId phải là UUID hợp lệ' })
+  baseAttributeValueIds?: string[];
 }

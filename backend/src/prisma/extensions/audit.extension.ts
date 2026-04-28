@@ -39,8 +39,10 @@ export const auditExtension = Prisma.defineExtension((client) => {
                 action: operation.toUpperCase(),
                 before: beforeState ? JSON.parse(JSON.stringify(beforeState)) : null,
                 after: afterState ? JSON.parse(JSON.stringify(afterState)) : null,
-                ipAddress: 'internal-prisma',
-                userAgent: 'prisma-extension',
+                metadata: {
+                  ipAddress: 'internal-prisma',
+                  userAgent: 'prisma-extension',
+                },
               },
             });
 
@@ -57,12 +59,15 @@ export const auditExtension = Prisma.defineExtension((client) => {
                 action: 'CREATE',
                 before: null,
                 after: JSON.parse(JSON.stringify(result)),
-                ipAddress: 'internal-prisma',
-                userAgent: 'prisma-extension',
+                metadata: {
+                  ipAddress: 'internal-prisma',
+                  userAgent: 'prisma-extension',
+                },
               },
             });
 
             return result;
+
           }
 
           return query(args);

@@ -22,8 +22,11 @@ import { OrderService } from './order.service';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { RefundService } from './services/refund.service';
+import { AdminCreateOrderDto } from './dto/admin-create-order.dto';
 import { OrderStatusEnum } from '@prisma/client';
 import { OrderStateMachine } from './utils/order-state-machine';
+
+import { OrderPaymentService } from './services/order-payment.service';
 
 @ApiTags('Admin Order')
 @Controller('admin/orders')
@@ -34,7 +37,15 @@ export class AdminOrderController {
     private readonly orderService: OrderService,
     private readonly refundService: RefundService,
     private readonly ownershipRegistry: OwnershipRegistry,
+    private readonly orderPaymentService: OrderPaymentService,
   ) { }
+
+  @Post()
+  @Permission(PERMISSIONS.ORDER.UPDATE)
+  @ApiOperation({ summary: 'Tạo đơn hàng mới (Admin)' })
+  create(@Body() dto: AdminCreateOrderDto, @CurrentUser() user: RequestUserPayload) {
+    return this.orderPaymentService.adminCreateOrder(dto, user.userId);
+  }
 
   @Get()
   @Permission(PERMISSIONS.ORDER.READ)

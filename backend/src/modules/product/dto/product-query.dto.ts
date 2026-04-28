@@ -8,10 +8,6 @@ export class ProductQueryDto extends PaginationDto {
   categoryId?: string;
 
   @IsOptional()
-  @IsString()
-  search?: string;
-
-  @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isFeatured?: boolean;

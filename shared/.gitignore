@@ -1,36 +1,38 @@
+# ==============================================================================
+# Shared Gitignore
+# ==============================================================================
 
 # Build & Compilation
-/dist
-/build
-/out
+dist/
+build/
+out/
 *.tsbuildinfo
 *.map
 
 # Dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp/
 .pnp.js
 
-# Discovery & Logs
-/logs
+# Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
 # Testing & Coverage
-/coverage
-/.nyc_output
+coverage/
+.nyc_output/
 .jest/
 
-# Environment
+# Environment (CRITICAL)
 .env
 .env.local
 .env.*.local
+!.env.example
 
-# OS & Filesystem
+# OS
 .DS_Store
 .DS_Store?
 ._*
@@ -39,8 +41,8 @@ lerna-debug.log*
 ehthumbs.db
 Thumbs.db
 
-# IDEs & Editor Configuration
-.vscode/*
+# IDE
+.vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -51,12 +53,12 @@ Thumbs.db
 *.swp
 *.swo
 
-# Infrastructure & Diagnostics
+# Infrastructure
 .terraform/
 .vagrant/
-.docker-compose.override.yml
+docker-compose.override.yml
 dump.rdb
 
-# Temporary Files
+# Temp
 .tmp/
 .temp/

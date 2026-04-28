@@ -76,7 +76,16 @@ export class UserService {
     type PrismaUser = Prisma.UserGetPayload<Record<string, never>>;
     type UserWhereInput = Prisma.UserWhereInput;
 
-    const baseWhere: UserWhereInput = { deletedAt: null };
+    const baseWhere: UserWhereInput = {
+      deletedAt: null,
+      ...(dto.search && {
+        OR: [
+          { email: { contains: dto.search, mode: 'insensitive' as Prisma.QueryMode } },
+          { fullName: { contains: dto.search, mode: 'insensitive' as Prisma.QueryMode } },
+          { phone: { contains: dto.search, mode: 'insensitive' as Prisma.QueryMode } },
+        ],
+      }),
+    };
 
     const result = await this.paginationService.paginate<PrismaUser>({
       findMany: (args) => {

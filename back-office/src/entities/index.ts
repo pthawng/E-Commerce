@@ -1,2 +1,2 @@
 // Business entities
-export { };
+export {};

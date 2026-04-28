@@ -207,4 +207,47 @@ export class MailService {
     this.logger.log(`Gmail OAuth2 mail sent → ${options.to}`);
     return true;
   }
+
+  /**
+   * Helper method to encapsulate the logic for sending admin order confirmations.
+   * This removes the formatting burden from the OrderService.
+   */
+  async sendAdminOrderConfirmation(recipientEmail: string, order: any, dto: any) {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    const paymentUrl = `${frontendUrl}/checkout/pay?orderId=${order.id}`;
+    const cancelUrl = `${frontendUrl}/checkout/cancel?orderId=${order.id}`;
+
+    return this.sendMail({
+      to: recipientEmail,
+      subject: `[Ray Paradis] Xác nhận yêu cầu đặt đơn hàng #${order.code}`,
+      template: 'admin-order-confirmation',
+      eventType: 'order.admin_created',
+      context: {
+        companyName: 'Ray Paradis',
+        orderCode: order.code,
+        orderDate: new Intl.DateTimeFormat('vi-VN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }).format(order.createdAt),
+        customerName: dto.shippingName,
+        shippingName: dto.shippingName,
+        shippingPhone: dto.shippingPhone,
+        shippingAddress: `${dto.shippingAddress.detail}, ${dto.shippingAddress.ward}, ${dto.shippingAddress.district}, ${dto.shippingAddress.city}`,
+        items: order.items.map((item: any) => ({
+          name: item.productName || 'Sản phẩm',
+          quantity: item.quantity,
+          price: Number(item.price).toLocaleString('vi-VN'),
+        })),
+        shippingFee: Number(order.shippingFee).toLocaleString('vi-VN'),
+        totalAmount: Number(order.totalAmount).toLocaleString('vi-VN'),
+        currency: 'VND',
+        paymentUrl,
+        cancelUrl,
+        supportEmail: 'support@rayparadis.com',
+        supportPhone: '1900xxxx',
+      },
+    });
+  }
 }
+

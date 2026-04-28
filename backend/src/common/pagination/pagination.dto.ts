@@ -50,4 +50,11 @@ export class PaginationDto {
   @IsOptional()
   @IsISO8601({ strict: true })
   snapshot_at?: string;
+
+  /**
+   * Optional search query string.
+   */
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

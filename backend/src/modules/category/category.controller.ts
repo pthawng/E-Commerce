@@ -52,40 +52,4 @@ export class CategoryController {
   findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.categoryService.findOne(id);
   }
-
-  // CREATE
-  @Post()
-  @ApiOperation({ summary: 'Tạo mới danh mục' })
-  @ApiResponse({ status: 201, description: 'Danh mục mới được tạo' })
-  @Permission({
-    permissions: [PERMISSIONS.PRODUCT.CATEGORY.CREATE],
-    mode: 'any',
-  })
-  create(@Body() dto: CreateCategoryDto) {
-    return this.categoryService.create(dto);
-  }
-
-  // UPDATE
-  @Patch(':id')
-  @ApiOperation({ summary: 'Cập nhật danh mục' })
-  @ApiResponse({ status: 200, description: 'Danh mục sau khi cập nhật' })
-  @Permission({
-    permissions: [PERMISSIONS.PRODUCT.CATEGORY.UPDATE],
-    mode: 'any',
-  })
-  update(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: UpdateCategoryDto) {
-    return this.categoryService.update(id, dto);
-  }
-
-  // DELETE
-  @Delete(':id')
-  @ApiOperation({ summary: 'Xoá danh mục' })
-  @ApiResponse({ status: 200, description: 'Thông báo xoá danh mục' })
-  @Permission({
-    permissions: [PERMISSIONS.PRODUCT.CATEGORY.DELETE],
-    mode: 'any',
-  })
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.categoryService.remove(id);
-  }
 }

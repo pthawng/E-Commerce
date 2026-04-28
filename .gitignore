@@ -1,8 +1,9 @@
 # ==============================================================================
-# Ray Paradis Monorepo - FAANG-Standard L8 Gitignore
+# Ray Paradis Monorepo - Comprehensive Gitignore
 # ==============================================================================
 
 # --- Dependencies ---
+node_modules/
 node_modules/
 .npm/
 .yarn/
@@ -19,48 +20,60 @@ out/
 .serverless/
 *.tsbuildinfo
 *.eslintcache
+.cache/
 
 # --- Security & Credentials (CRITICAL) ---
 .env
-.env.*
-!.env.example
-!.env.template
-*.pem
+.env.local
+.env.*.local
+!*!.env.example
+!*!.env.template
+!*!.env.production.example
+.pem
 *.key
 *.pub
 ssh_config
 auth_token.json
 .netrc
 credentials.json
+*.secret
+secrets.yaml
+secrets.yml
 
-# --- Database & Persistence ---
+# --- Database ---
 *.db
 *.sqlite
+*.sqlite3
+/data/
+/database/*.db
 /backend/prisma/migrations/backup/
 /backend/src/generated/
 
-# --- Infrastructure & Orchestration ---
+# --- Infrastructure ---
 .terraform/
 *.tfstate
 *.tfstate.*
+.tfplan
 .kube/config
 *kubeconfig*
 .helm/
 
-# --- Testing & Coverage ---
+# --- Testing ---
 coverage/
 .nyc_output/
 junit.xml
 test-results/
 playwright-report/
 blob-report/
-test-results/
+playwright/.cache/
 
 # --- Logs ---
 *.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+yarn-error.log*
+lerna-debug.log*
 logs/
 panic.log
 
@@ -88,9 +101,9 @@ $RECYCLE.BIN/
 # --- Temporary Files ---
 .tmp/
 .temp/
-.cache/
 bak/
 tmp/
+*.temp
 
 # --- Project Specific ---
 /scripts/sandbox/
@@ -100,3 +113,16 @@ CORTEX_LOGS/
 .gemini/
 .agents/
 brain/
+*.backup
+
+# --- Docker ---
+.dockerignore
+
+# --- Cloud Deployments ---
+.vercel/
+.netlify/
+
+# --- AI Service ---
+/ai-service/model-cache/
+/ai-service/*.duckdb
+/ai-service/*.duckdb.wal

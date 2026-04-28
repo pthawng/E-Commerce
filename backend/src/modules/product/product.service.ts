@@ -343,21 +343,34 @@ export class ProductService {
 
     const variantsInput: VariantInput[] = hasVariants
       ? (dto.variants as VariantInput[]) || []
-      : [
-          {
-            sku: undefined,
-            price: dto.basePrice!,
-            compareAtPrice: dto.baseCompareAtPrice,
-            costPrice: dto.baseCostPrice,
-            weightGram: dto.baseWeightGram,
-            variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
-            isDefault: true,
-            isActive: dto.isActive ?? true,
-            position: 0,
-            attributeValueIds: [],
-            mediaIndexes: [],
-          },
-        ];
+      : [];
+
+    if (!hasVariants) {
+      const defaultVariant = await tx.productVariant.create({
+        data: {
+          productId,
+          sku: dto.slug ? `${dto.slug}-default` : `DF-${Date.now()}`,
+          price: dto.basePrice!,
+          compareAtPrice: dto.baseCompareAtPrice,
+          costPrice: dto.baseCostPrice,
+          weightGram: dto.baseWeightGram,
+          variantTitle: dto.baseVariantTitle ?? { default: 'Default Variant' },
+          isDefault: true,
+          isActive: dto.isActive ?? true,
+          position: 0,
+        },
+      });
+
+      if (dto.baseAttributeValueIds?.length) {
+        await tx.variantAttributeValue.createMany({
+          data: dto.baseAttributeValueIds.map((attrId) => ({
+            variantId: defaultVariant.id,
+            attributeValueId: attrId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     const defaultIndexExplicit = variantsInput.findIndex((v) => v.isDefault);
     const defaultIndex = defaultIndexExplicit >= 0 ? defaultIndexExplicit : 0;
@@ -544,6 +557,23 @@ export class ProductService {
     );
 
     await Promise.all(uploadPromises);
+  }
+
+  // ---------------------------
+  // DELETE PRODUCT
+  // ---------------------------
+  async deleteProduct(id: string) {
+    await this.getProductOrThrow(id);
+
+    await this.prisma.product.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+      },
+    });
+
+    return { message: 'Sản phẩm đã được xóa thành công' };
   }
 
   private emitAiSync(product: any) {
