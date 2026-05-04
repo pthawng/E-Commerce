@@ -450,5 +450,8 @@
             "avg_hours": "Giờ Trung bình",
             "efficiency_target": "Mục tiêu Hiệu suất"
         }
+    },
+    "validation": {
+        "required": "Trường này là bắt buộc"
     }
 }

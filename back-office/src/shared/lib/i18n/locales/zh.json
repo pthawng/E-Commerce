@@ -86,5 +86,8 @@
             "avg_hours": "平均小时数",
             "efficiency_target": "效率目标"
         }
+    },
+    "validation": {
+        "required": "此字段为必填项"
     }
 }

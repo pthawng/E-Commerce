@@ -4,12 +4,15 @@
   "type": "commonjs",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "node --loader ts-node/esm src/main.ts",
+    "dev": "npx ts-node src/main.ts",
     "start": "node dist/main.js"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
   }
 }

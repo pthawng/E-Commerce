@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createServer } from 'node:http';
 import { AiController } from './api/ai.controller';
 import { AiHttpError } from './common/errors';

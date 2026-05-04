@@ -450,5 +450,8 @@
             "avg_hours": "Average Hours",
             "efficiency_target": "Efficiency Target"
         }
+    },
+    "validation": {
+        "required": "This field is required"
     }
 }

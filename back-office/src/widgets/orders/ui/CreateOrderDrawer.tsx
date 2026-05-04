@@ -151,18 +151,22 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
         message.warning(t("orders.no_items"));
         return;
       }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const resolvedEmail = selectedCustomer
+        ? selectedCustomer.email
+        : emailRegex.test(customerSearch)
+          ? customerSearch
+          : undefined;
       const orderData: CreateOrderInput = {
         customerId: selectedCustomer?.id,
-        customerEmail: selectedCustomer
-          ? selectedCustomer.email
-          : customerSearch,
+        customerEmail: resolvedEmail,
         customerName: selectedCustomer
           ? selectedCustomer.fullName
-          : values.shippingName || customerSearch,
+          : values.shippingName || customerSearch || undefined,
         items: orderItems.map((item) => ({
           variantId: item.variantId,
           quantity: item.quantity,
-          price: item.price,
+          price: Number(item.price),
         })),
         shippingName: values.shippingName,
         shippingPhone: values.shippingPhone,
@@ -172,7 +176,7 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
           ward: values.ward,
           detail: values.detail,
         },
-        note: values.note,
+        note: values.note || undefined,
       };
       createMutation.mutate(orderData);
     } catch (error) {
@@ -447,9 +451,9 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
                       {t("orders.recipient_name")}
                     </Text>
                   }
+                  rules={[{ required: true, message: t("validation.required") }]}
                 >
-                  {" "}
-                  <Input />{" "}
+                  <Input />
                 </Form.Item>{" "}
               </Col>{" "}
               <Col span={24}>
@@ -461,9 +465,9 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
                       {t("orders.phone")}
                     </Text>
                   }
+                  rules={[{ required: true, message: t("validation.required") }]}
                 >
-                  {" "}
-                  <Input />{" "}
+                  <Input />
                 </Form.Item>{" "}
               </Col>{" "}
               <Col span={8}>
@@ -475,9 +479,9 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
                       {t("orders.city")}
                     </Text>
                   }
+                  rules={[{ required: true, message: t("validation.required") }]}
                 >
-                  {" "}
-                  <Input />{" "}
+                  <Input />
                 </Form.Item>{" "}
               </Col>{" "}
               <Col span={8}>
@@ -489,9 +493,9 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
                       {t("orders.district")}
                     </Text>
                   }
+                  rules={[{ required: true, message: t("validation.required") }]}
                 >
-                  {" "}
-                  <Input />{" "}
+                  <Input />
                 </Form.Item>{" "}
               </Col>{" "}
               <Col span={8}>
@@ -503,9 +507,9 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
                       {t("orders.ward")}
                     </Text>
                   }
+                  rules={[{ required: true, message: t("validation.required") }]}
                 >
-                  {" "}
-                  <Input />{" "}
+                  <Input />
                 </Form.Item>{" "}
               </Col>{" "}
               <Col span={24}>
@@ -517,9 +521,9 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
                       {t("orders.address_detail")}
                     </Text>
                   }
+                  rules={[{ required: true, message: t("validation.required") }]}
                 >
-                  {" "}
-                  <Input.TextArea rows={2} />{" "}
+                  <Input.TextArea rows={2} />
                 </Form.Item>{" "}
               </Col>{" "}
               <Col span={24}>
