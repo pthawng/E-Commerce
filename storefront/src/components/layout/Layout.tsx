@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SpotlightCursor } from '@/components/effects/SpotlightCursor';
 import { CartDrawer } from '@/features/cart/components/CartDrawer';
+import { ConciergeModal } from '@/features/products/components/ConciergeModal';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export const Layout = ({ children, forceHeaderOpaque }: LayoutProps) => {
     <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
       <Header forceOpaque={forceHeaderOpaque} />
       <CartDrawer />
+      <ConciergeModal />
       <SpotlightCursor />
       <main>{children}</main>
       <Footer />

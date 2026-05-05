@@ -12,6 +12,7 @@ export class AiService {
   private readonly recommendationTimeoutMs: number;
   private readonly embeddingTimeoutMs: number;
   private readonly recommendationCacheTtlMs: number;
+  private readonly internalToken: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -25,6 +26,7 @@ export class AiService {
       'AI_RECOMMENDATION_CACHE_TTL_MS',
       10 * 60 * 1000,
     );
+    this.internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN', 'dev_internal_token_123');
   }
 
   async syncProduct(payload: ProductEmbeddingPayload): Promise<void> {
@@ -184,6 +186,7 @@ export class AiService {
       ...init,
       headers: {
         'Content-Type': 'application/json',
+        'X-Internal-Token': this.internalToken,
         ...(init.headers ?? {}),
       },
       signal: AbortSignal.timeout(timeoutMs),

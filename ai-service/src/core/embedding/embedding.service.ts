@@ -1,12 +1,24 @@
+import { LruCache } from '../../common/cache/lru-cache';
 import { logInfo } from '../../common/logger';
+import { CircuitBreaker } from '../../common/resilience/circuit-breaker';
+import { withRetry } from '../../common/resilience/retry';
 import { ProductEmbeddingPayload } from '../../common/types/recommendation.types';
-import { OpenAiClient } from '../../integrations/openai/openai.client';
+import { EmbeddingClient } from './embedding-client.interface';
 
 export class EmbeddingService {
+  private readonly breaker: CircuitBreaker;
+  private readonly cache = new LruCache<string, number[]>(500, 24 * 60 * 60 * 1000); // 500 items, 24h TTL
+
   constructor(
-    private readonly openAiClient: OpenAiClient,
+    private readonly client: EmbeddingClient,
     private readonly expectedDimensions?: number,
-  ) {}
+    circuitBreakerConfig: { failureThreshold?: number } = {},
+  ) {
+    this.breaker = new CircuitBreaker({
+      name: 'embedding-provider',
+      failureThreshold: circuitBreakerConfig.failureThreshold ?? 5,
+    });
+  }
 
   buildInput(payload: ProductEmbeddingPayload): string {
     return [
@@ -18,10 +30,24 @@ export class EmbeddingService {
       .join('. ');
   }
 
+  getCircuitState() {
+    return this.breaker.getState();
+  }
+
   async embed(payload: ProductEmbeddingPayload): Promise<number[]> {
+    const cached = this.cache.get(payload.id);
+    if (cached) {
+      logInfo('embedding.cache_hit', { productId: payload.id });
+      return cached;
+    }
+
     const input = this.buildInput(payload);
     const startedAt = Date.now();
-    const vector = await this.openAiClient.createEmbedding(input, payload.id);
+
+    const vector = await this.breaker.execute(() =>
+      withRetry(() => this.client.createEmbedding(input, payload.id)),
+    );
+
     const latencyMs = Date.now() - startedAt;
 
     if (!Array.isArray(vector) || vector.length === 0) {
@@ -33,6 +59,8 @@ export class EmbeddingService {
         `Unexpected embedding length ${vector.length}; expected ${this.expectedDimensions}`,
       );
     }
+
+    this.cache.set(payload.id, vector);
 
     logInfo('embedding.completed', {
       productId: payload.id,

@@ -18,6 +18,9 @@ export default {
         careGuide: 'Care Guide',
         mastery: 'Mastery in motion.',
         addToCollection: 'Add to Collection',
+        inquireToPurchase: 'Inquire to Purchase',
+        contactConcierge: 'Contact Concierge',
+        priceUponRequest: 'Price upon request',
         completeLook: 'Complete the Look',
         notFound: {
             title: 'A Masterpiece Misplaced',

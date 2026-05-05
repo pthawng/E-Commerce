@@ -132,14 +132,6 @@ export class QdrantClient {
         query: vector,
         limit,
         filter: {
-          must: [
-            {
-              key: 'isActive',
-              match: {
-                value: true,
-              },
-            },
-          ],
           ...(excludeProductId
             ? {
                 must_not: [

@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 import { useCartStore } from "@/features/cart/store/useCartStore";
@@ -42,9 +42,17 @@ export const ProductCard = React.memo(({
   const { t } = useTranslation();
   const { language } = useStore();
 
+  const priceNum = rawPrice || 0;
+  // Thresholds adjusted for demo data (10M - 90M) to demonstrate the hybrid UI.
+  // In production, these would be 125M ($5k) and 1.25B ($50k).
+  const isHighTier = priceNum >= 80000000; 
+  const isMidTier = priceNum >= 50000000 && priceNum < 80000000;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isHighTier) return; // High tier cannot be added to cart directly
+    
     const idToUse = variantId || id;
     if (idToUse) {
       addItem(idToUse, 1, {
@@ -57,23 +65,29 @@ export const ProductCard = React.memo(({
     }
   };
 
+  const handleInquire = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // This would open a VIP Concierge Modal
+    window.dispatchEvent(new CustomEvent('open-concierge-modal', { detail: { productId: id, name } }));
+  };
+
   return (
-    <Card className={cn("group flex flex-col h-full overflow-hidden border-none transition-all duration-700 bg-background shadow-luxury-soft hover:shadow-luxury isolate", className)}>
-      <CardHeader className="p-0 relative aspect-square overflow-hidden bg-secondary/10">
+    <Card className={cn("group flex flex-col h-full overflow-hidden border-none bg-transparent shadow-none isolate", className)}>
+      <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/5 rounded-sm">
         {isNew && (
-          <Badge className="absolute top-4 left-4 z-20 bg-gold text-primary hover:bg-gold/90 border-none rounded-full px-3 py-1 text-[10px] uppercase tracking-widest pointer-events-none">
+          <Badge className="absolute top-4 left-4 z-20 bg-background/80 backdrop-blur-md text-primary border-none rounded-sm px-4 py-1.5 text-[9px] uppercase tracking-[0.3em] pointer-events-none">
             {t('common.badge.new')}
           </Badge>
         )}
         <motion.img
           src={image}
           alt={name}
-          // Optimization: Prioritize the first row (LCP) and lazy-load the rest
           loading={index < 4 ? "eager" : "lazy"}
           decoding="async"
-          // @ts-ignore - fetchpriority is a valid experimental attribute for LCP
+          // @ts-ignore
           fetchpriority={index < 4 ? "high" : "low"}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-105"
         />
         {hoverImage && (
           <motion.img
@@ -81,43 +95,69 @@ export const ProductCard = React.memo(({
             alt={t('common.actions.secondaryView', { name })}
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100"
+            className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-1000 ease-in-out group-hover:opacity-100"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-      </CardHeader>
+        
+        {/* Subtle vignette shadow on hover instead of hard borders */}
+        <div className="absolute inset-0 shadow-[inset_0_0_40px_rgba(0,0,0,0.03)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
 
-      <CardContent className="flex flex-col flex-grow p-2 lg:p-3 text-center">
-        <p className="font-body text-[9px] lg:text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1 lg:mb-2">
-          {category}
-        </p>
-        <div className="flex-grow flex flex-col justify-center mb-1 lg:mb-2 min-h-[2rem] lg:min-h-[2.5rem]">
-          <CardTitle className="font-display text-sm md:text-md lg:text-lg font-normal italic tracking-wide group-hover:text-primary transition-colors duration-500 line-clamp-2">
-            {name}
-          </CardTitle>
-        </div>
-        <p className="font-body text-xs lg:text-sm text-primary/80 font-medium tracking-wide">
-          {price}
-        </p>
-      </CardContent>
-
-      <CardFooter className="p-2 pt-0 justify-center h-auto min-h-[2.5rem] lg:min-h-0 lg:h-10">
-        <div className="flex items-center justify-center gap-x-2 gap-y-2 lg:gap-x-6 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all duration-700 translate-y-0 lg:translate-y-2 group-hover:translate-y-0 flex-wrap">
+        {/* Hover Actions Overlay (Blur Structure) */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-2 z-20">
           <Link
             to={`/product/${slug}`}
-            className="font-body text-[9px] lg:text-[10px] uppercase tracking-ultra text-primary/60 border-b border-primary/20 hover:text-gold hover:border-gold transition-all duration-500 pb-1 flex-shrink-0"
+            className="w-full py-3 bg-background/80 backdrop-blur-md text-primary font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary hover:text-primary-foreground transition-colors duration-500"
           >
             {t('common.actions.quickView')}
           </Link>
-          <div className="hidden sm:block w-px h-3 bg-primary/10" />
-          <button
-            onClick={handleAddToCart}
-            className="font-body text-[9px] lg:text-[10px] uppercase tracking-ultra text-primary hover:text-gold transition-all duration-500 border-b border-transparent hover:border-gold pb-1 flex items-center justify-center gap-2 flex-shrink-0"
-          >
-            {t('common.actions.addToCollection')}
-          </button>
+
+          {isHighTier ? (
+            <button
+              onClick={handleInquire}
+              className="w-full py-3 bg-primary text-primary-foreground font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary/90 transition-colors duration-500"
+            >
+              {t('shop.pdp.inquireToPurchase')}
+            </button>
+          ) : isMidTier ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 py-3 bg-background/80 backdrop-blur-md text-primary font-body text-[10px] uppercase tracking-widest text-center hover:bg-background transition-colors duration-500"
+              >
+                {t('shop.pdp.addToCollection')}
+              </button>
+              <button
+                onClick={handleInquire}
+                className="flex-1 py-3 bg-primary text-primary-foreground font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary/90 transition-colors duration-500"
+              >
+                {t('shop.pdp.contactConcierge')}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              className="w-full py-3 bg-background/80 backdrop-blur-md text-primary font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary hover:text-primary-foreground transition-colors duration-500"
+            >
+              {t('shop.pdp.addToCollection')}
+            </button>
+          )}
         </div>
-      </CardFooter>
+        
+        {/* Subtle gradient to make text readable on hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+      </CardHeader>
+
+      <CardContent className="flex flex-col pt-5 pb-0 px-1 text-center bg-transparent">
+        <p className="font-body text-[9px] uppercase tracking-[0.3em] text-muted-foreground mb-3">
+          {category}
+        </p>
+        <CardTitle className="font-display text-base md:text-lg font-normal italic tracking-wide group-hover:text-gold transition-colors duration-500 mb-2">
+          {name}
+        </CardTitle>
+        <p className="font-body text-xs text-primary/80 tracking-widest">
+          {isHighTier ? <span className="italic opacity-70">{t('shop.pdp.priceUponRequest')}</span> : price}
+        </p>
+      </CardContent>
     </Card>
   );
 });

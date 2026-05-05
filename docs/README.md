@@ -13,6 +13,7 @@ Welcome to the internal engineering documentation for **Ray Paradis**, a headles
     * [Auth Flow](./flows/auth-flow.md) - Authentication, RBAC/ABAC authorization
     * [Checkout Flow](./flows/checkout-flow.md) - Cart compilation, inventory locks, and ordering
     * [Payment Flow](./flows/payment-flow.md) - Idempotent payment lifecycle (VNPay, PayPal)
+    * [AI Recommendation Flow](./flows/ai-recommendation-flow.md) - Vector synchronization and similarity search
 
 * **API & Integrations**
     * [Endpoints](./api/endpoints.md) - Key REST APIs grouped by domain
@@ -33,5 +34,6 @@ Welcome to the internal engineering documentation for **Ray Paradis**, a headles
 * **Service Implementations**
     * [Backend API Core](../backend/README.md)
     * [Storefront UI](../storefront/README.md)
+    * [AI Recommendation Service](../ai-service/README.md)
     * [Shared Ecosystem Contracts](../shared/README.md)
     * [Admin Portal](../back-office/README.md)

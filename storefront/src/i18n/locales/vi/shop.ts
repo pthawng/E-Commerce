@@ -18,6 +18,9 @@ export default {
         careGuide: 'Hướng Dẫn Bảo Quản',
         mastery: 'Sự tinh thông trong từng chuyển động.',
         addToCollection: 'Thêm Vào Bộ Sưu Tập',
+        inquireToPurchase: 'Yêu Cầu Đặt Hàng',
+        contactConcierge: 'Liên Hệ Chuyên Viên',
+        priceUponRequest: 'Liên hệ để biết giá',
         completeLook: 'Kết Hợp Hoàn Hảo',
         notFound: {
             title: 'Kiệt Tác Tạm Lánh',

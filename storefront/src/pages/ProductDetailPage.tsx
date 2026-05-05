@@ -244,9 +244,19 @@ export const ProductDetailPage = () => {
         ? product.media.map(m => m.url) 
         : [selectedVariant?.media?.[0]?.url || ''];
 
-    const priceFormatted = formatPrice(
-        selectedVariant?.price || product.displayPriceMin || 0
-    );
+    const rawPrice = selectedVariant?.price || product.displayPriceMin || 0;
+    const priceFormatted = formatPrice(rawPrice);
+    
+    // Thresholds adjusted for demo data (10M - 90M) to demonstrate the hybrid UI.
+    // In production, these would be 125M ($5k) and 1.25B ($50k).
+    const isHighTier = rawPrice >= 80000000; 
+    const isMidTier = rawPrice >= 50000000 && rawPrice < 80000000;
+
+    const handleInquire = () => {
+        window.dispatchEvent(new CustomEvent('open-concierge-modal', { 
+            detail: { productId: product.id, name: getLocalized(product.name, language) } 
+        }));
+    };
 
     return (
         <Layout forceHeaderOpaque={true}>
@@ -262,16 +272,19 @@ export const ProductDetailPage = () => {
                         </div>
 
                         <div className="flex flex-col lg:flex-row gap-16 xl:gap-24 items-start min-h-[calc(100vh-120px)]">
-                            {/* Left: Immersive Gallery */}
-                            <div className="w-full lg:w-[60%] space-y-8">
+                            {/* Left: Immersive Editorial Gallery */}
+                            <div className="w-full lg:w-[60%] grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                                 {images.map((img, i) => (
                                     <motion.div
                                         key={i}
-                                        className="aspect-[4/5] overflow-hidden rounded-xl bg-secondary/10 shadow-luxury-soft"
+                                        className={cn(
+                                            "overflow-hidden bg-secondary/5 rounded-sm",
+                                            i === 0 ? "aspect-[4/5] md:col-span-2" : "aspect-square"
+                                        )}
                                         initial={{ opacity: 0, scale: 0.98 }}
                                         whileInView={{ opacity: 1, scale: 1 }}
-                                        viewport={{ once: true }}
-                                        transition={{ duration: 1 }}
+                                        viewport={{ once: true, margin: "-100px" }}
+                                        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
                                     >
                                         <img 
                                             src={img} 
@@ -297,9 +310,9 @@ export const ProductDetailPage = () => {
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
-                                            className="font-body text-2xl text-primary font-light"
+                                            className="font-body text-xl sm:text-2xl text-primary/80 font-light tracking-wide"
                                         >
-                                            {priceFormatted}
+                                            {isHighTier ? <span className="italic">{t('shop.pdp.priceUponRequest')}</span> : priceFormatted}
                                         </motion.p>
                                     </AnimatePresence>
                                 </header>
@@ -347,17 +360,45 @@ export const ProductDetailPage = () => {
                                         </div>
                                     )}
 
-                                    {/* Add to Cart */}
-                                    <div className="space-y-4 pt-4">
-                                        <Button 
-                                            variant="luxury" 
-                                            className="w-full h-14 group"
-                                            onClick={handleAddToCart}
-                                        >
-                                            <span className="mr-2">{t('shop.pdp.addToCollection')}</span>
-                                            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                        </Button>
-                                        <p className="text-center font-body text-[10px] text-muted-foreground tracking-wide">
+                                    {/* Actions (Hybrid Strategy) */}
+                                    <div className="space-y-4 pt-8 border-t border-border/10">
+                                        {isHighTier ? (
+                                            <Button 
+                                                variant="luxury" 
+                                                className="w-full h-14 group text-[10px] tracking-widest uppercase"
+                                                onClick={handleInquire}
+                                            >
+                                                <span className="mr-2">{t('shop.pdp.inquireToPurchase')}</span>
+                                                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                            </Button>
+                                        ) : isMidTier ? (
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <Button 
+                                                    variant="outline" 
+                                                    className="flex-1 h-14 group text-[10px] tracking-widest uppercase border-border/20 hover:border-gold hover:text-gold"
+                                                    onClick={handleAddToCart}
+                                                >
+                                                    <span className="mr-2">{t('shop.pdp.addToCollection')}</span>
+                                                </Button>
+                                                <Button 
+                                                    variant="luxury" 
+                                                    className="flex-1 h-14 group text-[10px] tracking-widest uppercase"
+                                                    onClick={handleInquire}
+                                                >
+                                                    <span className="mr-2">{t('shop.pdp.contactConcierge')}</span>
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button 
+                                                variant="luxury" 
+                                                className="w-full h-14 group text-[10px] tracking-widest uppercase"
+                                                onClick={handleAddToCart}
+                                            >
+                                                <span className="mr-2">{t('shop.pdp.addToCollection')}</span>
+                                                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                            </Button>
+                                        )}
+                                        <p className="text-center font-body text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-4">
                                             GIA Certified / Handcrafted in Atelier / SKU: {selectedVariant?.sku}
                                         </p>
                                     </div>

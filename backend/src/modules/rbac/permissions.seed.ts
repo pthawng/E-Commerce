@@ -60,4 +60,6 @@ export const PERMISSION_SEEDS: PermissionSeed[] = [
   { action: PERMISSIONS.LEDGER.MANAGE, name: 'Quản lý sổ cái', module: 'LEDGER' },
   // CRM
   { action: PERMISSIONS.CRM.GUEST.READ, name: 'Xem khách vãng lai', module: 'CRM' },
+  // DASHBOARD
+  { action: PERMISSIONS.DASHBOARD.VIEW, name: 'Xem Dashboard', module: 'SYSTEM' },
 ];

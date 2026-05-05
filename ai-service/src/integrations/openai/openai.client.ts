@@ -1,4 +1,5 @@
 import { requestJson } from '../../common/http';
+import { EmbeddingClient } from '../../core/embedding/embedding-client.interface';
 
 interface OpenAiEmbeddingResponse {
   data: Array<{
@@ -6,7 +7,7 @@ interface OpenAiEmbeddingResponse {
   }>;
 }
 
-export class OpenAiClient {
+export class OpenAiClient implements EmbeddingClient {
   constructor(
     private readonly apiKey: string,
     private readonly model: string,

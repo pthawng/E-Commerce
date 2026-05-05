@@ -1,9 +1,21 @@
 # Architecture
 
 ## Architecture Style
-Ray Paradis operates as a **Pragmatic Monolith (Modular Monolith)** supported by a headless frontend ecosystem. 
+Ray Paradis operates as a **Pragmatic Monolith (Modular Monolith)** for its core transactional engine, augmented by **Specialized Microservices** for computation-heavy domains (e.g., AI).
 
-**Rationale:** Early isolation of features via microservices creates unnecessary DevOps overhead. By using a modular monolithic pattern within NestJS, domain contexts remain strictly encapsulated through Dependency Injection (DI).
+**Rationale:** Early isolation of features via microservices creates unnecessary DevOps overhead. By using a modular monolithic pattern within NestJS for the core, domain contexts remain strictly encapsulated. However, vector computations and embeddings are isolated into an independent Node.js service to scale and fail independently.
+
+## 🧠 AI & Vector Infrastructure
+The recommendation engine is decoupled from the main Prisma/PostgreSQL backend:
+1. **AI Microservice**: A lightweight, zero-dependency (aside from `zod`) Node.js service handling vector ingestion and similarity search.
+2. **Qdrant**: An external Vector Database storing product embeddings.
+3. **Google Gemini**: The LLM (`gemini-embedding-2`) used to convert product semantic text into 768-dimensional vectors.
+
+**FAANG-Level Hardening Applied:**
+- **Circuit Breakers**: A 3-state FSM prevents cascading failures if Gemini goes down.
+- **Token Bucket Rate Limiting**: In-memory IP-based rate limiting (60 RPM) protecting against DoS.
+- **LRU Caching**: Frequent queries bypass external network calls.
+- **Telemetry**: Distributed `X-Request-ID` tracing and deep `/health` endpoints for observability.
 
 ## System Hardening & Invariants (Staff-level)
 To ensure long-term data integrity and prevent "bypass" bugs, the system implements a multi-layered defense:

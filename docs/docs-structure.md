@@ -10,6 +10,7 @@ docs/
     auth-flow.md
     checkout-flow.md
     payment-flow.md
+    ai-recommendation-flow.md
 
   api/
     endpoints.md           # Tổng hợp API (optional nếu có Swagger)

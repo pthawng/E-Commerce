@@ -24,5 +24,11 @@ An administrative terminal.
 * **Order Fulfillment**: Table grids and detail hubs displaying user orders and allowing state progression (e.g., Shipping, Delivered).
 * **System Operations**: Administrative controls over the underlying TBAC/ABAC role associations.
 
+## AI Microservice (`@ray-paradis/ai-service`)
+An independent, high-performance Node.js service managing semantic search.
+* **Core Functionality**: Exposes `POST /products/embed` for syncing, and `GET /recommendations` for fetching similar products.
+* **Integrations**: Connects to **Qdrant** (Vector DB) for cosine similarity searches, and **Google Gemini** for text embeddings.
+* **Resilience Layer**: Contains custom implementations of `CircuitBreaker`, `LRUCache`, and `TokenBucketRateLimiter` to protect external API quotas.
+
 ## Shared (`@ray-paradis/shared`)
 A cross-workspace NPM module containing global TypeScript types, Zod schemas, and data transfer objects (DTOs). Ensures API request matching perfectly aligns with frontend state definitions.

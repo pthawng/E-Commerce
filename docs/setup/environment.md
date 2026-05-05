@@ -46,3 +46,20 @@ JWT_REFRESH_EXPIRATION="7d"
 # Frontend Domains - strict protection over Origin spoofing
 CORS_ORIGIN="http://localhost:5173,http://localhost:3000"
 ```
+
+## AI Service & Vector Database (`ai-service/.env`)
+```bash
+# LLM Provider (Google Gemini)
+GEMINI_API_KEY="AIzaSy..."
+GEMINI_EMBEDDING_MODEL="gemini-embedding-2"
+AI_EMBEDDING_DIMENSIONS=768
+
+# Vector Database (Qdrant)
+QDRANT_URL="http://localhost:6333"
+QDRANT_COLLECTION="products"
+
+# Security & Resilience
+INTERNAL_SERVICE_TOKEN="dev_internal_token_123"
+RATE_LIMIT_RPM=60
+CIRCUIT_BREAKER_THRESHOLD=5
+```
