@@ -5,7 +5,9 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpStatus,
+  Ip,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -22,6 +24,7 @@ import { Public } from 'src/common/decorators/public.decorator';
 import { PaginationRateLimitGuard } from 'src/common/guards/pagination-rate-limit.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
+import { ReportMediaDto } from './dto/report-media.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 
@@ -57,6 +60,21 @@ export class ProductController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Chi tiết sản phẩm theo slug' })
   findBySlug(@Param('slug') slug: string) {
     return this.productService.findBySlug(slug);
+  }
+
+  // REPORT MEDIA ISSUE
+  @Public()
+  @Post('report-media-issue')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'Báo cáo lỗi ảnh sản phẩm từ storefront' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Đã ghi nhận báo cáo' })
+  reportMediaIssue(
+    @Body() dto: ReportMediaDto,
+    @Headers('x-client-session-id') sessionId?: string,
+    @Ip() ip?: string,
+  ) {
+    const clientId = sessionId || ip || 'unknown';
+    return this.productService.reportMediaIssue(dto, clientId);
   }
 
 }

@@ -11,11 +11,13 @@ import { ProductStorageModule } from './product.storage/product-storage.module';
 import { VariantController } from './variants/variant.controller';
 import { VariantPolicy } from './variants/variant.policy';
 import { VariantService } from './variants/variant.service';
+import { ProductAnomalyListener } from './listeners/product-anomaly.listener';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
-  imports: [PrismaModule, PaginationModule, AbacModule, ProductStorageModule, RbacModule, EventEmitterModule],
+  imports: [PrismaModule, PaginationModule, AbacModule, ProductStorageModule, RbacModule, EventEmitterModule, CacheModule.register()],
   controllers: [ProductController, AdminProductController, VariantController],
-  providers: [ProductService, VariantService, VariantPolicy],
+  providers: [ProductService, VariantService, VariantPolicy, ProductAnomalyListener],
   exports: [ProductService, VariantService],
 })
 export class ProductModule {}

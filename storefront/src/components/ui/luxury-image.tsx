@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import axiosClient from '@/services/axiosClient';
 
 interface LuxuryImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     fallback?: string;
     lowResSrc?: string;
     aspectRatio?: 'square' | 'portrait' | 'landscape' | 'wide';
     priority?: 'high' | 'low' | 'auto';
+    productId?: string;
 }
 
 export const LuxuryImage: React.FC<LuxuryImageProps> = ({
@@ -16,6 +18,7 @@ export const LuxuryImage: React.FC<LuxuryImageProps> = ({
     lowResSrc,
     aspectRatio = 'square',
     priority = 'auto',
+    productId,
     ...props
 }) => {
     const [isLoaded, setIsLoaded] = useState(false);
@@ -49,7 +52,15 @@ export const LuxuryImage: React.FC<LuxuryImageProps> = ({
                 src={error ? fallback : src}
                 alt={alt}
                 onLoad={() => setIsLoaded(true)}
-                onError={() => setError(true)}
+                onError={(e) => {
+                    setError(true);
+                    if (productId && src) {
+                        axiosClient.post('/products/report-media-issue', {
+                            productId,
+                            mediaUrl: src,
+                        }).catch(() => {});
+                    }
+                }}
                 fetchPriority={priority === 'high' ? 'high' : 'auto'}
                 loading={priority === 'high' ? 'eager' : 'lazy'}
                 className={cn(

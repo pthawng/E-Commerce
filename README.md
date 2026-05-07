@@ -51,13 +51,17 @@ npm run dev --workspaces
 ```
 
 ## 🚀 Engineering Decisions
+* **Event-Driven Domain Decoupling**: Order and Inventory domains are decoupled via the `DomainEventOutbox` pattern, trading inline DB transaction locks for eventual consistency and massive write scalability.
+* **Distributed Concurrency Control**: Replaced Postgres row-level locks with a Redis-backed Distributed Lock (`DECRBY` atomic operations) to prevent DB connection pool exhaustion during flash sales.
+* **Full-Stack Observability**: Integrated W3C Trace Context (`traceparent`) and `x-correlation-id` propagation from React Axios interceptors down to NestJS middlewares, enabling distributed tracing across the API Gateway and Service meshes.
+* **Render-Waterfalls Mitigated**: Eliminated global React `<Suspense>` boundaries in favor of granular, route-level Suspense and hydration, protecting Largest Contentful Paint (LCP) and Time To Interactive (TTI).
 * **Predictable Boundaries**: NestJS Dependency Injection mathematically enforces clean architecture, isolating domain logic for future horizontal scaling.
 * **In-Memory Guard Rails**: Redis-backed 60s TTL cache aggressively shields PostgreSQL from sequential permission-check queries.
-* **Pragmatic Monolith**: Structured as a monolith to maximize delivery velocity, but domain modules (e.g., Inventory, Orders) remain decoupled for seamless future extraction into microservices.
 
 ## 🧭 Interviewer's Guide
 Key Code Paths:
-1. **Frontend Architecture & Security**: `back-office/ARCHITECTURE_CONTRACT.md` and `storefront/FRONTEND_SECURITY.md` (Zero-Trust enforcement).
-2. **Atomic Guarantees**: `backend/src/modules/order` (Transactional safety nets and JTI Idempotency logic).
-3. **Idempotency**: `backend/src/modules/payment/services/idempotency.service.ts` (Webhook retry governance).
-4. **Client State Machine**: `storefront/src/features/checkout`
+1. **Domain Decoupling & Outbox**: `backend/src/modules/order/order.service.ts` (Event-driven inventory choreography).
+2. **Flash Sale Synchronization**: `backend/src/modules/infra/distributed-lock.service.ts` (Atomic Redis reservation).
+3. **Distributed Tracing**: `storefront/src/services/axiosClient.ts` & `backend/src/common/middlewares/correlation-id.middleware.ts`.
+4. **Atomic Guarantees & Idempotency**: `backend/src/modules/payment/services/idempotency.service.ts` (Webhook retry governance).
+5. **Frontend Architecture & Security**: `storefront/FRONTEND_SECURITY.md` (Zero-Trust enforcement).

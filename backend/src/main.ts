@@ -70,8 +70,8 @@ async function bootstrap() {
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
-      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token, x-order-access-token, x-client-timestamp, x-client-signature',
-    exposedHeaders: ['x-csrf-token'],
+      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token, x-order-access-token, x-client-timestamp, x-client-signature, traceparent, x-correlation-id',
+    exposedHeaders: ['x-csrf-token', 'x-correlation-id'],
   });
 
   // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )

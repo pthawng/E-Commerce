@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/features/cart/store/useCartStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useStore } from "@/store/useStore";
+import { useModalStore } from "@/store/useModalStore";
+import { useVisibilityStore } from "@/store/useVisibilityStore";
+import axiosClient from "@/services/axiosClient";
 
 interface ProductCardProps {
   id: string;
@@ -20,11 +23,12 @@ interface ProductCardProps {
   slug: string;
   hoverImage?: string;
   isNew?: boolean;
+  isConciergeOnly?: boolean;
   index?: number;
   className?: string;
 }
 
-export const ProductCard = React.memo(({
+export const ProductCard = ({
   id,
   variantId,
   name,
@@ -35,23 +39,34 @@ export const ProductCard = React.memo(({
   slug,
   hoverImage,
   isNew,
+  isConciergeOnly = false,
   index = 0,
   className,
 }: ProductCardProps) => {
   const addItem = useCartStore((state) => state.addItem);
+  const openConcierge = useModalStore((state) => state.openConcierge);
   const { t } = useTranslation();
   const { language } = useStore();
+  const [hasError, setHasError] = useState(false);
+  const reportInvalidProduct = useVisibilityStore(s => s.reportInvalidProduct);
 
-  const priceNum = rawPrice || 0;
-  // Thresholds adjusted for demo data (10M - 90M) to demonstrate the hybrid UI.
-  // In production, these would be 125M ($5k) and 1.25B ($50k).
-  const isHighTier = priceNum >= 80000000; 
-  const isMidTier = priceNum >= 50000000 && priceNum < 80000000;
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    if (!hasError) {
+      setHasError(true);
+      reportInvalidProduct(id);
+      axiosClient.post('/products/report-media-issue', {
+        productId: id,
+        mediaUrl: e.currentTarget.src,
+      }).catch(() => { /* Ignore errors silently */ });
+    }
+  };
+
+  if (hasError) return null;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isHighTier) return; // High tier cannot be added to cart directly
+    if (isConciergeOnly) return; 
     
     const idToUse = variantId || id;
     if (idToUse) {
@@ -68,8 +83,7 @@ export const ProductCard = React.memo(({
   const handleInquire = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // This would open a VIP Concierge Modal
-    window.dispatchEvent(new CustomEvent('open-concierge-modal', { detail: { productId: id, name } }));
+    openConcierge(id, name);
   };
 
   return (
@@ -85,8 +99,8 @@ export const ProductCard = React.memo(({
           alt={name}
           loading={index < 4 ? "eager" : "lazy"}
           decoding="async"
-          // @ts-ignore
-          fetchpriority={index < 4 ? "high" : "low"}
+          fetchPriority={index < 4 ? "high" : "low"}
+          onError={handleImageError}
           className="w-full h-full object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-105"
         />
         {hoverImage && (
@@ -95,6 +109,7 @@ export const ProductCard = React.memo(({
             alt={t('common.actions.secondaryView', { name })}
             loading="lazy"
             decoding="async"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
             className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-1000 ease-in-out group-hover:opacity-100"
           />
         )}
@@ -111,28 +126,13 @@ export const ProductCard = React.memo(({
             {t('common.actions.quickView')}
           </Link>
 
-          {isHighTier ? (
+          {isConciergeOnly ? (
             <button
               onClick={handleInquire}
               className="w-full py-3 bg-primary text-primary-foreground font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary/90 transition-colors duration-500"
             >
               {t('shop.pdp.inquireToPurchase')}
             </button>
-          ) : isMidTier ? (
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddToCart}
-                className="flex-1 py-3 bg-background/80 backdrop-blur-md text-primary font-body text-[10px] uppercase tracking-widest text-center hover:bg-background transition-colors duration-500"
-              >
-                {t('shop.pdp.addToCollection')}
-              </button>
-              <button
-                onClick={handleInquire}
-                className="flex-1 py-3 bg-primary text-primary-foreground font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary/90 transition-colors duration-500"
-              >
-                {t('shop.pdp.contactConcierge')}
-              </button>
-            </div>
           ) : (
             <button
               onClick={handleAddToCart}
@@ -155,11 +155,11 @@ export const ProductCard = React.memo(({
           {name}
         </CardTitle>
         <p className="font-body text-xs text-primary/80 tracking-widest">
-          {isHighTier ? <span className="italic opacity-70">{t('shop.pdp.priceUponRequest')}</span> : price}
+          {isConciergeOnly ? <span className="italic opacity-70">{t('shop.pdp.priceUponRequest')}</span> : price}
         </p>
       </CardContent>
     </Card>
   );
-});
+};
 
 ProductCard.displayName = "ProductCard";

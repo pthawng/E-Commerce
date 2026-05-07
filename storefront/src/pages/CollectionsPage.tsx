@@ -13,6 +13,7 @@ import { useStore } from "@/store/useStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { mapProductToCardProps, getLocalized } from "@/features/products/utils/productMapper";
 import { ProductCardSkeleton } from "@/features/products/components/ProductCardSkeleton";
+import { useVisibilityStore } from "@/store/useVisibilityStore";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -21,6 +22,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 export const CollectionsPage = () => {
     const { language, currency, exchangeRatesUpdatedAt, formatPrice } = useStore();
     const { t } = useTranslation();
+    const { invalidProductIds } = useVisibilityStore();
 
     useEffect(() => {
         document.title = t('common.meta.collections');
@@ -81,7 +83,11 @@ export const CollectionsPage = () => {
     // P1-6 FIX: Use pages[0] for totalItems — the first page is the stable carrier of the
     // snapshot-consistent total count. lastPage shifts on every scroll and can be cursor-mode
     // which has no totalItems at all.
-    const totalItemCount = data?.pages[0]?.meta?.totalItems ?? allProducts.length;
+    const rawTotalCount = data?.pages[0]?.meta?.totalItems ?? allProducts.length;
+
+    // Staff+ L9 Fix: Adjust count based on client-side filtered (broken) items
+    // This ensures the label doesn't lie while the backend sync is in progress.
+    const totalItemCount = Math.max(0, rawTotalCount - invalidProductIds.size);
 
     const handleFilterChange = (categoryId: string | null) => {
         setActiveCategory(categoryId);
@@ -191,9 +197,12 @@ export const CollectionsPage = () => {
                             </div>
                         ) : (
                             <div className="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
-                                {allProducts.map((product) => (
-                                    <ProductCard key={product.id} {...product} />
-                                ))}
+                                {allProducts
+                                    .filter(p => !invalidProductIds.has(p.id))
+                                    .map((product) => (
+                                        <ProductCard key={product.id} {...product} />
+                                    ))
+                                }
                             </div>
                         )}
 

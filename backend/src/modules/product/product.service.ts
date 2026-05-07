@@ -7,6 +7,7 @@ import { slugify } from 'src/common/utils/string.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto, CreateProductVariantInputDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
+import { ReportMediaDto } from './dto/report-media.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductStorageService } from './product.storage/product-storage.service';
 import { VariantService } from './variants/variant.service';
@@ -614,5 +615,19 @@ export class ProductService {
     }
 
     return '';
+  }
+
+  // ---------------------------
+  // REPORT MEDIA ISSUE
+  // ---------------------------
+  async reportMediaIssue(dto: ReportMediaDto, clientId: string) {
+    console.log(`[ProductService] Received media anomaly report: product=${dto.productId}, client=${clientId}`);
+    // We emit an event instead of directly writing to DB to prevent abuse and decouple logic.
+    this.eventEmitter.emit('product.media.anomaly_reported', {
+      productId: dto.productId,
+      mediaUrl: dto.mediaUrl,
+      clientId,
+    });
+    return { success: true, message: 'Report accepted.' };
   }
 }

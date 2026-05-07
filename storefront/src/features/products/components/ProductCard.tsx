@@ -4,6 +4,9 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { useCartStore } from '@/features/cart/store/useCartStore';
+import { useState } from 'react';
+import axiosClient from '@/services/axiosClient';
+import { useVisibilityStore } from '@/store/useVisibilityStore';
 
 interface ProductCardProps {
     product: Product;
@@ -12,13 +15,14 @@ interface ProductCardProps {
 export const ProductCard = ({ product }: ProductCardProps) => {
     const { language, formatPrice } = useStore();
     const addItem = useCartStore((state) => state.addItem);
+    const [hasError, setHasError] = useState(false);
 
     // 1. Get localized name
     const name = product.name[language] || Object.values(product.name)[0];
 
     // 2. Get main image
     const thumbnail = product.media?.find(m => m.isThumbnail) || product.media?.[0];
-    const imageUrl = thumbnail ? thumbnail.url : '/placeholder.png';
+    const imageUrl = thumbnail ? thumbnail.url : '/placeholder.svg';
 
     // 3. Get Price (Prefer displayPriceMin, fallback to first variant)
     const price = product.displayPriceMin || product.variants?.[0]?.price || 0;
@@ -38,6 +42,20 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         }
     };
 
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        if (!hasError) {
+            setHasError(true);
+            const reportInvalidProduct = useVisibilityStore.getState().reportInvalidProduct;
+            reportInvalidProduct(product.id);
+            axiosClient.post('/products/report-media-issue', {
+                productId: product.id,
+                mediaUrl: e.currentTarget.src,
+            }).catch(() => { /* Ignore errors silently */ });
+        }
+    };
+
+    if (hasError) return null;
+
     return (
         <Card className="group overflow-hidden border-none shadow-md hover:shadow-xl transition-all duration-300">
             {/* Image Area */}
@@ -47,6 +65,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                     alt={name}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
+                    onError={handleImageError}
                 />
                 {/* Quick Add Overlay */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">

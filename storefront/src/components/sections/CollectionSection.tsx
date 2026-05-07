@@ -6,6 +6,8 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { getLocalized } from '@/features/products/utils/productMapper';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from 'react';
+import axiosClient from '@/services/axiosClient';
 
 const CollectionItem = ({ 
   product, 
@@ -17,10 +19,23 @@ const CollectionItem = ({
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
   const { language, t } = useTranslation();
+  const [hasError, setHasError] = useState(false);
 
   const name = getLocalized(product.name, language);
   const description = getLocalized(product.description, language);
   const image = product.media?.[0]?.url || product.variants?.[0]?.media?.[0]?.url || '';
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    if (!hasError) {
+      setHasError(true);
+      axiosClient.post('/products/report-media-issue', {
+        productId: product.id,
+        mediaUrl: e.currentTarget.src,
+      }).catch(() => {});
+    }
+  };
+
+  if (hasError) return null;
 
   return (
     <Link to={`/product/${product.slug}`}>
@@ -36,6 +51,7 @@ const CollectionItem = ({
           <img
             src={image}
             alt={name}
+            onError={handleImageError}
             className="w-full h-full object-cover transition-all duration-700 ease-out md:group-hover:scale-[1.02]"
           />
           

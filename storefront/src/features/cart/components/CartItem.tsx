@@ -6,6 +6,7 @@ import { useStore } from '@/store/useStore';
 import { CartItem as CartItemType } from '../types';
 import { useCartStore } from '../store/useCartStore';
 import { cn } from '@/lib/utils';
+import axiosClient from '@/services/axiosClient';
 
 interface CartItemProps {
     item: CartItemType;
@@ -18,6 +19,18 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
     const { updateQuantity, removeItem } = useCartStore();
 
     const isPage = layout === 'page';
+    const [hasReported, setHasReported] = React.useState(false);
+
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        e.currentTarget.src = '/placeholder.svg';
+        if (!hasReported) {
+            setHasReported(true);
+            axiosClient.post('/products/report-media-issue', {
+                productId: item.productId, // Need to make sure CartItem has productId, it usually has variantId and productId
+                mediaUrl: item.image,
+            }).catch(() => { /* Ignore errors */ });
+        }
+    };
 
     return (
         <motion.div
@@ -38,6 +51,7 @@ export const CartItem = ({ item, layout = 'drawer' }: CartItemProps) => {
                 <img
                     src={item.image}
                     alt={typeof item.name === 'string' ? item.name : (item.name[language] || item.name['en'])}
+                    onError={handleImageError}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
             </div>

@@ -28,6 +28,7 @@ import { getLocalized, mapProductToCardProps } from "@/features/products/utils/p
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { LocalizedString, AttributeValue } from "@/features/products/types";
+import axiosClient from "@/services/axiosClient";
 
 export const ProductDetailPage = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -36,6 +37,7 @@ export const ProductDetailPage = () => {
     const { addItem } = useCartStore();
 
     const [activeAccordion, setActiveAccordion] = useState<string | null>("craftsmanship");
+    const [reportedImages, setReportedImages] = useState<Set<string>>(new Set());
 
     // Fetch Main Product
     const { data: product, isLoading, isError, refetch } = useProduct(slug || "");
@@ -258,6 +260,17 @@ export const ProductDetailPage = () => {
         }));
     };
 
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, url: string) => {
+        e.currentTarget.src = '/placeholder.svg';
+        if (!reportedImages.has(url)) {
+            setReportedImages(prev => new Set(prev).add(url));
+            axiosClient.post('/products/report-media-issue', {
+                productId: product.id,
+                mediaUrl: url,
+            }).catch(() => { /* ignore */ });
+        }
+    };
+
     return (
         <Layout forceHeaderOpaque={true}>
             <div className="pt-20 sm:pt-28">
@@ -289,6 +302,7 @@ export const ProductDetailPage = () => {
                                         <img 
                                             src={img} 
                                             alt={`${getLocalized(product.name, language)} view ${i + 1}`} 
+                                            onError={(e) => handleImageError(e, img)}
                                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-[2000ms] cursor-zoom-in"
                                         />
                                     </motion.div>

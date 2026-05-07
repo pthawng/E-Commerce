@@ -22,11 +22,13 @@ import {
     StarFilled,
     CheckCircleOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useNotificationStore } from '@/shared/lib/notificationStore';
 import { productApi, ProductListItem, ProductDetail } from '@/entities/product/api/productApi';
 import { useCurrencyConverter } from '@/shared/lib/hooks/useCurrencyConverter';
 import { CreateProductDrawer } from '@/features/product/create-product';
+import api from '@/shared/api/apiInstance';
 
 const { Text, Paragraph, Title } = Typography;
 
@@ -40,6 +42,30 @@ export const ProductCatalog: React.FC = memo(() => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isCreateOpen, setCreateOpen] = useState(false);
     const { convertAndFormat } = useCurrencyConverter();
+    const queryClient = useQueryClient();
+    const { notifications } = useNotificationStore();
+
+    // Staff+ L9 Reactive UI: Synchronize product status with notifications in real-time
+    React.useEffect(() => {
+        if (notifications.length > 0) {
+            const latest = notifications[0];
+            // Nếu là thông báo lỗi liên quan đến Media Anomaly
+            if (latest.type === 'ERROR' && latest.metadata?.productId) {
+                // Cập nhật cache của React Query ngay lập tức mà không cần F5
+                queryClient.setQueryData(['pim-products', page, search], (oldData: any) => {
+                    if (!oldData || !oldData.items) return oldData;
+                    return {
+                        ...oldData,
+                        items: oldData.items.map((item: any) => 
+                            item.id === latest.metadata.productId 
+                                ? { ...item, isActive: false } 
+                                : item
+                        )
+                    };
+                });
+            }
+        }
+    }, [notifications, queryClient, page, search]);
 
     const getName = useCallback(
         (name: Record<string, string> | null | undefined, fallback = '—') => {
@@ -99,7 +125,17 @@ export const ProductCatalog: React.FC = memo(() => {
             render: (_: any, record: ProductListItem) => {
                 const url = getThumbnail(record);
                 return url ? (
-                    <img src={url} alt="" className="w-10 h-10 object-cover rounded" />
+                    <img 
+                        src={url} 
+                        alt="" 
+                        className="w-10 h-10 object-cover rounded" 
+                        onError={(e) => {
+                            api.post('/products/report-media-issue', {
+                                productId: record.id,
+                                mediaUrl: url,
+                            }).catch(() => {});
+                        }}
+                    />
                 ) : (
                     <div className="w-10 h-10 bg-gray-100 dark:bg-white/5 rounded flex items-center justify-center">
                         <GoldOutlined className="text-gray-300" />
@@ -359,6 +395,12 @@ export const ProductCatalog: React.FC = memo(() => {
                                                 src={m.url}
                                                 alt=""
                                                 className="w-20 h-20 object-cover rounded border border-gray-100 dark:border-gray-900"
+                                                onError={(e) => {
+                                                    api.post('/products/report-media-issue', {
+                                                        productId: selectedProduct.id,
+                                                        mediaUrl: m.url,
+                                                    }).catch(() => {});
+                                                }}
                                             />
                                             {m.isThumbnail && (
                                                 <Tag color="gold" className="absolute top-1 left-1 text-[8px] m-0">

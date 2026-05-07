@@ -15,6 +15,12 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStateMachine } from './utils/order-state-machine';
 
+export enum TimelineActorType {
+  ADMIN = 'admin',
+  SYSTEM = 'system',
+  CUSTOMER = 'customer',
+}
+
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
@@ -30,23 +36,6 @@ export class OrderService {
   // ============================================
   // PUBLIC API
   // ============================================
-
-  /**
-   * @deprecated Use OrderPaymentService.createOrderWithPayment instead.
-   * Direct order creation via OrderService is forbidden to maintain system invariants.
-   */
-  async createOrder(
-    userId: string | undefined,
-    sessionId: string | undefined,
-    dto: CreateOrderDto,
-  ) {
-    this.logger.error(
-      `❌ Illegal attempt to call deprecated OrderService.createOrder! (UserId: ${userId}, SessionId: ${sessionId})`,
-    );
-    throw new BadRequestException(
-      'This method is deprecated. Please use the modern checkout flow via OrderPaymentService.',
-    );
-  }
 
   async getMyOrders(userId: string) {
     return this.prisma.order.findMany({
@@ -239,13 +228,15 @@ export class OrderService {
           action: `STATE_TRANSITION_${nextStatus}`,
           fromStatus: order.status,
           toStatus: nextStatus,
-          beforeState: order as any, // Full snapshot
-          afterState: updatedOrder as any,
           description: note || `Order transitioned from ${order.status} to ${nextStatus}`,
           actorId,
-          actorType: actorId ? 'admin' : 'system',
-          metadata: sessionMetadata,
-        } as any,
+          actorType: actorId ? TimelineActorType.ADMIN : TimelineActorType.SYSTEM,
+          metadata: {
+            ...sessionMetadata,
+            beforeState: order,
+            afterState: updatedOrder,
+          } as Prisma.InputJsonValue,
+        },
       });
 
       // 5. Transactional Event Outbox (Decoupling)
@@ -297,7 +288,7 @@ export class OrderService {
           action: 'TRACKING_UPDATE',
           description: `Updated tracking code: ${trackingCode}`,
           actorId,
-          actorType: 'admin',
+          actorType: TimelineActorType.ADMIN,
         },
       });
 
@@ -361,13 +352,13 @@ export class OrderService {
         );
       }
 
-      // Check Price Mismatch
-      if (Number(variant.price) !== Number(item.cachedPrice)) {
+      // Check Price Mismatch (FAANG-grade decimal precision)
+      if (!new Prisma.Decimal(variant.price).equals(item.cachedPrice)) {
         priceMismatches.push({
           variantId: variant.id,
           sku: variant.sku,
           oldPrice: item.cachedPrice,
-          newPrice: variant.price as any as Prisma.Decimal,
+          newPrice: variant.price as unknown as Prisma.Decimal,
         });
       }
     }
@@ -412,48 +403,24 @@ export class OrderService {
     orderId: string,
     orderCode: string,
   ) {
-    for (const item of cartItems) {
-      const variant = variants.find((v) => v.id === item.productVariantId)!;
-      let remainingToDeduct = item.quantity;
-
-      // Simple warehouse selection: take from first available
-      for (const inv of variant.inventoryItems) {
-        if (remainingToDeduct <= 0) break;
-
-        const available = inv.quantity - inv.reservedQuantity;
-        if (available > 0) {
-          const deduct = Math.min(available, remainingToDeduct);
-
-          await tx.inventoryItem.update({
-            where: { id: inv.id },
-            data: { quantity: { decrement: deduct } },
-          });
-
-          await tx.inventoryLog.create({
-            data: {
-              inventoryItemId: inv.id,
-              productVariantId: variant.id,
-              warehouseId: inv.warehouseId,
-              actionType: ActionType.SALE,
-              quantityChange: -deduct,
-              beforeQuantity: inv.quantity,
-              afterQuantity: inv.quantity - deduct,
-              referenceType: 'ORDER',
-              referenceId: orderId,
-              note: 'Order Checkout',
-            },
-          });
-
-          remainingToDeduct -= deduct;
-        }
-      }
-
-      if (remainingToDeduct > 0) {
-        throw new BadRequestException(
-          `Inventory sync failed: Insufficient stock for ${variant.sku} during checkout`,
-        );
-      }
-    }
+    // Phase 3 Architecture: Event-Driven Choreography via Transactional Outbox
+    // We completely decouple the Order Domain from the Inventory Domain.
+    // Instead of inline N+1 Postgres locks, we emit a domain event that the Inventory Service will consume.
+    
+    await tx.domainEventOutbox.create({
+      data: {
+        eventType: 'inventory.reserve_requested',
+        payload: {
+          orderId,
+          orderCode,
+          items: cartItems.map(item => ({
+            productVariantId: item.productVariantId,
+            quantity: item.quantity,
+          })),
+        },
+        status: 'PENDING',
+      },
+    });
   }
 
   private generateOrderCode() {
