@@ -8,7 +8,9 @@ import { CartModule } from '@modules/cart/cart.module';
 import { CategoryModule } from '@modules/category/category.module';
 import { DashboardModule } from '@modules/dashboard/dashboard.module';
 import { DomainEventsModule } from '@modules/infra/events/domain-events.module';
+import { InfraModule } from '@modules/infra/infra.module';
 import { FeatureFlagModule } from '@modules/infra/feature-flag/feature-flag.module';
+
 import { HealthModule } from '@modules/infra/health/health.module';
 import { InventoryModule } from '@modules/inventory/inventory.module';
 import { MailModule } from '@modules/mail/mail.module';
@@ -73,13 +75,20 @@ import { JwtModule } from '@nestjs/jwt';
           limit: 100,
         },
         {
+          name: 'default',
+          ttl: 60000,
+          limit: 100,
+        },
+        {
           name: 'fast',
           ttl: 60000,
           limit: 300,
         },
+
       ],
     }),
     PrismaModule,
+    InfraModule,
     AiModule,
     UserModule,
     AuthModule,

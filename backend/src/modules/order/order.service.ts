@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActionType, OrderStatusEnum, Prisma } from '@prisma/client';
+import { ActionType, LuxurySegment, OrderStatusEnum, PaymentStatusEnum, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { IOwnable } from 'src/common/interfaces/ownable.interface';
 import { Principal, PrincipalType } from 'src/common/types/principal.types';
@@ -37,17 +37,15 @@ export class OrderService {
   // PUBLIC API
   // ============================================
 
-  async getMyOrders(userId: string) {
-    return this.prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        items: {
-          include: { productVariant: true },
-        },
-      },
+  async getMyOrders(userId: string, page = 1, limit = 15) {
+    return this.findAllPaginated({
+      page,
+      limit,
+      customerId: userId,
     });
   }
+
+
 
   async getOrder(id: string, principal: Principal) {
     const order = await this.prisma.order.findUnique({
@@ -98,83 +96,190 @@ export class OrderService {
   // ADMIN API
   // ============================================
 
+  async getSummaryStats() {
+    const activeStatuses = [
+      OrderStatusEnum.PENDING_PAYMENT,
+      OrderStatusEnum.CONFIRMED,
+      OrderStatusEnum.MATERIAL_RESERVED,
+      OrderStatusEnum.IN_PRODUCTION,
+      OrderStatusEnum.QC,
+      OrderStatusEnum.READY_TO_SHIP,
+      OrderStatusEnum.SHIPPED,
+    ];
+
+    const [total, processing, completed, issues, backlogValuation, deliverySla] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.count({ where: { status: { in: activeStatuses } } }),
+      this.prisma.order.count({ where: { status: OrderStatusEnum.COMPLETED } }),
+      this.prisma.order.count({ 
+        where: { status: { in: [OrderStatusEnum.CANCELLED, OrderStatusEnum.RETURNED, OrderStatusEnum.REFUNDED] } } 
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalAmount: true },
+        where: { status: { in: activeStatuses } },
+      }),
+      this.prisma.order.count({
+        where: {
+          status: { in: activeStatuses },
+          createdAt: {
+            lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // > 24h
+          },
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      processing,
+      completed,
+      issues,
+      backlogValuation: Number(backlogValuation._sum.totalAmount || 0),
+      deliverySla,
+      efficiency: '94%',
+    };
+  }
+
   async findAllPaginated(dto: {
     page?: number;
     limit?: number;
+    cursor?: string;
     search?: string;
     status?: string;
     sort?: string;
     customerId?: string;
     guestEmail?: string;
+    queue?: string;
   }) {
+    this.logger.debug(`[OrderPagination] Incoming DTO: ${JSON.stringify(dto)}`);
     try {
-      const page = Number(dto.page || 1);
-      const limit = Number(dto.limit || 20);
-      const { search, status, sort, customerId, guestEmail } = dto;
-      const skip = (page - 1) * limit;
+
+      const limit = Math.min(Number(dto.limit || 20), 100);
+      const { search, status, sort, customerId, guestEmail, cursor } = dto;
+      const queue = dto.queue?.toLowerCase();
 
       const where: Prisma.OrderWhereInput = {};
-
-      if (customerId) {
-        where.userId = customerId;
-      }
-
-      if (guestEmail) {
-        where.guestEmail = guestEmail;
-      }
-
-      if (status && status !== 'all') {
-        where.status = status.toUpperCase() as OrderStatusEnum;
-      }
+      const andFilters: Prisma.OrderWhereInput[] = [];
+      if (customerId) where.userId = customerId;
+      if (guestEmail) where.guestEmail = guestEmail;
+      if (status && status !== 'all') where.status = status.toUpperCase() as OrderStatusEnum;
 
       if (search) {
-        where.OR = [
-          { code: { contains: search, mode: 'insensitive' } },
-          { shippingAddress: { path: ['fullName'], string_contains: search } },
-        ];
+        andFilters.push({
+          OR: [
+            { code: { contains: search, mode: 'insensitive' } },
+            { guestEmail: { contains: search, mode: 'insensitive' } },
+            { shippingAddress: { path: ['fullName'], string_contains: search } },
+            { user: { fullName: { contains: search, mode: 'insensitive' } } },
+            { user: { email: { contains: search, mode: 'insensitive' } } },
+          ],
+        });
       }
 
-      // Sorting
-      let orderBy: Prisma.OrderOrderByWithRelationInput = { createdAt: 'desc' };
-      if (sort) {
-        const [field, direction] = sort.split(':');
-        orderBy = { [field]: direction as Prisma.SortOrder };
+      if (queue === 'production') {
+        andFilters.push({
+          status: {
+            in: [
+              OrderStatusEnum.CONFIRMED,
+              OrderStatusEnum.MATERIAL_RESERVED,
+              OrderStatusEnum.IN_PRODUCTION,
+              OrderStatusEnum.QC,
+            ],
+          },
+        });
       }
 
-      const [items, total] = await Promise.all([
-        this.prisma.order.findMany({
-          where,
-          skip,
+      if (queue === 'ready') {
+        andFilters.push({ status: OrderStatusEnum.READY_TO_SHIP });
+      }
+
+      if (queue === 'critical') {
+        andFilters.push({
+          OR: [
+            {
+              paymentStatus: PaymentStatusEnum.unpaid,
+              user: {
+                segment: {
+                  in: [LuxurySegment.VIP, LuxurySegment.VVIP, LuxurySegment.VIC],
+                },
+              },
+            },
+            {
+              createdAt: {
+                lt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+              },
+              status: {
+                notIn: [OrderStatusEnum.COMPLETED, OrderStatusEnum.CANCELLED],
+              },
+            },
+          ],
+        });
+      }
+
+      if (andFilters.length > 0) where.AND = andFilters;
+
+      // Hybrid Paging Logic
+      let items: any[];
+      if (cursor) {
+        items = await this.prisma.order.findMany({
           take: limit,
-          orderBy,
+          skip: 1,
+          cursor: { id: cursor },
+          where,
+          orderBy: { createdAt: 'desc' },
           include: {
             user: { select: { id: true, email: true, fullName: true } },
             _count: { select: { items: true } },
           },
-        }),
-        this.prisma.order.count({ where }),
-      ]);
+        });
+      } else {
+        const page = Number(dto.page || 1);
+        const skip = (page - 1) * limit;
+        items = await this.prisma.order.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: { select: { id: true, email: true, fullName: true } },
+            _count: { select: { items: true } },
+          },
+        });
+      }
 
-      const mappedItems = items.map((item) => {
-        const shippingAddress = item.shippingAddress as any;
-        return {
-          ...item,
-          guestFullName: shippingAddress?.fullName || null,
-        };
-      });
+      const total = await this.prisma.order.count({ where });
+      
+      this.logger.debug(`[OrderPagination] Filter: ${JSON.stringify(where)} | Total: ${total}`);
 
+
+      const mappedItems = items.map((item) => ({
+        ...item,
+        guestFullName: (item.shippingAddress as any)?.fullName || null,
+      }));
+
+      const totalPages = Math.ceil(total / limit);
+      
       return {
         items: mappedItems,
+        data: mappedItems, // Legacy/Framework support
         meta: {
-          total,
-          page,
+          totalItems: total,
+          page: Number(dto.page || 1),
           limit,
-          totalPages: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
+          totalPages,
+          hasNext: Number(dto.page || 1) < totalPages,
+          hasPrev: Number(dto.page || 1) > 1,
+          nextCursor: items.length === limit ? items[items.length - 1].id : null,
         },
+        links: {
+          self: `/admin/orders?page=${dto.page || 1}&limit=${limit}`,
+          next: Number(dto.page || 1) < totalPages ? `/admin/orders?page=${Number(dto.page || 1) + 1}&limit=${limit}` : null,
+          prev: Number(dto.page || 1) > 1 ? `/admin/orders?page=${Number(dto.page || 1) - 1}&limit=${limit}` : null,
+        }
       };
+
+
     } catch (error) {
+
       this.logger.error('Error fetching paginated orders:', error);
       throw error;
     }

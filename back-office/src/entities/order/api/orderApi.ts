@@ -57,6 +57,8 @@ export const orderApi = {
     api
       .get<PaginatedResponse<OrderListItem>>("/admin/orders", { params })
       .then((res) => res.data),
+  getStats: () =>
+    api.get("/admin/orders/stats").then((res) => res.data),
   getOrder: (id: string) =>
     api.get<OrderDetails>(`/admin/orders/${id}`).then((res) => res.data),
   transitionStatus: (id: string, nextStatus: OrderStatusEnum, notes?: string) =>

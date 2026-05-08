@@ -9,17 +9,10 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
    * P1-3: Multi-dimensional Rate Limiting Logic (v6 Compatible).
    */
   protected async handleRequest(requestProps: ThrottlerRequest): Promise<boolean> {
-    const { context, limit, ttl, throttler } = requestProps;
+    const { context, limit, ttl } = requestProps;
     const request = context.switchToHttp().getRequest();
 
-    // Safety check for request object
     if (!request) return true;
-
-    // Exempt infrastructure health probes to ensure high availability
-    const path = request.url || '';
-    if (path === '/' || path.includes('/health') || path === '/api') {
-      return true;
-    }
 
     const user = request.user;
     const query = request.query || {};
@@ -27,38 +20,30 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
     let adjustedLimit = limit;
     let adjustedTtl = ttl;
 
-    // 1. Penalize large page requests (Offset O(N) protection)
+    // [L9] Forensic Admin Detection
+    const isAdmin = 
+      user?.aud === 'admin' || 
+      user?.roles?.includes('admin') || 
+      user?.roles?.includes('superadmin');
+
     const page = Number(query.page);
-    if (page > 50) {
+
+    // Only penalize non-admin users for deep offset scans
+    if (page > 50 && !isAdmin) {
       adjustedLimit = Math.max(1, Math.floor(limit / 4));
       adjustedTtl = ttl * 2;
     }
 
-    // 2. Penalize large limit requests
-    const requestedLimit = Number(query.limit);
-    if (requestedLimit > 50) {
-      adjustedLimit = Math.max(1, Math.floor(limit / 2));
-    }
 
-    // 3. Identification (Tracker)
-    const tracker = user?.id || request.ip || 'anon';
-
-    try {
-      return await super.handleRequest({
-        ...requestProps,
-        limit: adjustedLimit,
-        ttl: adjustedTtl,
-        throttler: {
-          ...throttler,
-          name: `pagination_${tracker.replace(/[^a-zA-Z0-9]/g, '_')}`,
-        },
-      });
-    } catch (e) {
-      if (e instanceof ThrottlerException) {
-        throw e;
-      }
-      this.logger.error('Throttler handleRequest error', e);
-      return true;
-    }
+    return await super.handleRequest({
+      ...requestProps,
+      limit: adjustedLimit,
+      ttl: adjustedTtl,
+    });
   }
+
+  protected async getTracker(req: Record<string, any>): Promise<string> {
+    return req.user?.userId || req.user?.id || req.ip || 'anon';
+  }
+
 }

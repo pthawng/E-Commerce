@@ -14,12 +14,85 @@ function slugify(text: string) {
 }
 
 export async function seedCatalog(prisma: PrismaClient) {
-  console.log('🧹 Wiping existing catalog data...');
-  // Delete all products. Cascading rules will clear variants, media, categories, and orders.
-  await prisma.product.deleteMany({});
+  console.log('🧹 Cleaning up previous demo catalog data (preserving materials)...');
+  
+  // 0. Full Wipe of transactional and inventory data to avoid FK violations
+  // These should be deleted in reverse order of dependency
+  console.log('   - Clearing inventory and transactions...');
+  await prisma.paymentTransaction.deleteMany({});
+  await prisma.orderTimeline.deleteMany({});
+  await prisma.physicalItem.deleteMany({});
+  await prisma.inventoryReservation.deleteMany({});
+  await prisma.inventoryLog.deleteMany({});
+  await prisma.inventoryItem.deleteMany({});
+  await prisma.orderItem.deleteMany({});
+  await prisma.order.deleteMany({});
+
+  // 1. Delete products that are NOT in the 'materials' category to protect system foundation
+  console.log('   - Clearing products...');
+  await prisma.product.deleteMany({
+    where: {
+      categories: {
+        none: {
+          category: {
+            slug: 'materials'
+          }
+        }
+      }
+    }
+  });
   
   const categoryData = await prisma.category.findMany();
   const categoryMap = new Map(categoryData.map((c) => [c.slug, c]));
+  const materialCategory = categoryMap.get('materials');
+
+  // 1.5 Seed Raw Materials (The Ledger Foundation)
+  if (materialCategory) {
+    console.log('💎 Seeding Raw Materials for Ledger...');
+    const rawMaterials = [
+      { name: { en: '18k Yellow Gold', vi: 'Vàng 18k' }, sku: 'MAT-GOLD-18K', price: 1500000 },
+      { name: { en: 'Platinum PT950', vi: 'Bạch Kim PT950' }, sku: 'MAT-PLAT-950', price: 2200000 },
+      { name: { en: '18k Rose Gold', vi: 'Vàng Hồng 18k' }, sku: 'MAT-ROSE-18K', price: 1550000 },
+      { name: { en: 'White Gold 14k', vi: 'Vàng Trắng 14k' }, sku: 'MAT-WHITE-14K', price: 1200000 },
+      { name: { en: 'Round Diamond 1.0ct (D/IF)', vi: 'Kim Cương Tròn 1.0ct (D/IF)' }, sku: 'MAT-DIA-1CT', price: 250000000 },
+      { name: { en: 'Round Diamond 0.5ct (E/VVS1)', vi: 'Kim Cương Tròn 0.5ct (E/VVS1)' }, sku: 'MAT-DIA-05CT', price: 45000000 },
+      { name: { en: 'Blue Sapphire 2.5ct', vi: 'Sapphire Xanh 2.5ct' }, sku: 'MAT-SAP-25', price: 35000000 },
+      { name: { en: 'Burma Ruby 1.2ct', vi: 'Hồng Ngọc Burma 1.2ct' }, sku: 'MAT-RUB-12', price: 65000000 },
+      { name: { en: 'Zambian Emerald 3.0ct', vi: 'Ngọc Lục Bảo Zambia 3.0ct' }, sku: 'MAT-EME-30', price: 85000000 },
+    ];
+
+    for (const mat of rawMaterials) {
+      const slug = slugify(mat.name.en);
+      await prisma.product.upsert({
+        where: { slug },
+        update: {
+          name: mat.name,
+          displayPriceMin: mat.price,
+          displayPriceMax: mat.price,
+        },
+        create: {
+          name: mat.name,
+          slug,
+          description: { en: `Raw material for high-end jewelry production: ${mat.name.en}`, vi: `Vật liệu thô dùng trong chế tác trang sức cao cấp: ${mat.name.vi}` },
+          isActive: true,
+          displayPriceMin: mat.price,
+          displayPriceMax: mat.price,
+          categories: {
+            create: { categoryId: materialCategory.id }
+          },
+          variants: {
+            create: {
+              sku: mat.sku,
+              price: mat.price,
+              variantTitle: { en: 'Standard Unit', vi: 'Đơn vị tiêu chuẩn' },
+              isDefault: true,
+            }
+          }
+        }
+      });
+    }
+    console.log(`   - Seeded ${rawMaterials.length} raw materials.`);
+  }
 
   const materialsEN = ['18k Rose Gold', 'Platinum', 'White Gold', 'Sterling Silver', '18k Yellow Gold'];
   const materialsVI = ['Vàng Hồng 18k', 'Bạch Kim', 'Vàng Trắng', 'Bạc Nguyên Chất', 'Vàng Cổ Điển 18k'];

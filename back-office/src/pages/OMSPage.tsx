@@ -1,14 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Input, Button, message } from 'antd';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, GoldOutlined, TruckOutlined, RiseOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { useCurrencyConverter } from '@/shared/lib/hooks/useCurrencyConverter';
 import { orderApi } from '@/entities/order/api/orderApi';
-import { OrderStatusEnum, LuxurySegment, PaymentStatusEnum } from '@/shared/types/order.types';
+import { OrderStatusEnum } from '@/shared/types/order.types';
 import { usePageHeader } from '@/shared/lib/PageHeaderContext';
 import { WidgetErrorBoundary } from '@/shared/ui/ErrorBoundary/WidgetErrorBoundary';
 
@@ -18,8 +16,6 @@ import { OrderOrchestrator } from '@/widgets/orders/ui/OrderOrchestrator';
 import { OrderIntegrityDrawer } from '@/widgets/orders/ui/OrderIntegrityDrawer';
 import { CreateOrderDrawer } from '@/widgets/orders/ui/CreateOrderDrawer';
 
-dayjs.extend(relativeTime);
-
 export const OMSPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -28,6 +24,8 @@ export const OMSPage: React.FC = () => {
     const { convertAndFormat } = useCurrencyConverter();
     const [activeQueue, setActiveQueue] = useState('all');
     const [searchText, setSearchText] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(15);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(id || null);
     const [isDrawerVisible, setIsDrawerVisible] = useState(!!id);
     const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
@@ -46,8 +44,15 @@ export const OMSPage: React.FC = () => {
     };
 
     const { data: ordersData, isLoading } = useQuery({
-        queryKey: ['admin-orders', activeQueue],
-        queryFn: () => orderApi.getOrders({ limit: 100 }),
+        queryKey: ['admin-orders', activeQueue, currentPage, pageSize, searchText],
+        queryFn: () =>
+            orderApi.getOrders({
+                page: currentPage,
+                limit: pageSize,
+                search: searchText.trim() || undefined,
+                queue: activeQueue !== 'all' ? activeQueue : undefined,
+            }),
+        placeholderData: previousData => previousData,
     });
 
     const { data: orderDetails, isLoading: isDetailsLoading } = useQuery({
@@ -72,72 +77,54 @@ export const OMSPage: React.FC = () => {
         onError: () => message.error(t('dashboard.integrity.audit_failed', { defaultValue: 'Action Failed' })),
     });
 
-    const filteredOrders = useMemo(() => {
-        if (!ordersData?.items) return [];
-        let items = ordersData.items;
+    const filteredOrders = useMemo(() => ordersData?.items ?? [], [ordersData]);
 
-        if (searchText) {
-            items = items.filter(
-                o =>
-                    o.code.toLowerCase().includes(searchText.toLowerCase()) ||
-                    o.user?.fullName.toLowerCase().includes(searchText.toLowerCase())
-            );
-        }
-
-        switch (activeQueue) {
-            case 'critical':
-                return items.filter(o => {
-                    const isVip =
-                        o.user?.segment === LuxurySegment.VIP ||
-                        o.user?.segment === LuxurySegment.VVIP ||
-                        o.user?.segment === LuxurySegment.VIC;
-                    const isOld = dayjs().diff(dayjs(o.createdAt), 'day') > 2;
-                    return (isVip && o.paymentStatus === PaymentStatusEnum.unpaid) || (isOld && o.status !== OrderStatusEnum.COMPLETED);
-                });
-            case 'production':
-                return items.filter(o =>
-                    [
-                        OrderStatusEnum.CONFIRMED,
-                        OrderStatusEnum.MATERIAL_RESERVED,
-                        OrderStatusEnum.IN_PRODUCTION,
-                        OrderStatusEnum.QC,
-                    ].includes(o.status as OrderStatusEnum)
-                );
-            case 'ready':
-                return items.filter(o => o.status === OrderStatusEnum.READY_TO_SHIP);
-            default:
-                return items;
-        }
-    }, [ordersData, activeQueue, searchText]);
+    const { data: globalStats } = useQuery({
+        queryKey: ['admin-orders-stats'],
+        queryFn: () => orderApi.getStats(),
+        refetchInterval: 30000,
+    });
 
     const stats = useMemo(
         () => [
             {
-                title: t('orders.stats.efficiency', { defaultValue: 'Efficiency' }),
-                value: '94%',
+                title: t('orders.stats.total_orders', { defaultValue: 'Total Orders' }),
+                value: globalStats?.total || 0,
                 icon: <PlusOutlined />,
-                color: 'text-green-500',
+                color: 'text-gray-400',
             },
             {
-                title: t('orders.stats.backlog_valuation', { defaultValue: 'Backlog Valuation' }),
-                value: convertAndFormat(filteredOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0)),
-                icon: <PlusOutlined />,
-                color: 'text-amber-600',
-            },
-            {
-                title: t('dashboard.active_work_orders', { defaultValue: 'Work Orders' }),
-                value: filteredOrders.filter(o => o.status !== OrderStatusEnum.COMPLETED).length,
-                icon: <PlusOutlined />,
+                title: t('dashboard.active_work_orders', { defaultValue: 'Processing' }),
+                value: globalStats?.processing || 0,
+                icon: <TruckOutlined />,
                 color: 'text-blue-500',
             },
             {
-                title: t('orders.stats.delivery_sla', { defaultValue: 'Delivery SLA' }),
-                value: filteredOrders.filter(o => dayjs().diff(dayjs(o.createdAt), 'hour') > 24).length,
-                icon: <PlusOutlined />,
+                title: t('orders.stats.completed', { defaultValue: 'Completed' }),
+                value: globalStats?.completed || 0,
+                icon: <RiseOutlined />,
+                color: 'text-green-500',
+            },
+            {
+                title: t('orders.stats.issues', { defaultValue: 'Issues/Returns' }),
+                value: globalStats?.issues || 0,
+                icon: <ExclamationCircleOutlined />,
                 color: 'text-red-500',
             },
+            {
+                title: t('orders.stats.backlog_valuation', { defaultValue: 'Backlog Valuation' }),
+                value: convertAndFormat(globalStats?.backlogValuation || 0),
+                icon: <GoldOutlined />,
+                color: 'text-amber-600',
+            },
+            {
+                title: t('orders.stats.delivery_sla', { defaultValue: 'SLA Variance' }),
+                value: globalStats?.deliverySla || 0,
+                icon: <ExclamationCircleOutlined />,
+                color: 'text-orange-500',
+            },
         ],
-        [filteredOrders, convertAndFormat, t]
+        [globalStats, convertAndFormat, t]
     );
 
     return (
@@ -147,7 +134,10 @@ export const OMSPage: React.FC = () => {
                     prefix={<SearchOutlined className="text-gray-300" />}
                     placeholder={t('common.search_placeholder', { defaultValue: 'Search...' })}
                     className="h-10 w-80 border-gray-100 bg-transparent rounded-none text-[11px]"
-                    onChange={e => setSearchText(e.target.value)}
+                    onChange={e => {
+                        setSearchText(e.target.value);
+                        setCurrentPage(1);
+                    }}
                 />
                 <Button
                     type="primary"
@@ -167,8 +157,18 @@ export const OMSPage: React.FC = () => {
                 <OrderOrchestrator
                     orders={filteredOrders}
                     activeQueue={activeQueue}
-                    onQueueChange={setActiveQueue}
+                    onQueueChange={key => {
+                        setActiveQueue(key);
+                        setCurrentPage(1);
+                    }}
                     isLoading={isLoading}
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    totalItems={ordersData?.meta.totalItems ?? 0}
+                    onPaginationChange={(page, size) => {
+                        setCurrentPage(page);
+                        setPageSize(size);
+                    }}
                     onViewOrder={id => {
                         setSelectedOrderId(id);
                         setIsDrawerVisible(true);

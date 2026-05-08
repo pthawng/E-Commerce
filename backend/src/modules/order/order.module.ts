@@ -1,5 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
@@ -18,11 +20,29 @@ import { OrderService } from './order.service';
 import { CheckoutTokenService } from './services/checkout-token.service';
 import { OrderPaymentService } from './services/order-payment.service';
 import { RefundService } from './services/refund.service';
+import { PriceEngineService } from './services/price-engine.service';
+import { CheckoutValidator } from './services/checkout-validator.service';
 import { OrderEventConsumer } from './services/order-event.consumer';
+import { NerveCenterController } from './nerve-center.controller';
+
+
+
 
 @Module({
   imports: [
     PrismaModule,
+    BullModule.registerQueue({
+      name: 'system-events',
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: true,
+      },
+    }),
+
     RbacModule,
     CartModule,
     InventoryModule,
@@ -41,15 +61,26 @@ import { OrderEventConsumer } from './services/order-event.consumer';
       inject: [ConfigService],
     }),
   ],
-  controllers: [OrderController, AdminOrderController, CheckoutController, OrderRecoveryController],
+  controllers: [
+    OrderController,
+    AdminOrderController,
+    CheckoutController,
+    OrderRecoveryController,
+    NerveCenterController,
+  ],
+
   providers: [
     OrderService,
     OrderPaymentService,
     CheckoutTokenService,
     RefundService,
+    PriceEngineService,
+    CheckoutValidator,
     CleanupExpiredReservationsJob,
+
     OrderEventConsumer,
   ],
-  exports: [OrderService, OrderPaymentService, CheckoutTokenService, RefundService],
+  exports: [OrderService, OrderPaymentService, CheckoutTokenService, RefundService, PriceEngineService],
 })
 export class OrderModule { }
+

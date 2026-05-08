@@ -7,9 +7,11 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
+
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentSession } from 'src/common/decorators/current-session.decorator';
 import { OptionalAuth } from 'src/common/decorators/optional-auth.decorator';
@@ -59,8 +61,16 @@ export class OrderController {
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Lấy danh sách đơn hàng của tôi' })
-  getMyOrders(@Req() req: { user: RequestUserPayload }) {
-    return this.orderService.getMyOrders(req.user.userId);
+  getMyOrders(
+    @Req() req: { user: RequestUserPayload },
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.orderService.findAllPaginated({
+      page,
+      limit,
+      customerId: req.user.userId,
+    });
   }
 
   // -------------------------
@@ -79,3 +89,4 @@ export class OrderController {
     return this.orderService.getOrder(id, principal);
   }
 }
+

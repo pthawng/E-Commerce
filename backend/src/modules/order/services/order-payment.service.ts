@@ -23,7 +23,11 @@ import { OrderPaymentResponseDto } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
 import { OrderStatusValidator } from '../utils/order-status.validator';
 import { CheckoutTokenService } from './checkout-token.service';
+import { PriceEngineService } from './price-engine.service';
+import { CheckoutValidator } from './checkout-validator.service';
 import { AdminCreateOrderDto } from '../dto/admin-create-order.dto';
+
+
 
 /**
  * Staff+ (L8) Internal Type Extension
@@ -67,7 +71,11 @@ export class OrderPaymentService {
     private readonly guestVerificationService: GuestVerificationService,
     private readonly jwtService: JwtService,
     private readonly currencyService: CurrencyService,
+    private readonly priceEngine: PriceEngineService,
+    private readonly checkoutValidator: CheckoutValidator,
   ) { }
+
+
 
   /**
    * Step 1: Validate cart and reserve inventory (snapshot)
@@ -94,7 +102,8 @@ export class OrderPaymentService {
 
       const { totals } = this.calculateOrderTotals(cart.items, variants);
       const expiresAt = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
-      const cartHash = this.generateCartHash(cart.items);
+      const cartHash = this.checkoutValidator.generateCartHash(cart.items);
+
 
       const checkoutToken = await this.checkoutTokenService.generateToken({
         cartHash,
@@ -135,20 +144,13 @@ export class OrderPaymentService {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
       this.logger.log(`Creating order: method=${dto.paymentMethod}, userId=${userId}`);
 
-      // Enforce Guest Email Verification (L8 FAANG Standard)
-      if (!userId && dto.guestEmail) {
-        if (!dto.guestVerifyToken) {
-          throw new BadRequestException('Email guest chưa được xác thực (missing token).');
-        }
-        await this.guestVerificationService.validateVerifyToken(
-          dto.guestEmail,
-          dto.guestVerifyToken,
-        );
-      }
+      // 1. Authoritative Guest & Token Ownership Checks
+      await this.checkoutValidator.validateGuest(dto.guestEmail, dto.guestVerifyToken);
 
-      // 1. Verify checkout token FIRST to get authoritative jti
       const tokenPayload = await this.checkoutTokenService.verifyToken(dto.checkoutToken);
-      const idempotencyKey = tokenPayload.jti; // Use JTI from token as definitive key
+      this.checkoutValidator.validateTokenOwnership(tokenPayload, userId, sessionId);
+
+      const idempotencyKey = tokenPayload.jti;
 
       // 2. Global Idempotency Check using authoritative JTI
       const existingOrder = await this.prisma.order.findUnique({
@@ -156,40 +158,15 @@ export class OrderPaymentService {
         include: { transactions: true },
       });
       if (existingOrder) {
-        this.logger.warn(
-          `Idempotent request for JTI ${idempotencyKey}: returning existing order ${existingOrder.code}`,
-        );
-        return this.buildOrderPaymentResponse(
-          existingOrder,
-          existingOrder.transactions[0],
-          null,
-          false,
-        );
+        this.logger.warn(`Idempotent request for JTI ${idempotencyKey}: returning existing order`);
+        return this.buildOrderPaymentResponse(existingOrder, existingOrder.transactions[0], null, false);
       }
 
-      // Safety check: token ownership
-      if (tokenPayload.userId && tokenPayload.userId !== userId) {
-        throw new BadRequestException('Checkout token ownership mismatch (User)');
-      }
-      if (!tokenPayload.userId && tokenPayload.sessionId !== sessionId) {
-        throw new BadRequestException('Checkout token ownership mismatch (Session)');
-      }
-
-      // 2. Fetch cart and variants
+      // 3. Fetch current state and cross-verify with token snapshot
       const { cart, variants } = await this.getCartAndVariants(userId, sessionId);
+      if (!cart || cart.items.length === 0) throw new BadRequestException('Cart is empty');
 
-      if (!cart || cart.items.length === 0) {
-        throw new BadRequestException('Cart is empty');
-      }
-
-      // 3. Verify cart state and PRICE stability hasn't changed since token generation
-      const currentCartHash = this.generateCartHash(cart.items);
-      if (currentCartHash !== tokenPayload.cartHash) {
-        throw new ConflictException({
-          code: 'CART_HASH_MISMATCH',
-          message: 'Cart content has changed. Please re-validate checkout.',
-        });
-      }
+      this.checkoutValidator.validateCartStability(cart.items, tokenPayload.cartHash);
 
       const { orderItemsData, totals } = this.calculateOrderTotals(
         cart.items,
@@ -197,149 +174,105 @@ export class OrderPaymentService {
         dto.shippingMethodId,
       );
 
-      // Staff-level: Enforce Price Concurrency Safety (Integer-safe VND comparison)
-      // We check the TOTAL first, then individual items for forensic debugging
-      const isPriceSafe =
-        Math.abs(Math.round(totals.total) - Math.round(tokenPayload.totalAmount)) <= 1;
-
-      if (!isPriceSafe) {
-        this.logger.warn(
-          `Price mismatch detected for token ${tokenPayload.jti}. Expected: ${tokenPayload.totalAmount}, Actual: ${totals.total}`,
-        );
-        throw new ConflictException({
-          code: 'PRICE_STABILITY_ERROR',
-          message: 'Price has changed since validation. Please review your order totals.',
-          details: {
-            expected: tokenPayload.totalAmount,
-            actual: totals.total,
-          },
-        });
-      }
-
-      // Verify individual items to catch edge cases (e.g. price shifts that sum to same total)
-      for (const item of cart.items) {
-        const variant = variants.find((v) => v.id === item.productVariantId);
-        const snapshotItem = tokenPayload.lineItems.find(
-          (li) => li.variantId === item.productVariantId,
-        );
-
-        const currentPrice = Math.round(Number(variant?.price || 0));
-        const snapshotPrice = Math.round(snapshotItem?.price || 0);
-
-        if (currentPrice !== snapshotPrice) {
-          throw new ConflictException({
-            code: 'PRICE_STABILITY_ERROR',
-            message: `The price for ${variant?.sku || 'an item'} has changed.`,
-          });
-        }
-      }
-
-      // 4. Allocate inventory
-      const allocations = await this.inventoryAllocator.allocate(
-        cart.items.map((item) => ({
-          variantId: item.productVariantId,
-          quantity: item.quantity,
-        })),
+      this.checkoutValidator.validatePriceStability(
+        totals.total,
+        tokenPayload.totalAmount,
+        orderItemsData,
+        tokenPayload.lineItems,
       );
 
-      const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
 
-      // L8: Determine target currency and fetch current rate for freezing
+      // 4. Atomic Execution (Saga Step 1: Record Intent & Reserve)
+      const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
       const targetCurrency = dto.paymentMethod === PaymentMethodEnum.PAYPAL ? 'USD' : 'VND';
       const exchangeRate = await this.currencyService.getRate(targetCurrency);
 
-      try {
-        const result = await this.prisma.$transaction(async (tx) => {
-          // 4a. Create order with status 'pending_payment'
-          const order = await this.createOrder(tx, {
-            userId,
-            sessionId: userId ? null : sessionId,
-            dto,
-            orderItemsData,
-            subTotal: totals.subtotal,
-            totalAmount: totals.total,
-            status: OrderStatusEnum.PENDING_PAYMENT,
-            paymentDeadline,
-            idempotencyKey, // Secure JTI
-            exchangeRate,
-            displayCurrency: targetCurrency,
-          });
+      const allocations = await this.inventoryAllocator.allocate(
+        cart.items.map((item) => ({ variantId: item.productVariantId, quantity: item.quantity })),
+      );
 
-          // 4b. Reserve inventory with State: ACTIVE + CartItem traceability
-          await this.inventoryService.reserve(
-            order.id,
-            allocations.map((a) => ({
-              ...a,
-              cartItemId: cart.items.find((i) => i.productVariantId === a.variantId)?.id,
-            })),
-            paymentDeadline,
-            tx,
-            userId,
-            sessionId,
-          );
-
-          // 4c. Create payment transaction (INIT)
-          const payment = await this.createPaymentTransaction(tx, {
-            orderId: order.id,
-            amount: totals.total,
-            provider: dto.paymentMethod,
-            status: 'pending',
-          });
-
-          // 4d. Audit Trail: Event RECORDED
-          await tx.orderTimeline.create({
-            data: {
-              orderId: order.id,
-              action: 'ORDER_INITIATED',
-              description: `Order created with payment method ${dto.paymentMethod}`,
-              metadata: { idempotencyKey, version: 1 },
-            },
-          });
-
-          return { order, payment };
+      const result = await this.prisma.$transaction(async (tx) => {
+        const order = await this.createOrder(tx, {
+          userId,
+          sessionId: userId ? null : sessionId,
+          dto,
+          orderItemsData,
+          subTotal: totals.subtotal,
+          totalAmount: totals.total,
+          status: OrderStatusEnum.PENDING_PAYMENT,
+          paymentDeadline,
+          idempotencyKey,
+          exchangeRate,
+          displayCurrency: targetCurrency,
         });
 
-        // Step 5: Generate payment URL
-        let paymentUrl: string | null = null;
-        if (dto.paymentMethod !== 'VIETQR') {
-          try {
-            paymentUrl = await this.paymentService.generatePaymentUrl(
-              result.order.id,
-              result.order.code,
-              totals.total,
-              dto.paymentMethod,
-              dto.returnUrl,
-              dto.cancelUrl,
-            );
-          } catch (error) {
-            this.logger.error('Failed to initiate payment gateway', error);
-            await this.cancelOrderAndReleaseInventory(result.order.id, 'Payment initiation failed');
-            throw new BadRequestException('Failed to initiate payment gateway');
-          }
-        }
+        await this.inventoryService.reserve(
+          order.id,
+          allocations.map((a) => ({
+            ...a,
+            cartItemId: cart.items.find((i) => i.productVariantId === a.variantId)?.id,
+          })),
+          paymentDeadline,
+          tx,
+          userId,
+          sessionId,
+        );
 
-        // Step 6: Generate stateless Order Access Token (L8 Standard)
-        const orderAccessToken = await this.jwtService.signAsync(
-          { orderId: result.order.id, sub: 'order_access' },
-          {
-            secret: this.configService.get('JWT_CHECKOUT_SECRET'),
-            expiresIn: '1h',
+        const payment = await this.createPaymentTransaction(tx, {
+          orderId: order.id,
+          amount: totals.total,
+          provider: dto.paymentMethod,
+          status: 'pending',
+        });
+
+        await tx.orderTimeline.create({
+          data: {
+            orderId: order.id,
+            action: 'ORDER_INITIATED',
+            description: `Order created with payment method ${dto.paymentMethod}`,
+            metadata: { idempotencyKey, version: 1 },
           },
-        );
+        });
 
-        return this.buildOrderPaymentResponse(
-          result.order,
-          result.payment,
-          paymentUrl,
-          dto.paymentMethod === 'VIETQR',
-          orderAccessToken,
-        );
-      } catch (error) {
-        this.logger.error('Failed to create order with payment pipeline', error);
-        throw error;
+        return { order, payment };
+      });
+
+      // 5. External Interaction (Saga Step 2: Payment Gateway Integration)
+      let paymentUrl: string | null = null;
+      if (dto.paymentMethod !== PaymentMethodEnum.VIETQR) {
+        try {
+          paymentUrl = await this.paymentService.generatePaymentUrl(
+            result.order.id,
+            result.order.code,
+            totals.total,
+            dto.paymentMethod,
+            dto.returnUrl,
+            dto.cancelUrl,
+          );
+        } catch (error) {
+          this.logger.error(`[Saga] Payment Gateway failure for Order ${result.order.id}`, error);
+          // ⚠️ Saga Compensation: If external gateway fails, we MUST revert the DB transaction state
+          await this.cancelOrderAndReleaseInventory(result.order.id, 'Payment gateway unreachable');
+          throw new BadRequestException('Payment system currently unavailable. Order cancelled.');
+        }
       }
+
+      // 6. Completion (Saga Step 3: Access Control & Response)
+      const orderAccessToken = await this.jwtService.signAsync(
+        { orderId: result.order.id, sub: 'order_access' },
+        { secret: this.configService.get('JWT_CHECKOUT_SECRET'), expiresIn: '1h' },
+      );
+
+      return this.buildOrderPaymentResponse(
+        result.order,
+        result.payment,
+        paymentUrl,
+        dto.paymentMethod === PaymentMethodEnum.VIETQR,
+        orderAccessToken,
+      );
     });
   }
+
 
   async confirmOrder(orderId: string, tx?: Prisma.TransactionClient): Promise<void> {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
@@ -492,6 +425,15 @@ export class OrderPaymentService {
   }
 
   private calculateOrderTotals(items: any[], variants: any[], shippingMethodId?: string) {
+    const itemsForEngine = items.map((item) => {
+      const variant = variants.find((v) => v.id === item.productVariantId);
+      return { price: Number(variant.price), quantity: item.quantity };
+    });
+
+    const totals = this.priceEngine.calculateTotals({
+      items: itemsForEngine,
+    });
+
     const orderItemsData = items.map((item) => {
       const variant = variants.find((v) => v.id === item.productVariantId);
       const price = Number(variant.price);
@@ -510,15 +452,18 @@ export class OrderPaymentService {
       };
     });
 
-    const subtotal = orderItemsData.reduce((sum, item) => sum + item.totalLine, 0);
-    const shippingFee = this.SHIPPING_FEE;
-    const total = subtotal + shippingFee;
-
     return {
       orderItemsData,
-      totals: { subtotal, total, shipping: shippingFee, tax: 0, discount: 0 },
+      totals: {
+        subtotal: totals.subtotal,
+        total: totals.total,
+        shipping: totals.shipping,
+        tax: totals.tax,
+        discount: totals.discount,
+      },
     };
   }
+
 
   private assertPricingInvariant(params: {
     subTotal: number;
@@ -624,13 +569,7 @@ export class OrderPaymentService {
     });
   }
 
-  private generateCartHash(items: any[]): string {
-    const sortedItems = [...items].sort((a, b) =>
-      a.productVariantId.localeCompare(b.productVariantId),
-    );
-    const content = sortedItems.map((i) => `${i.productVariantId}:${i.quantity}`).join('|');
-    return createHash('sha256').update(content).digest('hex');
-  }
+
 
   private buildOrderPaymentResponse(
     order: any,

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { seedInventory } from './inventory';
 import { seedCRM } from './crm';
+import { seedAttributes } from './attributes';
 
 export interface DemoSeedScript {
   name: string;
@@ -9,19 +10,22 @@ export interface DemoSeedScript {
 
 export const demoSeeds: DemoSeedScript[] = [
   {
+    name: 'Semantic Attribute Registry',
+    run: seedAttributes,
+  },
+  {
     name: 'Jewelry Catalog (100 Products Factory)',
     run: async (prisma) => {
-      // Import dynamically to avoid loading dev dependencies or large mocks in prod if possible
       const { seedCatalog } = await import('./catalog');
       await seedCatalog(prisma);
     },
   },
   {
-    name: 'Customer Relationship Management (100 Customers, 500 Orders)',
-    run: seedCRM,
-  },
-  {
     name: 'Stock Allocation',
     run: seedInventory,
+  },
+  {
+    name: 'Customer Relationship Management (1,000 Customers, 2,000 Orders Simulation)',
+    run: seedCRM,
   },
 ];

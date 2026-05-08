@@ -36,7 +36,8 @@ export class AdminUserController {
 
   @Get()
   @UseGuards(PaginationRateLimitGuard)
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
+
   @ApiOperation({ summary: 'Lấy danh sách user quản trị (phân trang)' })
   @ApiResponse({ status: 200, description: 'Danh sách user' })
   @Permission(PERMISSIONS.AUTH.USER.READ)

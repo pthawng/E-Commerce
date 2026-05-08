@@ -14,30 +14,86 @@ export async function seedInventory(prisma: PrismaClient) {
     return;
   }
 
-  let count = 0;
-  for (const v of variants) {
-    // Allocate stock in one warehouse
-    const wh = warehouses[v.sku.length % warehouses.length];
-
-    // Safety check: Only seed if inventory record doesn't exist
-    // This prevents overwriting real production/dev stock values
-    const existing = await prisma.inventoryItem.findUnique({
-      where: { productVariantId_warehouseId: { productVariantId: v.id, warehouseId: wh.id } },
+  // 1. Ensure each warehouse has at least one location
+  const locationsMap = new Map<string, string>(); // warehouseId -> locationId
+  for (const wh of warehouses) {
+    const existingLoc = await prisma.inventoryLocation.findFirst({
+      where: { warehouseId: wh.id },
     });
 
-    if (!existing) {
-      const quantity = 100; // Fixed default for demo
-      await prisma.inventoryItem.create({
+    if (existingLoc) {
+      locationsMap.set(wh.id, existingLoc.id);
+    } else {
+      const loc = await prisma.inventoryLocation.create({
         data: {
-          productVariantId: v.id,
           warehouseId: wh.id,
-          quantity,
-          shelfLocation: 'DEMO-' + (count % 100),
+          name: 'Main Shelf A-1',
+          code: `LOC-${wh.code}-A1`,
+          type: 'SHELF',
         },
       });
-      count++;
+      locationsMap.set(wh.id, loc.id);
+      logger.log(`📍 Created default location for ${wh.code}`);
     }
   }
 
-  logger.log(`✅ Initialized stock for ${count} new demo items.`);
+  let count = 0;
+  let physicalCount = 0;
+
+  for (const v of variants) {
+    // Allocate stock in one warehouse based on SKU
+    const wh = warehouses[v.sku.length % warehouses.length];
+    const locId = locationsMap.get(wh.id);
+
+    // 2. Upsert InventoryItem (Aggregate Stock)
+    const quantity = 50; // Fixed default for demo
+    await prisma.inventoryItem.upsert({
+      where: {
+        productVariantId_warehouseId: {
+          productVariantId: v.id,
+          warehouseId: wh.id,
+        },
+      },
+      update: {
+        quantity: { increment: quantity }, // Add more stock if it exists
+      },
+      create: {
+        productVariantId: v.id,
+        warehouseId: wh.id,
+        quantity,
+        shelfLocation: 'DEMO-' + (count % 100),
+      },
+    });
+    count++;
+
+    // 3. Create some PhysicalItems (Serialized Stock) - 3 per variant
+    const numPhysical = 3;
+    for (let j = 0; j < numPhysical; j++) {
+      const serialNumber = `SN-${v.sku}-${j}`;
+      
+      // Check if serial exists to prevent unique constraint error
+      const existingPhysical = await prisma.physicalItem.findUnique({
+        where: { serialNumber }
+      });
+
+      if (!existingPhysical) {
+        await prisma.physicalItem.create({
+          data: {
+            productVariantId: v.id,
+            locationId: locId,
+            serialNumber,
+            status: 'AVAILABLE',
+            metadata: {
+              condition: 'New',
+              source: 'Demo Seed'
+            }
+          }
+        });
+        physicalCount++;
+      }
+    }
+  }
+
+  logger.log(`✅ Initialized aggregate stock for ${count} items.`);
+  logger.log(`✅ Created ${physicalCount} serialized physical items.`);
 }

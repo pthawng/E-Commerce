@@ -73,7 +73,7 @@ const CollectionItem = ({
               dangerouslySetInnerHTML={{ __html: description || '' }}
             />
             <span className="inline-block font-body text-2xs uppercase tracking-ultra text-primary underline-expand pb-1">
-              {t.collection.viewDetails}
+              {t('common.actions.viewDetails')}
             </span>
           </div>
         </div>
@@ -91,7 +91,10 @@ export const CollectionSection = () => {
   const { t } = useTranslation();
 
   const { data: productsRes, isLoading } = useProducts({ limit: 6 });
-  const products = useMemo(() => productsRes?.data || [], [productsRes]);
+  const products = useMemo(() => {
+    if (!productsRes?.pages) return [];
+    return productsRes.pages.flatMap(page => page.items).slice(0, 6);
+  }, [productsRes]);
 
   return (
     <section id="collection" className="bg-background section-vertical">
@@ -110,7 +113,7 @@ export const CollectionSection = () => {
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
-            {t.collection.subtitle}
+            {t('shop.listing.subtitle')}
           </motion.p>
           <motion.h2
             className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-primary tracking-wide font-normal"
@@ -118,7 +121,7 @@ export const CollectionSection = () => {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.3, duration: 0.8 }}
           >
-            {t.collection.title}
+            {t('shop.listing.title')}
           </motion.h2>
           <motion.div
             className="h-px bg-primary/30 mx-auto mt-6 sm:mt-8"

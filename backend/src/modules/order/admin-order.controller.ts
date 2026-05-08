@@ -47,10 +47,17 @@ export class AdminOrderController {
     return this.orderPaymentService.adminCreateOrder(dto, user.userId);
   }
 
+  @Get('stats')
+  @Permission(PERMISSIONS.ORDER.READ)
+  @ApiOperation({ summary: 'Lấy thống kê tổng quan đơn hàng (Admin)' })
+  getStats() {
+    return this.orderService.getSummaryStats();
+  }
+
   @Get()
   @Permission(PERMISSIONS.ORDER.READ)
   @ApiOperation({ summary: 'Lấy tất cả đơn hàng (Admin)' })
-  findAll(@Query() dto: PaginationDto & { status?: string; customerId?: string; guestEmail?: string }) {
+  findAll(@Query() dto: PaginationDto & { status?: string; customerId?: string; guestEmail?: string; queue?: string }) {
     return this.orderService.findAllPaginated(dto);
   }
 

@@ -31,12 +31,14 @@ import {
 } from 'recharts';
 import { usePageHeader } from '@/shared/lib/PageHeaderContext';
 import { WidgetErrorBoundary } from '@/shared/ui/ErrorBoundary/WidgetErrorBoundary';
+import { useCurrencyConverter } from '@/shared/lib/hooks/useCurrencyConverter';
 
 const { Text, Title } = Typography;
 
 export const AnalyticsPage: React.FC = () => {
     const { t } = useTranslation() as any;
     const [range, setRange] = React.useState('30d');
+    const { convertAndFormat } = useCurrencyConverter();
 
     usePageHeader({
         title: t('analytics.title', { defaultValue: 'Analytics' }),
@@ -94,9 +96,8 @@ export const AnalyticsPage: React.FC = () => {
                                             {t(`analytics.metrics.${metricKey}`, { defaultValue: m.label })}
                                         </Text>
                                     }
-                                    value={m.value}
-                                    precision={metricKey === 'volume' ? 0 : 2}
-                                    prefix={m.prefix}
+                                    value={metricKey === 'volume' ? m.value : convertAndFormat(m.value)}
+                                    precision={metricKey === 'volume' ? 0 : undefined}
                                     valueStyle={{
                                         fontSize: '28px',
                                         fontFamily: 'Playfair Display, serif',
@@ -154,6 +155,7 @@ export const AnalyticsPage: React.FC = () => {
                                     boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                                 }}
                                 labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
+                                formatter={(value: any) => [convertAndFormat(value), t('analytics.metrics.revenue', { defaultValue: 'Revenue' })]}
                             />
                             <Area
                                 type="monotone"
@@ -227,7 +229,10 @@ export const AnalyticsPage: React.FC = () => {
                                     tick={{ fontSize: 10, fontWeight: 'bold' }}
                                     width={80}
                                 />
-                                <Tooltip cursor={{ fill: 'transparent' }} />
+                                <Tooltip 
+                                    cursor={{ fill: 'transparent' }} 
+                                    formatter={(value: any) => [convertAndFormat(value), t('analytics.customers.avg_clv', { defaultValue: 'Avg CLV' })]}
+                                />
                                 <Bar dataKey="avgClv" fill="#0e2258" radius={[0, 4, 4, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>

@@ -22,12 +22,16 @@ export type CategoryTreeNode = FlatCategory & { children: CategoryTreeNode[] };
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // TREE VIEW (optionally include inactive)
-  async findTree(includeInactive = false): Promise<CategoryTreeNode[]> {
+  async findTree(includeInactive = false, onlyPublic = false): Promise<CategoryTreeNode[]> {
+    const where: Prisma.CategoryWhereInput = {};
+    if (!includeInactive) where.isActive = true;
+    if (onlyPublic) where.isInternal = false;
+
     const categories = await this.prisma.category.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where,
       orderBy: [{ order: 'asc' }, { slug: 'asc' }],
     });
 

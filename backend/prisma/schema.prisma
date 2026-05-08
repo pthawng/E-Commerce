@@ -182,6 +182,7 @@ model Category {
   name         Json
   slug         String            @unique
   isActive     Boolean           @default(true)
+  isInternal   Boolean           @default(false)
   order        Int               @default(0)
   path         String?
   level        Int?

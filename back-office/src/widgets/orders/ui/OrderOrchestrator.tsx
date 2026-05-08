@@ -16,6 +16,7 @@ import {
 import { AlertOutlined, ClockCircleOutlined, CheckCircleOutlined, MoreOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import {
     OrderStatusEnum,
     ORDER_STATUS_CONFIG,
@@ -26,21 +27,40 @@ import {
     PaymentStatusEnum,
 } from '@/shared/types/order.types';
 import { OrderListItem } from '@/entities/order/api/orderApi';
+import type { TablePaginationConfig } from 'antd/es/table';
 
 const { Text } = Typography;
+
+dayjs.extend(relativeTime);
 
 interface OrderOrchestratorProps {
     orders: OrderListItem[];
     activeQueue: string;
     onQueueChange: (key: string) => void;
     isLoading: boolean;
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    onPaginationChange: (page: number, pageSize: number) => void;
     onViewOrder: (id: string) => void;
     onTransition: (id: string, status: OrderStatusEnum) => void;
     convertAndFormat: (val: number) => string;
 }
 
 export const OrderOrchestrator: React.FC<OrderOrchestratorProps> = memo(
-    ({ orders, activeQueue, onQueueChange, isLoading, onViewOrder, onTransition, convertAndFormat }) => {
+    ({
+        orders,
+        activeQueue,
+        onQueueChange,
+        isLoading,
+        currentPage,
+        pageSize,
+        totalItems,
+        onPaginationChange,
+        onViewOrder,
+        onTransition,
+        convertAndFormat,
+    }) => {
         const { t } = useTranslation() as any;
 
         const getUrgencySignal = (record: OrderListItem) => {
@@ -242,7 +262,16 @@ export const OrderOrchestrator: React.FC<OrderOrchestratorProps> = memo(
                     columns={columns}
                     rowKey="id"
                     loading={isLoading}
-                    pagination={{ pageSize: 15 }}
+                    pagination={{
+                        current: currentPage,
+                        pageSize,
+                        total: totalItems,
+                        showSizeChanger: true,
+                        pageSizeOptions: [15, 30, 50, 100],
+                    }}
+                    onChange={(pagination: TablePaginationConfig) => {
+                        onPaginationChange(pagination.current || 1, pagination.pageSize || pageSize);
+                    }}
                     onRow={record => ({
                         onClick: () => onViewOrder(record.id),
                         className: 'cursor-pointer hover:bg-gray-50/50 transition-colors',

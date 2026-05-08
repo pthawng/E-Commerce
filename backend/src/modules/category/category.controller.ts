@@ -32,7 +32,7 @@ export class CategoryController {
   @ApiOperation({ summary: 'Lấy tree danh mục' })
   @ApiResponse({ status: 200, description: 'Danh sách danh mục dạng cây' })
   findTree(@Query() query: CategoryTreeQueryDto) {
-    return this.categoryService.findTree(query.includeInactive);
+    return this.categoryService.findTree(query.includeInactive, true);
   }
 
   // GET BY SLUG
