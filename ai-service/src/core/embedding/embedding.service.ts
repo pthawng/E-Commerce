@@ -35,17 +35,26 @@ export class EmbeddingService {
   }
 
   async embed(payload: ProductEmbeddingPayload): Promise<number[]> {
-    const cached = this.cache.get(payload.id);
+    const input = this.buildInput(payload);
+    return this.embedText(input, payload.id, payload.id);
+  }
+
+  async embedText(input: string, cacheKey?: string, user?: string): Promise<number[]> {
+    const normalizedInput = sanitizeText(input);
+    if (!normalizedInput) {
+      throw new Error('Embedding input is required');
+    }
+
+    const cached = cacheKey ? this.cache.get(cacheKey) : undefined;
     if (cached) {
-      logInfo('embedding.cache_hit', { productId: payload.id });
+      logInfo('embedding.cache_hit', { cacheKey });
       return cached;
     }
 
-    const input = this.buildInput(payload);
     const startedAt = Date.now();
 
     const vector = await this.breaker.execute(() =>
-      withRetry(() => this.client.createEmbedding(input, payload.id)),
+      withRetry(() => this.client.createEmbedding(normalizedInput, user)),
     );
 
     const latencyMs = Date.now() - startedAt;
@@ -60,10 +69,12 @@ export class EmbeddingService {
       );
     }
 
-    this.cache.set(payload.id, vector);
+    if (cacheKey) {
+      this.cache.set(cacheKey, vector);
+    }
 
     logInfo('embedding.completed', {
-      productId: payload.id,
+      cacheKey,
       vectorLength: vector.length,
       latencyMs,
     });

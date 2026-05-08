@@ -9,6 +9,7 @@ import { ChevronDown, SlidersHorizontal, RefreshCw, ShoppingBag, Search, X } fro
 import { Layout } from "@/components/layout/Layout";
 import { useProducts } from "@/features/products/hooks/useProducts";
 import { useCategories } from "@/features/products/hooks/useCategories";
+import { useAiSearch } from "@/features/ai/hooks/useSearch";
 import { useStore } from "@/store/useStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { mapProductToCardProps, getLocalized } from "@/features/products/utils/productMapper";
@@ -32,8 +33,14 @@ export const CollectionsPage = () => {
 
     // Elite UX: Debounce search
     const debouncedSearch = useDebounce(searchTerm, 500);
+    const normalizedSearch = debouncedSearch.trim();
+    const isAiSearchActive = normalizedSearch.length > 0;
 
     const { data: categories } = useCategories();
+    const activeCategoryName = useMemo(() => {
+        const category = categories?.find((cat) => cat.id === activeCategory);
+        return category ? getLocalized(category.name, 'vi') : undefined;
+    }, [categories, activeCategory]);
 
     const {
         data,
@@ -46,12 +53,23 @@ export const CollectionsPage = () => {
     } = useProducts({
         limit: 12,
         categoryId: activeCategory || undefined,
-        search: debouncedSearch || undefined,
+        enabled: !isAiSearchActive,
+    });
+    const {
+        data: aiSearchResult,
+        isLoading: isAiSearchLoading,
+        isError: isAiSearchError,
+        refetch: refetchAiSearch,
+    } = useAiSearch({
+        query: normalizedSearch,
+        limit: 12,
+        category: activeCategoryName,
+        enabled: isAiSearchActive,
     });
 
     // Optimization: Incremental Memoization
     // We memoize product mapping at the page level to ensure O(1) cost per scroll/render
-    const allProducts = useMemo(() => {
+    const paginatedProducts = useMemo(() => {
         if (!data?.pages) return [];
 
         // This is still O(N) overall but stable during app life.
@@ -64,18 +82,35 @@ export const CollectionsPage = () => {
         );
     }, [data?.pages, language, currency, exchangeRatesUpdatedAt, formatPrice]);
 
+    const aiSearchProducts = useMemo(() => {
+        return (aiSearchResult?.items || []).map((item, index) => ({
+            id: item.productId,
+            variantId: item.productId,
+            name: item.name || '',
+            price: item.price !== undefined ? formatPrice(item.price) : '',
+            rawPrice: item.price ?? 0,
+            category: item.category || 'Luxury',
+            image: item.imageUrl || '',
+            slug: item.slug || item.productId,
+            isNew: false,
+            index,
+        }));
+    }, [aiSearchResult?.items, formatPrice]);
+
+    const allProducts = isAiSearchActive ? aiSearchProducts : paginatedProducts;
+
     // L7 Optimization: Automated Infinite Scroll
     const { targetRef: loadMoreRef } = useInfiniteScroll({
         onIntersect: () => {
             // Gate infinite scroll fire until initial page is back.
             // This prevents race conditions where the observer fires before the
             // query reset has cleared/loaded the first page of new filters.
-            if (data?.pages && data.pages.length > 0) {
+            if (!isAiSearchActive && data?.pages && data.pages.length > 0) {
                 fetchNextPage();
             }
         },
-        hasNextPage: !!hasNextPage,
-        isFetchingNextPage: isFetchingNextPage,
+        hasNextPage: !isAiSearchActive && !!hasNextPage,
+        isFetchingNextPage: !isAiSearchActive && isFetchingNextPage,
         rootMargin: '150px', // Only trigger when user is 150px from the sentinel
     });
 
@@ -83,11 +118,23 @@ export const CollectionsPage = () => {
     // P1-6 FIX: Use pages[0] for totalItems — the first page is the stable carrier of the
     // snapshot-consistent total count. lastPage shifts on every scroll and can be cursor-mode
     // which has no totalItems at all.
-    const rawTotalCount = data?.pages[0]?.meta?.totalItems ?? allProducts.length;
+    const rawTotalCount = isAiSearchActive
+        ? aiSearchProducts.length
+        : data?.pages[0]?.meta?.totalItems ?? allProducts.length;
 
     // Staff+ L9 Fix: Adjust count based on client-side filtered (broken) items
     // This ensures the label doesn't lie while the backend sync is in progress.
     const totalItemCount = Math.max(0, rawTotalCount - invalidProductIds.size);
+    const isGridLoading = isAiSearchActive ? isAiSearchLoading : isLoading;
+    const isGridError = isAiSearchActive ? isAiSearchError : isError;
+    const isLoadingMore = !isAiSearchActive && isFetchingNextPage;
+    const handleRetry = () => {
+        if (isAiSearchActive) {
+            refetchAiSearch();
+            return;
+        }
+        refetch();
+    };
 
     const handleFilterChange = (categoryId: string | null) => {
         setActiveCategory(categoryId);
@@ -173,19 +220,19 @@ export const CollectionsPage = () => {
                 {/* Grid Section */}
                 <Section className="pb-8 lg:pb-8 pt-8">
                     <Container>
-                        {isError ? (
+                        {isGridError ? (
                             <div className="py-20 flex justify-center text-center">
                                 <Alert className="max-w-md border-destructive/20 bg-destructive/5">
                                     <AlertTitle className="text-destructive font-display tracking-wide">{t('common.error')}</AlertTitle>
                                     <AlertDescription className="text-destructive/80 font-body text-sm mt-2">
                                         {t('common.actions.tryAgain')}
                                     </AlertDescription>
-                                    <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+                                    <Button variant="outline" size="sm" className="mt-4" onClick={handleRetry}>
                                         <RefreshCw className="mr-2 h-3 w-3" /> {t('shop.pdp.notFound.retry')}
                                     </Button>
                                 </Alert>
                             </div>
-                        ) : isLoading ? (
+                        ) : isGridLoading ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
                                 {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
                             </div>
@@ -208,7 +255,7 @@ export const CollectionsPage = () => {
 
                         {/* L7 Optimization: Invisible Pagination Trigger */}
                         <div ref={loadMoreRef} className="w-full flex items-center justify-center">
-                            {isFetchingNextPage && (
+                            {isLoadingMore && (
                                 <div className="flex items-center gap-3 py-4">
                                     <RefreshCw className="h-4 w-4 animate-spin text-gold" />
                                     <span className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">

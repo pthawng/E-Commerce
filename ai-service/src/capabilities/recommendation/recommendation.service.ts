@@ -12,7 +12,7 @@ export class RecommendationService {
     const startedAt = Date.now();
     const limit = clampLimit(query.limit);
     const vector = await this.vectorDb.getVector(query.productId);
-    const candidates = await this.vectorDb.search(vector, limit + 1, query.productId);
+    const candidates = await this.vectorDb.searchSimilar(vector, limit + 1, query.productId);
     const items = candidates
       .filter((candidate) => candidate.productId !== query.productId)
       .sort((left, right) => right.score - left.score)

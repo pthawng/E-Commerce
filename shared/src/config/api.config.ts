@@ -169,6 +169,8 @@ export const API_ENDPOINTS = {
 
   AI: {
     RECOMMENDATIONS: '/api/ai/recommendations',
+    SEARCH: '/api/ai/search',
+    CHAT: '/api/ai/chat',
   },
 } as const;
 

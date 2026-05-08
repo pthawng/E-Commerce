@@ -35,8 +35,10 @@ export async function handleHealthCheck(
       uptimeSeconds: Math.floor(process.uptime()),
       dependencies: {
         embeddingProvider: {
-          name: config.geminiApiKey ? 'gemini' : 'openai',
-          model: config.geminiApiKey ? config.geminiEmbeddingModel : config.openAiEmbeddingModel,
+          name: config.embeddingProvider,
+          model: config.embeddingProvider === 'gemini'
+            ? config.geminiEmbeddingModel
+            : config.openAiEmbeddingModel,
           circuitBreaker: circuitState,
         },
         vectorDb: {

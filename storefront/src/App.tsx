@@ -9,7 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ZodLocalizer } from "./components/i18n/ZodLocalizer";
 import { ScrollToAnchor } from "@/components/utils/ScrollToAnchor";
 import { ErrorBoundary } from "@/components/utils/ErrorBoundary";
-import { Loader2 } from "lucide-react";
+import { AiChatbot } from "@/features/ai-chat/AiChatbot";
 
 // Performance Optimization: Route-based code splitting
 const Index = lazy(() => import("@/pages/Index"));
@@ -29,6 +29,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const ProfileFeature = lazy(() => import("@/features/profile").then(m => ({ default: m.ProfileFeature })));
 const OrderHistory = lazy(() => import("@/features/profile/components/OrderHistory").then(m => ({ default: m.OrderHistory })));
 const OrderDetail = lazy(() => import("@/features/profile/components/OrderDetail").then(m => ({ default: m.OrderDetail })));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -67,35 +68,36 @@ const App = () => (
           <Sonner position="top-right" expand={true} richColors />
           <BrowserRouter>
             <ScrollToAnchor />
-              <Routes>
-                <Route path="/" element={<Suspense fallback={<RouteLoader />}><Index /></Suspense>} />
-                <Route path="/collections" element={<Suspense fallback={<RouteLoader />}><CollectionsPage /></Suspense>} />
-                <Route path="/product/:slug" element={<Suspense fallback={<RouteLoader />}><ProductDetailPage /></Suspense>} />
-                <Route path="/cart" element={<Suspense fallback={<RouteLoader />}><CartPage /></Suspense>} />
-                <Route path="/checkout" element={<Suspense fallback={<RouteLoader />}><CheckoutPage /></Suspense>} />
-                <Route path="/payment-result" element={<Suspense fallback={<RouteLoader />}><PaymentResultPage /></Suspense>} />
-                <Route path="/reset-password" element={<Suspense fallback={<RouteLoader />}><ResetPassword /></Suspense>} />
-                <Route path="/verify-email" element={<Suspense fallback={<RouteLoader />}><VerifyEmail /></Suspense>} />
-                <Route
-                  path="/account"
-                  element={
-                    <ProtectedRoute>
-                      <Suspense fallback={<RouteLoader />}><AccountPage /></Suspense>
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<Suspense fallback={<RouteLoader />}><ProfileFeature /></Suspense>} />
-                  <Route path="orders" element={<Suspense fallback={<RouteLoader />}><OrderHistory /></Suspense>} />
-                  <Route path="orders/:id" element={<Suspense fallback={<RouteLoader />}><OrderDetail /></Suspense>} />
-                  <Route path="saved" element={<div className="font-display italic text-2xl py-20 text-center text-primary/40">Saved Items Coming Soon</div>} />
-                </Route>
+            <Routes>
+              <Route path="/" element={<Suspense fallback={<RouteLoader />}><Index /></Suspense>} />
+              <Route path="/collections" element={<Suspense fallback={<RouteLoader />}><CollectionsPage /></Suspense>} />
+              <Route path="/product/:slug" element={<Suspense fallback={<RouteLoader />}><ProductDetailPage /></Suspense>} />
+              <Route path="/cart" element={<Suspense fallback={<RouteLoader />}><CartPage /></Suspense>} />
+              <Route path="/checkout" element={<Suspense fallback={<RouteLoader />}><CheckoutPage /></Suspense>} />
+              <Route path="/payment-result" element={<Suspense fallback={<RouteLoader />}><PaymentResultPage /></Suspense>} />
+              <Route path="/reset-password" element={<Suspense fallback={<RouteLoader />}><ResetPassword /></Suspense>} />
+              <Route path="/verify-email" element={<Suspense fallback={<RouteLoader />}><VerifyEmail /></Suspense>} />
+              <Route
+                path="/account"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<RouteLoader />}><AccountPage /></Suspense>
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Suspense fallback={<RouteLoader />}><ProfileFeature /></Suspense>} />
+                <Route path="orders" element={<Suspense fallback={<RouteLoader />}><OrderHistory /></Suspense>} />
+                <Route path="orders/:id" element={<Suspense fallback={<RouteLoader />}><OrderDetail /></Suspense>} />
+                <Route path="saved" element={<div className="font-display italic text-2xl py-20 text-center text-primary/40">Saved Items Coming Soon</div>} />
+              </Route>
 
-                <Route path="/privacy" element={<Suspense fallback={<RouteLoader />}><PrivacyPage /></Suspense>} />
-                <Route path="/terms" element={<Suspense fallback={<RouteLoader />}><TermsPage /></Suspense>} />
+              <Route path="/privacy" element={<Suspense fallback={<RouteLoader />}><PrivacyPage /></Suspense>} />
+              <Route path="/terms" element={<Suspense fallback={<RouteLoader />}><TermsPage /></Suspense>} />
 
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<Suspense fallback={<RouteLoader />}><NotFound /></Suspense>} />
-              </Routes>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<Suspense fallback={<RouteLoader />}><NotFound /></Suspense>} />
+            </Routes>
+            <AiChatbot />
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
@@ -104,4 +106,3 @@ const App = () => (
 );
 
 export default App;
-

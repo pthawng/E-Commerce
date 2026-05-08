@@ -2,6 +2,8 @@ import { AiHttpError } from '../../common/errors';
 import { requestJson } from '../../common/http';
 import { logInfo } from '../../common/logger';
 import {
+  ProductSearchFilters,
+  ProductSearchResult,
   ProductEmbeddingPayload,
   RecommendationResult,
   VectorRecord,
@@ -23,6 +25,11 @@ interface QdrantRetrieveResponse {
     payload?: ProductEmbeddingPayload;
     vector?: number[] | { default?: number[] };
   }>;
+}
+
+export interface QdrantSearchOptions {
+  excludeProductId?: string;
+  filters?: ProductSearchFilters;
 }
 
 export class QdrantClient {
@@ -121,8 +128,14 @@ export class QdrantClient {
     throw new AiHttpError(`Vector not found for product ${productId}`, 404);
   }
 
-  async search(vector: number[], limit: number, excludeProductId?: string): Promise<RecommendationResult[]> {
+  async search(
+    vector: number[],
+    limit: number,
+    options: QdrantSearchOptions = {},
+  ): Promise<ProductSearchResult[]> {
     await this.ensureCollection();
+
+    const filter = buildSearchFilter(options);
 
     const response = await requestJson<QdrantSearchResponse>(this.queryUrl(), {
       method: 'POST',
@@ -131,20 +144,7 @@ export class QdrantClient {
       body: JSON.stringify({
         query: vector,
         limit,
-        filter: {
-          ...(excludeProductId
-            ? {
-                must_not: [
-                  {
-                    key: 'id',
-                    match: {
-                      value: excludeProductId,
-                    },
-                  },
-                ],
-              }
-            : {}),
-        },
+        ...(filter ? { filter } : {}),
         with_payload: true,
         with_vector: false,
       }),
@@ -159,6 +159,14 @@ export class QdrantClient {
       category: point.payload?.category,
       price: point.payload?.price,
     }));
+  }
+
+  async searchSimilar(
+    vector: number[],
+    limit: number,
+    excludeProductId?: string,
+  ): Promise<RecommendationResult[]> {
+    return this.search(vector, limit, { excludeProductId });
   }
 
   async getPayload(productId: string): Promise<ProductEmbeddingPayload | null> {
@@ -196,4 +204,60 @@ export class QdrantClient {
       ...(this.apiKey ? { 'api-key': this.apiKey } : {}),
     };
   }
+}
+
+function buildSearchFilter(options: QdrantSearchOptions) {
+  const must: unknown[] = [];
+  const mustNot: unknown[] = [];
+  const filters = options.filters;
+
+  if (options.excludeProductId) {
+    mustNot.push({ has_id: [options.excludeProductId] });
+  }
+
+  if (filters?.isActive !== undefined) {
+    must.push({
+      key: 'isActive',
+      match: { value: filters.isActive },
+    });
+  }
+
+  if (filters?.category) {
+    must.push({
+      key: 'category',
+      match: { value: filters.category },
+    });
+  }
+
+  if (filters?.material) {
+    must.push({
+      key: 'material',
+      match: { value: filters.material },
+    });
+  }
+
+  if (filters?.gender) {
+    must.push({
+      key: 'gender',
+      match: { value: filters.gender },
+    });
+  }
+
+
+  if (filters?.minPrice !== undefined || filters?.maxPrice !== undefined) {
+    must.push({
+      key: 'price',
+      range: {
+        ...(filters.minPrice !== undefined ? { gte: filters.minPrice } : {}),
+        ...(filters.maxPrice !== undefined ? { lte: filters.maxPrice } : {}),
+      },
+    });
+  }
+
+  if (must.length === 0 && mustNot.length === 0) return undefined;
+
+  return {
+    ...(must.length ? { must } : {}),
+    ...(mustNot.length ? { must_not: mustNot } : {}),
+  };
 }

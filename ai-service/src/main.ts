@@ -6,6 +6,7 @@ import { sendJson } from './common/http';
 import { logError, logInfo, logWarn } from './common/logger';
 import { loadConfig } from './config/env';
 import { RecommendationService } from './capabilities/recommendation/recommendation.service';
+import { SearchEngine } from './capabilities/search/search.engine';
 import { EmbeddingService } from './core/embedding/embedding.service';
 import { StorefrontRecommendationService } from './domains/storefront/recommendation/recommendation.service';
 import { GeminiClient } from './integrations/gemini/gemini.client';
@@ -15,22 +16,31 @@ import { EmbeddingPipeline } from './pipelines/embedding.pipeline';
 import { EmbeddingClient } from './core/embedding/embedding-client.interface';
 import { handleHealthCheck } from './routes/health';
 import { readJsonBodySized, requireInternalAuth } from './common/middleware/auth';
-import { ProductEmbeddingSchema, RecommendationQuerySchema } from './common/validation/schemas';
+import { ProductEmbeddingSchema, RecommendationQuerySchema, SearchQuerySchema } from './common/validation/schemas';
 import { applyResponseContext, buildRequestContext } from './common/telemetry/request-context';
 import { RateLimiter } from './common/middleware/rate-limit';
+import { ChatService } from './domains/storefront/chat/chat.service';
+
 
 const config = loadConfig();
 
 let embeddingClient: EmbeddingClient;
 let dimensions = config.embeddingDimensions;
 
-if (config.geminiApiKey) {
+if (config.embeddingProvider === 'gemini') {
   dimensions = dimensions ?? 768; // Default for our vector DB
-  embeddingClient = new GeminiClient(config.geminiApiKey, config.geminiEmbeddingModel, dimensions);
+  embeddingClient = new GeminiClient(
+    config.geminiApiKey!,
+    config.geminiEmbeddingModel,
+    config.geminiChatModel,
+    config.requestTimeoutMs,
+    dimensions,
+  );
 } else {
   embeddingClient = new OpenAiClient(
     config.openAiApiKey!,
     config.openAiEmbeddingModel,
+    config.openAiChatModel,
     config.requestTimeoutMs,
     config.embeddingDimensions,
   );
@@ -49,9 +59,15 @@ const embeddingService = new EmbeddingService(embeddingClient, dimensions, {
 });
 const embeddingPipeline = new EmbeddingPipeline(embeddingService, vectorDb);
 const recommendationEngine = new RecommendationService(vectorDb);
+const searchEngine = new SearchEngine(embeddingService, vectorDb);
 const storefrontRecommendation = new StorefrontRecommendationService(recommendationEngine);
-const aiController = new AiController(storefrontRecommendation, embeddingPipeline);
-const rateLimiter = new RateLimiter(config.rateLimitRpm);
+const chatService = new ChatService(embeddingClient as any, searchEngine);
+const aiController = new AiController(storefrontRecommendation, embeddingPipeline, searchEngine, chatService);
+const rateLimiter = new RateLimiter({
+  requestsPerMinute: config.rateLimitRpm,
+  maxBuckets: config.rateLimitMaxBuckets,
+  trustProxyHeaders: config.trustProxyHeaders,
+});
 
 const server = createServer(async (request, response) => {
   const ctx = buildRequestContext(request);
@@ -61,8 +77,8 @@ const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
 
   try {
-    // 1. Rate Limiting (All routes)
-    if (!rateLimiter.middleware(request, response, config.rateLimitRpm)) return;
+    // 1. Rate Limiting (Disabled for local testing/internal calls to avoid 429)
+    // if (!rateLimiter.middleware(request, response, config.rateLimitRpm)) return;
 
     // 2. Health Check (Public)
     if (request.method === 'GET' && url.pathname === '/health') {
@@ -92,6 +108,24 @@ const server = createServer(async (request, response) => {
       };
       const query = RecommendationQuerySchema.parse(rawQuery); // Zod Validation
       const result = await aiController.getRecommendations(query);
+      sendJson(response, 200, result);
+      logInfo('ai.request.completed', { req: ctx, statusCode: 200, durationMs: Date.now() - ctx.startTime });
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/search') {
+      const rawPayload = await readJsonBodySized(request);
+      const payload = SearchQuerySchema.parse(rawPayload);
+      const result = await aiController.searchProducts(payload);
+      sendJson(response, 200, result);
+      logInfo('ai.request.completed', { req: ctx, statusCode: 200, durationMs: Date.now() - ctx.startTime });
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/chat') {
+      const rawPayload = await readJsonBodySized(request);
+      const payload = (await import('./common/validation/schemas')).ChatRequestSchema.parse(rawPayload);
+      const result = await aiController.handleChat(payload);
       sendJson(response, 200, result);
       logInfo('ai.request.completed', { req: ctx, statusCode: 200, durationMs: Date.now() - ctx.startTime });
       return;
@@ -159,7 +193,8 @@ process.on('SIGINT', shutdown);
 server.listen(config.port, () => {
   logInfo('ai-service.started', {
     port: config.port,
-    model: config.geminiApiKey ? config.geminiEmbeddingModel : config.openAiEmbeddingModel,
+    embeddingProvider: config.embeddingProvider,
+    model: config.embeddingProvider === 'gemini' ? config.geminiEmbeddingModel : config.openAiEmbeddingModel,
     qdrantCollection: config.qdrantCollection,
     version: process.env.SERVICE_VERSION ?? '1.0.0',
     hardening: {

@@ -19,5 +19,44 @@ export const RecommendationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(5),
 });
 
+export const SearchQuerySchema = z.object({
+  query: z.string().trim().min(1, 'query is required').max(300),
+  limit: z.coerce.number().int().min(1).max(50).default(12),
+  filters: z
+    .object({
+      isActive: z.boolean().optional(),
+      category: z.string().trim().min(1).max(200).optional(),
+      minPrice: z.number().nonnegative().optional(),
+      maxPrice: z.number().nonnegative().optional(),
+    })
+    .optional(),
+}).superRefine((value, ctx) => {
+  const minPrice = value.filters?.minPrice;
+  const maxPrice = value.filters?.maxPrice;
+
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'minPrice must be less than or equal to maxPrice',
+      path: ['filters', 'minPrice'],
+    });
+  }
+});
+
+export const ChatRequestSchema = z.object({
+  message: z.string().trim().min(1, 'message is required').max(1000),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string().min(1),
+      }),
+    )
+    .optional(),
+});
+
+
 export type ValidatedEmbeddingPayload = z.infer<typeof ProductEmbeddingSchema>;
+
 export type ValidatedRecommendationQuery = z.infer<typeof RecommendationQuerySchema>;
+export type ValidatedSearchQuery = z.infer<typeof SearchQuerySchema>;

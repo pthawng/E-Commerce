@@ -3,26 +3,49 @@ import { AiHttpError } from './errors';
 
 export async function requestJson<T>(
   url: string,
-  init: RequestInit & { timeoutMs?: number } = {},
+  init: RequestInit & { timeoutMs?: number; maxRetries?: number } = {},
 ): Promise<T> {
-  const { timeoutMs = 5000, headers, ...rest } = init;
-  const response = await fetch(url, {
-    ...rest,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    signal: rest.signal ?? AbortSignal.timeout(timeoutMs),
-  });
+  const { timeoutMs = 5000, maxRetries = 2, headers, ...rest } = init;
+  let lastError: any;
 
-  const rawText = await response.text();
-  const payload = rawText ? safeJsonParse(rawText) : null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        // Wait before retry (Exponential backoff simple version)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
 
-  if (!response.ok) {
-    throw new AiHttpError(`HTTP ${response.status} for ${url}`, response.status, payload ?? rawText);
+      const response = await fetch(url, {
+        ...rest,
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        signal: rest.signal ?? AbortSignal.timeout(timeoutMs),
+      });
+
+      const rawText = await response.text();
+      const payload = rawText ? safeJsonParse(rawText) : null;
+
+      if (!response.ok) {
+        const error = new AiHttpError(`HTTP ${response.status} for ${url}`, response.status, payload ?? rawText);
+        
+        // Retry only on 503 (Service Unavailable) or 429 (Rate Limit)
+        if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
+          lastError = error;
+          continue;
+        }
+        throw error;
+      }
+
+      return payload as T;
+    } catch (err) {
+      lastError = err;
+      if (attempt === maxRetries) throw err;
+    }
   }
-
-  return payload as T;
+  
+  throw lastError;
 }
 
 export async function readJsonBody<T>(request: IncomingMessage): Promise<T> {

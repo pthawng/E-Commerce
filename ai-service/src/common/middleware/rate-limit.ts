@@ -3,33 +3,47 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 interface TokenBucket {
   tokens: number;
   lastRefill: number;
+  lastSeen: number;
 }
 
-/**
- * In-memory token bucket rate limiter per IP.
- * FAANG standard: shed load at the edge, never let bad callers starve good ones.
- */
+interface RateLimiterOptions {
+  requestsPerMinute: number;
+  maxBuckets?: number;
+  trustProxyHeaders?: boolean;
+}
+
 export class RateLimiter {
   private readonly buckets = new Map<string, TokenBucket>();
   private readonly maxTokens: number;
-  private readonly refillRateMs: number; // ms per token
+  private readonly refillRateMs: number;
+  private readonly maxBuckets: number;
+  private readonly trustProxyHeaders: boolean;
+  private nextCleanupAt = 0;
 
-  constructor(requestsPerMinute: number) {
-    this.maxTokens = requestsPerMinute;
-    this.refillRateMs = 60_000 / requestsPerMinute;
+  constructor(options: RateLimiterOptions) {
+    this.maxTokens = Math.max(1, Math.floor(options.requestsPerMinute));
+    this.refillRateMs = 60_000 / this.maxTokens;
+    this.maxBuckets = options.maxBuckets ?? 10_000;
+    this.trustProxyHeaders = options.trustProxyHeaders ?? false;
   }
 
   isAllowed(ip: string): boolean {
     const now = Date.now();
+    this.cleanup(now);
+
     let bucket = this.buckets.get(ip);
 
     if (!bucket) {
-      bucket = { tokens: this.maxTokens - 1, lastRefill: now };
+      if (this.buckets.size >= this.maxBuckets) {
+        this.evictOldestBucket();
+      }
+
+      bucket = { tokens: this.maxTokens - 1, lastRefill: now, lastSeen: now };
       this.buckets.set(ip, bucket);
       return true;
     }
 
-    // Refill tokens based on elapsed time
+    bucket.lastSeen = now;
     const elapsed = now - bucket.lastRefill;
     const refill = Math.floor(elapsed / this.refillRateMs);
     if (refill > 0) {
@@ -50,10 +64,7 @@ export class RateLimiter {
     response: ServerResponse,
     requestsPerMinute: number,
   ): boolean {
-    const ip =
-      (request.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ??
-      request.socket.remoteAddress ??
-      'unknown';
+    const ip = this.getClientIp(request);
 
     if (!this.isAllowed(ip)) {
       const retryAfter = Math.ceil(this.refillRateMs / 1000);
@@ -69,5 +80,45 @@ export class RateLimiter {
       return false;
     }
     return true;
+  }
+
+  private getClientIp(request: IncomingMessage): string {
+    if (this.trustProxyHeaders) {
+      const forwardedFor = request.headers['x-forwarded-for'];
+      const firstForwardedIp = typeof forwardedFor === 'string'
+        ? forwardedFor.split(',')[0]?.trim()
+        : undefined;
+      if (firstForwardedIp) return firstForwardedIp;
+    }
+
+    return request.socket.remoteAddress ?? 'unknown';
+  }
+
+  private cleanup(now: number): void {
+    if (now < this.nextCleanupAt) return;
+    this.nextCleanupAt = now + 60_000;
+
+    const staleAfterMs = 10 * 60_000;
+    for (const [ip, bucket] of this.buckets) {
+      if (now - bucket.lastSeen > staleAfterMs) {
+        this.buckets.delete(ip);
+      }
+    }
+  }
+
+  private evictOldestBucket(): void {
+    let oldestIp: string | undefined;
+    let oldestLastSeen = Number.POSITIVE_INFINITY;
+
+    for (const [ip, bucket] of this.buckets) {
+      if (bucket.lastSeen < oldestLastSeen) {
+        oldestIp = ip;
+        oldestLastSeen = bucket.lastSeen;
+      }
+    }
+
+    if (oldestIp) {
+      this.buckets.delete(oldestIp);
+    }
   }
 }

@@ -76,4 +76,5 @@ export interface ProductParams {
     categoryId?: string;
     isFeatured?: boolean;
     cursor?: string; // NEW: Base64 cursor
+    enabled?: boolean;
 }

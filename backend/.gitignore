@@ -70,3 +70,18 @@ generated/prisma/
 
 # Sandbox
 /scripts/sandbox/
+
+# Temporary diagnostic scripts
+check_*.js
+scan_*.js
+hunt_*.js
+simulate_*.js
+find_*.js
+verify_*.js
+debug_*.js
+test_*.js
+query_*.js
+get_*.js
+list_*.js
+count_*.js
+clean_*.js

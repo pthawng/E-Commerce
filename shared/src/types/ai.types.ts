@@ -34,3 +34,21 @@ export interface RecommendationResponse {
   source: 'ai' | 'fallback';
   cached: boolean;
 }
+
+export interface AiSearchResult {
+  productId: string;
+  score: number;
+  slug?: string;
+  imageUrl?: string;
+  name?: string;
+  category?: string;
+  price?: number;
+}
+
+export interface AiSearchResponse {
+  query: string;
+  items: AiSearchResult[];
+  source: 'ai' | 'fallback';
+  cached: boolean;
+  latencyMs: number;
+}

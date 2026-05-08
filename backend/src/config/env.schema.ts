@@ -74,6 +74,8 @@ export const envSchema = z.object({
   AI_SERVICE_URL: z.string().url().default('http://localhost:4100'),
   AI_QUERY_TIMEOUT_MS: z.coerce.number().default(500),
   AI_EMBED_TIMEOUT_MS: z.coerce.number().default(3000),
+  AI_SEARCH_TIMEOUT_MS: z.coerce.number().default(800),
+  AI_SEARCH_CACHE_TTL_MS: z.coerce.number().default(120000),
   AI_RECOMMENDATION_CACHE_TTL_MS: z.coerce.number().default(600000),
 
   // Operational Hardening
