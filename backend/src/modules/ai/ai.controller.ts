@@ -1,6 +1,8 @@
 import { Public } from '@common/decorators/public.decorator';
 import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { AiChatDto } from './dto/ai-chat.dto';
 import { AiService } from './ai.service';
 
 @ApiTags('ai')
@@ -60,13 +62,10 @@ export class AiController {
 
   @Post('chat')
   @Public()
+  @Throttle({ strict: { limit: 15, ttl: 60000 } })
   @ApiOperation({ summary: 'Interact with the AI chatbot' })
   @ApiResponse({ status: 200, description: 'AI chatbot response' })
-  async chat(@Body() body: { message: string; history?: any[] }) {
-    if (!body.message?.trim()) {
-      throw new BadRequestException('message is required');
-    }
-
+  async chat(@Body() body: AiChatDto) {
     return this.aiService.chat(body.message, body.history);
   }
 }

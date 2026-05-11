@@ -1,5 +1,6 @@
-import { ChatClient } from '../../core/chat/chat-client.interface';
-import { logInfo } from '../../common/logger';
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import { CHAT_PROVIDER } from '../../core/llm/llm.module';
+import { ChatProvider } from '../../core/llm/llm-provider.interface';
 
 export type UserIntent = 'PRODUCT_DISCOVERY' | 'ORDER_QUERY' | 'GENERAL_INQUIRY' | 'COMPARE_PRODUCTS';
 
@@ -17,8 +18,11 @@ export interface IntentAnalysis {
   confidence: number;
 }
 
+@Injectable()
 export class IntentClassifier {
-  constructor(private readonly chatClient: ChatClient) {}
+  private readonly logger = new Logger(IntentClassifier.name);
+
+  constructor(@Inject(CHAT_PROVIDER) private readonly chatClient: ChatProvider) {}
 
   async analyze(message: string): Promise<IntentAnalysis> {
     const prompt = `Analyze the following user message for a luxury jewelry store called "Ray Paradis" and extract the intent and entities.
@@ -49,16 +53,13 @@ Example Output:
         { role: 'user', content: prompt }
       ]);
 
-      // Simple JSON extraction from response string
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON found in response');
       
       const analysis = JSON.parse(jsonMatch[0]) as IntentAnalysis;
-      logInfo('intent.classified', { message, analysis });
-      
       return analysis;
     } catch (e) {
-      logInfo('intent.classification.failed', { message, error: String(e) });
+      this.logger.error(`Intent classification failed: ${e}`);
       return {
         intent: 'PRODUCT_DISCOVERY',
         entities: {},

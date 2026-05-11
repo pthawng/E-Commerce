@@ -5,6 +5,7 @@ describe('AiController', () => {
   const aiService = {
     getRecommendations: jest.fn(),
     searchProducts: jest.fn(),
+    chat: jest.fn(),
   };
   const controller = new AiController(aiService as any);
 

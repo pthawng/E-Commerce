@@ -38,7 +38,7 @@ export interface RecommendationResult {
 export interface RecommendationResponse {
   productId: string;
   items: RecommendationResult[];
-  source: 'ai' | 'fallback';
+  source: 'ai' | 'fallback' | 'ai-diversified';
   cached: boolean;
 }
 
@@ -76,7 +76,7 @@ export interface ProductSearchResult {
 export interface SearchResponse {
   query: string;
   items: ProductSearchResult[];
-  source: 'ai' | 'fallback';
+  source: 'ai' | 'fallback' | 'ai-hybrid';
   cached: boolean;
   latencyMs: number;
 }

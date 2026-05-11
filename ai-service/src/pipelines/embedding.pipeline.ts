@@ -1,7 +1,9 @@
+import { Injectable } from '@nestjs/common';
 import { ProductEmbeddingPayload, VectorRecord } from '../common/types/recommendation.types';
 import { EmbeddingService } from '../core/embedding/embedding.service';
 import { QdrantClient } from '../integrations/qdrant/qdrant.client';
 
+@Injectable()
 export class EmbeddingPipeline {
   constructor(
     private readonly embeddingService: EmbeddingService,
@@ -9,7 +11,6 @@ export class EmbeddingPipeline {
   ) {}
 
   async processProduct(product: ProductEmbeddingPayload): Promise<VectorRecord> {
-    // Extract additional metadata if missing
     if (!product.material) {
       product.material = extractMaterial(product.name, product.description);
     }
@@ -47,4 +48,3 @@ function extractGender(name: string, description?: string): string | undefined {
   if (text.includes('nữ') || text.includes('women')) return 'Women';
   return 'Unisex';
 }
-

@@ -1,5 +1,7 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { requestJson } from '../../common/http';
-import { EmbeddingClient } from '../../core/embedding/embedding-client.interface';
+import { ChatMessage, ChatProvider, EmbeddingProvider } from '../../core/llm/llm-provider.interface';
 
 interface GeminiEmbeddingResponse {
   embedding?: {
@@ -15,19 +17,21 @@ interface GeminiEmbeddingRequest {
   output_dimensionality?: number;
 }
 
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
+@Injectable()
+export class GeminiClient implements ChatProvider, EmbeddingProvider {
+  private readonly apiKey: string;
+  private readonly embeddingModel: string;
+  private readonly chatModel: string;
+  private readonly requestTimeoutMs: number;
+  private readonly dimensions: number;
 
-export class GeminiClient implements EmbeddingClient {
-  constructor(
-    private readonly apiKey: string,
-    private readonly modelName: string,
-    private readonly chatModelName: string,
-    private readonly requestTimeoutMs: number,
-    private readonly dimensions: number = 768,
-  ) {}
+  constructor(private readonly configService: ConfigService) {
+    this.apiKey = this.configService.get<string>('GEMINI_API_KEY')!;
+    this.embeddingModel = this.configService.get<string>('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001');
+    this.chatModel = this.configService.get<string>('GEMINI_CHAT_MODEL', 'gemini-flash-latest');
+    this.requestTimeoutMs = this.configService.get<number>('AI_REQUEST_TIMEOUT_MS', 5000);
+    this.dimensions = this.configService.get<number>('AI_EMBEDDING_DIMENSIONS', 768);
+  }
 
   async createEmbedding(input: string): Promise<number[]> {
     const request: GeminiEmbeddingRequest = {
@@ -52,7 +56,7 @@ export class GeminiClient implements EmbeddingClient {
     const chatMessages = messages.filter((m) => m.role !== 'system');
 
     const contents = chatMessages.map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
+      role: m.role === 'assistant' || m.role === 'model' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
 
@@ -74,7 +78,7 @@ export class GeminiClient implements EmbeddingClient {
 
     const result = await requestJson<any>(this.chatUrl(), {
       method: 'POST',
-      timeoutMs: this.requestTimeoutMs * 2, // Chat takes longer
+      timeoutMs: this.requestTimeoutMs * 2,
       headers: {
         'x-goog-api-key': this.apiKey,
       },
@@ -85,18 +89,16 @@ export class GeminiClient implements EmbeddingClient {
   }
 
   private embeddingUrl(): string {
-    const model = this.modelName.startsWith('models/')
-      ? this.modelName
-      : `models/${this.modelName}`;
+    const model = this.embeddingModel.startsWith('models/')
+      ? this.embeddingModel
+      : `models/${this.embeddingModel}`;
     return `https://generativelanguage.googleapis.com/v1beta/${model}:embedContent`;
   }
 
   private chatUrl(): string {
-    const model = this.chatModelName.startsWith('models/')
-      ? this.chatModelName
-      : `models/${this.chatModelName}`;
+    const model = this.chatModel.startsWith('models/')
+      ? this.chatModel
+      : `models/${this.chatModel}`;
     return `https://generativelanguage.googleapis.com/v1beta/${model}:generateContent`;
   }
-
 }
-
