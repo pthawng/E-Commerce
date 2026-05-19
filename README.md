@@ -1,3 +1,4 @@
+[ignoring loop detection]
 # 💍 Ray Paradis
 
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -10,49 +11,27 @@
 [![IaC](https://img.shields.io/badge/Terraform-v1.5+-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![Orchestration](https://img.shields.io/badge/Kubernetes-v1.28-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
 
-> **A production-ready, headless e-commerce engine engineered for luxury multi-variant catalog logic, hyper-concurrent flash-sale stock reservation, and AI-driven semantic recommendation search.**
+[English](#english) | [Tiếng Việt](#tiếng-việt)
 
 ---
 
-## 📖 Table of Contents
-1. [Overview](#-overview)
-2. [Core Capabilities](#-core-capabilities)
-3. [System Architecture](#-system-architecture)
-4. [Monorepo Workspace Layout](#-monorepo-workspace-layout)
-5. [Technology Matrix](#-technology-matrix)
-6. [Quick Start & Onboarding](#-quick-start--onboarding)
-7. [Core Engineering Decisions (Deep Dive)](#-core-engineering-decisions-deep-dive)
-8. [Interviewer's Guide: Code Walkthrough Paths](#-interviewers-guide-code-walkthrough-paths)
-9. [Documentation System](#-documentation-system)
+## English
 
----
+### 1. Overview
+**Ray Paradis** is a distributed, headless e-commerce platform engineered for the unique complexities of high-end jewelry retail (dynamic multi-variant matrices of metal, sizing, gem cut, and dynamically calculated pricing). It implements a **Modular Monolith core** optimized for high-concurrency checkouts, zero-trust authorization, sub-10ms cache retrieval, and an independent microservice for AI-powered semantic similarity recommendations.
 
-## 🧠 Overview
-
-**Ray Paradis** is a distributed, headless e-commerce platform designed to address the unique complexities of high-end jewelry retail (e.g. dynamic multi-variant combinations of metal, sizing, gem cut, and dynamic pricing). 
-
-Unlike traditional monolith e-commerce systems, Ray Paradis uses a **Modular Monolith core** optimized for high-concurrency checkout security, zero-trust authorization, sub-10ms cache checking, and an independent microservice for AI-powered semantic similarity recommendation loops.
-
----
-
-## ✨ Core Capabilities
-
-* **🔒 Atomic Stock Governance**: Row-level locks (`SELECT FOR UPDATE NOWAIT`) combined with an async outbox queue prevent database connection hangs and overselling under high concurrency.
-* **⚡ Active Authorization Caching**: User RBAC/ABAC role trees are flattened at login and cached inside Redis, cutting verification latency from ~50ms (PostgreSQL join) to **<0.5ms** (Redis read) on every API request.
+### 2. Core Capabilities
+* **🔒 Atomic Stock Governance**: Row-level locks (`SELECT FOR UPDATE NOWAIT`) combined with an async outbox queue prevent database hangs and double-selling under high concurrency.
+* **⚡ Active Authorization Caching**: User RBAC/ABAC role trees are flattened and cached inside Redis, reducing validation latency from ~50ms (PostgreSQL join) to **<0.5ms** on every request.
 * **🔄 Idempotent Payment Webhooks**: Replay-attack protection for VNPay and PayPal callbacks using unique transaction states and JWT `jti` (JWT ID) checking.
-* **🛍️ Headless Storefront**: Feature-Sliced Design (FSD) React client built to eliminate global React Suspense waterfalls, optimizing Core Web Vitals (LCP, FID) and maintaining 60fps micro-interactions.
-* **🧠 AI Embedding Search**: High-dimensional vector generation via Google Gemini API (`gemini-embedding-2`) mapped into a Qdrant Vector Database for fast cosine-similarity product recommendations.
+* **🛍️ Headless Storefront**: Feature-Sliced Design (FSD) React client built to eliminate suspense waterfalls and optimize Core Web Vitals (LCP, FID).
+* **🧠 AI Embedding Search**: High-dimensional vector generation via Google Gemini API (`gemini-embedding-2`) mapped into a Qdrant Vector Database for similarity search.
 
----
-
-## 🧩 System Architecture
-
-The core transaction processing engine is built as a Modular Monolith in NestJS. Auxiliary heavy-computation engines (like vector retrieval) are decoupled into isolated services.
-
+### 3. System Architecture
 ```mermaid
 graph TD
     Client[Storefront / Back-Office] -->|HTTPS Requests + Trace Context| Gateway[NestJS Core API Gateway]
-    Gateway -->|Redis distributed lock / ABAC cache| Redis[(Redis Caching Layer)]
+    Gateway -->|Redis lock / ABAC cache| Redis[(Redis Caching Layer)]
     Gateway -->|ACID Transactions| PostgreSQL[(PostgreSQL Database)]
     Gateway -->|Internal Auth Token| AIService[NestJS AI Service]
     
@@ -62,12 +41,7 @@ graph TD
     end
 ```
 
----
-
-## 📂 Monorepo Workspace Layout
-
-Managed via NPM Workspaces to maintain strict module borders and universal data models:
-
+### 4. Monorepo Workspace Layout
 ```text
 ├── 📂 backend         # @ray-paradis/backend: NestJS Core API, state-machine, & database migrations
 ├── 📂 storefront      # @ray-paradis/storefront: React consumer SPA (Vite + TailwindCSS + TanStack Query)
@@ -78,10 +52,7 @@ Managed via NPM Workspaces to maintain strict module borders and universal data 
 └── 📂 docs            # Standardized system design, sequence flows, and runbooks
 ```
 
----
-
-## 🛠️ Technology Matrix
-
+### 5. Technology Matrix
 | Workspace | Technology Stack | Purpose / Boundary |
 | :--- | :--- | :--- |
 | **`backend`** | NestJS, Node.js, Prisma ORM, PostgreSQL, Redis, BullMQ | Commerce core database logic, transactions, state-machine, webhook endpoints. |
@@ -91,18 +62,7 @@ Managed via NPM Workspaces to maintain strict module borders and universal data 
 | **`shared`** | TypeScript, Zod | Type safety, validations, and DTO definitions shared between all front/back workspaces. |
 | **`infra`** | Terraform, Kubernetes, Docker, Helm, AWS | Infrastructure as Code (VPC, private subnetting) & automated scaling deployments. |
 
----
-
-## ⚡ Quick Start & Onboarding
-
-### 1. Pre-requisites
-Ensure you have the following installed on your host system:
-* Node.js `v20+` & NPM `v9+`
-* Docker Engine & Docker Compose
-
-### 2. Dev Environment Boot
-Follow these steps to boot up database dependencies, run migrations, and launch local servers:
-
+### 6. Quick Start & Onboarding
 ```bash
 # Clone and enter the repository
 git clone https://github.com/your-username/ray-paradis.git
@@ -123,73 +83,106 @@ cd ..
 # 4. Boot all workspaces in development mode
 npm run dev --workspaces
 ```
+* Core Backend API: `http://localhost:4000`
+* Vite Storefront: `http://localhost:5173`
+* Operations Back-Office: `http://localhost:3000`
 
-* **Core Backend API**: Runs on `http://localhost:4000`
-* **Vite Storefront**: Runs on `http://localhost:5173`
-* **Operations Back-Office**: Runs on `http://localhost:3000`
-* **Qdrant Dashboard**: Runs on `http://localhost:6333/dashboard`
+### 7. Core Engineering Decisions (Deep Dive)
+* **Modular Monolith core**: Keeps modules strictly isolated by NestJS Dependency Injection. Prisma Query Extensions throw database-level exceptions if outside controllers try to query databases directly bypassing Services.
+* **Nowait DB Reservation**: Executes `SELECT FOR UPDATE NOWAIT` on PostgreSQL rows. An exponential backoff helper `withRetry` retries lock acquisitions up to 5 times.
+* **Transactional Outbox**: Decouples orders from inventory events using `DomainEventOutbox` and BullMQ background workers to maintain eventual consistency.
+* **Active Authorization Cache**: Flattens roles at login and caches them in Redis to resolve privileges in under **0.5ms**.
+* **AI Vector Resilience**: Protects Google Gemini calls with local **LRU Cache**, **Token Bucket Rate Limiter**, and **3-State Circuit Breaker** to prevent cascading failures.
 
----
-
-## 🚀 Core Engineering Decisions (Deep Dive)
-
-### 1. Pragmatic Modular Monolith
-To prevent unnecessary network overhead and distributed transaction (Saga) patterns in early scaling phases, we implement a **Modular Monolith** using **NestJS**. Domains like `Order` and `Inventory` remain strictly isolated by NestJS Dependency Injection. An internal `Prisma Query Extension` checks execution contexts dynamically, throwing database-level exceptions if one module attempts to bypass services and write directly to another module's database tables.
-
-### 2. High-Concurrency Stock Locking
-To handle flash-sales for luxury jewelry:
-* **Pre-Check Cache Lock**: Decrements SKU values atomically in Redis (`DECRBY`) before touching database transactions. If the Redis value goes below zero, the request fails fast.
-* **Nowait DB Reservation**: Executes `SELECT FOR UPDATE NOWAIT` on PostgreSQL rows. Instead of queueing requests (which spikes CPU usage and exhausts database pools), the transaction fails fast upon collision.
-* **Exponential Backoff**: A `withRetry` helper catches database lock failures and retries up to 5 times with growing intervals to resolve lock contentions smoothly.
-
-### 3. Event-Driven Domain Decoupling
-Rather than maintaining active database transactions that lock both `Order` and `InventoryItem` tables during checkout, we use the **Transactional Outbox Pattern** (`DomainEventOutbox`). When an order is created, an event is written to the Outbox table in the same database transaction. A separate background worker processes this queue, maintaining **Eventual Consistency** between domains and boosting checkout write speeds.
-
-### 4. Active Authorization Cache
-Querying user roles, access matrices, and permissions requires joining 4+ relational tables in Postgres (Users, Roles, Permissions, etc.). To bypass this tax on every API call:
-* The entire permission tree is flattened at login and cached inside a Redis in-memory lookup map.
-* API authorization checks complete in under **0.5ms**, avoiding database queries entirely.
-* A pattern-based invalidation (`DEL session:powers:*`) flushes the cache if roles are changed by an administrator.
-
-### 5. AI Vector Resilience
-The embedding service (`ai-service`) translates catalog text into 768-dimensional vectors using Google Gemini API and stores them in Qdrant. Because external API quotas are highly volatile:
-* We deploy a custom in-memory **LRU Cache** to save generated vectors.
-* An internal **Token Bucket Rate Limiter** limits client sync requests.
-* Calls to Gemini are protected by a **3-State Circuit Breaker** and **Exponential Backoff Retries** to prevent cascading failures if the AI API suffers an outage.
-
-### 6. Full-Stack Tracing & Correlation
-To troubleshoot performance drops in production, a `traceparent` (W3C Trace Context) and `x-correlation-id` header is generated in the storefront Axios interceptor and forwarded to the backend. It propagates through NestJS middlewares to SQL queries and AI logs, allowing end-to-end tracing across services.
+### 8. Interviewer's Guide: Key Code Paths
+1. **Transactional Outbox**: [`backend/src/modules/order/order.service.ts`](./backend/src/modules/order/order.service.ts)
+2. **Distributed Locks**: [`backend/src/modules/infra/distributed-lock.service.ts`](./backend/src/modules/infra/distributed-lock.service.ts)
+3. **AI Integration & CB**: [`ai-service/src/core/embedding/embedding.service.ts`](./ai-service/src/core/embedding/embedding.service.ts)
+4. **Correlation Tracing**: [`storefront/src/services/apiClient.ts`](./storefront/src/services/apiClient.ts) & [`backend/src/common/middlewares/correlation-id.middleware.ts`](./backend/src/common/middlewares/correlation-id.middleware.ts)
 
 ---
 
-## 🧭 Interviewer's Guide: Key Code Paths
+## Tiếng Việt
 
-To review the implementation of the design decisions outlined above, check the following source files:
+### 1. Tổng quan
+**Ray Paradis** là một nền tảng thương mại điện tử headless (không đầu), phân tán, được thiết kế cho các nghiệp vụ trang sức xa xỉ phức tạp (cấu hình biến thể đa chiều gồm chất liệu, size nhẫn, giác cắt đá, và cách tính giá động). Dự án phát triển **lõi Modular Monolith** tối ưu cho việc thanh toán đồng thời cao, phân quyền bảo mật zero-trust, phản hồi cache dưới 10ms và một microservice độc lập xử lý gợi ý sản phẩm ngữ nghĩa qua AI.
 
-1. **Transactional Outbox & Domain Decoupling**  
-   📄 [`backend/src/modules/order/order.service.ts`](./backend/src/modules/order/order.service.ts) - *Outbox record generation in `transitionTo` and async decoupling in `processInventoryDeduction`.*
+### 2. Các chức năng chính
+* **🔒 Quản trị tồn kho Atomic**: Áp dụng cơ chế khóa dòng Postgres (`SELECT FOR UPDATE NOWAIT`) kết hợp hàng đợi sự kiện outbox bất đồng bộ để tránh treo DB và bán vượt tồn kho dưới tải cao.
+* **⚡ Phân quyền hiệu năng cao**: Toàn bộ danh sách quyền hạn được làm phẳng và lưu ở Redis, giảm độ trễ xác thực từ ~50ms (SQL Join) xuống **<0.5ms** trên mỗi request.
+* **🔄 Idempotent Payment Webhooks**: Chống tấn công lặp lại (replay attacks) cho các callback VNPay/PayPal bằng trạng thái giao dịch duy nhất và đối soát JWT `jti` (JWT ID).
+* **🛍️ Giao diện Headless**: Client React phát triển theo chuẩn thiết kế Feature-Sliced Design (FSD) loại bỏ hiện tượng giật lag màn hình và tối ưu hóa các chỉ số Core Web Vitals (LCP, FID).
+* **🧠 Tìm kiếm ngữ nghĩa AI**: Tự động chuyển siêu dữ liệu sản phẩm thành vector 768 chiều qua Google Gemini (`gemini-embedding-2`) và lưu vào Qdrant Vector DB để truy vấn gợi ý.
 
-2. **Distributed Locks & Concurrency Guards**  
-   📄 [`backend/src/modules/infra/distributed-lock.service.ts`](./backend/src/modules/infra/distributed-lock.service.ts) - *Redis NX/PX locking routines and cache decrement guards.*
+### 3. Kiến trúc hệ thống
+```mermaid
+graph TD
+    Client[Storefront / Back-Office] -->|HTTPS Requests + Trace Context| Gateway[NestJS Core API Gateway]
+    Gateway -->|Redis lock / ABAC cache| Redis[(Redis Caching Layer)]
+    Gateway -->|ACID Transactions| PostgreSQL[(PostgreSQL Database)]
+    Gateway -->|Internal Auth Token| AIService[NestJS AI Service]
+    
+    subgraph AI Engine
+        AIService -->|Embeddings Generation| Gemini[Google Gemini API]
+        AIService -->|Vector Storage & Search| Qdrant[(Qdrant Vector DB)]
+    end
+```
 
-3. **AI Integration, Circuit Breaker, & Retries**  
-   📄 [`ai-service/src/core/embedding/embedding.service.ts`](./ai-service/src/core/embedding/embedding.service.ts) - *Gemini embeddings integration protected by Circuit Breakers, LRU caches, and retry mechanisms.*
+### 4. Phân bổ thư mục monorepo
+```text
+├── 📂 backend         # @ray-paradis/backend: NestJS Core API, quản lý transaction & migrations
+├── 📂 storefront      # @ray-paradis/storefront: React consumer SPA (Vite + TailwindCSS + TanStack Query)
+├── 📂 back-office     # @ray-paradis/back-office: Giao diện quản trị & vận hành (React + Ant Design)
+├── 📂 ai-service      # @ray-paradis/ai-service: Microservice NestJS xử lý và đồng bộ vector AI
+├── 📂 shared          # @ecommerce/shared: Kiểu TypeScript, Zod schema dùng chung cho toàn bộ dự án
+├── 📂 infra           # Cơ sở hạ tầng IaC: AWS Terraform modules & Kubernetes manifests
+└── 📂 docs            # Tài liệu thiết kế hệ thống, sơ đồ tuần tự và kịch bản vận hành
+```
 
-4. **Distributed Correlation Tracing**  
-   📄 Client Interceptor: [`storefront/src/services/apiClient.ts`](./storefront/src/services/apiClient.ts)  
-   📄 Backend Middleware: [`backend/src/common/middlewares/correlation-id.middleware.ts`](./backend/src/common/middlewares/correlation-id.middleware.ts)
+### 5. Bảng công nghệ sử dụng
+| Workspace | Công nghệ sử dụng | Vai trò nghiệp vụ |
+| :--- | :--- | :--- |
+| **`backend`** | NestJS, Node.js, Prisma ORM, PostgreSQL, Redis, BullMQ | Lõi xử lý giao dịch thương mại, database migrations, webhook cổng thanh toán. |
+| **`storefront`** | React, Vite, TailwindCSS, Zustand, TanStack Query | Client mua sắm của khách hàng, tối ưu LCP/TTI, cache dữ liệu server riêng biệt. |
+| **`back-office`** | React, Vite, Ant Design | Giao diện vận hành đơn hàng, kho bãi và cấu hình quyền hạn cho nhân sự. |
+| **`ai-service`**| NestJS, Redis, BullMQ, Google Gemini API, Qdrant Vector DB | Xử lý ngầm tạo vector nhúng, lưu trữ vector DB và tối ưu quota gọi AI. |
+| **`shared`** | TypeScript, Zod | Định nghĩa DTOs, Zod schema dùng chung cho cả backend lẫn frontend. |
+| **`infra`** | Terraform, Kubernetes, Docker, Helm, AWS | Hạ tầng khai báo IaC (phân vùng mạng VPC) & cấu hình co giãn Pod K8s. |
 
-5. **Token Replay & Idempotency**  
-   📄 [`backend/src/modules/payment/services/idempotency.service.ts`](./backend/src/modules/payment/services/idempotency.service.ts) - *Webhook idempotency checks.*
+### 6. Hướng dẫn khởi chạy nhanh
+```bash
+# Clone và truy cập mã nguồn
+git clone https://github.com/your-username/ray-paradis.git
+cd ray-paradis
 
-6. **Client-side Authorization Security**  
-   📄 [`storefront/FRONTEND_SECURITY.md`](./storefront/FRONTEND_SECURITY.md) - *Detailed explanation of CSRF validation and session binding.*
+# 1. Khởi động PostgreSQL, Redis, và Qdrant local bằng Docker
+docker compose -f infra/docker-compose.dev.yml up -d
 
----
+# 2. Cài đặt các thư viện toàn hệ thống
+npm install
 
-## 📖 Documentation System
+# 3. Đồng bộ cấu trúc bảng và nạp dữ liệu mẫu
+cd backend
+npx prisma migrate dev
+npx prisma db seed
+cd ..
 
-This codebase is supported by a standardized, internal documentation portal located in `docs/`:
-* **Global Overview**: Read [`docs/README.md`](./docs/README.md) for navigation guides.
-* **System Design**: Learn about core components and design rules in [`docs/system/architecture.md`](./docs/system/architecture.md).
-* **Operational Runbooks**: Review recovery metrics and incident playbooks in [`docs/ops/runbooks/incident-response.md`](./docs/ops/runbooks/incident-response.md).
+# 4. Chạy toàn bộ workspaces ở chế độ phát triển (dev mode)
+npm run dev --workspaces
+```
+* Core Backend API: `http://localhost:4000`
+* Vite Storefront: `http://localhost:5173`
+* Operations Back-Office: `http://localhost:3000`
+
+### 7. Chi tiết quyết định kiến trúc
+* **Lõi Modular Monolith**: Độc lập hóa các module nghiệp vụ qua NestJS DI. Sử dụng Prisma Query Extension để tự động chặn các truy vấn sửa đổi database trực tiếp không qua tầng Service được quy định.
+* **Đặt chỗ tồn kho Nowait**: Thực thi `SELECT FOR UPDATE NOWAIT` trên dòng Postgres. Hỗ trợ cơ chế thử lại tự động `withRetry` tối đa 5 lần để xử lý xung đột khóa dòng.
+* **Domain Decoupling qua Outbox**: Phân tách luồng thanh toán và trừ kho thông qua bảng trung gian `DomainEventOutbox` và BullMQ worker chạy ngầm để bảo đảm tính nhất quán sau cùng.
+* **Cache phân quyền động**: Flatten danh sách phân quyền của User tại thời điểm đăng nhập và cache vào Redis giúp phân quyền thời gian thực chỉ mất **<0.5ms**.
+* **Độ bền bỉ của AI Pipeline**: Bảo vệ Gemini API hạn mức gọi bằng **LRU Cache**, bộ lọc tần suất **Token Bucket** và bộ ngắt mạch tự động **3-State Circuit Breaker** tránh sập hệ thống dây chuyền.
+
+### 8. Hướng dẫn đọc mã nguồn cho người phỏng vấn
+1. **Transactional Outbox**: [`backend/src/modules/order/order.service.ts`](./backend/src/modules/order/order.service.ts)
+2. **Khóa dòng phân tán**: [`backend/src/modules/infra/distributed-lock.service.ts`](./backend/src/modules/infra/distributed-lock.service.ts)
+3. **AI Integration & CB**: [`ai-service/src/core/embedding/embedding.service.ts`](./ai-service/src/core/embedding/embedding.service.ts)
+4. **Correlation Tracing**: Interceptor client [`storefront/src/services/apiClient.ts`](./storefront/src/services/apiClient.ts) & Middleware backend [`backend/src/common/middlewares/correlation-id.middleware.ts`](./backend/src/common/middlewares/correlation-id.middleware.ts)
