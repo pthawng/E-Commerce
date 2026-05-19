@@ -1,0 +1,45 @@
+# ==============================================================================
+# Ray Paradis Infrastructure - Production-Grade Local Gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Terraform Output & Local State
+# ------------------------------------------------------------------------------
+# Terraform local state and modules
+.terraform/
+*.tfstate
+*.tfstate.*
+.tfplan
+.terraform.lock.hcl
+
+# ------------------------------------------------------------------------------
+# Kubernetes & Helm
+# ------------------------------------------------------------------------------
+# Kubeconfigs and helm secrets
+*kubeconfig*
+.kube/
+.helm/
+helm-charts/*/.helm/
+
+# ------------------------------------------------------------------------------
+# Docker Compose Local Overrides
+# ------------------------------------------------------------------------------
+# Allow docker-compose.dev.yml to be committed, but ignore local overrides
+docker-compose.override.yml
+docker-compose.override.yaml
+compose.override.yml
+compose.override.yaml
+
+# ------------------------------------------------------------------------------
+# Secrets & Credentials
+# ------------------------------------------------------------------------------
+# Avoid committing raw PEM keys, service account credentials or cloud credentials
+*.pem
+*.key
+*.pub
+gcp-key.json
+aws-creds/
+secrets/
+.env
+.env.*
+!.env.example

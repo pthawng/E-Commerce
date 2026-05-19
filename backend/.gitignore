@@ -1,13 +1,25 @@
 # ==============================================================================
-# Backend Gitignore
+# @ray-paradis/backend - Production-Grade Local Gitignore
 # ==============================================================================
 
-# Dependencies
+# ------------------------------------------------------------------------------
+# Dependencies & Build Targets
+# ------------------------------------------------------------------------------
 node_modules/
 dist/
 build/
 
-# Environment Variables (CRITICAL - Bảo mật)
+# ------------------------------------------------------------------------------
+# Runtime & Process State
+# ------------------------------------------------------------------------------
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ------------------------------------------------------------------------------
+# Environment Configurations (Bảo mật - Local only)
+# ------------------------------------------------------------------------------
 .env
 .env.local
 .env.development.local
@@ -17,61 +29,31 @@ build/
 !.env.example
 !.env.production.example
 
-# Logs
+# ------------------------------------------------------------------------------
+# Prisma ORM Artifacts
+# ------------------------------------------------------------------------------
+# Ignore custom generated prisma clients or schemas, but NEVER ignore migrations.
+src/generated/
+generated/prisma/
+# SQLite databases if used for local tests
+*.db
+*.db-journal
+
+# ------------------------------------------------------------------------------
+# Logs & Diagnostic Reports
+# ------------------------------------------------------------------------------
 logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Tests
-/coverage/
-.nyc_output/
-
-# IDE
-.idea/
-.project
-.classpath
-.c9/
-.vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.sublime-workspace
-*.swp
-*.swo
-
-# Temp
-.temp
-.tmp/
-*.temp
-
-# Runtime
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Diagnostic reports
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-# Prisma
-src/generated/
-generated/prisma/
-
-# Build
-*.tsbuildinfo
-.vite/
-
-# Sandbox
+# ------------------------------------------------------------------------------
+# Temporary Diagnostic / Sandbox Scripts
+# ------------------------------------------------------------------------------
+# Prevents accidental commit of local debugging or ad-hoc querying scripts
 /scripts/sandbox/
-
-# Temporary diagnostic scripts
 check_*.js
 scan_*.js
 hunt_*.js
@@ -85,3 +67,16 @@ get_*.js
 list_*.js
 count_*.js
 clean_*.js
+check_*.ts
+scan_*.ts
+hunt_*.ts
+simulate_*.ts
+find_*.ts
+verify_*.ts
+debug_*.ts
+test_*.ts
+query_*.ts
+get_*.ts
+list_*.ts
+count_*.ts
+clean_*.ts

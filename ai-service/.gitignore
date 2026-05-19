@@ -1,13 +1,46 @@
 # ==============================================================================
-# AI Service Gitignore
+# @ray-paradis/ai-service - Production-Grade Local Gitignore
 # ==============================================================================
 
-# Dependencies
+# ------------------------------------------------------------------------------
+# Node.js Dependencies & Build Targets
+# ------------------------------------------------------------------------------
 node_modules/
 dist/
 build/
+.cache/
+.vite/
 
-# Environment Variables (CRITICAL)
+# ------------------------------------------------------------------------------
+# Python & Virtual Environments (In case of Python scripts or migration)
+# ------------------------------------------------------------------------------
+venv/
+.venv/
+env/
+bin/
+lib/
+include/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# ------------------------------------------------------------------------------
+# Databases, Model Cache & Large Binary Files
+# ------------------------------------------------------------------------------
+# Ignore local AI model weights and cached embeddings database
+model-cache/
+*.duckdb
+*.duckdb.wal
+*.bin
+*.onnx
+*.pt
+*.h5
+
+# ------------------------------------------------------------------------------
+# Environment Variables (Bảo mật - Local only)
+# ------------------------------------------------------------------------------
 .env
 .env.local
 .env.development.local
@@ -17,40 +50,14 @@ build/
 !.env.example
 !.env.template
 
-# TypeScript
-*.tsbuildinfo
-.eslintcache
-
-# Testing
+# ------------------------------------------------------------------------------
+# Testing & Logs
+# ------------------------------------------------------------------------------
 coverage/
 .nyc_output/
 test-results/
-
-# Logs
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
-
-# IDE
-.vscode/
-!.vscode/extensions.json
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.DS_Store
-Thumbs.db
-
-# Build
-build/
-.vite/
-.cache/
-
-# Databases / Caches
-model-cache/
-*.duckdb
-*.duckdb.wal

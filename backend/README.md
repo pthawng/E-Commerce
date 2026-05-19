@@ -1,64 +1,141 @@
-# Backend Service (`@ray-paradis/backend`)
+# ⚙️ Core Commerce Backend API (`@ray-paradis/backend`)
 
-## 1. Overview
-The `@ray-paradis/backend` service operates as the core API, commerce engine, and master source of truth for the Ray Paradis platform. Built on NestJS, it serves as the primary boundary guarding business logic, executing transactional state shifts (orders/payments), and managing intricate role-based permissions for both the storefront and the back-office administrative portals. 
+[English](#english) | [Tiếng Việt](#tiếng-việt)
 
-## 2. Responsibilities
-* **Owns:**
-  * Master relational database schemas and Prisma ORM migrations.
-  * Fast-path active authorization (RBAC/ABAC) cached in Redis.
-  * **Session Security**: Issues `HttpOnly`, `SameSite=Lax` cookies for JWTs and enforces the Double Submit Cookie pattern for CSRF protection.
-  * **System Authority**: Strictly enforces pricing, discounting, and cart validation. The frontend is treated as completely untrusted (Zero-Trust Model).
-  * Atomic inventory holding mechanisms to prevent hyper-concurrency overselling.
-  * Ingress for third-party asynchronous webhooks (VNPay, PayPal).
-  * Transactional Order state-machines (Draft, Pending, Paid, Shipped).
-* **Does NOT Own:**
-  * UI state management or rendering logic.
-  * Raw static asset hosting (delegated to CDNs/Storage APIs).
-  * Direct payment processing card loops (delegated entirely to VNPay/PayPal gateway redirects).
+---
 
-## 3. Key Modules / Features
-Structured defensively by domain context:
-* **`auth`, `rbac`, `abac`, `user`**: Identity layer. Hands out JWT tokens and dynamically resolves granular permission trees down to the specific resource.
-* **`product`, `category`, `attribute`**: Catalog definitions. Resolves multidimensional SKU configurations (e.g., Size + Material + Gem Cut = 1 Unique Variant).
-* **`inventory`, `warehouse`**: Operations boundary. Exclusively handles atomic variants locks (`InventoryReservation`) and ledger append-only logs (`InventoryLog`).
-* **`cart`, `order`**: Commerce timeline. Turns localized cart payloads into firm financial order snapshots.
-* **`payment`**: Idempotent ledger. Generates outgoing gateway URLs and captures incoming, asynchronous webhook fulfillments safely.
+## English
 
-## 4. Architecture Notes
-* **Modular Monolith**: Uses strict NestJS Dependency Injection. Domains (like `Order` and `Inventory`) do not directly execute SQL in each other's spaces; they interact exclusively via injected Service interfaces.
-* **System Invariant Guard (Staff-level)**: Implemented a global **Prisma Extension Guard**. Mutations on sensitive models (`Order`, `Payment`, `InventoryItem`) are intercepted at the database level. If a mutation originates outside an authorized service layer (tracked via `SystemContextStore`), the system throws an `InvariantViolation` exception immediately.
-* **Concurrency & Locking Model**:
-  * Uses `FOR UPDATE NOWAIT` for row-level locking to prevent system-wide hangs and deadlocks.
-  * Employs an **Exponential Backoff Retry (`withRetry`)** mechanism to handle lock contention gracefully during high-traffic SKU drops.
-* **Controller/Service/Repository Pattern**: API routing is isolated from business rules, which are isolated from Prisma data-access logic.
+### 1. Overview
+The `@ray-paradis/backend` application is the core transaction processing engine, business logic layer, and primary source of truth for the Ray Paradis platform. Built on **NestJS** and **Prisma ORM**, it manages database consistency, processes order workflows, orchestrates inventory allocations, and enforces secure user sessions and RBAC/ABAC authorization checks.
 
-## 5. External Dependencies
-* **PostgreSQL (via Prisma)**: Primary persistence, ensuring ACID compliance for critical paths.
-* **Redis (Recommended)**: High-speed caching, rate-limiting (`ThrottlerGuard`), and idempotency locking. **Production environment SHOULD use `REDIS_PASSWORD`**.
-* **VNPay & PayPal (Gateways)**: Financial orchestrators driving the webhook engine.
+---
 
-## 6. Key Flows (Service Perspective)
-*(For full system logic, see the [Global Checkout Flow](../docs/flows/checkout-flow.md))*
+### 2. Core Capabilities
+* **🔒 Concurrency Guard & Row Locks**: Employs PostgreSQL row locks (`SELECT FOR UPDATE NOWAIT`) and an automated **Exponential Backoff Retry** mechanism to prevent overselling on hot-SKUs and avoid DB pool exhaustion.
+* **⚡ Sub-10ms Active Authorization**: User permissions are cached in Redis as flat arrays, bypassing expensive PostgreSQL multi-table joins on every incoming HTTP call.
+* **📬 Event-Driven Decoupling**: Implements the **Transactional Outbox Pattern** to write events (like inventory deduction) to an `Outbox` table in the same transaction as order creation. A background queue processor ensures eventual consistency without delaying checkout response times.
+* **🛡️ Security Hardening**: Enforces Double Submit Cookie pattern for CSRF protection, HttpOnly/SameSite cookies for JWT session validation, and intercepts direct database mutation attempts outside authorized service classes using a custom **Prisma Invariant Guard**.
 
-* **The Atomic Reservation (Order Checkout)**: 
-  * Receives Cart intent -> `OrderPaymentService` initiates transaction -> `InventoryService` acquires `NOWAIT` row-lock -> Success yields a `PENDING_PAYMENT` Order. Contention triggers automated retries. Persistent failure returns 409/423.
-* **Webhook Reconciliations**:
-  * Gateway hits IPN/Callback -> **Idempotency Check** (Redis + DB Lock) -> `PaymentService` verifies amount and signature -> Mutates Payment record (Source of Truth) -> Atomic Inventory Deduction -> Order Confirmation.
+---
 
-## 7. Environment & Configuration
-Requires core infrastructural wiring inside `.env`.
-* `DATABASE_URL`: Full PostgreSQL connection string required by Prisma.
-* `REDIS_HOST`, `REDIS_PORT`: Local or cloud memory cache dials.
-* `REDIS_PASSWORD`: **(Required)** Strict requirement for production readiness.
-* `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`: Cryptographic boundaries.
-* Gateway Credentials: `VNPAY_TMNCODE`, `VNPAY_HASHSECRET`, `VNPAY_IPN_URL`.
-* `CORS_ORIGIN`: Strict origin headers dictating acceptable SPA clients.
+### 3. Folder Architecture
+The NestJS project is structured into domain-specific modules:
 
-## 8. How to Run
-... [Existing run instructions] ...
+```text
+backend/src/
+├── 📂 modules/       # Encapsulated Business Modules
+│   ├── 📂 auth/      # JWT authentication, session binding, and password recovery
+│   ├── 📂 rbac/      # Role-Based Access Control and Permission mapping
+│   ├── 📂 catalog/   # Product, Dynamic Attribute, and Variant models
+│   ├── 📂 inventory/ # Multi-warehouse stock tracking, reservations, and logs
+│   ├── 📂 order/     # Order timeline state-machine and Outbox event dispatches
+│   └── 📂 payment/   # Idempotent gateway transaction registers and webhooks
+├── 📂 common/        # Shared middleware (Correlation IDs), decorators, and filters
+├── 📂 prisma/        # Database schema models, seed files, and migration scripts
+├── 📄 main.ts        # Server entry point, CORS settings, and validator configs
+└── 📄 app.module.ts  # Master application module resolving global dependencies
+```
 
-## 9. Notes & Staff Decisions
-* **Guard Enforcement**: All mutation logic must live in `Service` classes. Ad-hoc repository calls or direct Prisma injections in Controllers will trigger Invariant Violations.
-* **Idempotency**: Pushed deeply into the backend. Checkout flows rely on a backend-signed `checkoutToken` where the JWT ID (`jti`) acts as the definitive idempotency key to prevent order duplication.
-* **PII Protection**: User emails and sensitive identifiers are masked in public verification responses (e.g. password resets).
+---
+
+### 4. Technical Stack
+* **Framework**: NestJS (v10) for structured server architectures.
+* **Database & ORM**: PostgreSQL (v16) managed via Prisma ORM.
+* **Cache & Locks**: Redis (v7) integrated using `ioredis` for permissions caching, API throttles, and checkout pre-checks.
+* **Task Queues**: BullMQ for processing Outbox messages asynchronously.
+
+---
+
+### 5. Running Operations
+
+Before starting, copy `.env.example` into `.env` and configure your credentials (e.g. `DATABASE_URL`, `REDIS_HOST`, `JWT_ACCESS_SECRET`):
+
+```bash
+# Start local server in hot-reload development mode
+npm run start:dev
+
+# Run database migrations and generate the updated Prisma Client
+npm run prisma:migrate:dev
+
+# Seed initial database records (roles, taxonomy attributes)
+npm run seed
+
+# Build the optimized production bundle (dist/)
+npm run build
+
+# Start the compiled bundle in production mode
+npm run start:prod
+```
+
+* Defaults to listening on `http://localhost:4000`.
+
+---
+
+---
+
+## Tiếng Việt
+
+### 1. Tổng quan
+Ứng dụng `@ray-paradis/backend` là lõi xử lý giao dịch, tầng nghiệp vụ chính và là nguồn chân lý dữ liệu (Source of Truth) của hệ thống Ray Paradis. Được phát triển trên nền tảng **NestJS** và **Prisma ORM**, ứng dụng chịu trách nhiệm quản trị tính nhất quán dữ liệu, xử lý vòng đời đơn hàng, điều phối phân bổ kho hàng, bảo mật phiên làm việc và kiểm tra quyền truy cập (RBAC/ABAC) của người dùng.
+
+---
+
+### 2. Các chức năng chính
+* **🔒 Chống trùng lặp & Khóa dòng**: Áp dụng cơ chế khóa dòng PostgreSQL (`SELECT FOR UPDATE NOWAIT`) kết hợp giải thuật **Thử lại với thời gian chờ tăng dần (Exponential Backoff)** để ngăn ngừa bán vượt tồn kho (overselling) đối với các sản phẩm hot mà không làm treo hàng đợi kết nối DB.
+* **⚡ Phân quyền hiệu năng cao (Sub-10ms)**: Toàn bộ danh sách quyền hạn của tài khoản đăng nhập được làm phẳng và lưu ở Redis, bỏ qua việc thực hiện truy vấn JOIN nhiều bảng trong Postgres trên mỗi request.
+* **📬 Khử liên kết bất đồng bộ (Outbox Pattern)**: Triển khai mô hình **Transactional Outbox Pattern** để ghi nhận các sự kiện nghiệp vụ (như trừ kho) vào bảng `Outbox` ngay trong cùng transaction tạo đơn hàng. Worker chạy ngầm sau đó sẽ xử lý hàng đợi này nhằm bảo đảm tính nhất quán sau cùng (Eventual Consistency).
+* **🛡️ Bảo mật nghiêm ngặt (Hardening)**: Áp dụng Double Submit Cookie để phòng chống tấn công CSRF, lưu trữ token phiên trong cookie bảo mật HttpOnly/SameSite. Đặc biệt sử dụng **Prisma Invariant Guard** tùy chỉnh để tự động chặn các thao tác sửa đổi database trái phép từ bên ngoài lớp Service được chỉ định.
+
+---
+
+### 3. Kiến trúc thư mục
+Dự án NestJS được modul hóa rõ ràng theo các miền nghiệp vụ riêng biệt:
+
+```text
+backend/src/
+├── 📂 modules/       # Các Module Nghiệp vụ Độc lập
+│   ├── 📂 auth/      # Xác thực người dùng, liên kết phiên JWT và khôi phục mật khẩu
+│   ├── 📂 rbac/      # Phân quyền người dùng (Role-Based Access Control) và ánh xạ quyền
+│   ├── 📂 catalog/   # Định nghĩa sản phẩm, thuộc tính động và các biến thể biến đổi
+│   ├── 📂 inventory/ # Quản lý tồn kho đa điểm, giữ hàng tạm thời (Reservation) và lịch sử kho
+│   ├── 📂 order/     # Máy trạng thái đơn hàng (State-machine) và phát sự kiện Outbox ngầm
+│   └── 📂 payment/   # Ghi nhận giao dịch tài chính độc lập và bắt webhook từ VNPay/PayPal
+├── 📂 common/        # Middleware (Correlation ID bám vết), decorator tùy biến và bộ lọc lỗi
+├── 📂 prisma/        # Định nghĩa bảng dữ liệu (Schema), file seed dữ liệu và mã migration
+├── 📄 main.ts        # Điểm chạy máy chủ, cấu hình CORS và bộ lọc kiểm tra dữ liệu đầu vào
+└── 📄 app.module.ts  # Module tổng thể kết nối toàn bộ hệ thống dependencies
+```
+
+---
+
+### 4. Công nghệ sử dụng
+* **Framework**: NestJS (v10) định hình kiến trúc máy chủ vững chắc.
+* **Cơ sở dữ liệu & ORM**: PostgreSQL (v16) thông qua Prisma ORM.
+* **Bộ nhớ đệm & Khóa**: Redis (v7) kết hợp thư viện `ioredis` để cache phân quyền, giới hạn tần suất gọi API và khóa kiểm tra trước khi thanh toán.
+* **Hàng đợi xử lý**: BullMQ để quét và thực thi các sự kiện Outbox bất đồng bộ.
+
+---
+
+### 5. Hướng dẫn chạy dự án
+
+Trước khi khởi động, hãy sao chép file `.env.example` thành `.env` và thiết lập các biến môi trường thiết yếu (như `DATABASE_URL`, `REDIS_HOST`, `JWT_ACCESS_SECRET`):
+
+```bash
+# Khởi chạy server local ở chế độ tự động tải lại (hot-reload)
+npm run start:dev
+
+# Cập nhật cấu trúc bảng dữ liệu database và cập nhật Prisma Client
+npm run prisma:migrate:dev
+
+# Đổ dữ liệu thiết lập ban đầu (vai trò phân quyền, danh mục thuộc tính trang sức)
+npm run seed
+
+# Biên dịch mã nguồn thành JavaScript tối ưu (thư mục dist/)
+npm run build
+
+# Khởi chạy bản biên dịch ở chế độ Production
+npm run start:prod
+```
+
+* Máy chủ mặc định chạy tại địa chỉ `http://localhost:4000`.

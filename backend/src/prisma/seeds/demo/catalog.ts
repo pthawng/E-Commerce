@@ -28,19 +28,9 @@ export async function seedCatalog(prisma: PrismaClient) {
   await prisma.orderItem.deleteMany({});
   await prisma.order.deleteMany({});
 
-  // 1. Delete products that are NOT in the 'materials' category to protect system foundation
-  console.log('   - Clearing products...');
-  await prisma.product.deleteMany({
-    where: {
-      categories: {
-        none: {
-          category: {
-            slug: 'materials'
-          }
-        }
-      }
-    }
-  });
+  // 1. Delete all existing products to ensure a clean slate and prevent SKU conflicts
+  console.log('   - Clearing all products...');
+  await prisma.product.deleteMany({});
   
   const categoryData = await prisma.category.findMany();
   const categoryMap = new Map(categoryData.map((c) => [c.slug, c]));

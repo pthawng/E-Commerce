@@ -54,6 +54,24 @@ The system manages cart state across guest and authenticated lifecycles with a "
 - **API → Service → Guard → Database**: Core transactions (Order finalizing, Inventory locking) are initiated by Controllers but MUST be orchestrated by Services to bypass the Invariant Guard and write to PostgreSQL.
 - **Concurrency (NOWAIT)**: Inventory locking uses `SELECT FOR UPDATE NOWAIT` to fail fast and prevent deadlocks during high-traffic events.
 
-## Infrastructure
-... [Existing infrastructure details] ...
+## Infrastructure & Deployment Architecture
+
+Ray Paradis employs a highly standardized infrastructure design partitioned into Local Development, Public Cloud Provisioning, and Container Orchestration.
+
+### 1. Local Development Topology
+For local developer onboarding and rapid testing, all peripheral dependencies are containerized via **Docker Compose** (`infra/docker-compose.dev.yml`):
+* **PostgreSQL (v16-alpine)**: Configured with persistent volumes and standard health checks.
+* **Redis (v7-alpine)**: Run with secure password constraints to support distributed locks and authorization cache simulation locally.
+* **Qdrant Vector Database**: Exposes HTTP (`:6333`) and gRPC (`:6334`) interfaces with dedicated storage volumes for vector retrieval experiments.
+
+### 2. Public Cloud Infrastructure (AWS via Terraform)
+Cloud infrastructure is defined declaratively using **Terraform** (`infra/terraform/`):
+* **VPC Module (`vpc.tf`)**: provisions a standard production-grade virtual private network with the IP CIDR `10.0.0.0/16` across three availability zones (`us-east-1a`, `us-east-1b`, `us-east-1c`).
+* **Subnet Partitioning**: Allocates public subnets (`10.0.101.0/24`, etc.) and private subnets (`10.0.1.0/24`, etc.) with NAT Gateways to ensure backend application servers and databases are kept isolated from direct public traffic.
+* **State Management (`main.tf`)**: Integrated with AWS provider (v5.0+) and configured to support secure remote state backends (S3 buckets for state retention and DynamoDB tables for state lock orchestration).
+
+### 3. Container Orchestration & Autoscaling (Kubernetes)
+Production deployments run on container clusters managed by **Kubernetes** (`infra/k8s/`):
+* **Rolling Update Deployments (`backend.yaml`)**: Spins up the NestJS backend container with 3 active replicas. Employs a rolling update strategy (`maxSurge: 1`, `maxUnavailable: 0`) to guarantee zero-downtime deployments. Defines liveness/readiness HTTP probes on the `/api/health` gateway.
+* **Autoscaling Policies (`hpa.yaml`)**: A Horizontal Pod Autoscaler monitors real-time pod workloads. It scales backend instances dynamically (min: 2, max: 10 replicas) when average CPU utilization hits **70%** or average Memory utilization hits **80%**, safeguarding catalog throughput during flash sales or heavy recommendation retrieval loads.
 

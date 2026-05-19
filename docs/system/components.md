@@ -18,7 +18,7 @@ A Feature-Sliced architecture, separating code structurally by user-centric doma
 * **Cart Operations (`features/cart`)**: Local-first or sync-heavy shopping bag state.
 * **Checkout & Payment (`features/checkout`)**: The specialized wizard UI containing state-machines for shipping, verification, and payment redirect lifecycles.
 
-## Admin Portal (`@ray-paradis/admin`)
+## Admin Portal (`@ray-paradis/back-office`)
 An administrative terminal.
 * **Catalog Management**: Creation flows for dynamic attributes and heavily nested product variants.
 * **Order Fulfillment**: Table grids and detail hubs displaying user orders and allowing state progression (e.g., Shipping, Delivered).
@@ -30,5 +30,5 @@ An independent, high-performance Node.js service managing semantic search.
 * **Integrations**: Connects to **Qdrant** (Vector DB) for cosine similarity searches, and **Google Gemini** for text embeddings.
 * **Resilience Layer**: Contains custom implementations of `CircuitBreaker`, `LRUCache`, and `TokenBucketRateLimiter` to protect external API quotas.
 
-## Shared (`@ray-paradis/shared`)
+## Shared (`@ecommerce/shared`)
 A cross-workspace NPM module containing global TypeScript types, Zod schemas, and data transfer objects (DTOs). Ensures API request matching perfectly aligns with frontend state definitions.

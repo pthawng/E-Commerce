@@ -9,9 +9,9 @@ Sử dụng file cấu hình: `.env.development`
 
 ### 🐳 Quản lý Docker (Database & Redis)
 *Chạy tại thư mục gốc của dự án*
-- **Khởi động**: `docker compose -f database/compose.dev.yaml up -d`
-- **Tắt**: `docker compose -f database/compose.dev.yaml down`
-- **Xóa sạch Volume (Dữ liệu DB)**: `docker compose -f database/compose.dev.yaml down -v`
+- **Khởi động**: `docker compose -f infra/docker-compose.dev.yml up -d`
+- **Tắt**: `docker compose -f infra/docker-compose.dev.yml down`
+- **Xóa sạch Volume (Dữ liệu DB)**: `docker compose -f infra/docker-compose.dev.yml down -v`
 
 ### 🛠 Thao tác Database Local
 *Chạy tại thư mục `backend`*

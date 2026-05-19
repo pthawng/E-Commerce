@@ -1,64 +1,35 @@
 # ==============================================================================
-# Shared Gitignore
+# @ray-paradis/shared - Production-Grade Local Gitignore
 # ==============================================================================
 
-# Build & Compilation
+# ------------------------------------------------------------------------------
+# Build & Compilation Output
+# ------------------------------------------------------------------------------
 dist/
 build/
 out/
-*.tsbuildinfo
 *.map
 
+# ------------------------------------------------------------------------------
 # Dependencies
+# ------------------------------------------------------------------------------
 node_modules/
-.pnp/
-.pnp.js
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Testing & Coverage
-coverage/
-.nyc_output/
-.jest/
-
-# Environment (CRITICAL)
+# ------------------------------------------------------------------------------
+# Environment Variables (Bảo mật - Local only)
+# ------------------------------------------------------------------------------
 .env
 .env.local
 .env.*.local
 !.env.example
 
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# IDE
-.vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-.idea/
-*.sublime-project
-*.sublime-workspace
-*.swp
-*.swo
-
-# Infrastructure
-.terraform/
-.vagrant/
-docker-compose.override.yml
-dump.rdb
-
-# Temp
-.tmp/
-.temp/
+# ------------------------------------------------------------------------------
+# Testing & Logs
+# ------------------------------------------------------------------------------
+coverage/
+.nyc_output/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*

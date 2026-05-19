@@ -1,35 +1,51 @@
 # ==============================================================================
-# Ray Paradis Monorepo - Comprehensive Gitignore
+# Ray Paradis Monorepo - Production-Grade Root Gitignore
 # ==============================================================================
 
-# --- Dependencies ---
+# ------------------------------------------------------------------------------
+# Dependencies
+# ------------------------------------------------------------------------------
+# Always ignore node_modules at all levels of the monorepo.
 node_modules/
-node_modules/
+/node_modules/
+
+# Package manager cache directories (but NEVER ignore lockfiles)
 .npm/
 .yarn/
 .pnpm-store/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
 
-# --- Build Artifacts ---
+# ------------------------------------------------------------------------------
+# Build & Compilation Output (Root-level/generic fallback)
+# ------------------------------------------------------------------------------
+# Ignore build outputs at the project root level.
 dist/
 build/
 out/
 .next/
 .serverless/
-*.tsbuildinfo
-*.eslintcache
+.docusaurus/
 .cache/
 
-# --- Security & Credentials (CRITICAL) ---
+# TypeScript incremental compilation cache
+*.tsbuildinfo
+
+# ------------------------------------------------------------------------------
+# Security, Keys & Secrets (CRITICAL PROTECTION)
+# ------------------------------------------------------------------------------
+# Block raw secrets, credentials, and environment configuration files.
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.*.local
-!*!.env.example
-!*!.env.template
-!*!.env.production.example
-.pem
+# DO NOT ignore .env.* files that match example/template files
+!.env.example
+!.env.template
+!.env.production.example
+
+# Credentials & Key files
+*.pem
 *.key
 *.pub
 ssh_config
@@ -40,34 +56,23 @@ credentials.json
 secrets.yaml
 secrets.yml
 
-# --- Database ---
-*.db
-*.sqlite
-*.sqlite3
-/data/
-/database/*.db
-/backend/prisma/migrations/backup/
-/backend/src/generated/
-
-# --- Infrastructure ---
-.terraform/
-*.tfstate
-*.tfstate.*
-.tfplan
-.kube/config
-*kubeconfig*
-.helm/
-
-# --- Testing ---
+# ------------------------------------------------------------------------------
+# Testing & Code Coverage
+# ------------------------------------------------------------------------------
+# Coverage output
 coverage/
 .nyc_output/
+
+# Test reports
 junit.xml
 test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
 
-# --- Logs ---
+# ------------------------------------------------------------------------------
+# Logs & Diagnostic Reports
+# ------------------------------------------------------------------------------
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -77,13 +82,21 @@ lerna-debug.log*
 logs/
 panic.log
 
-# --- IDE & Editors ---
-.vscode/
+# ------------------------------------------------------------------------------
+# IDE & System Editors
+# ------------------------------------------------------------------------------
+# VS Code (Allow sharing workspace settings, but ignore user/dev-specific settings)
+.vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.vscode/extensions.json
+
+# IntelliJ / WebStorm
 .idea/
+
+# Editors swap and backup files
 *.swp
 *.swo
 .project
@@ -92,37 +105,39 @@ panic.log
 *.sublime-project
 *.sublime-workspace
 
-# --- OS Specific ---
+# ------------------------------------------------------------------------------
+# OS-Specific Files
+# ------------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 $RECYCLE.BIN/
 
-# --- Temporary Files ---
+# ------------------------------------------------------------------------------
+# Temporary Files
+# ------------------------------------------------------------------------------
 .tmp/
 .temp/
 bak/
 tmp/
 *.temp
+*.backup
 
-# --- Project Specific ---
-/scripts/sandbox/
-/backups/
-/docs/site/
-CORTEX_LOGS/
+# ------------------------------------------------------------------------------
+# Tooling & Agent Workspace Caches
+# ------------------------------------------------------------------------------
 .gemini/
 .agents/
 brain/
-*.backup
+CORTEX_LOGS/
 
-# --- Docker ---
-.dockerignore
-
-# --- Cloud Deployments ---
+# ------------------------------------------------------------------------------
+# Deployment / Hosting Platform Metadata
+# ------------------------------------------------------------------------------
 .vercel/
 .netlify/
-
-# --- AI Service ---
-/ai-service/model-cache/
-/ai-service/*.duckdb
-/ai-service/*.duckdb.wal

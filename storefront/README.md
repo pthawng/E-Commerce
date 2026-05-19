@@ -1,71 +1,123 @@
-# Storefront Service (`@ray-paradis/storefront`)
+# 🛍️ Headless Storefront Application (`@ray-paradis/storefront`)
 
-## 1. Overview
-The `@ray-paradis/storefront` service is the primary consumer-facing application for the luxury e-commerce platform. Built as a React SPA on Vite, it is designed strictly around the "Quiet Atelier" aesthetic, prioritizing 60fps micro-interactions, immediate responsiveness (via TanStack Query caching), and rendering complex multi-variant product configurations. It acts as the visual and interaction layer bounding the `backend` API.
+[English](#english) | [Tiếng Việt](#tiếng-việt)
 
-## 2. Responsibilities
-* **Owns:**
-  * The entirety of the consumer User Interface and User Experience.
-  * *Client State* management (e.g., active cart modals, multi-step checkout wizard progression) using Zustand.
-  * In-browser caching and Background Syncing of *Server State* (e.g., live product pricing) using TanStack Query.
-  * UI routing and the immediate visual handling of external Gateway redirects (VNPay/PayPal).
-* **Does NOT Own:**
-  * Financial truth, pricing, or order sum calculations (yielding fully to backend snapshots).
-  * Storage of Access/Refresh Tokens (delegated entirely to secure `HttpOnly` cookies, preventing XSS).
-  * Direct interaction with PGSQL or Redis.
-  * Private webhook validations or cryptographic signatures.
+---
 
-## 3. Key Modules / Features
-Built upon a **Feature-Sliced** project structure grouping code by user domain:
-* **`products`**: The Catalog. Heavily handles nested variant selections (Size + Material combinations) and renders HD visual assets. Optimization target for Largest Contentful Paint (LCP).
-* **`cart`**: Local-first Cart manager. Aggregates selected variants and syncs anonymous or authenticated selections to the backend seamlessly.
-* **`checkout`**: A specialized, highly-controlled UI wizard. Manages the sensitive handoff where users confirm intent, trigger backend atomic locks, and dispatch to VNPay/PayPal.
-* **`auth` / `profile`**: Customer identity portals mapping to backend JWT sessions, displaying historical Orders and saved shipping entities.
+## English
 
-## 4. Architecture Notes
-* **Feature-Sliced Design**: Avoids the anti-pattern of mega `src/components` or `src/hooks` folders. Code belonging to Checkout (checkout hooks, checkout UI, checkout types) stays in `src/features/checkout`.
-* **Decoupled Server vs Client State**: Zustand is strictly restricted to ephemeral local UI phenomena (e.g., `isCartDrawerOpen`). TanStack Query inherently manages all persistent domain states fetched from the backend, guaranteeing minimal prop-drilling and automatic cache invalidation.
-* **Zero-Trust Networking**: Enforces the Double Submit Cookie Pattern via Axios interceptors, injecting CSRF tokens into APIs and robustly queuing redundant 401s during silent refresh cycles.
-* **Shared Types Syncing**: Structurally imports all DTOs and Payload specifications directly from the `@ray-paradis/shared` workspace, ensuring TS compiler failures if the backend API contract shifts.
+### 1. Overview
+The `@ray-paradis/storefront` is the consumer-facing Single Page Application (SPA) for the Ray Paradis luxury e-commerce platform. Built with **React**, **Vite**, and **Tailwind CSS**, it is designed around a premium "Quiet Atelier" aesthetic, prioritizing sub-second Largest Contentful Paint (LCP), smooth 60fps micro-animations, and client-side server-state caching via TanStack Query.
 
-## 5. External Dependencies
-* **Backend API (`@ray-paradis/backend`)**: The sole source of truth via REST.
-* **External Gateways**: VNPay and PayPal portals (redirect targets).
-* **CDN Providers**: For fetching luxury 3D models or 4k ring media specified by backend payload pointers.
+---
 
-## 6. Key Flows (Service Perspective)
-*(For full system logic, see the [Global Checkout Flow](../docs/flows/checkout-flow.md))*
+### 2. Core Capabilities
+* **💎 Dynamic Variant Configuration**: Interactive configuration loops that handle combinations of metals, sizes, and gem cuts, instantly updating high-definition media carousels.
+* **⚡ Optimistic Cart Syncer**: Local-first cart storage synchronized to the backend via TanStack Query, showing instant cart count increments for better UX.
+* **🛡️ Zero-Trust Security**: Standardized token lifecycle management using HttpOnly, SameSite secure cookies to prevent XSS. It automatically appends CSRF validation headers using the Double Submit Cookie pattern. (See [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md) for details).
+* **🔄 Payment Return Orchestrator**: Safely handles redirections back from VNPay/PayPal by polling the secure backend API (`GET /payment/status/:orderId`) rather than relying on insecure URL parameters.
 
-* **The Catalog Discovery Flow**:
-  * User loads route -> `TanStack Query` checks its cache -> Cache Miss triggers an API GET -> React suspends/shows skeleton -> UI paints the `Product`. Subsequent visits immediately paint from memory while background-re-validating.
-* **The Checkout Sequence**:
-  * User submits Shipping Address (Local State) -> Dispatches `POST /order` -> Backend responds with *Gateway Redirect URL* & *Order ID* -> Storefront mutates `window.location.href`, abandoning the current local runtime to execute the financial handshake externally.
-* **Payment Return**:
-  * Gateway returns User to `storefront/checkout/vnpay/callback`. **Crucially**, the Storefront completely distrusts the URL parameters (which can be spoofed), and instead fires a polling request to `GET /payment/status/:orderId` to fetch the deterministic backend validation state before rendering a "Success" or "Failed" UI.
+---
 
-## 7. Environment & Configuration
-Requires core `.env` pointing to the execution environments.
+### 3. Folder Architecture (Feature-Sliced Design)
+The client project strictly follows the **Feature-Sliced Design (FSD)** architecture:
 
-```bash
-# Target REST API
-VITE_API_BASE_URL=http://localhost:4000/api
-
-# Standard app ports defined for Vite
-VITE_PORT=5173 
+```text
+storefront/src/
+├── 📂 app/          # App Shell: Entry points (main.tsx), styles, router paths, provider chains
+├── 📂 pages/        # Lazy-loaded screen components (Home, Catalog, ProductDetails, Checkout, Profile)
+├── 📂 widgets/      # Composite UI layouts (e.g. Header, Footer, ImageGallery)
+├── 📂 features/     # User actions (e.g. AddToCart, FilterCatalog, AuthenticateCustomer)
+├── 📂 entities/     # Domain business components and state stores (e.g. ProductCard, CartStore)
+└── 📂 shared/       # Primitives: UI buttons, custom Axios client (`apiClient`), helper hooks
 ```
 
-## 8. How to Run
+---
 
-> **Note:** The preferred method to boot the entire stack is via the repository root (`npm run dev --workspaces`). See [Root Local Development](../docs/setup/local-development.md).
+### 4. Technical Stack
+* **UI & Animations**: Tailwind CSS (v3) combined with Radix UI primitives and Framer Motion.
+* **State Management**: Zustand for local-first UI states.
+* **Server Caching**: TanStack Query (v5) for stale-while-revalidate data fetching.
+* **Data Typing**: Shared TypeScript definitions directly imported from the `@ecommerce/shared` package.
+* **E2E Testing**: Playwright configuration for browser-level workflow verification.
 
-To run **ONLY** this service in isolation:
+---
+
+### 5. Running Operations
 
 ```bash
-npm run dev --workspace=@ray-paradis/storefront
-```
-*Note: Ensure the backend is concurrently running, or Storefront will fail all TanStack queries.*
+# Boot the storefront in development mode
+npm run dev
 
-## 9. Notes & Security
-* **Assumptions**: Presumes all structural payloads conform entirely to `@ray-paradis/shared`.
-* **Zero-Trust Focus**: See [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md) for architectural guidelines regarding session hijacking prevention, CSRF, and data authority.
-* **Limitations**: Current SPA (Single Page Application) nature limits native SEO purely to client-side renders. If heavy SEO on Catalog URLs becomes mandatory, this service may need to shift architectural paradigms toward Next.js (SSR).
+# Audit code formatting and linting rules
+npm run lint
+
+# Compile and build the optimized production package (dist/)
+npm run build
+
+# Preview the production-built bundle locally
+npm run preview
+```
+
+* Defaults to running on `http://localhost:5173`.
+
+---
+
+---
+
+## Tiếng Việt
+
+### 1. Tổng quan
+Ứng dụng `@ray-paradis/storefront` là giao diện khách hàng (Single Page Application - SPA) của hệ thống thương mại điện tử trang sức xa xỉ Ray Paradis. Được phát triển bằng **React**, **Vite** và **Tailwind CSS**, ứng dụng được tối ưu hóa theo ngôn ngữ thiết kế tối giản "Quiet Atelier", chú trọng vào thời gian hiển thị nội dung lớn nhất cực nhanh (LCP), chuyển động mượt mà 60fps và cơ chế lưu trữ đệm phản hồi từ server bằng TanStack Query.
+
+---
+
+### 2. Các chức năng chính
+* **💎 Cấu hình biến thể sản phẩm động**: Giao diện tương tác trực quan cho phép khách hàng kết hợp các loại chất liệu, kích thước ni tay nhẫn và giác cắt đá quý, lập tức cập nhật hình ảnh độ nét cao.
+* **⚡ Đồng bộ hóa giỏ hàng Optimistic**: Giỏ hàng lưu trữ ưu tiên ở local và đồng bộ ngầm với backend qua TanStack Query, tăng số lượng hiển thị ngay lập tức để tối ưu trải nghiệm (UX).
+* **🛡️ Bảo mật Zero-Trust**: Quản lý vòng đời token qua cookie HttpOnly, SameSite an toàn để phòng chống tấn công XSS. Tự động đính kèm mã bảo mật CSRF qua cơ chế Double Submit Cookie (Chi tiết tại [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md)).
+* **🔄 Điều phối kết quả thanh toán**: Nhận diện phản hồi chuyển hướng từ cổng VNPay/PayPal, thực hiện gọi API kiểm tra trạng thái thực tế từ backend (`GET /payment/status/:orderId`) thay vì tin tưởng các tham số không an toàn trên URL.
+
+---
+
+### 3. Kiến trúc thư mục (Feature-Sliced Design)
+Dự án áp dụng chặt chẽ kiến trúc thiết kế chia lớp **Feature-Sliced Design (FSD)**:
+
+```text
+storefront/src/
+├── 📂 app/          # Khung ứng dụng: File khởi chạy (main.tsx), styles toàn cục, định tuyến router
+├── 📂 pages/        # Các trang được tải chậm (Home, Catalog, ProductDetails, Checkout, Profile)
+├── 📂 widgets/      # Bố cục giao diện phức hợp (Ví dụ: Header, Footer, ImageGallery)
+├── 📂 features/     # Hành động của người dùng (Ví dụ: AddToCart, FilterCatalog, AuthenticateCustomer)
+├── 📂 entities/     # Thực thể nghiệp vụ và Zustand store liên quan (Ví dụ: ProductCard, CartStore)
+└── 📂 shared/       # Primitives: Nút bấm UI, Axios client tùy chỉnh (`apiClient`), hooks tiện ích
+```
+
+---
+
+### 4. Công nghệ sử dụng
+* **Giao diện & Chuyển động**: Tailwind CSS (v3) phối hợp cùng Radix UI primitives và Framer Motion.
+* **Quản lý trạng thái**: Zustand quản lý trạng thái giao diện local.
+* **Bộ nhớ đệm dữ liệu**: TanStack Query (v5) đồng bộ dữ liệu server theo cơ chế stale-while-revalidate.
+* **Kiểu dữ liệu**: Nhập trực tiếp các định nghĩa TypeScript từ package chung `@ecommerce/shared`.
+* **Kiểm thử E2E**: Tích hợp Playwright để tự động kiểm thử toàn trình trên trình duyệt.
+
+---
+
+### 5. Hướng dẫn chạy dự án
+
+```bash
+# Khởi chạy storefront ở chế độ local development
+npm run dev
+
+# Kiểm tra lỗi định dạng code và quy tắc lint
+npm run lint
+
+# Biên dịch gói sản phẩm tối ưu hóa cho môi trường Production (thư mục dist/)
+npm run build
+
+# Xem thử gói biên dịch Production ngay tại local
+npm run preview
+```
+
+* Ứng dụng mặc định chạy tại địa chỉ `http://localhost:5173`.
