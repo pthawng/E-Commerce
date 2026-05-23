@@ -1,6 +1,6 @@
 /**
  * User Types
- * Types cho User entity - dùng chung giữa BE và FE
+ * Types for User entity
  */
 
 /**
@@ -25,7 +25,7 @@ export interface User {
 }
 
 /**
- * User Summary (cho list, không có thông tin nhạy cảm)
+ * User Summary without sensitive information
  */
 export interface UserSummary {
   id: string;

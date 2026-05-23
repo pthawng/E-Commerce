@@ -1,5 +1,5 @@
 /**
- * Staff-grade Deployment Health Verifier.
+ * Deployment health verifier.
  * Performs exponential backoff polling on the production health endpoint.
  * Uses native fetch (Node 22+) to avoid external dependencies.
  */

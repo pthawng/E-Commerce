@@ -1,6 +1,6 @@
 /**
  * Order Status Enum
- * Trạng thái đơn hàng
+ * Order status
  */
 export enum OrderStatus {
   PENDING = 'pending',
@@ -16,7 +16,7 @@ export enum OrderStatus {
 
 /**
  * Payment Status Enum
- * Trạng thái thanh toán
+ * Payment status
  */
 export enum PaymentStatus {
   UNPAID = 'unpaid',
@@ -27,7 +27,7 @@ export enum PaymentStatus {
 
 /**
  * Transaction Type Enum
- * Loại giao dịch thanh toán
+ * Payment transaction type
  */
 export enum TransactionType {
   PAYMENT = 'payment',
@@ -36,7 +36,7 @@ export enum TransactionType {
 
 /**
  * Transaction Status Enum
- * Trạng thái giao dịch
+ * Transaction status
  */
 export enum TransactionStatus {
   PENDING = 'pending',

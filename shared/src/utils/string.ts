@@ -1,11 +1,11 @@
 /**
  * String Utilities
- * Các hàm xử lý string dùng chung
+ * Shared string utilities
  */
 
 /**
  * Generate slug from string
- * @param str - String cần convert
+ * @param str - String to convert
  */
 export function slugify(str: string): string {
   return str
@@ -20,9 +20,9 @@ export function slugify(str: string): string {
 
 /**
  * Truncate string
- * @param str - String cần truncate
- * @param length - Độ dài tối đa
- * @param suffix - Suffix (mặc định: '...')
+ * @param str - String to truncate
+ * @param length - Maximum length
+ * @param suffix - Truncation suffix (default: '...')
  */
 export function truncate(str: string, length: number, suffix: string = '...'): string {
   if (str.length <= length) return str;

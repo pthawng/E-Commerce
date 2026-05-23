@@ -1,6 +1,6 @@
 /**
  * Shared Utils
- * Export tất cả utils
+ * Exports all utilities
  */
 
 export * from './format';

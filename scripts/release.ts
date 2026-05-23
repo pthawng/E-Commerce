@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * L8 Release Strategy Automation.
+ * Release strategy automation.
  * Ensures consistent versioning, tagging, and deployment readiness.
  */
 function release() {
@@ -22,14 +22,14 @@ function release() {
     console.log(`🚀 Starting release from ${oldVersion} (${versionType})...`);
 
     try {
-        // 1. Ensure clean git state
+        // Ensure clean git state
         const status = execSync('git status --porcelain').toString();
         if (status) {
             console.error('❌ Git workspace is not clean. Commit or stash changes first.');
             process.exit(1);
         }
 
-        // 2. Bump version using npm (handles package.json and package-lock.json)
+        // Bump version using npm (handles package.json and package-lock.json)
         // Note: Running in backend dir
         execSync(`cd backend && npm version ${versionType} --no-git-tag-version`, { stdio: 'inherit' });
 
@@ -37,7 +37,7 @@ function release() {
         const newVersion = newPackageJson.version;
         const tag = `v${newVersion}`;
 
-        // 3. Commit and Tag
+        // Commit and Tag
         execSync('git add .', { stdio: 'inherit' });
         execSync(`git commit -m "chore(release): ${newVersion}"`, { stdio: 'inherit' });
         execSync(`git tag -a ${tag} -m "Release ${tag}"`, { stdio: 'inherit' });

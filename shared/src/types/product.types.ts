@@ -1,6 +1,6 @@
 /**
  * Product Types
- * Types cho Product entity - dùng chung giữa BE và FE
+ * Types for Product entity
  */
 
 import { MediaType } from '../enums';
@@ -68,7 +68,7 @@ export interface Product {
 }
 
 /**
- * Product Summary (cho list)
+ * Product Summary for listings
  */
 export interface ProductSummary {
   id: string;

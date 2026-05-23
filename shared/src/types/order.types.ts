@@ -1,6 +1,6 @@
 /**
  * Order Types
- * Types cho Order entity - dùng chung giữa BE và FE
+ * Types for Order entity
  */
 
 import { OrderStatus, PaymentStatus } from '../enums';
@@ -55,7 +55,7 @@ export interface Order {
 }
 
 /**
- * Order Summary (cho list)
+ * Order Summary for listings
  */
 export interface OrderSummary {
   id: string;

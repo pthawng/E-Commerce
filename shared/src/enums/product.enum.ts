@@ -1,6 +1,6 @@
 /**
  * Media Type Enum
- * Loại media cho sản phẩm
+ * Media type for products
  */
 export enum MediaType {
   IMAGE = 'image',
@@ -10,7 +10,7 @@ export enum MediaType {
 
 /**
  * Inventory Action Type Enum
- * Loại hành động kho
+ * Inventory action type
  */
 export enum ActionType {
   IMPORT = 'IMPORT',

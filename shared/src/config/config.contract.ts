@@ -1,28 +1,28 @@
 /**
  * App Configuration Contract
- * Đảm bảo sự đồng nhất cấu hình giữa Backend và Frontend
+ * Ensures configuration alignment between backend and frontend
  */
 
 export interface AppConfig {
   /**
-   * Môi trường hiện tại (development, production, test)
+   * Current environment (development, production, test)
    */
   nodeEnv: 'development' | 'production' | 'test';
 
   /**
-   * URL của Backend API
+   * URL of the backend API
    */
   apiBaseUrl: string;
 
   /**
-   * Cấu hình liên quan đến Client/Frontend
+   * Client/Frontend specific configurations
    */
   client: {
     url: string;
   };
 
   /**
-   * Các hằng số cấu hình khác
+   * Other configuration constants
    */
   features?: {
     enableRegistration: boolean;
@@ -31,7 +31,7 @@ export interface AppConfig {
 }
 
 /**
- * Helper để kiểm tra tính hợp lệ của config (Optional)
+ * Helper to validate configuration (Optional)
  */
 export function validateAppConfig(config: AppConfig): boolean {
   return !!config.apiBaseUrl && !!config.client.url;

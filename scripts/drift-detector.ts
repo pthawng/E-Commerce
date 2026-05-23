@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Staff+ Enforcement: Environment Drift Detector.
+ * Environment drift detector.
  * Compares .env.example with the actual schemas to detect missing or unused variables.
  */
 function checkDrift(dir: string, schema: any, label: string) {

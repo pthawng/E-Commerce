@@ -1,13 +1,13 @@
 /**
  * Format Utilities
- * Các hàm format dùng chung giữa BE và FE
+ * Shared formatting utilities for backend and frontend
  */
 
 /**
  * Format currency
- * @param amount - Số tiền
- * @param currency - Mã tiền tệ (mặc định: VND)
- * @param locale - Locale (mặc định: vi-VN)
+ * @param amount - Amount
+ * @param currency - Currency code (default: 'VND')
+ * @param locale - Locale (default: 'vi-VN')
  */
 export function formatCurrency(
   amount: number,
@@ -24,8 +24,8 @@ export function formatCurrency(
 
 /**
  * Format number
- * @param num - Số cần format
- * @param locale - Locale (mặc định: vi-VN)
+ * @param num - Number to format
+ * @param locale - Locale (default: 'vi-VN')
  */
 export function formatNumber(num: number, locale: string = 'vi-VN'): string {
   return new Intl.NumberFormat(locale).format(num);
@@ -33,8 +33,8 @@ export function formatNumber(num: number, locale: string = 'vi-VN'): string {
 
 /**
  * Format date
- * @param date - Date object hoặc string
- * @param locale - Locale (mặc định: vi-VN)
+ * @param date - Date object or date string
+ * @param locale - Locale (default: 'vi-VN')
  * @param options - Intl.DateTimeFormatOptions
  */
 export function formatDate(
@@ -54,8 +54,8 @@ export function formatDate(
 
 /**
  * Format datetime
- * @param date - Date object hoặc string
- * @param locale - Locale (mặc định: vi-VN)
+ * @param date - Date object or date string
+ * @param locale - Locale (default: 'vi-VN')
  */
 export function formatDateTime(
   date: Date | string,
@@ -71,9 +71,9 @@ export function formatDateTime(
 }
 
 /**
- * Format relative time (e.g., "2 giờ trước")
- * @param date - Date object hoặc string
- * @param locale - Locale (mặc định: vi-VN)
+ * Format relative time
+ * @param date - Date object or date string
+ * @param locale - Locale (default: 'vi-VN')
  */
 export function formatRelativeTime(
   date: Date | string,

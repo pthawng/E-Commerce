@@ -1,6 +1,6 @@
 /**
  * Shared Config
- * Export tất cả config
+ * Exports all configuration modules
  */
 
 export * from './api.config';

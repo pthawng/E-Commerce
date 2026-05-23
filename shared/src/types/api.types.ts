@@ -1,6 +1,6 @@
 /**
  * API Response Types
- * Chuẩn hóa response format giữa BE và FE
+ * Standardizes the response format between backend and frontend
  */
 
 /**

@@ -1,6 +1,6 @@
 /**
  * App Configuration
- * Cấu hình ứng dụng dùng chung
+ * Shared application configurations
  */
 
 /**

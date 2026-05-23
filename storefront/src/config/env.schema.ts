@@ -18,6 +18,15 @@ export type EnvConfig = z.infer<typeof envSchema>;
  * Fail-fast if any critical variable is missing.
  */
 function validateFrontendEnv(): Readonly<EnvConfig> {
+    if (typeof import.meta === 'undefined' || !import.meta.env) {
+        return Object.freeze({
+            VITE_API_BASE_URL: 'http://localhost:4000',
+            MODE: 'development',
+            PROD: false,
+            DEV: true,
+        }) as Readonly<EnvConfig>;
+    }
+
     const result = envSchema.safeParse(import.meta.env);
 
     if (!result.success) {

@@ -8,7 +8,7 @@ terraform {
     }
   }
 
-  # L8 Tip: Always use a remote backend with state locking
+  # Always use a remote backend with state locking in production
   # backend "s3" {
   #   bucket         = "ray-paradis-terraform-state"
   #   key            = "prod/terraform.tfstate"

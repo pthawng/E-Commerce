@@ -1,6 +1,6 @@
 /**
  * Permission Module Enum
- * Module phân quyền
+ * Permission modules
  */
 export enum PermissionModule {
   USER = 'USER',
@@ -13,7 +13,7 @@ export enum PermissionModule {
 
 /**
  * Permission Action Enum
- * Hành động phân quyền
+ * Permission actions
  */
 export enum PermissionAction {
   READ = 'READ',

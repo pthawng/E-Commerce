@@ -1,6 +1,6 @@
 /**
  * Shared Enums
- * Export tất cả enums để dùng chung giữa BE và FE
+ * Exports all shared enums
  */
 
 export * from './order.enum';

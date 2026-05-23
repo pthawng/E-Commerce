@@ -1,6 +1,6 @@
 /**
  * Auth Types
- * Types cho Authentication - dùng chung giữa BE và FE
+ * Types for Authentication
  */
 
 /**

@@ -58,7 +58,7 @@ export const NODE_ENV = config.nodeEnv;
 
 /**
  * Configure API Base URL manually
- * Dùng để force một URL đặc biệt từ bên ngoài (ví dụ: main.tsx)
+ * Used to force a specific URL from the outside (e.g., main.tsx)
  */
 export function configureApiBaseUrl(url: string | undefined): void {
   if (url) {
@@ -76,7 +76,7 @@ export function getApiBaseUrl(): string {
 
 /**
  * API Endpoints
- * Các endpoint paths dùng chung
+ * Shared endpoint paths
  */
 export const API_ENDPOINTS = {
   // Auth
@@ -176,7 +176,7 @@ export const API_ENDPOINTS = {
 
 /**
  * Build full API URL
- * @param path - API path (có thể là từ API_ENDPOINTS hoặc custom path)
+ * @param path - API path (can be from API_ENDPOINTS or custom path)
  */
 export function buildApiUrl(path: string): string {
   const baseUrl = API_BASE_URL.replace(/\/$/, ''); // Remove trailing slash

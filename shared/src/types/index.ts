@@ -1,6 +1,6 @@
 /**
  * Shared Types
- * Export tất cả types để dùng chung giữa BE và FE
+ * Exports all types
  */
 
 export * from './api.types';
