@@ -17,29 +17,26 @@ export const ShimmerText = ({
   const [isShimmering, setIsShimmering] = useState(false);
 
   useEffect(() => {
-    let initialTimeout: any;
-    let shimmerInterval: any;
-    let disableTimeout: any;
+    let disableTimeout: ReturnType<typeof setTimeout> | undefined;
 
     const triggerShimmer = () => {
       setIsShimmering(true);
-      // Clean up previous disable timeout if any
-      clearTimeout(disableTimeout);
+      if (disableTimeout) clearTimeout(disableTimeout);
       disableTimeout = setTimeout(() => {
         setIsShimmering(false);
       }, duration);
     };
 
     // Initial shimmer after a delay
-    initialTimeout = setTimeout(triggerShimmer, 2000);
+    const initialTimeout = setTimeout(triggerShimmer, 2000);
     
     // Recurring shimmer
-    shimmerInterval = setInterval(triggerShimmer, interval);
+    const shimmerInterval = setInterval(triggerShimmer, interval);
 
     return () => {
       clearTimeout(initialTimeout);
       clearInterval(shimmerInterval);
-      clearTimeout(disableTimeout);
+      if (disableTimeout) clearTimeout(disableTimeout);
     };
   }, [interval, duration]);
 

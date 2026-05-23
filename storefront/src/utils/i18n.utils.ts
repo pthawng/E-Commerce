@@ -2,19 +2,24 @@
  * Access a nested property from an object using a string path (e.g., 'common.nav.collections')
  * Staff Fix: Added better protection and deep reduction.
  */
-const getNestedValue = (obj: any, path: string): string | undefined => {
+const getNestedValue = (obj: unknown, path: string): string | undefined => {
   if (!obj || !path) return undefined;
-  const val = path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  const val = path.split('.').reduce<unknown>((acc, part) => {
+    if (acc && typeof acc === 'object') {
+      return (acc as Record<string, unknown>)[part];
+    }
+    return undefined;
+  }, obj);
   return typeof val === 'string' ? val : undefined;
 };
 
 /**
- * Creates a Principal-grade translation function with multi-level fallback
- * and production-standard interpolation {{variable}}
+ * Creates a translation function with multi-level fallback
+ * and interpolation {{variable}}
  */
 export const createTranslationFn = (
-  currentTranslations: any,
-  defaultTranslations: any,
+  currentTranslations: unknown,
+  defaultTranslations: unknown,
   language: string,
   fallbackLng: string = 'en'
 ) => {

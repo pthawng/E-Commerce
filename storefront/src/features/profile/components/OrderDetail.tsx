@@ -131,10 +131,10 @@ export const OrderDetail: React.FC = () => {
           <div className="p-8 border border-primary/5 bg-primary/[0.02]">
             <h4 className="text-[10px] uppercase tracking-ultra text-primary/60 mb-6">{t('account.orders.shippingTo')}</h4>
             <div className="space-y-2 text-sm text-primary/70 font-body italic leading-relaxed">
-              <p>{(order.shippingAddress as any)?.fullName}</p>
-              <p>{(order.shippingAddress as any)?.address}</p>
-              <p>{(order.shippingAddress as any)?.city}, {(order.shippingAddress as any)?.postalCode}</p>
-              <p className="text-xs text-primary/40 not-italic mt-4">{(order.shippingAddress as any)?.phone}</p>
+              <p>{order.shippingAddress?.fullName}</p>
+              <p>{order.shippingAddress?.address}</p>
+              <p>{order.shippingAddress?.city}, {order.shippingAddress?.postalCode}</p>
+              <p className="text-xs text-primary/40 not-italic mt-4">{order.shippingAddress?.phone}</p>
             </div>
           </div>
         </aside>

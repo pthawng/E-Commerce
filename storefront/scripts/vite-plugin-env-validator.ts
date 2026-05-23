@@ -14,7 +14,7 @@ const storefrontEnvSchema = z.object({
 export function envValidator() {
     return {
         name: 'vite-plugin-env-validator',
-        configResolved(config: any) {
+        configResolved(config: { mode: string; command: string }) {
             // Load .env files based on mode
             const envRoot = path.resolve(__dirname, '../');
             const envPath = path.resolve(envRoot, `.env.${config.mode}`);

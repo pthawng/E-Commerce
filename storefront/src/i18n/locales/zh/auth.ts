@@ -41,5 +41,28 @@ export default {
         successRegister: '欢迎加入尊享圈层。您的旅程由此开启。',
         successReset: '重置协议已发送至您的电子邮箱。',
         unverifiedEmail: '身份验证待处理。验证链接已发送至您的收件箱。',
+    },
+    verification: {
+        invalidLink: '验证链接无效',
+        noToken: '未找到验证 Token。',
+        backHome: '返回首页',
+        verifying: '正在验证...',
+        waitMoment: '请稍候。',
+        successTitle: '验证成功',
+        successDesc: '谢谢您。您的电子邮件已成功验证。',
+        continueToAccount: '继续前往账户',
+        failedTitle: '验证失败',
+        loginManually: '手动登录',
+    },
+    reset: {
+        title: '重置密码',
+        verifyingLink: '正在验证链接...',
+        requestNewLink: '请求新链接',
+        enterNewPassword: '输入账户新密码：',
+        newPasswordLabel: '新密码',
+        confirmPasswordLabel: '确认密码',
+        placeholderNewPassword: '输入新密码',
+        placeholderConfirmPassword: '再次输入新密码',
+        processing: '正在处理...',
     }
 };

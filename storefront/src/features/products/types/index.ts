@@ -34,7 +34,7 @@ export interface ProductVariant {
     sku: string;
     price: number;
     compareAtPrice?: number;
-    variantTitle: any;
+    variantTitle: Record<string, string> | null;
     isDefault: boolean;
     thumbnailUrl?: string;
     attributes: VariantAttribute[];
@@ -66,7 +66,7 @@ export interface Product {
 
 import { ApiResponse } from '@shared';
 
-export interface ProductResponse extends ApiResponse<Product[]> { }
+export type ProductResponse = ApiResponse<Product[]>;
 
 export interface ProductParams {
     page?: number;

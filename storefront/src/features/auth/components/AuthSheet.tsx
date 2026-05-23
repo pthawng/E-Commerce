@@ -158,8 +158,9 @@ export function AuthSheet({ open, onOpenChange }: AuthSheetProps) {
         } else {
           throw new Error('Invalid auth response');
         }
-      } catch (err: any) {
-        const msg = err.response?.data?.message || err.message || 'Login failed';
+      } catch (err) {
+        const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
+        const msg = errorObj.response?.data?.message || errorObj.message || 'Login failed';
         if (msg === 'UNVERIFIED_EMAIL') {
           toast.error(t('auth.messages.unverifiedEmail') || 'Tài khoản chưa xác thực. Đang gửi lại email...');
           try {

@@ -19,8 +19,9 @@ export const useUpdateProfile = () => {
       queryClient.setQueryData(['profile'], updatedProfile);
       toast.success('Profile updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update profile');
+    onError: (error: unknown) => {
+      const errObj = error as { message?: string };
+      toast.error(errObj.message || 'Failed to update profile');
     },
   });
 };
@@ -31,8 +32,9 @@ export const useChangePassword = () => {
     onSuccess: () => {
       toast.success('Password changed successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to change password');
+    onError: (error: unknown) => {
+      const errObj = error as { message?: string };
+      toast.error(errObj.message || 'Failed to change password');
     },
   });
 };

@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
  * 4. Verify payment section visibility.
  */
 test.describe('Checkout Flow', () => {
-    test('should complete guest checkout flow up to payment', async ({ page }: { page: any }) => {
+    test('should complete guest checkout flow up to payment', async ({ page }) => {
         // 1. Visit Home & Add to Cart
         await page.goto('/');
 
@@ -42,8 +42,8 @@ test.describe('Checkout Flow', () => {
         // Note: Actual payment completion would require mocks or sandbox
     });
 
-    test('should handle payment failure and allow retry', async ({ page }: { page: any }) => {
+    test('should handle payment failure and allow retry', async ({ page }) => {
         // This requires a mock of the payment provider response
-        // L8: We test the RECOVERY flow
+        // Test the recovery flow
     });
 });

@@ -58,7 +58,7 @@ export const Header = React.memo(({ forceOpaque }: { forceOpaque?: boolean }) =>
 
   useEffect(() => {
     const tolerance = 10;
-    let throttleTimeout: any;
+    let throttleTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const handleScroll = () => {
       if (throttleTimeout) return;

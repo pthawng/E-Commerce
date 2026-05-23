@@ -15,7 +15,7 @@ export type EnvConfig = z.infer<typeof envSchema>;
 
 /**
  * Validates the frontend environment.
- * L8 Enforcement: Fail-fast if any critical variable is missing.
+ * Fail-fast if any critical variable is missing.
  */
 function validateFrontendEnv(): Readonly<EnvConfig> {
     const result = envSchema.safeParse(import.meta.env);

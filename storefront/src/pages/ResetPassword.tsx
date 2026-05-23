@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useResetPassword } from '@/features/auth/hooks/useResetPassword';
+import { useTranslation } from '@/hooks/useTranslation';
 
 const passwordSchema = z.string().min(8);
 
@@ -21,6 +22,7 @@ export default function ResetPassword() {
         isSubmitting,
         resetPassword
     } = useResetPassword();
+    const { t } = useTranslation();
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -30,12 +32,12 @@ export default function ResetPassword() {
         e.preventDefault();
 
         if (!passwordSchema.safeParse(password).success) {
-            setError('Mật khẩu phải có ít nhất 8 ký tự');
+            setError(t('auth.validation.passwordLength'));
             return;
         }
 
         if (password !== confirmPassword) {
-            setError('Mật khẩu xác nhận không khớp');
+            setError(t('auth.validation.passwordMismatch'));
             return;
         }
 
@@ -54,12 +56,12 @@ export default function ResetPassword() {
                 className="w-full max-w-md space-y-8"
             >
                 <div className="text-center space-y-2">
-                    <h1 className="font-display text-3xl text-foreground">Đặt lại mật khẩu</h1>
+                    <h1 className="font-display text-3xl text-foreground">{t('auth.reset.title')}</h1>
 
                     {verifyStatus === 'verifying' && (
                         <div className="flex flex-col items-center justify-center py-8 space-y-4">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="text-sm text-muted-foreground">Đang xác minh liên kết...</p>
+                            <p className="text-sm text-muted-foreground">{t('auth.reset.verifyingLink')}</p>
                         </div>
                     )}
 
@@ -67,7 +69,7 @@ export default function ResetPassword() {
                         <div className="py-6 space-y-4">
                             <p className="text-destructive font-medium">{error}</p>
                             <Button variant="outline" onClick={() => navigate('/forgot-password')}>
-                                Yêu cầu liên kết mới
+                                {t('auth.reset.requestNewLink')}
                             </Button>
                         </div>
                     )}
@@ -75,7 +77,7 @@ export default function ResetPassword() {
                     {verifyStatus === 'success' && (
                         <>
                             <p className="text-muted-foreground font-body text-sm">
-                                Nhập mật khẩu mới cho tài khoản:
+                                {t('auth.reset.enterNewPassword')}
                             </p>
                             <div className="font-medium text-foreground bg-secondary/30 py-2 px-4 rounded-md inline-block">
                                 {userInfo?.email}
@@ -87,7 +89,7 @@ export default function ResetPassword() {
                 {verifyStatus === 'success' && (
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="password">Mật khẩu mới</Label>
+                            <Label htmlFor="password">{t('auth.reset.newPasswordLabel')}</Label>
                             <div className="relative">
                                 <Input
                                     id="password"
@@ -95,7 +97,7 @@ export default function ResetPassword() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="pr-10"
-                                    placeholder="Nhập mật khẩu mới"
+                                    placeholder={t('auth.reset.placeholderNewPassword')}
                                 />
                                 <button
                                     type="button"
@@ -108,13 +110,13 @@ export default function ResetPassword() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+                            <Label htmlFor="confirmPassword">{t('auth.reset.confirmPasswordLabel')}</Label>
                             <Input
                                 id="confirmPassword"
                                 type={showPassword ? 'text' : 'password'}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Nhập lại mật khẩu mới"
+                                placeholder={t('auth.reset.placeholderConfirmPassword')}
                             />
                         </div>
 
@@ -130,10 +132,10 @@ export default function ResetPassword() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Đang xử lý...
+                                    {t('auth.reset.processing')}
                                 </>
                             ) : (
-                                'Đặt lại mật khẩu'
+                                t('auth.reset.title')
                             )}
                         </Button>
                     </form>

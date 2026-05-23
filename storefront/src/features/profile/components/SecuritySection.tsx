@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, UseFormRegisterReturn } from 'react-hook-form';
 import { useTranslation } from '@/hooks/useTranslation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lock, ShieldCheck, X } from 'lucide-react';
@@ -49,7 +49,7 @@ export const SecuritySection: React.FC = () => {
     show: boolean,
     toggle: () => void,
     error?: string,
-    registerProps: any
+    registerProps: UseFormRegisterReturn
   }) => (
     <div className="space-y-4">
       <Label className="text-[10px] uppercase tracking-ultra text-muted-foreground/60">{label}</Label>

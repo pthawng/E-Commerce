@@ -52,5 +52,28 @@ export default {
         verifyError: 'Invalid verification signal',
         resendSuccess: 'A new protocol has been dispatched',
         resendError: 'Unable to dispatch new protocol',
+    },
+    verification: {
+        invalidLink: 'Invalid verification link',
+        noToken: 'No verification token found.',
+        backHome: 'Back to Home',
+        verifying: 'Verifying...',
+        waitMoment: 'Please wait a moment.',
+        successTitle: 'Verification Successful',
+        successDesc: 'Thank you. Your email has been successfully verified.',
+        continueToAccount: 'Continue to Account',
+        failedTitle: 'Verification Failed',
+        loginManually: 'Sign In Manually',
+    },
+    reset: {
+        title: 'Reset Password',
+        verifyingLink: 'Verifying verification link...',
+        requestNewLink: 'Request new link',
+        enterNewPassword: 'Enter a new password for the account:',
+        newPasswordLabel: 'New password',
+        confirmPasswordLabel: 'Confirm Password',
+        placeholderNewPassword: 'Enter new password',
+        placeholderConfirmPassword: 'Repeat new password',
+        processing: 'Processing...',
     }
 };

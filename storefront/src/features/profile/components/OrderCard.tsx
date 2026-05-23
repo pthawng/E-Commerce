@@ -62,7 +62,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-3 h-3 stroke-[1]" />
               <span className="text-[10px] uppercase tracking-widest">
-                {(order.shippingAddress as any)?.city || t('account.orders.internationalDelivery')}
+                {order.shippingAddress?.city || t('account.orders.internationalDelivery')}
               </span>
             </div>
           </div>

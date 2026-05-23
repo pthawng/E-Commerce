@@ -6,7 +6,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@shared": ["../shared"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "zod": ["./node_modules/zod"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,

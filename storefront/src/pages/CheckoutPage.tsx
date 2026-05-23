@@ -30,7 +30,7 @@ export const CheckoutPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'VIETQR' | 'VNPAY' | 'PAYPAL'>('VNPAY');
 
-    // Guest OTP States (L8 Standard)
+    // Guest OTP States
     const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
     const [otpEmail, setOtpEmail] = useState('');
     const [guestVerifyToken, setGuestVerifyToken] = useState<string | null>(null);
@@ -94,14 +94,14 @@ export const CheckoutPage: React.FC = () => {
         }
     }, [items.length, fetchCart, navigate]);
 
-    const onSubmit = async (formData: CheckoutShippingV1, manualToken?: any) => {
+    const onSubmit = async (formData: CheckoutShippingV1, manualToken?: unknown) => {
         // manualToken might be the React Event object if called via handleSubmit
         const effectiveToken = typeof manualToken === 'string' ? manualToken : guestVerifyToken;
 
         if (isSubmitting) return;
         setIsSubmitting(true);
 
-        // Step 0: Guest Verification Gate (L8 standard)
+        // Guest Verification Gate
         // Use isAuthenticated (not user object) to avoid stale Zustand persist state
         if (!isAuthenticated && !effectiveToken) {
             setPendingFormData(formData);
@@ -110,8 +110,9 @@ export const CheckoutPage: React.FC = () => {
             try {
                 await CheckoutService.requestGuestOTP(formData.email);
                 setIsOTPModalOpen(true);
-            } catch (err: any) {
-                toast.error(err.response?.data?.message || t('checkout.messages.otpRequestError') || 'Không thể yêu cầu mã OTP');
+            } catch (err) {
+                const errorObj = err as { response?: { data?: { message?: string } } };
+                toast.error(errorObj.response?.data?.message || t('checkout.messages.otpRequestError') || 'Không thể yêu cầu mã OTP');
             } finally {
                 setIsSubmitting(false);
             }
@@ -168,21 +169,22 @@ export const CheckoutPage: React.FC = () => {
                 toast.success(t('checkout.messages.success'));
                 navigate('/');
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Checkout error:', err);
+            const errorObj = err as { response?: { status: number; data?: { message?: string } }; statusCode?: number; message?: string };
 
-            if (err.response?.status === 409) {
+            if (errorObj.response?.status === 409) {
                 toast.error(t('checkout.messages.cartChanged'));
                 await fetchCart();
                 return;
             }
-            if (err.statusCode === 400 && (err.message?.includes('token') || err.message?.includes('expired'))) {
+            if (errorObj.statusCode === 400 && (errorObj.message?.includes('token') || errorObj.message?.includes('expired'))) {
                 toast.error(t('checkout.messages.expired'));
                 await fetchCart();
                 navigate('/cart');
                 return;
             }
-            toast.error(err.response?.data?.message || t('checkout.messages.error'));
+            toast.error(errorObj.response?.data?.message || t('checkout.messages.error'));
         } finally {
             setIsSubmitting(false);
         }
@@ -325,7 +327,7 @@ export const CheckoutPage: React.FC = () => {
                                     <CardContent className="p-5 sm:p-8">
                                         <RadioGroup
                                             value={paymentMethod}
-                                            onValueChange={(val: any) => setPaymentMethod(val)}
+                                            onValueChange={(val) => setPaymentMethod(val as 'VIETQR' | 'VNPAY' | 'PAYPAL')}
                                             className="grid gap-4"
                                         >
                                             {['VNPAY', 'PAYPAL', 'VIETQR'].map((method) => (

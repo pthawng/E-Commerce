@@ -59,7 +59,7 @@ export const PaymentResultPage: React.FC = () => {
   /**
    * Observability: Track payment result events
    */
-  const trackEvent = useCallback((event: string, properties?: any) => {
+  const trackEvent = useCallback((event: string, properties?: Record<string, unknown>) => {
     console.log(`[Tracking] ${event}`, properties);
     // Add real tracking library call here, e.g., segment.track(...)
   }, []);
@@ -74,7 +74,7 @@ export const PaymentResultPage: React.FC = () => {
     }
   }, []);
 
-  const handleTerminalState = useCallback((state: PaymentUIState, data?: any) => {
+  const handleTerminalState = useCallback((state: PaymentUIState, data?: OrderInfo | null) => {
     stopPolling();
     setUiState(state);
     if (data) setOrderInfo(data);
@@ -103,7 +103,7 @@ export const PaymentResultPage: React.FC = () => {
     }
 
     try {
-      const data = await CheckoutService.getPaymentStatus(effectiveOrderId);
+      const data = (await CheckoutService.getPaymentStatus(effectiveOrderId)) as (OrderInfo & { status?: string }) | null;
 
       // Deterministic Backend Check
       if (data?.paymentStatus === 'paid') {

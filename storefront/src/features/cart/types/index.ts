@@ -26,3 +26,22 @@ export interface CartTotals {
 }
 
 export type CartStatus = 'idle' | 'syncing' | 'success' | 'error';
+
+export interface CartWarning {
+    type: 'OUT_OF_STOCK' | 'QUANTITY_REDUCED' | string;
+    message?: string;
+}
+
+export interface Cart {
+    items: CartItem[];
+    totals: CartTotals;
+    version?: number;
+    warnings?: CartWarning[];
+}
+
+export interface CartConfig {
+    shippingThreshold: number;
+    shippingFee: number;
+    currency: string;
+    maxQuantityPerItem: number;
+}

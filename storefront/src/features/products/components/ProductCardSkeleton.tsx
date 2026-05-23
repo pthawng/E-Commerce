@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { cn } from "@/lib/utils";
 
 /**
- * L7/L8 Standard Skeleton
+ * Product Card Skeleton
  * Uses a GPU-accelerated shimmer effect for smooth loading.
  */
 export const ProductCardSkeleton = ({ className }: { className?: string }) => {

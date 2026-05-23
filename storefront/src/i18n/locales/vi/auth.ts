@@ -52,5 +52,28 @@ export default {
         verifyError: 'Mã xác thực không hợp lệ',
         resendSuccess: 'Mã mới đã được gửi',
         resendError: 'Không thể gửi lại mã',
+    },
+    verification: {
+        invalidLink: 'Liên kết không hợp lệ',
+        noToken: 'Không tìm thấy mã xác thực.',
+        backHome: 'Về trang chủ',
+        verifying: 'Đang xác thực...',
+        waitMoment: 'Vui lòng đợi trong giây lát.',
+        successTitle: 'Xác thực thành công',
+        successDesc: 'Cảm ơn bạn. Email của bạn đã được xác thực an toàn.',
+        continueToAccount: 'Tiếp tục đến Tài khoản',
+        failedTitle: 'Không thể xác thực',
+        loginManually: 'Đăng nhập thủ công',
+    },
+    reset: {
+        title: 'Đặt lại mật khẩu',
+        verifyingLink: 'Đang xác minh liên kết...',
+        requestNewLink: 'Yêu cầu liên kết mới',
+        enterNewPassword: 'Nhập mật khẩu mới cho tài khoản:',
+        newPasswordLabel: 'Mật khẩu mới',
+        confirmPasswordLabel: 'Xác nhận mật khẩu',
+        placeholderNewPassword: 'Nhập mật khẩu mới',
+        placeholderConfirmPassword: 'Nhập lại mật khẩu mới',
+        processing: 'Đang xử lý...',
     }
 };

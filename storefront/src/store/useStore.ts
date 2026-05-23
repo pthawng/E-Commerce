@@ -154,7 +154,7 @@ export const useStore = create<AppState>()(
         language: state.language,
         currency: state.currency,
       }),
-      migrate: (persistedState: any): any => {
+      migrate: (persistedState: unknown): unknown => {
         const state = persistedState as Partial<AppState>;
         return {
           theme: state.theme || 'light',

@@ -10,6 +10,14 @@ export interface UserProfile {
   userType: 'CUSTOMER' | 'STAFF' | 'SUPER_ADMIN';
 }
 
+export interface ShippingAddress {
+  fullName: string;
+  address: string;
+  city: string;
+  postalCode?: string | null;
+  phone: string;
+}
+
 export const updateProfileSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
@@ -34,7 +42,7 @@ export interface OrderItem {
   productVariantId: string;
   productName: string;
   sku: string;
-  variantTitle: any;
+  variantTitle: Record<string, string> | null;
   thumbnailUrl: string | null;
   productVariant?: {
     thumbnailUrl: string | null;
@@ -83,7 +91,7 @@ export interface Order {
   items: OrderItem[];
   timelines: OrderTimeline[];
   transactions: PaymentTransaction[];
-  shippingAddress: any;
+  shippingAddress: ShippingAddress | null;
   paymentMethod?: string | null;
   paymentDeadline?: string | null;
   cancelReason?: string | null;

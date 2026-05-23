@@ -3,6 +3,7 @@
  * Centralized axios instance with automatic refresh-token handling.
  */
 import axios from 'axios';
+import type { AxiosRequestConfig } from 'axios';
 import type { ApiResponse, ApiError } from '@shared';
 import { buildApiUrl } from '@shared';
 import axiosInstance from './axiosClient';
@@ -19,7 +20,7 @@ export class ApiClientError extends Error {
   }
 }
 
-async function handleAxiosResponse<T>(promise: Promise<any>): Promise<ApiResponse<T>> {
+async function handleAxiosResponse<T>(promise: Promise<{ data: unknown }>): Promise<ApiResponse<T>> {
   try {
     const res = await promise;
     // Improved null checks for response and data
@@ -27,7 +28,7 @@ async function handleAxiosResponse<T>(promise: Promise<any>): Promise<ApiRespons
         throw new ApiClientError(500, 'Invalid response structure from server: data is missing or null');
     }
     return res.data as ApiResponse<T>;
-  } catch (err: any) {
+  } catch (err) {
     // Silent handling for cancelled requests (Elite UX)
     if (axios.isCancel(err)) {
         // Return a promise that never resolves/rejects to stop the chain
@@ -36,8 +37,9 @@ async function handleAxiosResponse<T>(promise: Promise<any>): Promise<ApiRespons
 
     if (err instanceof ApiClientError) throw err;
     
-    const status = err?.response?.status || 500;
-    const data = err?.response?.data;
+    const axiosError = err as { response?: { status: number; data?: unknown } };
+    const status = axiosError.response?.status || 500;
+    const data = axiosError.response?.data;
     if (status === 401) {
       throw new ApiClientError(401, 'Unauthorized - Please login again');
     }
@@ -46,41 +48,39 @@ async function handleAxiosResponse<T>(promise: Promise<any>): Promise<ApiRespons
   }
 }
 
-export async function apiGet<T = unknown>(endpoint: string, options?: any) {
+export async function apiGet<T = unknown>(endpoint: string, options?: AxiosRequestConfig) {
   const url = buildApiUrl(endpoint);
   return handleAxiosResponse<T>(axiosInstance.get(url, options));
 }
 
-export async function apiPost<T = unknown>(endpoint: string, body?: unknown, options?: any) {
+export async function apiPost<T = unknown>(endpoint: string, body?: unknown, options?: AxiosRequestConfig) {
   const url = buildApiUrl(endpoint);
   return handleAxiosResponse<T>(axiosInstance.post(url, body, options));
 }
 
-export async function apiPut<T = unknown>(endpoint: string, body?: unknown, options?: any) {
+export async function apiPut<T = unknown>(endpoint: string, body?: unknown, options?: AxiosRequestConfig) {
   const url = buildApiUrl(endpoint);
   return handleAxiosResponse<T>(axiosInstance.put(url, body, options));
 }
 
-export async function apiPatch<T = unknown>(endpoint: string, body?: unknown, options?: any) {
+export async function apiPatch<T = unknown>(endpoint: string, body?: unknown, options?: AxiosRequestConfig) {
   const url = buildApiUrl(endpoint);
   return handleAxiosResponse<T>(axiosInstance.patch(url, body, options));
 }
 
-export async function apiDelete<T = unknown>(endpoint: string, options?: any) {
+export async function apiDelete<T = unknown>(endpoint: string, options?: AxiosRequestConfig) {
   const url = buildApiUrl(endpoint);
   return handleAxiosResponse<T>(axiosInstance.delete(url, options));
 }
 
-export async function apiPostFormData<T = unknown>(endpoint: string, formData: FormData, options?: any) {
+export async function apiPostFormData<T = unknown>(endpoint: string, formData: FormData, options?: AxiosRequestConfig) {
   const url = buildApiUrl(endpoint);
   const cfg = { headers: { 'Content-Type': 'multipart/form-data' }, ...options };
   return handleAxiosResponse<T>(axiosInstance.post(url, formData, cfg));
 }
 
-export async function apiPatchFormData<T = unknown>(endpoint: string, formData: FormData, options?: any) {
+export async function apiPatchFormData<T = unknown>(endpoint: string, formData: FormData, options?: AxiosRequestConfig) {
   const url = buildApiUrl(endpoint);
   const cfg = { headers: { 'Content-Type': 'multipart/form-data' }, ...options };
   return handleAxiosResponse<T>(axiosInstance.patch(url, formData, cfg));
 }
-
-

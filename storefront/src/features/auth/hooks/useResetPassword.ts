@@ -40,9 +40,9 @@ export function useResetPassword() {
                     setVerifyStatus('error');
                     setError('Liên kết không hợp lệ');
                 }
-            } catch (err: any) {
+            } catch (err) {
                 setVerifyStatus('error');
-                setError(err?.message || 'Liên kết không hợp lệ hoặc đã hết hạn');
+                setError(err instanceof Error ? err.message : 'Liên kết không hợp lệ hoặc đã hết hạn');
             }
         };
 
@@ -61,8 +61,8 @@ export function useResetPassword() {
             });
             toast.success('Đặt lại mật khẩu thành công, vui lòng đăng nhập lại');
             onSuccess();
-        } catch (err: any) {
-            const message = err?.message || 'Có lỗi xảy ra, vui lòng thử lại';
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Có lỗi xảy ra, vui lòng thử lại';
             toast.error(message);
             setError(message);
         } finally {

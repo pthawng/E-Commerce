@@ -46,7 +46,7 @@ export const GuestOTPModal: React.FC<GuestOTPModalProps> = ({
         return () => clearTimeout(timer);
     }, [countdown]);
 
-    const handleVerify = async () => {
+    const handleVerify = useCallback(async () => {
         if (otp.length !== 6) return;
 
         setIsVerifying(true);
@@ -54,14 +54,15 @@ export const GuestOTPModal: React.FC<GuestOTPModalProps> = ({
             const result = await CheckoutService.verifyGuestOTP(email, otp);
             onVerified(result.guestVerifyToken);
             toast.success(t('auth.guest.verifySuccess'));
-        } catch (err: any) {
+        } catch (err) {
             console.error('OTP Verification error:', err);
-            toast.error(err.response?.data?.message || t('auth.guest.verifyError'));
+            const errObj = err as { response?: { data?: { message?: string } } };
+            toast.error(errObj.response?.data?.message || t('auth.guest.verifyError'));
             setOtp('');
         } finally {
             setIsVerifying(false);
         }
-    };
+    }, [otp, email, onVerified, t]);
 
     const handleResend = async () => {
         if (countdown > 0) return;
@@ -83,7 +84,7 @@ export const GuestOTPModal: React.FC<GuestOTPModalProps> = ({
         if (otp.length === 6) {
             handleVerify();
         }
-    }, [otp]);
+    }, [otp, handleVerify]);
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CartItem, CartStatus, CartTotals } from '../types';
+import { CartItem, CartStatus, CartTotals, Cart } from '../types';
 import { CartService } from '../services/CartService';
 import { toast } from 'sonner';
 
@@ -31,7 +31,7 @@ interface CartState {
 
     // Internal Sync
     _syncWithBackend: (
-        action: (version: number, signal: AbortSignal) => Promise<any>,
+        action: (version: number, signal: AbortSignal) => Promise<Cart>,
         versionOverride?: number,
         rollbackItems?: CartItem[],
     ) => Promise<void>;
@@ -105,8 +105,9 @@ export const useCartStore = create<CartState>()(
                         isHydrated: true,
                         status: 'idle'
                     });
-                } catch (err: any) {
-                    set({ status: 'error', error: err.message, isHydrated: true });
+                } catch (err) {
+                    const message = err instanceof Error ? err.message : 'Could not load your cart';
+                    set({ status: 'error', error: message, isHydrated: true });
                     toast.error('Could not load your cart. Please try again.');
                 }
             },
@@ -142,16 +143,17 @@ export const useCartStore = create<CartState>()(
                         error: null
                     });
                     setTimeout(() => set({ status: 'idle' }), 1000);
-                } catch (err: any) {
-                    if (err.name === 'AbortError') return;
+                } catch (err) {
+                    const errorObj = err as { name?: string; response?: { status: number }; code?: string; message?: string };
+                    if (errorObj.name === 'AbortError') return;
 
                     // 409 Conflict Handling
-                    if (err.response?.status === 409 || err.code === 'CART_VERSION_MISMATCH') {
+                    if (errorObj.response?.status === 409 || errorObj.code === 'CART_VERSION_MISMATCH') {
                         await get().fetchCart();
                         return;
                     }
 
-                    set({ status: 'error', error: err.message });
+                    set({ status: 'error', error: errorObj.message || 'Unknown error occurred' });
                     if (rollbackItems) {
                         set({ items: rollbackItems, totals: calculateTotals(rollbackItems, get().config || DEFAULT_CONFIG) });
                     }
@@ -190,7 +192,7 @@ export const useCartStore = create<CartState>()(
                     newItems = [...existingItems, newItem];
                 }
 
-                // L8+ UX: Keep old totals but show sync status
+                // UX: Keep old totals but show sync status
                 set({
                     items: newItems,
                     status: 'syncing',
@@ -254,7 +256,7 @@ export const useCartStore = create<CartState>()(
                 await get()._syncWithBackend(async () => {
                     const data = await CartService.mergeCart();
                     if (data.warnings?.length) {
-                        data.warnings.forEach((w: any) => {
+                        data.warnings.forEach((w) => {
                             if (w.type === 'OUT_OF_STOCK') {
                                 toast.warning('Some items are out of stock and were removed.');
                             } else if (w.type === 'QUANTITY_REDUCED') {

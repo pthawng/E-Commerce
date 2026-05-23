@@ -19,7 +19,7 @@ export const OrderHistory: React.FC = () => {
     );
   }
 
-  const orders = response?.data || [];
+  const orders = response?.data?.items ?? [];
 
   if (error || !response?.success) {
     return (

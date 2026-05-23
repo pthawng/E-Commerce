@@ -1,5 +1,6 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from '@/services/apiClient';
 import { API_ENDPOINTS } from '@shared';
+import { Cart, CartConfig } from '../types';
 
 /**
  * Cart Service
@@ -11,8 +12,8 @@ export const CartService = {
     /**
      * Get backend cart totals and items
      */
-    getCart: async (signal?: AbortSignal): Promise<any> => {
-        const response = await apiGet(API_ENDPOINTS.CART.BASE, {
+    getCart: async (signal?: AbortSignal): Promise<Cart> => {
+        const response = await apiGet<Cart>(API_ENDPOINTS.CART.BASE, {
             signal
         });
         return response.data;
@@ -21,8 +22,8 @@ export const CartService = {
     /**
      * Add single item to server cart
      */
-    addItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal, idempotencyKey?: string): Promise<any> => {
-        const response = await apiPost(API_ENDPOINTS.CART.BASE, { variantId, quantity, version, idempotencyKey }, {
+    addItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal, idempotencyKey?: string): Promise<Cart> => {
+        const response = await apiPost<Cart>(API_ENDPOINTS.CART.BASE, { variantId, quantity, version, idempotencyKey }, {
             signal
         });
         return response.data;
@@ -31,8 +32,8 @@ export const CartService = {
     /**
      * Update item quantity
      */
-    updateItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal): Promise<any> => {
-        const response = await apiPatch(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, { quantity, version }, {
+    updateItem: async (variantId: string, quantity: number, version?: number, signal?: AbortSignal): Promise<Cart> => {
+        const response = await apiPatch<Cart>(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, { quantity, version }, {
             signal
         });
         return response.data;
@@ -41,8 +42,8 @@ export const CartService = {
     /**
      * Remove item from server cart
      */
-    removeItem: async (variantId: string, version?: number, signal?: AbortSignal): Promise<any> => {
-        const response = await apiDelete(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, {
+    removeItem: async (variantId: string, version?: number, signal?: AbortSignal): Promise<Cart> => {
+        const response = await apiDelete<Cart>(`${API_ENDPOINTS.CART.ITEMS}/${variantId}`, {
             params: { version },
             signal
         });
@@ -52,16 +53,16 @@ export const CartService = {
     /**
      * Merge guest cart into user cart
      */
-    mergeCart: async (): Promise<any> => {
-        const response = await apiPost(`${API_ENDPOINTS.CART.BASE}/merge`, {});
+    mergeCart: async (): Promise<Cart> => {
+        const response = await apiPost<Cart>(`${API_ENDPOINTS.CART.BASE}/merge`, {});
         return response.data;
     },
 
     /**
      * Get global cart config (shipping thresholds, etc.)
      */
-    getConfig: async (): Promise<any> => {
-        const response = await apiGet(`${API_ENDPOINTS.CART.BASE}/config`);
+    getConfig: async (): Promise<CartConfig> => {
+        const response = await apiGet<CartConfig>(`${API_ENDPOINTS.CART.BASE}/config`);
         return response.data;
     }
 };

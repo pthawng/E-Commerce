@@ -9,7 +9,7 @@ interface UseInfiniteScrollOptions {
 }
 
 /**
- * L8+ Infinite Scroll Hook — Stable Observer Edition
+ * Infinite Scroll Hook — Stable Observer Edition
  *
  * Key fix over naive implementations:
  * - Uses a `callbackRef` to keep the latest handler WITHOUT re-creating the
@@ -56,9 +56,7 @@ export function useInfiniteScroll({
       observerRef.current?.disconnect();
     };
     // Intentionally only depends on rootMargin/threshold — observer lifecycle is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rootMargin, threshold]);
 
   return { targetRef };
 }
-

@@ -9,11 +9,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useState } from 'react';
 import axiosClient from '@/services/axiosClient';
 
+import { Product } from '@/features/products/types';
+
 const CollectionItem = ({ 
   product, 
   index 
 }: { 
-  product: any; 
+  product: Product; 
   index: number;
 }) => {
   const ref = useRef(null);

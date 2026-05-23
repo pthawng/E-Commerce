@@ -10,6 +10,7 @@ import { ZodLocalizer } from "./components/i18n/ZodLocalizer";
 import { ScrollToAnchor } from "@/components/utils/ScrollToAnchor";
 import { ErrorBoundary } from "@/components/utils/ErrorBoundary";
 import { AiChatbot } from "@/features/ai-chat/AiChatbot";
+import { OAuthCallbackHandler } from "@/features/auth/components/OAuthCallbackHandler";
 
 // Performance Optimization: Route-based code splitting
 const Index = lazy(() => import("@/pages/Index"));
@@ -35,8 +36,9 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 60000,
       gcTime: 1000 * 60 * 60 * 24,
-      retry: (failureCount, error: any) => {
-        if (error?.statusCode === 404) return false;
+      retry: (failureCount, error: unknown) => {
+        const errObj = error as { statusCode?: number } | null | undefined;
+        if (errObj?.statusCode === 404) return false;
         return failureCount < 2;
       },
       refetchOnWindowFocus: false,
@@ -68,6 +70,7 @@ const App = () => (
           <Sonner position="top-right" expand={true} richColors />
           <BrowserRouter>
             <ScrollToAnchor />
+            <OAuthCallbackHandler />
             <Routes>
               <Route path="/" element={<Suspense fallback={<RouteLoader />}><Index /></Suspense>} />
               <Route path="/collections" element={<Suspense fallback={<RouteLoader />}><CollectionsPage /></Suspense>} />
