@@ -33,7 +33,7 @@ import { usePageHeader } from '@/shared/lib/PageHeaderContext';
 import { WidgetErrorBoundary } from '@/shared/ui/ErrorBoundary/WidgetErrorBoundary';
 import { useCurrencyConverter } from '@/shared/lib/hooks/useCurrencyConverter';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 export const AnalyticsPage: React.FC = () => {
     const { t } = useTranslation() as any;
@@ -196,7 +196,7 @@ export const AnalyticsPage: React.FC = () => {
                                     dataKey="value"
                                     nameKey="type"
                                 >
-                                    {customers?.segmentDistribution.map((entry: any, index: number) => (
+                                    {customers?.segmentDistribution.map((_entry: any, index: number) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
@@ -286,7 +286,7 @@ export const AnalyticsPage: React.FC = () => {
                         <ZAxis type="number" dataKey="revenue" range={[100, 1000]} name="Revenue" />
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                         <Scatter name="Products" data={products} fill="#d4af37">
-                            {products?.map((entry: any, index: number) => (
+                            {products?.map((_entry: any, index: number) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.6} />
                             ))}
                         </Scatter>
@@ -321,7 +321,6 @@ export const AnalyticsPage: React.FC = () => {
                             tickLine={false}
                             tick={{ fontSize: 10 }}
                             tickFormatter={val => {
-                                const stepKey = val.toLowerCase().replace(/ /g, '_');
                                 return t(`dashboard.status_mapping.${val.toUpperCase()}`, {
                                     defaultValue: val,
                                 });

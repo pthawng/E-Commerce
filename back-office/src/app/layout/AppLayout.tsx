@@ -4,9 +4,7 @@ import {
   Menu,
   Button,
   Typography,
-  Space,
   Input,
-  Badge,
   Dropdown,
   Avatar,
   MenuProps,
@@ -21,13 +19,9 @@ import {
   MenuUnfoldOutlined,
   MenuFoldOutlined,
   SearchOutlined,
-  BellOutlined,
-  PlusOutlined,
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
-  SecurityScanOutlined,
-  SafetyCertificateOutlined,
   BugOutlined,
   BankOutlined,
 } from "@ant-design/icons";
@@ -37,7 +31,6 @@ import { useSettingsStore } from "@/shared/lib/settingsStore";
 import { useAuthStore } from "@/features/auth/model/authStore";
 import {
   GlobalOutlined,
-  DollarOutlined,
   RightOutlined,
 } from "@ant-design/icons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -55,7 +48,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({
   const location = useLocation();
 
   const { t, i18n } = useTranslation();
-  const { locale, currency, setLocale } = useSettingsStore();
+  const { locale, setLocale } = useSettingsStore();
 
   const menuItems: MenuProps["items"] = [
     {
@@ -100,39 +93,6 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({
     },
   ];
 
-  const quickActionItems: MenuProps["items"] = [
-    {
-      key: "new-order",
-      label: (
-        <span className="text-[10px] uppercase tracking-widest font-bold">
-          {t("common.forge_order")}
-        </span>
-      ),
-      icon: <PlusOutlined className="text-[10px]" />,
-    },
-    {
-      key: "add-material",
-      label: (
-        <span className="text-[10px] uppercase tracking-widest font-bold">
-          {t("common.intake_material")}
-        </span>
-      ),
-      icon: <SecurityScanOutlined className="text-[10px]" />,
-    },
-    {
-      type: "divider",
-    },
-    {
-      key: "qc-approval",
-      label: (
-        <span className="text-[10px] uppercase tracking-widest font-bold">
-          {t("common.qc_approval")}
-        </span>
-      ),
-      icon: <SafetyCertificateOutlined className="text-[10px]" />,
-    },
-  ];
-
   const regionalItems: MenuProps["items"] = [
     {
       key: "vi",
@@ -161,7 +121,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({
   ];
 
   const { currentHeader } = usePageHeader();
-  const { user, clearAuth } = useAuthStore();
+  const { clearAuth } = useAuthStore();
 
   const profileItems: MenuProps["items"] = [
     {
@@ -190,7 +150,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <Layout className="min-h-screen">
-      {/* Sidebar - Pure & Minimal */}
+      {/* Sidebar */}
       <Sider
         trigger={null}
         collapsible
@@ -247,9 +207,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({
       </Sider>
 
       <Layout className="!bg-white dark:!bg-[#050505]">
-        {/* Topbar - The Control Layer */}
+        {/* Topbar */}
         <Header className="!bg-white border-b border-gray-200 shadow-sm h-24 px-8 flex items-center justify-between sticky top-0 z-50 overflow-hidden">
-          {/* Left: System Control */}
+          {/* Left controls */}
           <div className="flex items-center gap-4">
             <Button
               type="text"
@@ -259,7 +219,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({
             />
           </div>
 
-          {/* Center: Dynamic Page Context (The "FAANG-Grade" Header) */}
+          {/* Page context */}
           <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-8">
             <AnimatePresence mode="wait">
               <motion.div

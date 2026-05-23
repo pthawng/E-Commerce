@@ -14,7 +14,6 @@ import {
     Divider,
     App,
     Upload,
-    Tooltip,
     List,
     Skeleton,
 } from 'antd';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Space, Badge, Button, message } from 'antd';
+import { Typography, Badge, Button, message } from 'antd';
 import { SecurityScanOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ledgerApi } from '@/entities/ledger/api/ledgerApi';

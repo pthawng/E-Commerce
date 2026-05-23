@@ -1,9 +1,6 @@
 import React, { memo } from "react";
-import { Typography } from "antd";
 import { MailOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
-
-const { Text } = Typography;
 
 export const EmailQueueMonitor: React.FC = memo(() => {
   const { t } = useTranslation();

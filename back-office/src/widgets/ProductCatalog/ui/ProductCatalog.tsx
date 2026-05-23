@@ -45,7 +45,7 @@ export const ProductCatalog: React.FC = memo(() => {
     const queryClient = useQueryClient();
     const { notifications } = useNotificationStore();
 
-    // Staff+ L9 Reactive UI: Synchronize product status with notifications in real-time
+    // Keep product status in sync with media anomaly notifications.
     React.useEffect(() => {
         if (notifications.length > 0) {
             const latest = notifications[0];
@@ -129,7 +129,7 @@ export const ProductCatalog: React.FC = memo(() => {
                         src={url} 
                         alt="" 
                         className="w-10 h-10 object-cover rounded" 
-                        onError={(e) => {
+                        onError={() => {
                             api.post('/products/report-media-issue', {
                                 productId: record.id,
                                 mediaUrl: url,
@@ -395,7 +395,7 @@ export const ProductCatalog: React.FC = memo(() => {
                                                 src={m.url}
                                                 alt=""
                                                 className="w-20 h-20 object-cover rounded border border-gray-100 dark:border-gray-900"
-                                                onError={(e) => {
+                                                onError={() => {
                                                     api.post('/products/report-media-issue', {
                                                         productId: selectedProduct.id,
                                                         mediaUrl: m.url,

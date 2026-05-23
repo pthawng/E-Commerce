@@ -17,9 +17,9 @@ import {
     Select,
     TreeSelect,
 } from 'antd';
+import type { UploadFile } from 'antd';
 import {
     PlusOutlined,
-    UploadOutlined,
     DeleteOutlined,
     SettingOutlined,
     InboxOutlined,
@@ -45,7 +45,7 @@ export const CreateProductDrawer: React.FC<CreateProductDrawerProps> = ({ open, 
     const { t } = useTranslation();
     const queryClient = useQueryClient();
     const [submitting, setSubmitting] = useState(false);
-    const [fileList, setFileList] = useState<any[]>([]);
+    const [fileList, setFileList] = useState<UploadFile[]>([]);
 
     const { data: categories } = useQuery({
         queryKey: ['categories-tree'],

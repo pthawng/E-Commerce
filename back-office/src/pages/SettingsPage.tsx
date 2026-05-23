@@ -22,7 +22,6 @@ import {
     ShopOutlined,
     LockOutlined,
     BellOutlined,
-    TeamOutlined,
     SafetyCertificateOutlined,
     GlobalOutlined,
     DeleteOutlined,
@@ -89,7 +88,7 @@ export const SettingsPage: React.FC = () => {
             );
             queryClient.invalidateQueries({ queryKey: ['user-sessions'] });
         },
-        onError: (error: any) => {
+        onError: () => {
             message.error(t('settings.security.revoke_failed', { defaultValue: 'Failed to revoke session.' }));
         },
     });

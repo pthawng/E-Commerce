@@ -4,12 +4,9 @@ import {
   Button,
   Dropdown,
   List,
-  Avatar,
   Typography,
   Space,
   Empty,
-  Tag,
-  Divider,
 } from "antd";
 import {
   BellOutlined,
@@ -24,7 +21,6 @@ import { useNotificationStore } from "@/shared/lib/notificationStore";
 import { useAuthStore } from "@/features/auth/model/authStore";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 
 const { Text, Title } = Typography;
 
@@ -35,7 +31,6 @@ export const NotificationCenter: React.FC = () => {
     init,
     markAsRead,
     markAllAsRead,
-    isLoading,
   } = useNotificationStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();

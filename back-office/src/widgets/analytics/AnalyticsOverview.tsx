@@ -8,8 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   Cell,
   PieChart,
   Pie,
@@ -202,7 +200,7 @@ export const AnalyticsOverview: React.FC = () => {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {MATERIAL_DATA.map((entry, index) => (
+                    {MATERIAL_DATA.map((_entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}

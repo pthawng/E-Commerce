@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Drawer,
   Form,
@@ -9,7 +9,6 @@ import {
   InputNumber,
   Space,
   Typography,
-  Divider,
   Card,
   message,
   Row,
@@ -19,15 +18,12 @@ import {
   Tag,
 } from "antd";
 import {
-  PlusOutlined,
   DeleteOutlined,
   ShoppingOutlined,
   UserOutlined,
-  SearchOutlined,
 } from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import dayjs from "dayjs";
 import { orderApi, CreateOrderInput } from "@/entities/order/api/orderApi";
 import {
   customerApi,
@@ -35,9 +31,7 @@ import {
 } from "@/entities/customer/api/customerApi";
 import { productApi, ProductListItem } from "@/entities/product/api/productApi";
 import { useCurrencyConverter } from "@/shared/lib/hooks/useCurrencyConverter";
-import { usePageHeader } from "@/shared/lib/PageHeaderContext";
 const { Text, Title } = Typography;
-const { TextArea } = Input;
 interface CreateOrderDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -179,8 +173,10 @@ export const CreateOrderDrawer: React.FC<CreateOrderDrawerProps> = ({
         note: values.note || undefined,
       };
       createMutation.mutate(orderData);
-    } catch (error) {
-      console.error("Validation failed:", error);
+    } catch {
+      message.error(
+        t("orders.validation_failed", { defaultValue: "Please review the order form." }),
+      );
     }
   };
   const itemColumns = [

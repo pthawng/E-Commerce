@@ -1,11 +1,5 @@
 import React, { memo } from "react";
 import { Row, Col, Typography } from "antd";
-import {
-  RiseOutlined,
-  GoldOutlined,
-  TruckOutlined,
-  ExclamationCircleOutlined,
-} from "@ant-design/icons";
 
 const { Text } = Typography;
 

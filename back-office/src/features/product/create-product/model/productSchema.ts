@@ -56,7 +56,7 @@ export const ProductVariantSchema = z
     }
   });
 
-// Schema tổng cho việc tạo Sản phẩm (FAANG L8 Standard)
+// Schema tổng cho việc tạo sản phẩm.
 export const CreateProductSchema = z
   .object({
     name: I18nStringSchema,
@@ -94,8 +94,7 @@ export const CreateProductSchema = z
     variants: z.array(ProductVariantSchema).optional(),
   })
   .superRefine((data, ctx) => {
-    // Ràng buộc logic FAANG L8:
-    // 1. Nếu hasVariants = true, BẮT BUỘC phải có ít nhất 1 variant.
+    // Nếu hasVariants = true, bắt buộc phải có ít nhất 1 variant.
     if (data.hasVariants) {
       if (!data.variants || data.variants.length === 0) {
         ctx.addIssue({

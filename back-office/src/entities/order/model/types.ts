@@ -1,5 +1,3 @@
-import { JewelryProduct, JewelryVariant } from "../../product/model/types";
-
 export interface Order {
   id: string;
   orderNumber: string;
@@ -50,7 +48,7 @@ export interface OrderItem {
   unitPrice: number;
   quantity: number;
   totalPrice: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface OrderTotals {

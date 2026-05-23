@@ -1,4 +1,4 @@
-import React, { useState, memo } from "react";
+import React, { useEffect, useMemo, useState, memo } from "react";
 import {
   Table,
   Tag,
@@ -16,49 +16,82 @@ import {
   EyeOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 const { Text } = Typography;
 
+type EventStatus = "COMPLETED" | "FAILED" | "PENDING" | "PROCESSING";
+
+interface NerveEvent {
+  id: string;
+  eventType: string;
+  status: EventStatus;
+  retryCount: number;
+  createdAt: string;
+  payload?: unknown;
+  lastError?: string;
+}
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(
+  /\/$/,
+  "",
+);
+
+const normalizeEvent = (raw: Partial<NerveEvent> & { type?: string }): NerveEvent => ({
+  id: raw.id || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  eventType: raw.eventType || raw.type || "system.event",
+  status: raw.status || "COMPLETED",
+  retryCount: raw.retryCount || 0,
+  createdAt: raw.createdAt || new Date().toISOString(),
+  payload: raw.payload,
+  lastError: raw.lastError,
+});
+
 export const DomainEventMonitor: React.FC = memo(() => {
   const { t } = useTranslation();
-  const [page, setPage] = useState(1);
+  const [events, setEvents] = useState<NerveEvent[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Mock data for UI demonstration - In production, replace with real API
-  const { data: events, isLoading } = useQuery({
-    queryKey: ["nerve-events", page],
-    queryFn: async () => ({
-      items: [
-        {
-          id: "1",
-          eventType: "order.created",
-          status: "COMPLETED",
-          retryCount: 0,
-          createdAt: new Date().toISOString(),
-          payload: { orderId: "ORD-123" },
-        },
-        {
-          id: "2",
-          eventType: "payment.failed",
-          status: "FAILED",
-          retryCount: 5,
-          lastError: "Gateway Timeout",
-          createdAt: new Date().toISOString(),
-          payload: { orderId: "ORD-124" },
-        },
-        {
-          id: "3",
-          eventType: "inventory.reserved",
-          status: "PENDING",
-          retryCount: 0,
-          createdAt: new Date().toISOString(),
-          payload: { variantId: "V-88" },
-        },
-      ],
-      meta: { total: 3 },
-    }),
-  });
+  useEffect(() => {
+    const source = new EventSource(`${API_BASE_URL}/nerve-center/stream`, {
+      withCredentials: true,
+    });
+
+    source.onopen = () => setIsConnected(true);
+    source.onerror = () => setIsConnected(false);
+    source.onmessage = (message) => {
+      try {
+        const parsed = JSON.parse(message.data) as Partial<NerveEvent> & {
+          type?: string;
+        };
+        const event = normalizeEvent(parsed);
+        setEvents((current) => [event, ...current].slice(0, 50));
+      } catch {
+        setEvents((current) =>
+          [
+            normalizeEvent({
+              eventType: "system.unparseable_event",
+              status: "FAILED",
+              lastError: "Received malformed event payload",
+            }),
+            ...current,
+          ].slice(0, 50),
+        );
+      }
+    };
+
+    return () => {
+      source.close();
+    };
+  }, []);
+
+  const metrics = useMemo(() => {
+    const failed = events.filter((event) => event.status === "FAILED").length;
+    const pending = events.filter((event) => event.status === "PENDING").length;
+    const failureRate = events.length ? (failed / events.length) * 100 : 0;
+
+    return { failed, pending, failureRate };
+  }, [events]);
 
   const columns = [
     {
@@ -75,7 +108,7 @@ export const DomainEventMonitor: React.FC = memo(() => {
       title: t("common.status"),
       dataIndex: "status",
       key: "status",
-      render: (v: string) => {
+      render: (v: EventStatus) => {
         const isFailed = v === "FAILED";
         const isCompleted = v === "COMPLETED";
         return (
@@ -109,7 +142,7 @@ export const DomainEventMonitor: React.FC = memo(() => {
     {
       title: t("common.actions"),
       key: "actions",
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: NerveEvent) => (
         <Space size={12}>
           <Tooltip title="View Payload">
             <EyeOutlined className="text-gray-400 cursor-pointer hover:text-black dark:hover:text-white" />
@@ -138,7 +171,7 @@ export const DomainEventMonitor: React.FC = memo(() => {
                   {t("nerve_center.events.backlog")}
                 </Text>
               }
-              value={12}
+              value={metrics.pending}
               prefix={<DatabaseOutlined className="text-blue-500" />}
             />
           </Card>
@@ -154,9 +187,9 @@ export const DomainEventMonitor: React.FC = memo(() => {
                   {t("nerve_center.events.failure_rate")}
                 </Text>
               }
-              value={0.8}
+              value={Number(metrics.failureRate.toFixed(1))}
               suffix="%"
-              valueStyle={{ color: "#ff4d4f" }}
+              valueStyle={{ color: metrics.failed ? "#ff4d4f" : undefined }}
               prefix={<BugOutlined className="text-red-500" />}
             />
           </Card>
@@ -165,8 +198,8 @@ export const DomainEventMonitor: React.FC = memo(() => {
 
       <Table
         columns={columns}
-        dataSource={events?.items || []}
-        loading={isLoading}
+        dataSource={events}
+        loading={!isConnected && events.length === 0}
         rowKey="id"
         pagination={false}
         className="luxury-table"

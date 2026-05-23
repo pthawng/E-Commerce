@@ -3,15 +3,12 @@ import { useNavigate } from "react-router-dom";
 import {
   Row,
   Col,
-  Statistic,
   Table,
   Typography,
   Space,
   Button,
   Tabs,
-  Card,
   Badge,
-  Modal,
   message,
   Tag,
   Input,
@@ -20,8 +17,6 @@ import {
   SafetyCertificateOutlined,
   DollarCircleOutlined,
   SolutionOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
   SyncOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -35,7 +30,6 @@ import { usePageHeader } from "@/shared/lib/PageHeaderContext";
 import { useCurrencyConverter } from "@/shared/lib/hooks/useCurrencyConverter";
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 
 export const LedgerOverviewPage: React.FC = () => {
   const navigate = useNavigate();
@@ -309,17 +303,5 @@ export const LedgerOverviewPage: React.FC = () => {
     </div>
   );
 };
-
-const Divider = ({
-  type,
-  className,
-}: {
-  type: "vertical" | "horizontal";
-  className?: string;
-}) => (
-  <div
-    className={`${type === "vertical" ? "w-[1px] h-full" : "h-[1px] w-full"} bg-gray-100 dark:bg-gray-800 ${className}`}
-  />
-);
 
 export default LedgerOverviewPage;

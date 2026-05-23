@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
+import { Component, ErrorInfo, ReactNode } from "react";
 import { ErrorFallback } from "./ErrorFallback";
 
 interface Props {
@@ -22,10 +22,7 @@ export class WidgetErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Widget Uncaught Error:", error, errorInfo);
-    // Here you would typically log to a service like Sentry or LogRocket
-  }
+  public componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {}
 
   private handleReset = () => {
     this.setState({ hasError: false, error: null });

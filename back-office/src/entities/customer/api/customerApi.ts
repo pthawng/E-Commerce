@@ -1,9 +1,16 @@
 import api from '@/shared/api/apiInstance';
 import { PaginatedResponse } from '@/entities/order/api/orderApi';
 
-// ============================================
-// CUSTOMER TYPES (CRM)
-// ============================================
+type CustomerSegment = 'VIP' | 'LOYAL' | 'ACTIVE' | 'PROSPECT' | 'NEW' | 'CHURN_RISK';
+type GuestListItem = Record<string, unknown>;
+
+interface CrmStats {
+    topPatron?: {
+        name?: string;
+    };
+    newInquiries?: number;
+    averageLtv?: number;
+}
 
 export interface CustomerListItem {
     id: string;
@@ -17,17 +24,17 @@ export interface CustomerListItem {
     ltv?: number;
     orderCount?: number;
     lastOrderAt?: string;
-    segment?: 'VIP' | 'LOYAL' | 'ACTIVE' | 'PROSPECT' | 'NEW' | 'CHURN_RISK';
+    segment?: CustomerSegment;
 }
 
 export interface CustomerDetail extends CustomerListItem {
     bio: string | null;
     nickName: string | null;
-    orders: any[];
-    reviews: any[];
-    discountUsages: any[];
-    preferences?: any[];
-    lifeEvents?: any[];
+    orders: unknown[];
+    reviews: unknown[];
+    discountUsages: unknown[];
+    preferences?: unknown[];
+    lifeEvents?: unknown[];
 }
 
 export interface CustomerUpdatePayload {
@@ -39,38 +46,30 @@ export interface CustomerUpdatePayload {
     isActive?: boolean;
 }
 
-// ============================================
-// FAANG-GRADE PRIVACY UTILS
-// ============================================
-
 export const maskPII = (value: string | null | undefined, type: 'email' | 'phone') => {
-    if (!value) return '—';
+    if (!value) return '-';
     if (type === 'email') {
         const [name, domain] = value.split('@');
         if (!domain) return value;
-        return `${name.slice(0, 2)}••••@${domain}`;
+        return `${name.slice(0, 2)}****@${domain}`;
     }
     if (type === 'phone') {
-        return `••••••••${value.slice(-4)}`;
+        return `********${value.slice(-4)}`;
     }
     return value;
 };
-
-// ============================================
-// CRM API METHODS
-// ============================================
 
 export const customerApi = {
     getCustomers: (params?: { page?: number; limit?: number; search?: string }) =>
         api.get<PaginatedResponse<CustomerListItem>>('/admin/rbac/users', { params }).then(res => res.data),
 
     getGuests: (params?: { page?: number; limit?: number }) =>
-        api.get<PaginatedResponse<any>>('/admin/crm/guests', { params }).then(res => res.data),
+        api.get<PaginatedResponse<GuestListItem>>('/admin/crm/guests', { params }).then(res => res.data),
 
     getCustomerDetail: async (id: string): Promise<CustomerDetail> => {
         const [userRes, ordersRes] = await Promise.all([
-            api.get(`/admin/rbac/users/${id}`),
-            api.get('/admin/orders', { params: { customerId: id, limit: 100 } }),
+            api.get<CustomerDetail>(`/admin/rbac/users/${id}`),
+            api.get<{ items?: unknown[] }>('/admin/orders', { params: { customerId: id, limit: 100 } }),
         ]);
 
         return {
@@ -82,9 +81,8 @@ export const customerApi = {
     updateCustomer: (id: string, data: CustomerUpdatePayload) =>
         api.patch<CustomerDetail>(`/admin/rbac/users/${id}`, data).then(res => res.data),
 
-    getStats: () => api.get<any>('/admin/crm/stats').then(res => res.data),
+    getStats: () => api.get<CrmStats>('/admin/crm/stats').then(res => res.data),
 
-    logPiiAccess: (customerId: string, reason: string) => {
-        console.log(`[AUDIT] PII Access logged for ${customerId}: ${reason}`);
-    },
+    logPiiAccess: (customerId: string, reason: string) =>
+        Promise.resolve({ customerId, reason, recordedAt: new Date().toISOString() }),
 };

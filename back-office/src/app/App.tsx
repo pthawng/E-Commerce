@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from "react";
-import { ConfigProvider, App as AntdApp, Spin } from "antd";
+import { ConfigProvider, App as AntdApp } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,7 +8,6 @@ import { lightTheme } from "@/shared/design-system/themeConfig";
 import { PageHeaderProvider } from "@/shared/lib/PageHeaderContext";
 import "@/shared/lib/i18n/i18n";
 
-// Pages - Staff+ Lazy Loading Architecture
 const DashboardPage = lazy(() =>
   import("../pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 );
@@ -57,7 +56,6 @@ const UnauthorizedPage = lazy(() =>
 
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 
-// Luxury Loader Component
 const PageLoader = () => (
   <div className="h-screen w-full flex flex-col items-center justify-center bg-white space-y-6 animate-in fade-in duration-500">
     <div className="relative">

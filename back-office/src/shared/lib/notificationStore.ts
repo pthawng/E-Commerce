@@ -31,7 +31,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
 
     socket.on("connect", () => {
-      console.log("Connected to notifications gateway");
       socket.emit("join", userId);
     });
 
@@ -57,8 +56,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const notifications = await notificationApi.getAll();
       const unreadCount = notifications.filter((n) => !n.isRead).length;
       set({ notifications, unreadCount });
-    } catch (error) {
-      console.error("Failed to fetch notifications", error);
+    } catch {
+      set({ notifications: [], unreadCount: 0 });
     } finally {
       set({ isLoading: false });
     }
@@ -80,8 +79,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         ),
         unreadCount: Math.max(0, state.unreadCount - 1),
       }));
-    } catch (error) {
-      console.error("Failed to mark notification as read", error);
+    } catch {
+      await get().fetchNotifications();
     }
   },
 
@@ -92,8 +91,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
         unreadCount: 0,
       }));
-    } catch (error) {
-      console.error("Failed to mark all notifications as read", error);
+    } catch {
+      await get().fetchNotifications();
     }
   },
 }));

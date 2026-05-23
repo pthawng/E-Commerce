@@ -44,7 +44,7 @@ export const NerveCenterPage: React.FC = () => {
                   {t("nerve_center.matrix")}
                 </Title>
                 <Text className="text-gray-500 text-[10px] uppercase tracking-[0.2em]">
-                  FAANG-Grade L8 Monitoring
+                  Operational Monitoring
                 </Text>
               </div>
               <Space size={24}>

@@ -38,7 +38,6 @@ interface OrderIntegrityDrawerProps {
 
 export const OrderIntegrityDrawer: React.FC<OrderIntegrityDrawerProps> = memo(
   ({
-    orderId,
     open,
     onClose,
     orderDetails,

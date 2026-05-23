@@ -7,7 +7,6 @@ import {
   Select,
   Card,
   Typography,
-  Tooltip,
   Badge,
   Button,
 } from "antd";

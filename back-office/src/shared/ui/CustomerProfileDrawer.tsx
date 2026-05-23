@@ -6,7 +6,6 @@ import {
   Badge,
   Space,
   Tag,
-  Table,
   Divider,
   Button,
   Statistic,
@@ -38,10 +37,9 @@ import {
   FireOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
-  DollarCircleOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { customerApi, CustomerDetail, maskPII } from "@/entities/customer/api/customerApi";
+import { customerApi, maskPII } from "@/entities/customer/api/customerApi";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -297,7 +295,7 @@ export const CustomerProfileDrawer: React.FC<CustomerProfileDrawerProps> = ({
             </Descriptions>
             {!piiVisible && (
               <div className="mt-4 p-2 bg-blue-50/50 flex items-start gap-2 rounded border border-blue-100/50">
-                <Tooltip title="FAANG-grade privacy compliance: Accessing PII is logged for audit trails.">
+                <Tooltip title="PII access is tracked for audit review.">
                   <ClockCircleOutlined className="text-blue-400 mt-1" />
                 </Tooltip>
                 <Text className="text-[10px] text-blue-500">
