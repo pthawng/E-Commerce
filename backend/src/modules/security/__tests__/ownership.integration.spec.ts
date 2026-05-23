@@ -1,5 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { IOwnable } from 'src/common/interfaces/ownable.interface';
 import { Principal, PrincipalType } from 'src/common/types/principal.types';
 import { OwnershipRegistry } from '../ownership.registry';
@@ -8,10 +10,24 @@ import { SecurityEventBus, SecurityEventType } from '../security-event-bus.servi
 describe('OwnershipRegistry Integration', () => {
   let registry: OwnershipRegistry;
   let eventBus: SecurityEventBus;
+  let jwtService: JwtService;
+
+  const mockJwtService = {
+    verify: jest.fn(),
+  };
+
+  const mockConfigService = {
+    get: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [OwnershipRegistry, SecurityEventBus],
+      providers: [
+        OwnershipRegistry,
+        SecurityEventBus,
+        { provide: JwtService, useValue: mockJwtService },
+        { provide: ConfigService, useValue: mockConfigService },
+      ],
     }).compile();
 
     registry = module.get<OwnershipRegistry>(OwnershipRegistry);

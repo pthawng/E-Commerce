@@ -140,10 +140,8 @@ export class VariantPolicy extends BasePolicy<VariantResource> {
       // Inventory manager có thể update nhưng với giới hạn
       // (Logic này có thể được mở rộng để kiểm tra fields cụ thể trong request body)
       return this.allow({
-        metadata: {
-          restrictedFields: ['stock', 'isActive'],
-          warning: 'Inventory manager chỉ nên cập nhật stock-related fields',
-        },
+        restrictedFields: ['stock', 'isActive'],
+        warning: 'Inventory manager chỉ nên cập nhật stock-related fields',
       });
     }
 

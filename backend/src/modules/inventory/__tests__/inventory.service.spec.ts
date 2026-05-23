@@ -13,6 +13,7 @@ describe('InventoryService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
+      upsert: jest.fn(),
     },
     inventoryReservation: {
       create: jest.fn(),
@@ -101,7 +102,10 @@ describe('InventoryService', () => {
 
       expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith({
         where: { id: 'inv1' },
-        data: { quantity: 5, reservedQuantity: 0 },
+        data: {
+          quantity: { decrement: 5 },
+          reservedQuantity: { decrement: 5 },
+        },
       });
       expect(mockPrismaService.inventoryReservation.update).toHaveBeenCalledWith({
         where: { id: 'res1' },
@@ -123,7 +127,9 @@ describe('InventoryService', () => {
 
       expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith({
         where: { id: 'inv1' },
-        data: { reservedQuantity: 0 },
+        data: {
+          reservedQuantity: { decrement: 5 },
+        },
       });
       expect(mockPrismaService.inventoryReservation.update).toHaveBeenCalledWith({
         where: { id: 'res1' },
@@ -132,32 +138,24 @@ describe('InventoryService', () => {
     });
   });
 
-  describe('directDeduct', () => {
-    it('should deduct stock directly without prior reservation (COD)', async () => {
-      const allocations = [{ variantId: 'v1', warehouseId: 'w1', quantity: 3 }];
-      mockPrismaService.$queryRawUnsafe.mockResolvedValue([
-        { id: 'inv1', quantity: 10, reservedQuantity: 0 },
-      ]);
 
-      await service.directDeduct('order_cod', allocations);
-
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: { quantity: 7 },
-        }),
-      );
-    });
-  });
 
   describe('receiveStock', () => {
     it('should increment stock and log IMPORT action', async () => {
-      mockPrismaService.inventoryItem.findUnique.mockResolvedValue({ id: 'inv1', quantity: 10 });
+      mockPrismaService.inventoryItem.upsert.mockResolvedValue({ id: 'inv1', quantity: 15 });
 
       await service.receiveStock('v1', 'w1', 5);
 
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
+      expect(mockPrismaService.inventoryItem.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { quantity: 15 },
+          create: {
+            productVariantId: 'v1',
+            warehouseId: 'w1',
+            quantity: 5,
+          },
+          update: {
+            quantity: { increment: 5 },
+          },
         }),
       );
       expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledWith(

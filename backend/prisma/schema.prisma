@@ -74,7 +74,7 @@ model User {
   id                  String               @id @default(uuid()) @db.Uuid
   email               String               @unique
   phone               String?              @unique
-  passwordHash        String
+  passwordHash        String?
   fullName            String
   isActive            Boolean              @default(true)
   isEmailVerified     Boolean              @default(false)
@@ -102,8 +102,28 @@ model User {
   requestedApprovals  ApprovalRequest[]    @relation("RequestedApprovals")
   approvedApprovals   ApprovalRequest[]    @relation("ApprovedApprovals")
   notifications       Notification[]
+  oauthAccounts       OAuthAccount[]
 
   @@index([email], map: "idx_users_active_email")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @db.Uuid
+  provider          OAuthProvider
+  providerAccountId String
+  email             String?
+  emailVerified     Boolean       @default(false)
+  displayName       String?
+  avatarUrl         String?
+  lastLoginAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([email])
 }
 
 model RefreshToken {
@@ -1034,6 +1054,11 @@ enum UserType {
   CUSTOMER
   STAFF
   SUPER_ADMIN
+}
+
+enum OAuthProvider {
+  GOOGLE
+  FACEBOOK
 }
 
 enum OutboxStatus {

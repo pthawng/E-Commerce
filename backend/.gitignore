@@ -27,7 +27,6 @@ pids/
 .env.production.local
 .env.*
 !.env.example
-!.env.production.example
 
 # ------------------------------------------------------------------------------
 # Prisma ORM Artifacts

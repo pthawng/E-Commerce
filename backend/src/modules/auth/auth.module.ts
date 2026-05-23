@@ -1,5 +1,6 @@
 import { AdminAuthController } from '@modules/auth/admin-auth.controller';
 import { AuthController } from '@modules/auth/auth.controller';
+import { OAuthAuthController } from '@modules/auth/controllers/oauth-auth.controller';
 import { AuthService } from '@modules/auth/auth.service';
 import { GuestVerificationController } from '@modules/auth/controllers/guest-verification.controller';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
@@ -7,6 +8,7 @@ import { AdminJwtAccessGuard } from '@modules/auth/guard/admin-access-jwt.guard'
 import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
 import { ForgotPassEmailService } from '@modules/auth/services/forgot-pass-email.auth.service';
 import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
+import { OAuthAuthService } from '@modules/auth/services/oauth-auth.service';
 import { RiskScoreService } from '@modules/auth/services/risk-score.service';
 import { VerifyEmailService } from '@modules/auth/services/verify-email.auth.service';
 import { JwtAccessStrategy } from '@modules/auth/strategies/access-jwt.strategy';
@@ -39,7 +41,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, AdminAuthController, GuestVerificationController],
+  controllers: [AuthController, AdminAuthController, GuestVerificationController, OAuthAuthController],
   providers: [
     AuthService,
     JwtAccessStrategy,
@@ -49,6 +51,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     JwtRefreshGuard,
     VerifyEmailService,
     ForgotPassEmailService,
+    OAuthAuthService,
     RiskScoreService,
     GuestVerificationService,
   ],

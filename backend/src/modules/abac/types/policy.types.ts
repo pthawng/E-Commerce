@@ -9,7 +9,7 @@ import type { RequestUserPayload } from '@common/types/jwt.types';
  * Policy Context
  * Chứa tất cả attributes cần thiết để evaluate policy
  */
-export interface PolicyContext<TResource = unknown> {
+export interface PolicyContext<TResource = any> {
   /** User attributes - từ JWT và DB */
   user: RequestUserPayload & {
     /** User ID */

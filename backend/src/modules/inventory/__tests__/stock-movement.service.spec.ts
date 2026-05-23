@@ -12,9 +12,21 @@ describe('StockMovementService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
+      upsert: jest.fn(),
     },
     inventoryTransfer: {
-      create: jest.fn(),
+      create: jest.fn().mockResolvedValue({ id: 'trf1' }),
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'trf1',
+        variantId: 'v1',
+        fromWarehouseId: 'w1',
+        toWarehouseId: 'w2',
+        quantity: 10,
+        status: 'PENDING',
+        fromWarehouse: { name: 'Warehouse 1' },
+        toWarehouse: { name: 'Warehouse 2' },
+      }),
+      update: jest.fn(),
     },
     inventoryLog: {
       create: jest.fn(),
@@ -44,10 +56,34 @@ describe('StockMovementService', () => {
     it('should successfully transfer stock between warehouses', async () => {
       // Source warehouse has enough stock
       mockPrismaService.$queryRawUnsafe
-        .mockResolvedValueOnce([{ id: 'inv1', quantity: 50, reservedQuantity: 0 }]) // from
-        .mockResolvedValueOnce([{ id: 'inv2', quantity: 20, reservedQuantity: 0 }]); // to
+        .mockResolvedValueOnce([{ id: 'inv1', quantity: 50, reservedQuantity: 0, damagedQuantity: 0 }]) // from
+        .mockResolvedValueOnce([{ id: 'inv2', quantity: 20, inTransitQuantity: 10 }]); // to
 
       mockPrismaService.inventoryTransfer.create.mockResolvedValue({ id: 'trf1' });
+      mockPrismaService.inventoryTransfer.findUnique
+        .mockResolvedValueOnce({
+          id: 'trf1',
+          variantId: 'v1',
+          fromWarehouseId: 'w1',
+          toWarehouseId: 'w2',
+          quantity: 10,
+          status: 'PENDING',
+          fromWarehouse: { name: 'Warehouse 1' },
+          toWarehouse: { name: 'Warehouse 2' },
+        })
+        .mockResolvedValueOnce({
+          id: 'trf1',
+          variantId: 'v1',
+          fromWarehouseId: 'w1',
+          toWarehouseId: 'w2',
+          quantity: 10,
+          status: 'SHIPPED',
+          fromWarehouse: { name: 'Warehouse 1' },
+          toWarehouse: { name: 'Warehouse 2' },
+        });
+
+      mockPrismaService.inventoryTransfer.update.mockResolvedValue({ id: 'trf1' });
+      mockPrismaService.inventoryItem.upsert.mockResolvedValue({ id: 'inv2' });
 
       await service.transfer(
         transferParams.variantId,
@@ -59,13 +95,16 @@ describe('StockMovementService', () => {
       // Verify source deduction
       expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith({
         where: { id: 'inv1' },
-        data: { quantity: 40 },
+        data: { quantity: { decrement: 10 } },
       });
 
       // Verify destination addition
       expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith({
         where: { id: 'inv2' },
-        data: { quantity: 30 },
+        data: {
+          inTransitQuantity: { decrement: 10 },
+          quantity: { increment: 10 }
+        },
       });
 
       // Verify InventoryTransfer record

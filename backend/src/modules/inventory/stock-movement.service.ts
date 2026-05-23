@@ -79,7 +79,11 @@ export class StockMovementService {
         transfer.fromWarehouseId,
       );
 
-      if (!fromItem || (fromItem.quantity - fromItem.reservedQuantity - fromItem.damagedQuantity) < transfer.quantity) {
+      if (!fromItem) {
+        throw new NotFoundException('Inventory item not found in source warehouse');
+      }
+
+      if ((fromItem.quantity - fromItem.reservedQuantity - fromItem.damagedQuantity) < transfer.quantity) {
         throw new BadRequestException('Insufficient available stock in source warehouse');
       }
 

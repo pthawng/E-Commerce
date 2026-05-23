@@ -4,27 +4,26 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import sgMail from '@sendgrid/mail';
 import * as fs from 'fs/promises';
-import { google } from 'googleapis';
 import * as handlebars from 'handlebars';
-import * as nodemailer from 'nodemailer';
 import * as path from 'path';
+import { SmtpProvider } from './providers/smtp.provider';
 import { EmailOutboxService } from './services/email-outbox.service';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private oAuth2Client: any;
   private readonly templatesDir = path.join(process.cwd(), 'src', 'modules', 'mail', 'templates');
 
   constructor(
     private configService: ConfigService,
     private outboxService: EmailOutboxService,
+    private smtpProvider: SmtpProvider,
   ) {
     this.initializeProviders();
   }
 
   private initializeProviders() {
-    const provider = this.configService.get<string>('MAIL_PROVIDER') || 'gmail';
+    const provider = this.configService.get<string>('MAIL_PROVIDER') || 'smtp';
 
     if (provider === 'sendgrid') {
       const apiKey = this.configService.get<string>('SENDGRID_API_KEY');
@@ -35,24 +34,6 @@ export class MailService {
       }
     }
 
-    if (provider === 'gmail') {
-      this.initializeGmail();
-    }
-  }
-
-  private initializeGmail() {
-    const clientId = this.configService.get<string>('GMAIL_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('GMAIL_CLIENT_SECRET');
-    const redirectUri = this.configService.get<string>('GMAIL_REDIRECT_URI') || 'http://localhost';
-    const refreshToken = this.configService.get<string>('GMAIL_REFRESH_TOKEN');
-
-    if (!clientId || !clientSecret || !refreshToken) {
-      this.logger.warn('Gmail credentials are missing. Mail service may not work.');
-      return;
-    }
-
-    this.oAuth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
-    this.oAuth2Client.setCredentials({ refresh_token: refreshToken });
   }
 
   /**
@@ -128,14 +109,14 @@ export class MailService {
   }): Promise<boolean> {
     try {
       const html = await this.compileTemplate(options.template, options.context);
-      const provider = this.configService.get<string>('MAIL_PROVIDER') || 'gmail';
+      const provider = this.configService.get<string>('MAIL_PROVIDER') || 'smtp';
+
+      if (provider === 'smtp') {
+        return await this.sendViaSmtp(options, html);
+      }
 
       if (provider === 'sendgrid') {
         return await this.sendViaSendGrid(options, html);
-      }
-
-      if (provider === 'gmail') {
-        return await this.sendViaGmail(options, html);
       }
 
       this.logger.warn(`Unknown mail provider: ${provider}`);
@@ -174,37 +155,21 @@ export class MailService {
     return true;
   }
 
-  private async sendViaGmail(
+  private async sendViaSmtp(
     options: { to: string; subject: string },
     html: string,
   ): Promise<boolean> {
-    if (!this.oAuth2Client) {
-      throw new Error('Gmail client not initialized properly');
-    }
-
-    const accessTokenObj = await this.oAuth2Client.getAccessToken();
-    const accessToken = accessTokenObj?.token;
-    if (!accessToken) throw new Error('Failed to get access token');
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        type: 'OAuth2',
-        user: this.configService.get<string>('GMAIL_USER'),
-        clientId: this.configService.get<string>('GMAIL_CLIENT_ID'),
-        clientSecret: this.configService.get<string>('GMAIL_CLIENT_SECRET'),
-        refreshToken: this.configService.get<string>('GMAIL_REFRESH_TOKEN'),
-        accessToken,
-      },
-    });
-
-    await transporter.sendMail({
-      from: this.configService.get<string>('GMAIL_USER'),
+    const result = await this.smtpProvider.send({
       to: options.to,
       subject: options.subject,
       html,
     });
-    this.logger.log(`Gmail OAuth2 mail sent → ${options.to}`);
+
+    if (!result.success) {
+      throw new Error(result.error || 'SMTP send failed');
+    }
+
+    this.logger.log(`SMTP mail sent via Mailpit-compatible transport -> ${options.to}`);
     return true;
   }
 
@@ -250,4 +215,3 @@ export class MailService {
     });
   }
 }
-

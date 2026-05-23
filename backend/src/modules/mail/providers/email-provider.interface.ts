@@ -2,7 +2,7 @@ export interface EmailResponse {
   success: boolean;
   messageId?: string;
   error?: string;
-  provider: 'sendgrid' | 'ses';
+  provider: 'sendgrid' | 'ses' | 'smtp';
 }
 
 export interface EmailOptions {
@@ -15,5 +15,5 @@ export interface EmailOptions {
 
 export abstract class EmailProvider {
   abstract send(options: EmailOptions): Promise<EmailResponse>;
-  abstract getName(): 'sendgrid' | 'ses';
+  abstract getName(): 'sendgrid' | 'ses' | 'smtp';
 }

@@ -151,6 +151,9 @@ export class CartService {
         0,
       );
       if (availableStock <= 0) throw new BadRequestException('Product is out of stock');
+      if (availableStock < dto.quantity) {
+        throw new BadRequestException('Insufficient stock');
+      }
 
       const result = await this.prisma.$transaction(
         async (tx) => {

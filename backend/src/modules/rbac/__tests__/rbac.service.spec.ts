@@ -40,7 +40,7 @@ describe('RbacService', () => {
   describe('getUserPermissions', () => {
     it('should aggregate permissions from roles and direct assignments', async () => {
       const rolePerms = [{ role: { rolePermissions: [{ permission: { action: 'p1' } }] } }];
-      const directPerms = [{ permission: { action: 'p2' } }];
+      const directPerms = [{ effect: 'ALLOW', permission: { action: 'p2' } }];
 
       mockPrismaService.userRole.findMany.mockResolvedValue(rolePerms);
       mockPrismaService.userPermission.findMany.mockResolvedValue(directPerms);
@@ -57,7 +57,7 @@ describe('RbacService', () => {
         { role: { rolePermissions: [{ permission: { action: 'p1' } }] } },
       ]);
       mockPrismaService.userPermission.findMany.mockResolvedValue([
-        { permission: { action: 'p1' } },
+        { effect: 'ALLOW', permission: { action: 'p1' } },
       ]);
 
       const result = await service.getUserPermissions('u1');

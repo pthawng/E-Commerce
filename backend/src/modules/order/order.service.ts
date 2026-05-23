@@ -260,7 +260,8 @@ export class OrderService {
       
       return {
         items: mappedItems,
-        data: mappedItems, // Legacy/Framework support
+        /** @deprecated Use `items` instead. Will be removed in v2. */
+        data: mappedItems,
         meta: {
           totalItems: total,
           page: Number(dto.page || 1),

@@ -4,8 +4,10 @@ import { Job } from 'bull';
 import * as fs from 'fs/promises';
 import * as handlebars from 'handlebars';
 import * as path from 'path';
+import { ConfigService } from '@nestjs/config';
 import { SendGridProvider } from '../providers/sendgrid.provider';
 import { SesProvider } from '../providers/ses.provider';
+import { SmtpProvider } from '../providers/smtp.provider';
 import { CircuitBreakerService, CircuitBreakerState } from './circuit-breaker.service';
 import { EmailOutboxService } from './email-outbox.service';
 
@@ -17,10 +19,12 @@ export class EmailProcessor {
 
   constructor(
     private readonly outboxService: EmailOutboxService,
+    private readonly configService: ConfigService,
     private readonly sendgridProvider: SendGridProvider,
     private readonly sesProvider: SesProvider,
+    private readonly smtpProvider: SmtpProvider,
     private readonly circuitBreaker: CircuitBreakerService,
-  ) {}
+  ) { }
 
   @Process('send-email')
   async handleSendEmail(job: Job<any>) {
@@ -61,6 +65,10 @@ export class EmailProcessor {
   }
 
   private async sendWithFallback(to: string, subject: string, html: string, outboxId: string) {
+    if (this.configService.get<string>('MAIL_PROVIDER') === 'smtp') {
+      return this.smtpProvider.send({ to, subject, html, metadata: { outboxId } });
+    }
+
     const sendGridState = await this.circuitBreaker.getState('sendgrid');
 
     // Phase 1: Try SendGrid if it's not OPEN

@@ -9,6 +9,7 @@ import { MailWebhookController } from './controllers/mail-webhook.controller';
 import { MailService } from './mail.service';
 import { SendGridProvider } from './providers/sendgrid.provider';
 import { SesProvider } from './providers/ses.provider';
+import { SmtpProvider } from './providers/smtp.provider';
 import { CircuitBreakerService } from './services/circuit-breaker.service';
 import { EmailOutboxService } from './services/email-outbox.service';
 import { EmailProcessor } from './services/email.processor';
@@ -41,6 +42,7 @@ import { EmailRetentionService } from './services/retention.service';
     EmailProcessor,
     SendGridProvider,
     SesProvider,
+    SmtpProvider,
     CircuitBreakerService,
     EmailRetentionService,
   ],

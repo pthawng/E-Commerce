@@ -1,5 +1,7 @@
 import { otelSDK } from './otel-sdk';
-otelSDK.start();
+if (otelSDK) {
+  otelSDK.start();
+}
 
 import { register } from 'tsconfig-paths';
 

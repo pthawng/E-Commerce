@@ -7,9 +7,14 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { UserService } from '../../user/user.service';
 import { AuthService } from '../auth.service';
 import { ForgotPassEmailService } from '../services/forgot-pass-email.auth.service';
+import { RiskScoreService } from '../services/risk-score.service';
+import { SecurityEventBus } from '../../security/security-event-bus.service';
 import { VerifyEmailService } from '../services/verify-email.auth.service';
 
-jest.mock('argon2');
+jest.mock('argon2', () => ({
+  hash: jest.fn(),
+  verify: jest.fn(),
+}));
 jest.mock('node:crypto', () => ({
   randomUUID: jest.fn(() => 'test-jti'),
 }));
@@ -25,30 +30,53 @@ describe('AuthService', () => {
       create: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
-      delete: jest.fn(),
       update: jest.fn(),
     },
     refreshToken: {
       create: jest.fn(),
-      findFirst: jest.fn(),
       findUnique: jest.fn(),
-      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
-    $transaction: jest.fn((callback) => callback(mockPrismaService)),
+    resetPasswordToken: {
+      findFirst: jest.fn(),
+      delete: jest.fn(),
+    },
+    $transaction: jest.fn((actions) => {
+      if (Array.isArray(actions)) {
+        return Promise.all(actions);
+      }
+      return actions(mockPrismaService);
+    }),
   };
 
   const mockJwtService = {
-    signAsync: jest.fn(),
-    verifyAsync: jest.fn(),
-    decode: jest.fn(),
+    signAsync: jest.fn().mockImplementation((payload) => {
+      if (payload.type === 'access') return Promise.resolve('mock_access_token');
+      if (payload.type === 'refresh') return Promise.resolve('mock_refresh_token');
+      return Promise.resolve('mock_token');
+    }),
+    verifyAsync: jest.fn().mockImplementation((token) => {
+      if (token === 'mock_refresh_token' || token === 'expired_token') {
+        return Promise.resolve({ sub: 'u1', type: 'refresh', jti: 'test-jti' });
+      }
+      return Promise.reject(new Error('Invalid token'));
+    }),
+    decode: jest.fn().mockImplementation((token) => {
+      if (token === 'mock_refresh_token') {
+        return { sub: 'u1', type: 'refresh', jti: 'test-jti' };
+      }
+      return null;
+    }),
   };
 
   const mockConfigService = {
-    get: jest.fn((key: string) => {
-      if (key === 'JWT_ACCESS_SECRET') return 'access-secret';
-      if (key === 'JWT_REFRESH_SECRET') return 'refresh-secret';
+    get: jest.fn().mockImplementation((key: string) => {
+      if (key === 'JWT_ACCESS_SECRET') return 'access_secret';
+      if (key === 'JWT_REFRESH_SECRET') return 'refresh_secret';
       return null;
     }),
   };
@@ -59,6 +87,10 @@ describe('AuthService', () => {
   };
   const mockForgotPassEmailService = {
     sendForgotPasswordEmail: jest.fn(),
+  };
+  const mockRiskScoreService = {};
+  const mockSecurityEventBus = {
+    emit: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -71,6 +103,8 @@ describe('AuthService', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: VerifyEmailService, useValue: mockVerifyEmailService },
         { provide: ForgotPassEmailService, useValue: mockForgotPassEmailService },
+        { provide: RiskScoreService, useValue: mockRiskScoreService },
+        { provide: SecurityEventBus, useValue: mockSecurityEventBus },
       ],
     }).compile();
 
@@ -126,6 +160,7 @@ describe('AuthService', () => {
         email: 'test@example.com',
         passwordHash: 'hash',
         userType: 'CUSTOMER',
+        isEmailVerified: true,
       };
       mockPrismaService.user.findFirst.mockResolvedValue(user);
       (argon2.verify as jest.Mock).mockResolvedValue(true);
@@ -142,7 +177,7 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException for invalid password', async () => {
-      mockPrismaService.user.findFirst.mockResolvedValue({ id: 'u1', passwordHash: 'hash' });
+      mockPrismaService.user.findFirst.mockResolvedValue({ id: 'u1', passwordHash: 'hash', isEmailVerified: true });
       (argon2.verify as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
@@ -157,6 +192,7 @@ describe('AuthService', () => {
         id: 'rt1',
         token: 'hashed_rt',
         expiresAt: new Date(Date.now() + 10000),
+        version: 1,
       });
       (argon2.verify as jest.Mock).mockResolvedValue(true);
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1', userRoles: [] });
@@ -165,7 +201,12 @@ describe('AuthService', () => {
       const result = await service.refreshToken({ refreshToken: 'old_rt' });
 
       expect(result.tokens).toBeDefined();
-      expect(mockPrismaService.refreshToken.delete).toHaveBeenCalledWith({ where: { id: 'rt1' } });
+      expect(mockPrismaService.refreshToken.update).toHaveBeenCalledWith({
+        where: { id: 'rt1' },
+        data: expect.objectContaining({
+          revokedReason: 'ROTATED',
+        }),
+      });
       expect(mockPrismaService.refreshToken.create).toHaveBeenCalled(); // Save new rotated token
     });
 

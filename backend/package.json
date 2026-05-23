@@ -27,7 +27,6 @@
     "prisma:migrate:prod": "dotenv -e .env.production -- npx prisma migrate deploy",
     "seed": "npx ts-node src/prisma/orchestrator.ts",
     "db:reset": "npx ts-node src/prisma/reset-db.ts",
-    "get:gmail-token": "node scripts/get-gmail-refresh-token.js",
     "prisma:migrate:prod:local": "dotenv -e .env.production -- npx prisma migrate deploy",
     "prisma:studio:prod": "dotenv -e .env.production -- npx prisma studio",
     "db:reset:prod": "dotenv -e .env.production -- npm run db:reset -- --force-production-reset",
@@ -61,23 +60,18 @@
     "@sendgrid/eventwebhook": "^8.0.0",
     "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.86.2",
-    "@types/cron": "^2.0.1",
     "@willsoto/nestjs-prometheus": "^6.1.0",
     "argon2": "^0.44.0",
-    "autocannon": "^8.0.0",
     "axios": "^1.15.0",
     "axios-retry": "^4.5.0",
     "bull": "^4.16.5",
     "cache-manager": "^7.2.7",
-    "cache-manager-redis-store": "^3.0.1",
     "cache-manager-redis-yet": "^5.1.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
-    "googleapis": "^166.0.0",
     "ioredis": "^5.8.2",
-    "joi": "^18.0.2",
     "module-alias": "^2.3.4",
     "multer": "^2.0.2",
     "nodemailer": "^8.0.4",
@@ -103,6 +97,7 @@
     "@stryker-mutator/typescript-checker": "^9.6.1",
     "@testcontainers/postgresql": "^11.14.0",
     "@types/cookie-parser": "^1.4.10",
+    "@types/cron": "^2.0.1",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/module-alias": "^2.0.4",
@@ -111,6 +106,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/socket.io": "^3.0.1",
     "@types/supertest": "^6.0.2",
+    "autocannon": "^8.0.0",
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.18.0",
@@ -132,22 +128,5 @@
   },
   "prisma": {
     "seed": "npx ts-node src/prisma/orchestrator.ts"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
   }
 }

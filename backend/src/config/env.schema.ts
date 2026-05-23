@@ -18,6 +18,7 @@ export const envSchema = z.object({
   // Server
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
+  BACKEND_PUBLIC_URL: z.string().url().default('http://localhost:4000'),
   CORS_ORIGIN: z
     .string()
     .default('')
@@ -32,6 +33,8 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES: z.string().default('15m'),
   JWT_REFRESH_EXPIRES: z.string().default('7d'),
+  JWT_CHECKOUT_SECRET: z.string().min(32).optional(),
+  JWT_CHECKOUT_EXPIRES_IN: z.string().default('15m'),
   PAGINATION_SECRET: z.string().min(32),
 
   // Redis
@@ -42,15 +45,25 @@ export const envSchema = z.object({
   REDIS_TTL: z.coerce.number().default(60000),
 
   // Mail
-  MAIL_PROVIDER: z.enum(['gmail', 'sendgrid']).default('gmail'),
+  MAIL_PROVIDER: z
+    .enum(['smtp', 'sendgrid'])
+    .default(process.env.NODE_ENV === 'production' ? 'sendgrid' : 'smtp'),
   MAIL_FROM: z.string().email(),
+  MAIL_FROM_NAME: z.string().default('Ray Paradis'),
   COMPANY_NAME: z.string().default('Ray Paradis'),
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().default(1025),
+  SMTP_SECURE: z.preprocess((v) => v === true || v === 'true', z.boolean().default(false)),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
   SENDGRID_API_KEY: z.string().optional(),
-  GMAIL_CLIENT_ID: z.string().optional(),
-  GMAIL_CLIENT_SECRET: z.string().optional(),
-  GMAIL_REFRESH_TOKEN: z.string().optional(),
-  GMAIL_USER: z.string().optional(),
-  GMAIL_REDIRECT_URI: z.string().optional(),
+
+  // Customer OAuth
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  FACEBOOK_OAUTH_CLIENT_ID: z.string().optional(),
+  FACEBOOK_OAUTH_CLIENT_SECRET: z.string().optional(),
+  OAUTH_STATE_TTL_SECONDS: z.coerce.number().default(600),
 
   // Storage
   SUPABASE_URL: z.string().url(),
@@ -58,25 +71,41 @@ export const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string(),
   SUPABASE_BUCKET: z.string(),
 
-  // Payment
+  // Payment: VNPay
   VNPAY_TMN_CODE: z.string().optional(),
   VNPAY_HASH_SECRET: z.string().optional(),
   VNPAY_URL: z.string().url().optional(),
   VNPAY_RETURN_URL: z.string().url().optional(),
   VNPAY_API_URL: z.string().url().optional(),
 
+  // Payment: PayPal
   PAYPAL_CLIENT_ID: z.string().optional(),
   PAYPAL_CLIENT_SECRET: z.string().optional(),
   PAYPAL_MODE: z.enum(['sandbox', 'live']).default('sandbox'),
   PAYPAL_WEBHOOK_ID: z.string().optional(),
 
-  // AI
+  // Payment: VietQR / Bank Transfer
+  VIETQR_BANK_BIN: z.string().optional(),
+  VIETQR_BANK_ACCOUNT_NO: z.string().optional(),
+  VIETQR_BANK_ACCOUNT_NAME: z.string().optional(),
+  VIETQR_TEMPLATE: z.string().default('compact'),
+  VIETQR_EXPIRE_MINUTES: z.coerce.number().default(20),
+  VIETQR_WEBHOOK_SECRET: z.string().optional(),
+  VIETQR_WEBHOOK_IPS: z.string().optional(),
+
+  // AI Service
   AI_SERVICE_URL: z.string().url().default('http://localhost:4100'),
   AI_QUERY_TIMEOUT_MS: z.coerce.number().default(500),
   AI_EMBED_TIMEOUT_MS: z.coerce.number().default(3000),
   AI_SEARCH_TIMEOUT_MS: z.coerce.number().default(800),
   AI_SEARCH_CACHE_TTL_MS: z.coerce.number().default(120000),
   AI_RECOMMENDATION_CACHE_TTL_MS: z.coerce.number().default(600000),
+  AI_CHAT_TIMEOUT_MS: z.coerce.number().default(30000),
+  INTERNAL_SERVICE_TOKEN: z.string().default('dev_internal_token_123'),
+
+  // Currency
+  SYSTEM_BASE_CURRENCY: z.string().default('VND'),
+  CURRENCY_API_URL: z.string().optional(),
 
   // Operational Hardening
   TRUST_PROXY_DEPTH: z.coerce.number().default(1),

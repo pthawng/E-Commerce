@@ -33,6 +33,12 @@ describe('ProductService', () => {
     attributeValue: {
       count: jest.fn(),
     },
+    productVariant: {
+      create: jest.fn().mockResolvedValue({ id: 'pv1' }),
+    },
+    variantAttributeValue: {
+      createMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
   };
 
@@ -87,7 +93,7 @@ describe('ProductService', () => {
 
       expect(result).toBeDefined();
       expect(mockPrismaService.product.create).toHaveBeenCalled();
-      expect(mockVariantService.createVariant).toHaveBeenCalled();
+      expect(mockPrismaService.productVariant.create).toHaveBeenCalled();
       expect(mockVariantService.recalculateDisplayPrice).toHaveBeenCalled();
     });
 

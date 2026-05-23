@@ -16,6 +16,7 @@ import { PayPalProvider } from '../providers/paypal/paypal.provider';
 import { VietQRProvider } from '../providers/vietqr/vietqr.provider';
 import { VNPayProvider } from '../providers/vnpay/vnpay.provider';
 import { IdempotencyService } from '../services/idempotency.service';
+import { WebhookIdempotencyService } from '../services/webhook-idempotency.service';
 import { PaymentStateMachine } from '../services/payment-state.machine';
 import { TransactionStatus } from '../types/payment.types';
 
@@ -61,6 +62,12 @@ describe('PaymentService', () => {
     storeResult: jest.fn(),
     acquireLock: jest.fn().mockResolvedValue('token'),
     releaseLock: jest.fn(),
+  };
+
+  const mockWebhookIdempotencyService = {
+    startProcessing: jest.fn().mockResolvedValue(true),
+    complete: jest.fn(),
+    fail: jest.fn(),
   };
 
   const mockVNPayProvider = {
@@ -109,6 +116,7 @@ describe('PaymentService', () => {
         { provide: PayPalProvider, useValue: mockPayPalProvider },
         { provide: VietQRProvider, useValue: mockVietQRProvider },
         { provide: IdempotencyService, useValue: mockIdempotencyService },
+        { provide: WebhookIdempotencyService, useValue: mockWebhookIdempotencyService },
         { provide: PaymentStateMachine, useValue: mockStateMachine },
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: PaginationService, useValue: {} },

@@ -36,7 +36,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { CommonModule } from './common/common.module';
 import { CsrfGuard } from './common/guards/csrf.guard';
 import { GlobalThrottlerGuard } from './common/guards/global-throttler.guard';
@@ -135,7 +134,6 @@ import { JwtModule } from '@nestjs/jwt';
   ],
   controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: JwtAccessGuard,
@@ -165,7 +163,7 @@ export class AppModule implements NestModule {
       .apply(BullBoardAuthMiddleware)
       .forRoutes('admin/queues', 'admin/queues/*path');
 
-    // 🛡️ Bọc toàn bộ ứng dụng bằng Security & Session Middleware 
+    // 🛡️ Wrap the entire application with Security & Session Middleware
     consumer
       .apply(SecurityMiddleware, SessionMiddleware)
       .forRoutes('*');
