@@ -86,6 +86,7 @@ npm run dev --workspaces
 * Core Backend API: `http://localhost:4000`
 * Vite Storefront: `http://localhost:5173`
 * Operations Back-Office: `http://localhost:3000`
+* Mailpit Local Inbox: `http://localhost:8025`
 
 ### 7. Core Engineering Decisions (Deep Dive)
 * **Modular Monolith core**: Keeps modules strictly isolated by NestJS Dependency Injection. Prisma Query Extensions throw database-level exceptions if outside controllers try to query databases directly bypassing Services.
@@ -93,12 +94,6 @@ npm run dev --workspaces
 * **Transactional Outbox**: Decouples orders from inventory events using `DomainEventOutbox` and BullMQ background workers to maintain eventual consistency.
 * **Active Authorization Cache**: Flattens roles at login and caches them in Redis to resolve privileges in under **0.5ms**.
 * **AI Vector Resilience**: Protects Google Gemini calls with local **LRU Cache**, **Token Bucket Rate Limiter**, and **3-State Circuit Breaker** to prevent cascading failures.
-
-### 8. Interviewer's Guide: Key Code Paths
-1. **Transactional Outbox**: [`backend/src/modules/order/order.service.ts`](./backend/src/modules/order/order.service.ts)
-2. **Distributed Locks**: [`backend/src/modules/infra/distributed-lock.service.ts`](./backend/src/modules/infra/distributed-lock.service.ts)
-3. **AI Integration & CB**: [`ai-service/src/core/embedding/embedding.service.ts`](./ai-service/src/core/embedding/embedding.service.ts)
-4. **Correlation Tracing**: [`storefront/src/services/apiClient.ts`](./storefront/src/services/apiClient.ts) & [`backend/src/common/middlewares/correlation-id.middleware.ts`](./backend/src/common/middlewares/correlation-id.middleware.ts)
 
 ---
 
@@ -173,6 +168,7 @@ npm run dev --workspaces
 * Core Backend API: `http://localhost:4000`
 * Vite Storefront: `http://localhost:5173`
 * Operations Back-Office: `http://localhost:3000`
+* Mailpit Local Inbox: `http://localhost:8025`
 
 ### 7. Chi tiết quyết định kiến trúc
 * **Lõi Modular Monolith**: Độc lập hóa các module nghiệp vụ qua NestJS DI. Sử dụng Prisma Query Extension để tự động chặn các truy vấn sửa đổi database trực tiếp không qua tầng Service được quy định.
@@ -180,9 +176,3 @@ npm run dev --workspaces
 * **Domain Decoupling qua Outbox**: Phân tách luồng thanh toán và trừ kho thông qua bảng trung gian `DomainEventOutbox` và BullMQ worker chạy ngầm để bảo đảm tính nhất quán sau cùng.
 * **Cache phân quyền động**: Flatten danh sách phân quyền của User tại thời điểm đăng nhập và cache vào Redis giúp phân quyền thời gian thực chỉ mất **<0.5ms**.
 * **Độ bền bỉ của AI Pipeline**: Bảo vệ Gemini API hạn mức gọi bằng **LRU Cache**, bộ lọc tần suất **Token Bucket** và bộ ngắt mạch tự động **3-State Circuit Breaker** tránh sập hệ thống dây chuyền.
-
-### 8. Hướng dẫn đọc mã nguồn cho người phỏng vấn
-1. **Transactional Outbox**: [`backend/src/modules/order/order.service.ts`](./backend/src/modules/order/order.service.ts)
-2. **Khóa dòng phân tán**: [`backend/src/modules/infra/distributed-lock.service.ts`](./backend/src/modules/infra/distributed-lock.service.ts)
-3. **AI Integration & CB**: [`ai-service/src/core/embedding/embedding.service.ts`](./ai-service/src/core/embedding/embedding.service.ts)
-4. **Correlation Tracing**: Interceptor client [`storefront/src/services/apiClient.ts`](./storefront/src/services/apiClient.ts) & Middleware backend [`backend/src/common/middlewares/correlation-id.middleware.ts`](./backend/src/common/middlewares/correlation-id.middleware.ts)
