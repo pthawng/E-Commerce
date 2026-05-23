@@ -52,6 +52,17 @@ services:
     networks:
       - ray_paradis_net
 
+  # Local SMTP capture. Mailpit never sends email to the public internet.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ray-paradis-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - ray_paradis_net
+
 volumes:
   pg_data:
   qdrant_data:
