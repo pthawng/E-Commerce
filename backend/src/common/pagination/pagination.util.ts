@@ -62,7 +62,7 @@ export function buildPaginationMeta({
     totalPages,
     hasNext:
       hasNext ?? (page !== undefined && totalPages !== undefined ? page < totalPages : false),
-    // P1-4 FIX: Accept explicit hasPrev from caller (cursor mode) instead of
+    // Accept explicit hasPrev from caller (cursor mode) instead of
     // unconditionally deriving from page number (which is undefined in cursor mode).
     hasPrev: hasPrev ?? (page !== undefined ? page > 1 : false),
     nextCursor,
@@ -108,8 +108,8 @@ export function buildPaginationLinks({
     return `${basePath}?${urlParams.toString()}`;
   };
 
-  // P1-5 FIX: self link correctly encodes cursor when in cursor mode.
-  // Previously always encoded page=undefined → produced page-1 URL for cursor consumers.
+  // Self link correctly encodes cursor when in cursor mode.
+  // Previously always encoded page=undefined which produced page-1 URL for cursor consumers.
   const selfParams: Record<string, string | undefined> = {};
   if (page !== undefined) {
     selfParams['page'] = String(page);

@@ -79,7 +79,9 @@ export class AdminAttributeController {
   }
 
   @Get('values/all')
-  @ApiOperation({ summary: 'Danh sách tất cả attribute values (để chọn khi tạo/sửa attribute) (Admin)' })
+  @ApiOperation({
+    summary: 'Danh sách tất cả attribute values (để chọn khi tạo/sửa attribute) (Admin)',
+  })
   @Permission({
     permissions: [PERMISSIONS.PRODUCT.ATTRIBUTE.READ],
     mode: 'any',

@@ -18,21 +18,7 @@ import {
 } from 'class-validator';
 
 /**
- * Create Product DTO
- *
- * DTO này dùng để tạo mới sản phẩm.
- * - name: Object đa ngôn ngữ (ví dụ: { vi: "Tên sản phẩm", en: "Product Name" })
- * - slug: URL-friendly string (có thể để trống, sẽ tự generate từ name)
- * - description: Object đa ngôn ngữ (tùy chọn)
- * - categoryIds: Mảng ID các danh mục sản phẩm thuộc về
- * - hasVariants: Sản phẩm có biến thể không (mặc định: true)
- * - isActive: Sản phẩm có đang hoạt động không (mặc định: true)
- * - isFeatured: Sản phẩm có nổi bật không (mặc định: false)
- */
-
-/**
- * Input cho một biến thể khi tạo product (dùng trong cùng transaction)
- * SKU có thể để trống để BE tự sinh.
+ * Input details for creating a variant as part of product creation.
  */
 export class CreateProductVariantInputDto {
   @ApiPropertyOptional({
@@ -144,7 +130,7 @@ export class CreateProductDto {
     example: { vi: 'Mô tả sản phẩm', en: 'Product description' },
   })
   @Transform(({ value }) => {
-    // Nếu là string (từ FormData), parse JSON
+    // Parse JSON string if value comes from FormData
     if (typeof value === 'string') {
       try {
         return JSON.parse(value);
@@ -165,7 +151,7 @@ export class CreateProductDto {
   })
   @IsOptional()
   @Transform(({ value }) => {
-    // Hỗ trợ cả FormData (string hoặc string[]) lẫn JSON thuần
+    // Support both FormData array structure and raw JSON
     if (value === undefined || value === null) return value;
     if (Array.isArray(value)) return value;
     return [value];
@@ -248,7 +234,7 @@ export class CreateProductDto {
   @ArrayMinSize(1, { message: 'Cần ít nhất 1 variant khi hasVariants = true' })
   variants?: CreateProductVariantInputDto[];
 
-  // Giá cơ sở cho sản phẩm không biến thể: BE sẽ tự tạo 1 variant mặc định từ giá này
+  // Base price for products without variants used to generate a default variant
   @ApiPropertyOptional({ description: 'Giá cơ sở (dùng khi hasVariants = false)', example: 199000 })
   @IsOptional()
   @Type(() => Number)

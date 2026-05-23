@@ -22,9 +22,11 @@ export type CategoryTreeNode = FlatCategory & { children: CategoryTreeNode[] };
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  // TREE VIEW (optionally include inactive)
+  /**
+   * Retrieves the category tree structure.
+   */
   async findTree(includeInactive = false, onlyPublic = false): Promise<CategoryTreeNode[]> {
     const where: Prisma.CategoryWhereInput = {};
     if (!includeInactive) where.isActive = true;
@@ -38,7 +40,9 @@ export class CategoryService {
     return this.buildTree(categories);
   }
 
-  // DETAIL BY ID
+  /**
+   * Retrieves a single category by ID.
+   */
   async findOne(id: string) {
     const category = await this.prisma.category.findUnique({
       where: { id },
@@ -55,7 +59,9 @@ export class CategoryService {
     return category;
   }
 
-  // DETAIL BY SLUG
+  /**
+   * Retrieves a single category by slug.
+   */
   async findBySlug(slug: string) {
     const category = await this.prisma.category.findUnique({
       where: { slug },
@@ -72,18 +78,20 @@ export class CategoryService {
     return category;
   }
 
-  // CREATE
+  /**
+   * Creates a new category.
+   */
   async create(dto: CreateCategoryDto) {
     const mainName = dto.name?.['vi'] || dto.name?.['en'] || Object.values(dto.name ?? {})[0];
     if (!mainName) {
-      throw new BadRequestException('Tên danh mục phải có ít nhất một ngôn ngữ');
+      throw new BadRequestException('Category name must have at least one language');
     }
 
     // Validate parent if provided
     if (dto.parentId) {
       const parent = await this.prisma.category.findUnique({ where: { id: dto.parentId } });
       if (!parent) {
-        throw new BadRequestException('Danh mục cha không tồn tại');
+        throw new BadRequestException('Parent category does not exist');
       }
     }
 
@@ -105,23 +113,25 @@ export class CategoryService {
     return this.findOne(created.id);
   }
 
-  // UPDATE
+  /**
+   * Updates an existing category.
+   */
   async update(id: string, dto: UpdateCategoryDto) {
     const existing = await this.prisma.category.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException('Danh mục không tồn tại');
+      throw new NotFoundException('Category does not exist');
     }
 
     // Parent validation
     if (dto.parentId !== undefined) {
       if (dto.parentId === id) {
-        throw new BadRequestException('Không thể đặt danh mục làm cha của chính nó');
+        throw new BadRequestException('Cannot set a category as its own parent');
       }
 
       if (dto.parentId) {
         const parent = await this.prisma.category.findUnique({ where: { id: dto.parentId } });
         if (!parent) {
-          throw new BadRequestException('Danh mục cha không tồn tại');
+          throw new BadRequestException('Parent category does not exist');
         }
 
         const categories = await this.prisma.category.findMany({
@@ -129,7 +139,7 @@ export class CategoryService {
         });
         const isLoop = this.isParentLoop(id, dto.parentId, categories);
         if (isLoop) {
-          throw new BadRequestException('Không thể chuyển danh mục vào chính nhánh con của nó');
+          throw new BadRequestException('Cannot move a category into its own descendant');
         }
       }
     }
@@ -165,22 +175,21 @@ export class CategoryService {
     return this.findOne(updated.id);
   }
 
-  // DELETE
+  /**
+   * Deletes a category by ID.
+   */
   async remove(id: string) {
     const existing = await this.prisma.category.findUnique({ where: { id } });
     if (!existing) {
-      throw new NotFoundException('Danh mục không tồn tại');
+      throw new NotFoundException('Category does not exist');
     }
 
     await this.prisma.category.delete({ where: { id } });
     await this.rebuildPaths();
 
-    return { message: 'Đã xoá danh mục', id };
+    return { message: 'Category deleted successfully', id };
   }
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
   private buildTree(categories: FlatCategory[]): CategoryTreeNode[] {
     const map = new Map<string, CategoryTreeNode>();
     const roots: CategoryTreeNode[] = [];
@@ -235,7 +244,7 @@ export class CategoryService {
     newParentId: string,
     categories: { id: string; parentId: string | null }[],
   ) {
-    // đi lên từ newParentId, nếu gặp currentId -> tạo vòng lặp
+    // Traverse up from newParentId; if currentId is encountered, a loop is detected
     let cursor: string | null | undefined = newParentId;
     const parentMap = new Map(categories.map((c) => [c.id, c.parentId]));
 

@@ -3,9 +3,9 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { InventoryAllocatorService } from './inventory-allocator.service';
 import { InventoryController } from './inventory.controller';
 import { InventoryService } from './inventory.service';
+import { PhysicalItemService } from './physical-item.service';
 import { StockMovementService } from './stock-movement.service';
 import { WarehouseService } from './warehouse.service';
-import { PhysicalItemService } from './physical-item.service';
 
 import { InventoryReconciliationService } from './inventory-reconciliation.service';
 
@@ -22,4 +22,4 @@ import { InventoryReconciliationService } from './inventory-reconciliation.servi
   ],
   exports: [InventoryService, InventoryAllocatorService, PhysicalItemService],
 })
-export class InventoryModule { }
+export class InventoryModule {}

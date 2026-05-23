@@ -1,9 +1,9 @@
+import { OwnershipRegistry } from '@modules/security/ownership.registry';
+import { NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { OrderService } from '../order.service';
-import { OwnershipRegistry } from '@modules/security/ownership.registry';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NotFoundException } from '@nestjs/common';
 
 describe('OrderService', () => {
   let service: OrderService;
@@ -45,9 +45,9 @@ describe('OrderService', () => {
     it('should throw NotFoundException if order not found', async () => {
       mockPrismaService.order.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.getOrder('o1', { id: 'u1', type: 'user' } as any),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getOrder('o1', { id: 'u1', type: 'user' } as any)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

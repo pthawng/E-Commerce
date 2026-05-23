@@ -2,8 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 /**
- * Enum cho module của permission
- * Giúp phân loại permission theo module trong hệ thống
+ * Enum for permission modules.
  */
 export enum PermissionModule {
   USER = 'user',
@@ -16,28 +15,18 @@ export enum PermissionModule {
 }
 
 /**
- * Enum cho action của permission
- * Giúp phân loại permission theo hành động
+ * Enum for permission actions.
  */
 export enum PermissionAction {
   CREATE = 'create',
   READ = 'read',
   UPDATE = 'update',
   DELETE = 'delete',
-  MANAGE = 'manage', // Full quyền quản lý (CRUD + các hành động đặc biệt)
+  MANAGE = 'manage', // Full management permission
 }
 
 /**
- * DTO tạo mới Permission
- *
- * - slug: URL-friendly identifier (bắt buộc, unique)
- *   Format: "module.action" hoặc "module.resource.action"
- *   Ví dụ: "user.create", "product.manage", "rbac.role.update"
- * - name: Tên hiển thị của permission (bắt buộc)
- *   Ví dụ: "Tạo người dùng", "Quản lý sản phẩm"
- * - description: Mô tả permission (tùy chọn)
- * - module: Module mà permission thuộc về (tùy chọn)
- * - action: Hành động của permission (tùy chọn)
+ * DTO for creating a permission.
  */
 export class CreatePermissionDto {
   @ApiProperty({

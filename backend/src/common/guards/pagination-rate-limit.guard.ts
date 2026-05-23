@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ThrottlerException, ThrottlerGuard, ThrottlerRequest } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerRequest } from '@nestjs/throttler';
 
 @Injectable()
 export class PaginationRateLimitGuard extends ThrottlerGuard {
@@ -21,9 +21,9 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
     let adjustedTtl = ttl;
 
     // [L9] Forensic Admin Detection
-    const isAdmin = 
-      user?.aud === 'admin' || 
-      user?.roles?.includes('admin') || 
+    const isAdmin =
+      user?.aud === 'admin' ||
+      user?.roles?.includes('admin') ||
       user?.roles?.includes('superadmin');
 
     const page = Number(query.page);
@@ -33,7 +33,6 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
       adjustedLimit = Math.max(1, Math.floor(limit / 4));
       adjustedTtl = ttl * 2;
     }
-
 
     return await super.handleRequest({
       ...requestProps,
@@ -45,5 +44,4 @@ export class PaginationRateLimitGuard extends ThrottlerGuard {
   protected async getTracker(req: Record<string, any>): Promise<string> {
     return req.user?.userId || req.user?.id || req.ip || 'anon';
   }
-
 }

@@ -33,8 +33,8 @@ export const VNPAY_COMMAND = {
  * VNPAY Transaction Types
  */
 export const VNPAY_TRANSACTION_TYPE = {
-  FULL_REFUND: '02', // Hoàn trả toàn phần
-  PARTIAL_REFUND: '03', // Hoàn trả một phần
+  FULL_REFUND: '02',
+  PARTIAL_REFUND: '03',
 } as const;
 
 /**

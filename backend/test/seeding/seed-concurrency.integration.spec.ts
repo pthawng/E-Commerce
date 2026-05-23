@@ -8,7 +8,7 @@ import { SeedHistoryTracker } from '../../src/prisma/seeds/utils/history';
 /**
  * INTEGRATION TEST: Seeding Advisory Lock Contention
  *
- * L8 Philosophy: In horizontally-scaled deployments, all pods run
+ * In horizontally-scaled deployments, all pods run
  * their startup sequence concurrently. The advisory lock MUST guarantee
  * that only one pod runs the seeding process, and all others gracefully skip.
  */

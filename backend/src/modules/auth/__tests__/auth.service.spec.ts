@@ -4,11 +4,11 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SecurityEventBus } from '../../security/security-event-bus.service';
 import { UserService } from '../../user/user.service';
 import { AuthService } from '../auth.service';
 import { ForgotPassEmailService } from '../services/forgot-pass-email.auth.service';
 import { RiskScoreService } from '../services/risk-score.service';
-import { SecurityEventBus } from '../../security/security-event-bus.service';
 import { VerifyEmailService } from '../services/verify-email.auth.service';
 
 jest.mock('argon2', () => ({
@@ -177,7 +177,11 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException for invalid password', async () => {
-      mockPrismaService.user.findFirst.mockResolvedValue({ id: 'u1', passwordHash: 'hash', isEmailVerified: true });
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        id: 'u1',
+        passwordHash: 'hash',
+        isEmailVerified: true,
+      });
       (argon2.verify as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);

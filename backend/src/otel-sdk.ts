@@ -4,9 +4,8 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 
 /**
- * OpenTelemetry SDK Setup.
- * Provides distributed tracing and automated metrics collection.
- * Only initialized when OTEL_ENABLED=true in environment.
+ * OpenTelemetry SDK setup.
+ * Initializes distributed tracing and metrics collection.
  */
 export let otelSDK: NodeSDK | null = null;
 

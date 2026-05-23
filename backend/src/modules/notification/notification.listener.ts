@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationService } from './notification.service';
-import { NotificationType, NotificationPriority } from '@prisma/client';
 
 @Injectable()
 export class NotificationListener {
@@ -12,7 +11,7 @@ export class NotificationListener {
   @OnEvent('order.status.changed')
   async handleOrderStatusChanged(payload: any) {
     const { orderId, newStatus, oldStatus } = payload;
-    
+
     this.logger.log(`Handling order status change notification: ${orderId} -> ${newStatus}`);
 
     // Notify about high-value transitions
@@ -23,9 +22,9 @@ export class NotificationListener {
         title: 'New Confirmed Order',
         content: `Order #${orderId.substring(0, 8)} has been confirmed and is ready for production.`,
         metadata: {
-            path: `/orders/${orderId}`,
-            actionLabel: 'View Order'
-        }
+          path: `/orders/${orderId}`,
+          actionLabel: 'View Order',
+        },
       });
     }
 
@@ -36,9 +35,9 @@ export class NotificationListener {
         title: 'Order Cancelled',
         content: `Order #${orderId.substring(0, 8)} has been cancelled.`,
         metadata: {
-            path: `/orders/${orderId}`,
-            actionLabel: 'Check Reason'
-        }
+          path: `/orders/${orderId}`,
+          actionLabel: 'Check Reason',
+        },
       });
     }
   }
@@ -46,16 +45,16 @@ export class NotificationListener {
   @OnEvent('ledger.approval.required')
   async handleLedgerApproval(payload: any) {
     const { journalId, amount, currency, createdBy } = payload;
-    
+
     await this.notificationService.create({
       type: 'ACTION_REQUIRED' as any,
       priority: 'CRITICAL' as any,
       title: 'Financial Approval Required',
       content: `A high-value posting of ${amount} ${currency} requires secondary approval.`,
       metadata: {
-          path: '/ledger',
-          actionLabel: 'Approve Now'
-      }
+        path: '/ledger',
+        actionLabel: 'Approve Now',
+      },
     });
   }
 
@@ -66,12 +65,12 @@ export class NotificationListener {
     await this.notificationService.create({
       userId,
       type: 'ERROR' as any,
-      priority: severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH' as any,
+      priority: severity === 'CRITICAL' ? 'CRITICAL' : ('HIGH' as any),
       title: 'Security Alert',
       content: message,
       metadata: {
-          path: '/health'
-      }
+        path: '/health',
+      },
     });
   }
 }

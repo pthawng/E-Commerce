@@ -1,11 +1,6 @@
 /**
  * Centralized permission strings.
- *
- * Tư duy "Hybrid":
- * - DB / UI grouping: dùng enum/module (PermissionModule) để group theo module.
- * - Logic check quyền: luôn dựa vào chuỗi slug cụ thể (vd: 'product.category.create').
- *
- * PERMISSIONS ở đây là single source of truth cho toàn bộ slug.
+ * Acts as the single source of truth for all permission slugs.
  */
 export const PERMISSIONS = {
   AUTH: {
@@ -86,15 +81,15 @@ export const PERMISSIONS = {
   CRM: {
     GUEST: {
       READ: 'crm.guest.read',
-    }
+    },
   },
 } as const;
 
 type NestedValues<T> = T extends string
   ? T
   : T extends object
-  ? { [K in keyof T]: NestedValues<T[K]> }[keyof T]
-  : never;
+    ? { [K in keyof T]: NestedValues<T[K]> }[keyof T]
+    : never;
 
-// Union type của tất cả slug hợp lệ (tự động, không cần sửa tay)
+// Union type of all valid permission slugs
 export type PermissionValue = NestedValues<typeof PERMISSIONS>;

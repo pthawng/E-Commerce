@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { LuxurySegment, OrderStatusEnum } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { OrderStatusEnum, LuxurySegment } from '@prisma/client';
 
 @Injectable()
 export class AnalyticsService {
@@ -38,9 +38,12 @@ export class AnalyticsService {
     const calculateMetrics = (orders: any[]) => {
       const revenue = orders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
       const cost = orders.reduce((sum, o) => {
-        return sum + o.items.reduce((iSum: number, item: any) => {
-          return iSum + (Number(item.productVariant?.costPrice || 0) * item.quantity);
-        }, 0);
+        return (
+          sum +
+          o.items.reduce((iSum: number, item: any) => {
+            return iSum + Number(item.productVariant?.costPrice || 0) * item.quantity;
+          }, 0)
+        );
       }, 0);
       const count = orders.length;
       return {
@@ -58,10 +61,29 @@ export class AnalyticsService {
 
     return {
       metrics: [
-        { label: 'Revenue', value: current.revenue, delta: getDelta(current.revenue, previous.revenue), prefix: '$' },
-        { label: 'Gross Profit', value: current.profit, delta: getDelta(current.profit, previous.profit), prefix: '$' },
-        { label: 'Average Order Value', value: current.aov, delta: getDelta(current.aov, previous.aov), prefix: '$' },
-        { label: 'Order Volume', value: current.count, delta: getDelta(current.count, previous.count) },
+        {
+          label: 'Revenue',
+          value: current.revenue,
+          delta: getDelta(current.revenue, previous.revenue),
+          prefix: '$',
+        },
+        {
+          label: 'Gross Profit',
+          value: current.profit,
+          delta: getDelta(current.profit, previous.profit),
+          prefix: '$',
+        },
+        {
+          label: 'Average Order Value',
+          value: current.aov,
+          delta: getDelta(current.aov, previous.aov),
+          prefix: '$',
+        },
+        {
+          label: 'Order Volume',
+          value: current.count,
+          delta: getDelta(current.count, previous.count),
+        },
       ],
       revenueChart: this.formatChartData(currentOrders, days),
     };
@@ -163,7 +185,8 @@ export class AnalyticsService {
 
       Object.values(orderTransitions).forEach((trans: any) => {
         if (trans[startStatus] && trans[endStatus]) {
-          const diff = (trans[endStatus].getTime() - trans[startStatus].getTime()) / (1000 * 60 * 60);
+          const diff =
+            (trans[endStatus].getTime() - trans[startStatus].getTime()) / (1000 * 60 * 60);
           totalHours += diff;
           count++;
         }

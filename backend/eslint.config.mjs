@@ -9,12 +9,12 @@ export default tseslint.config(
     ignores: ['eslint.config.mjs', 'dist', 'node_modules', 'coverage'],
   },
 
-  // Các config nền tảng
+  // Core configuration files
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   eslintPluginPrettierRecommended,
 
-  // Config riêng cho TypeScript trong src
+  // Specific configuration for TypeScript files
   {
     files: ['src/**/*.ts', 'test/**/*.ts', 'apps/**/*.ts', 'libs/**/*.ts'],
     languageOptions: {
@@ -36,10 +36,10 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
 
-      // Fix lỗi Prettier xuống dòng trên Windows
+      // Prevent Prettier line end issues on Windows
       "prettier/prettier": ["error", { endOfLine: "auto" }],
 
-      // Staff+ Enforcement: Ban direct process.env usage (Warn during migration)
+      // Ban direct process.env usage. ConfigService should be used instead.
       "no-restricted-properties": [
         "warn",
         {
@@ -51,7 +51,7 @@ export default tseslint.config(
     },
   },
   {
-    // Allow process.env ONLY in config/validation layers, entry point, and scripts
+    // Allow process.env only in config, validation layers, entry point, and scripts
     files: ['src/main.ts', 'src/config/env.schema.ts', 'src/config/env.validator.ts', 'src/config/app-config.module.ts', 'scripts/**/*.ts'],
     rules: {
       "no-restricted-properties": "off"

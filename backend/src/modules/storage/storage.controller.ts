@@ -13,7 +13,9 @@ import { StorageService } from './storage.service';
 export class StorageController {
   constructor(private storage: StorageService) {}
 
-  // Upload 1 ảnh
+  /**
+   * Uploads a single file.
+   */
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadOne(@UploadedFile() file: Express.Multer.File, @Body() body: { folder: string }) {
@@ -25,7 +27,9 @@ export class StorageController {
     return { url, path };
   }
 
-  // Upload nhiều ảnh
+  /**
+   * Uploads multiple files.
+   */
   @Post('multi-upload')
   @UseInterceptors(FilesInterceptor('files', 10))
   async uploadMany(

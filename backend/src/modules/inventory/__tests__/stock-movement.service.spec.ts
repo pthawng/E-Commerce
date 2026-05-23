@@ -56,7 +56,9 @@ describe('StockMovementService', () => {
     it('should successfully transfer stock between warehouses', async () => {
       // Source warehouse has enough stock
       mockPrismaService.$queryRawUnsafe
-        .mockResolvedValueOnce([{ id: 'inv1', quantity: 50, reservedQuantity: 0, damagedQuantity: 0 }]) // from
+        .mockResolvedValueOnce([
+          { id: 'inv1', quantity: 50, reservedQuantity: 0, damagedQuantity: 0 },
+        ]) // from
         .mockResolvedValueOnce([{ id: 'inv2', quantity: 20, inTransitQuantity: 10 }]); // to
 
       mockPrismaService.inventoryTransfer.create.mockResolvedValue({ id: 'trf1' });
@@ -103,7 +105,7 @@ describe('StockMovementService', () => {
         where: { id: 'inv2' },
         data: {
           inTransitQuantity: { decrement: 10 },
-          quantity: { increment: 10 }
+          quantity: { increment: 10 },
         },
       });
 

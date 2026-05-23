@@ -2,8 +2,8 @@ import { Public } from '@common/decorators/public.decorator';
 import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { AiChatDto } from './dto/ai-chat.dto';
 import { AiService } from './ai.service';
+import { AiChatDto } from './dto/ai-chat.dto';
 
 @ApiTags('ai')
 @Controller('ai')
@@ -48,7 +48,11 @@ export class AiController {
     const parsedMinPrice = parseOptionalNumber(minPrice, 'minPrice');
     const parsedMaxPrice = parseOptionalNumber(maxPrice, 'maxPrice');
 
-    if (parsedMinPrice !== undefined && parsedMaxPrice !== undefined && parsedMinPrice > parsedMaxPrice) {
+    if (
+      parsedMinPrice !== undefined &&
+      parsedMaxPrice !== undefined &&
+      parsedMinPrice > parsedMaxPrice
+    ) {
       throw new BadRequestException('minPrice must be less than or equal to maxPrice');
     }
 
@@ -69,7 +73,6 @@ export class AiController {
     return this.aiService.chat(body.message, body.history);
   }
 }
-
 
 function parseOptionalNumber(value: string | undefined, field: string): number | undefined {
   if (value === undefined || value === '') return undefined;

@@ -12,21 +12,21 @@ export class UserPolicy extends BasePolicy<any> {
 
     switch (action) {
       case PolicyAction.READ:
-        // Cho phép xem chính mình
+        // Allow viewing own profile
         if (resource && this.isOwner(user, resource)) return this.allow();
-        return this.deny('Chỉ được xem thông tin của bạn');
+        return this.deny('You can only view your own information');
 
       case PolicyAction.UPDATE:
-        // Cho phép tự cập nhật hoặc nhân viên HR
+        // Allow self-update or HR staff
         if (resource && this.isOwner(user, resource)) return this.allow();
         if (this.hasRole(user, 'hr')) return this.allow();
-        return this.deny('Không đủ quyền cập nhật user');
+        return this.deny('Insufficient permissions to update the user');
 
       case PolicyAction.DELETE:
-        return this.deny('Không cho phép xóa user');
+        return this.deny('Deleting users is not allowed');
 
       default:
-        return this.deny(`Action ${action} chưa hỗ trợ`);
+        return this.deny(`Action ${action} is not supported`);
     }
   }
 }

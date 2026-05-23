@@ -19,12 +19,11 @@ import { PaginationDto } from '../../common/pagination';
 import { RequestUserPayload } from '../../common/types/jwt.types';
 import { OrderService } from './order.service';
 
+import { OrderStatusEnum } from '@prisma/client';
+import { AdminCreateOrderDto } from './dto/admin-create-order.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { RefundService } from './services/refund.service';
-import { AdminCreateOrderDto } from './dto/admin-create-order.dto';
-import { OrderStatusEnum } from '@prisma/client';
-import { OrderStateMachine } from './utils/order-state-machine';
 
 import { OrderPaymentService } from './services/order-payment.service';
 
@@ -38,7 +37,7 @@ export class AdminOrderController {
     private readonly refundService: RefundService,
     private readonly ownershipRegistry: OwnershipRegistry,
     private readonly orderPaymentService: OrderPaymentService,
-  ) { }
+  ) {}
 
   @Post()
   @Permission(PERMISSIONS.ORDER.UPDATE)
@@ -57,7 +56,15 @@ export class AdminOrderController {
   @Get()
   @Permission(PERMISSIONS.ORDER.READ)
   @ApiOperation({ summary: 'Lấy tất cả đơn hàng (Admin)' })
-  findAll(@Query() dto: PaginationDto & { status?: string; customerId?: string; guestEmail?: string; queue?: string }) {
+  findAll(
+    @Query()
+    dto: PaginationDto & {
+      status?: string;
+      customerId?: string;
+      guestEmail?: string;
+      queue?: string;
+    },
+  ) {
     return this.orderService.findAllPaginated(dto);
   }
 

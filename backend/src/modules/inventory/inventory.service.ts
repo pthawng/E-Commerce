@@ -11,7 +11,7 @@ import { ActionType, Prisma, ReservationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 /**
- * Allocation item — result from InventoryAllocatorService
+ * Allocation item details.
  */
 export interface AllocationItem {
   variantId: string;
@@ -21,21 +21,18 @@ export interface AllocationItem {
 }
 
 /**
- * InventoryService
- *
- * Core stock operations with transaction + row-level locking (FOR UPDATE NOWAIT).
- * Enforces system invariants via SystemContextStore.
+ * Inventory service.
+ * Handles stock checks, reservations, adjustments, and movements.
  */
 @Injectable()
 export class InventoryService {
   private readonly logger = new Logger(InventoryService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  // ============================================
-  // CHECK AVAILABILITY
-  // ============================================
-
+  /**
+   * Checks the availability of a variant in the specified warehouse or globally.
+   */
   async checkAvailability(
     variantId: string,
     quantity: number,
@@ -49,7 +46,8 @@ export class InventoryService {
     const items = await this.prisma.inventoryItem.findMany({ where });
 
     const totalAvailable = items.reduce(
-      (sum, item) => sum + (item.quantity || 0) - (item.reservedQuantity || 0) - (item.damagedQuantity || 0),
+      (sum, item) =>
+        sum + (item.quantity || 0) - (item.reservedQuantity || 0) - (item.damagedQuantity || 0),
       0,
     );
 
@@ -59,10 +57,9 @@ export class InventoryService {
     };
   }
 
-  // ============================================
-  // RESERVE — Row-level lock (FOR UPDATE NOWAIT)
-  // ============================================
-
+  /**
+   * Reserves stock for an order using row-level locking.
+   */
   async reserve(
     orderId: string,
     allocations: AllocationItem[],
@@ -76,7 +73,7 @@ export class InventoryService {
         const reservationIds: string[] = [];
 
         for (const alloc of allocations) {
-          // Use NOWAIT + Retry for maximum concurrency safety without hanging
+          // Use NOWAIT and retry logic for concurrent safety without hanging
           const inventoryItem = await withRetry(
             async () => {
               const [item] = await tx.$queryRawUnsafe<
@@ -159,10 +156,9 @@ export class InventoryService {
     });
   }
 
-  // ============================================
-  // CONFIRM — Atomic commit of reserved stock
-  // ============================================
-
+  /**
+   * Deducts the reserved stock for a confirmed order.
+   */
   async deduct(orderId: string, txClient?: Prisma.TransactionClient): Promise<void> {
     return SystemContextStore.asInternal('InventoryService', async () => {
       const execute = async (tx: Prisma.TransactionClient) => {
@@ -226,10 +222,9 @@ export class InventoryService {
     });
   }
 
-  // ============================================
-  // RELEASE — Restore reserved stock
-  // ============================================
-
+  /**
+   * Releases and restores reserved stock.
+   */
   async release(orderId: string, txClient?: Prisma.TransactionClient): Promise<void> {
     return SystemContextStore.asInternal('InventoryService', async () => {
       const execute = async (tx: Prisma.TransactionClient) => {
@@ -292,10 +287,9 @@ export class InventoryService {
     });
   }
 
-  // ============================================
-  // STOCK MANAGEMENT (RESTORED)
-  // ============================================
-
+  /**
+   * Imports or increases stock levels in a specific warehouse.
+   */
   async receiveStock(
     variantId: string,
     warehouseId: string,
@@ -341,10 +335,12 @@ export class InventoryService {
     });
   }
 
+  /**
+   * Adjusts stock quantity for a variant in a warehouse.
+   */
   async adjustStock(variantId: string, warehouseId: string, newQuantity: number, reason?: string) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
-        // Enforce row level lock for adjustment too
         const inventoryItem = await withRetry(
           async () => {
             const [item] = await tx.$queryRawUnsafe<any>(
@@ -388,6 +384,9 @@ export class InventoryService {
     });
   }
 
+  /**
+   * Moves a specified quantity of a variant in a warehouse to the damaged pool.
+   */
   async reportDamage(
     variantId: string,
     warehouseId: string,
@@ -397,7 +396,6 @@ export class InventoryService {
   ) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
-        // Enforce row level lock
         const inventoryItem = await withRetry(
           async () => {
             const [item] = await tx.$queryRawUnsafe<any>(
@@ -418,7 +416,7 @@ export class InventoryService {
 
         const updated = await tx.inventoryItem.update({
           where: { id: inventoryItem.id },
-          data: { 
+          data: {
             quantity: { decrement: quantity },
             damagedQuantity: { increment: quantity },
           },
@@ -443,10 +441,9 @@ export class InventoryService {
     });
   }
 
-  // ============================================
-  // READ OPS (No Guard Required)
-  // ============================================
-
+  /**
+   * Retrieves all stock levels matching optional filters.
+   */
   async getAllStockLevels(filters: { warehouseId?: string; variantId?: string }) {
     return this.prisma.inventoryItem.findMany({
       where: {
@@ -460,6 +457,9 @@ export class InventoryService {
     });
   }
 
+  /**
+   * Retrieves stock levels for a specific variant across warehouses.
+   */
   async getStockLevels(variantId: string) {
     return this.prisma.inventoryItem.findMany({
       where: { productVariantId: variantId },

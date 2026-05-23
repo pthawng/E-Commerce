@@ -18,13 +18,17 @@ export type VariantWithRelations = Prisma.ProductVariantGetPayload<{
   };
 }>;
 
+/**
+ * Product variant service.
+ * Manages creation, updating, retrieval, and deletion of product variants.
+ */
 @Injectable()
 export class VariantService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ---------------------------
-  // CREATE VARIANT
-  // ---------------------------
+  /**
+   * Creates a new product variant.
+   */
   async createVariant(
     productId: string,
     dto: CreateVariantDto,
@@ -37,12 +41,10 @@ export class VariantService {
   ) {
     const client = tx ?? this.prisma;
 
-    // Ensure product exists
     const product = await this.ensureProductExists(productId, client);
 
-    // Ensure SKU unique / auto-gen
     const rawSku = dto.sku?.trim();
-    // If creating first variant, set isDefault = true (opt-in)
+    // If this is the first variant, make it default
     const variantCount = await client.productVariant.count({
       where: { productId, deletedAt: null },
     });
@@ -59,7 +61,7 @@ export class VariantService {
         ? variantCount === 0
         : false;
 
-    // Validate attribute values nếu có
+    // Validate attribute values if provided
     if (dto.attributeValueIds?.length) {
       await this.validateAttributeValues(dto.attributeValueIds, client);
     }
@@ -79,12 +81,11 @@ export class VariantService {
       },
     });
 
-    // If mark as default, unset others
+    // Unset other defaults if this variant is marked default
     if (variant.isDefault) {
       await this.unsetOtherDefaults(productId, variant.id, client);
     }
 
-    // Attribute values
     if (dto.attributeValueIds?.length) {
       await client.variantAttributeValue.createMany({
         data: dto.attributeValueIds.map((attributeValueId) => ({
@@ -95,7 +96,7 @@ export class VariantService {
       });
     }
 
-    // Map media via index
+    // Map media items by index
     if (dto.mediaIndexes?.length) {
       let medias = options?.mediaRecords;
       if (!medias) {
@@ -133,9 +134,9 @@ export class VariantService {
     return variant;
   }
 
-  // ---------------------------
-  // UPDATE VARIANT
-  // ---------------------------
+  /**
+   * Updates an existing product variant.
+   */
   async updateVariant(productId: string, variantId: string, dto: UpdateVariantDto) {
     const existing = await this.prisma.productVariant.findUnique({ where: { id: variantId } });
     if (!existing) {
@@ -146,7 +147,6 @@ export class VariantService {
       throw new BadRequestException('Variant không thuộc sản phẩm này');
     }
 
-    // SKU unique check
     if (dto.sku && typeof dto.sku === 'string') {
       const exists = await this.prisma.productVariant.findUnique({ where: { sku: dto.sku } });
       if (exists && exists.id !== variantId) {
@@ -179,9 +179,9 @@ export class VariantService {
     return updated;
   }
 
-  // ---------------------------
-  // DELETE VARIANT
-  // ---------------------------
+  /**
+   * Deletes a product variant.
+   */
   async deleteVariant(productId: string, variantId: string) {
     const existing = await this.prisma.productVariant.findUnique({ where: { id: variantId } });
     if (!existing) {
@@ -197,9 +197,9 @@ export class VariantService {
     return { message: 'Đã xoá variant', id: variantId };
   }
 
-  // ---------------------------
-  // GET VARIANT BY ID
-  // ---------------------------
+  /**
+   * Finds a product variant by ID.
+   */
   async findOne(productId: string, variantId: string): Promise<VariantWithRelations> {
     const variant = await this.prisma.productVariant.findUnique({
       where: { id: variantId },
@@ -224,9 +224,9 @@ export class VariantService {
     return variant;
   }
 
-  // ---------------------------
-  // GET VARIANTS BY PRODUCT
-  // ---------------------------
+  /**
+   * Finds all variants belonging to a specific product.
+   */
   async findByProduct(productId: string) {
     await this.ensureProductExists(productId);
     return this.prisma.productVariant.findMany({
@@ -235,9 +235,6 @@ export class VariantService {
     });
   }
 
-  // ---------------------------
-  // Helpers
-  // ---------------------------
   private async ensureProductExists(
     productId: string,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
@@ -263,11 +260,14 @@ export class VariantService {
     });
   }
 
+  /**
+   * Recalculates display prices for a product based on its active variants.
+   */
   async recalculateDisplayPrice(
     productId: string,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    // Lấy min/max price của các variant đang active và chưa xoá
+    // Retrieve minimum and maximum prices of active variants
     const prices = await client.productVariant.findMany({
       where: { productId, deletedAt: null, isActive: true },
       select: { price: true },

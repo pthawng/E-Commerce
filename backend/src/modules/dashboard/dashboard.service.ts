@@ -11,7 +11,7 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) { }
+  ) {}
 
   async getStats() {
     const cacheKey = 'dashboard_stats';
@@ -25,39 +25,40 @@ export class DashboardService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [revenueData, ordersToday, activeOrders, lowStockItems, totalOrders, totalSessions] = await Promise.all([
-      this.prisma.order.aggregate({
-        _sum: { totalAmount: true },
-        where: { status: { not: OrderStatusEnum.CANCELLED } },
-      }),
-      this.prisma.order.count({
-        where: { createdAt: { gte: today } },
-      }),
-      this.prisma.order.count({
-        where: {
-          status: {
-            in: [
-              OrderStatusEnum.PENDING_PAYMENT,
-              OrderStatusEnum.CONFIRMED,
-              OrderStatusEnum.MATERIAL_RESERVED,
-              OrderStatusEnum.IN_PRODUCTION,
-              OrderStatusEnum.QC,
-              OrderStatusEnum.READY_TO_SHIP,
-              OrderStatusEnum.SHIPPED,
-            ],
+    const [revenueData, ordersToday, activeOrders, lowStockItems, totalOrders, totalSessions] =
+      await Promise.all([
+        this.prisma.order.aggregate({
+          _sum: { totalAmount: true },
+          where: { status: { not: OrderStatusEnum.CANCELLED } },
+        }),
+        this.prisma.order.count({
+          where: { createdAt: { gte: today } },
+        }),
+        this.prisma.order.count({
+          where: {
+            status: {
+              in: [
+                OrderStatusEnum.PENDING_PAYMENT,
+                OrderStatusEnum.CONFIRMED,
+                OrderStatusEnum.MATERIAL_RESERVED,
+                OrderStatusEnum.IN_PRODUCTION,
+                OrderStatusEnum.QC,
+                OrderStatusEnum.READY_TO_SHIP,
+                OrderStatusEnum.SHIPPED,
+              ],
+            },
           },
-        },
-      }),
-      this.prisma.inventoryItem.count({
-        where: { quantity: { lt: 5 } },
-      }),
-      this.prisma.order.count(),
-      this.prisma.order
-        .groupBy({
-          by: ['sessionId'],
-        })
-        .then((res) => res.length),
-    ]);
+        }),
+        this.prisma.inventoryItem.count({
+          where: { quantity: { lt: 5 } },
+        }),
+        this.prisma.order.count(),
+        this.prisma.order
+          .groupBy({
+            by: ['sessionId'],
+          })
+          .then((res) => res.length),
+      ]);
 
     const stats = {
       revenue: Number(revenueData._sum.totalAmount || 0),
@@ -133,7 +134,7 @@ export class DashboardService {
     try {
       const cached = await this.cacheManager.get(cacheKey);
       if (cached) return cached;
-    } catch { }
+    } catch {}
 
     const topItems = await this.prisma.orderItem.groupBy({
       by: ['productVariantId'],

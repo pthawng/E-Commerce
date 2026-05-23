@@ -67,7 +67,6 @@ export const auditExtension = Prisma.defineExtension((client) => {
             });
 
             return result;
-
           }
 
           return query(args);

@@ -17,7 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AuditLogInterceptor implements NestInterceptor {
   private readonly logger = new Logger('AuditLog');
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest<Request>();

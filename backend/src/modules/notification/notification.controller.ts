@@ -1,7 +1,7 @@
-import { Controller, Get, Patch, Param, UseGuards, Query } from '@nestjs/common';
-import { NotificationService } from './notification.service';
-import { AdminJwtAccessGuard } from '../auth/guard/admin-access-jwt.guard';
+import { Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { CurrentUserId } from 'src/common/decorators/get-user.decorator';
+import { AdminJwtAccessGuard } from '../auth/guard/admin-access-jwt.guard';
+import { NotificationService } from './notification.service';
 
 @Controller('admin/notifications')
 @UseGuards(AdminJwtAccessGuard)

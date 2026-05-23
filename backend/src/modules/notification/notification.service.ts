@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationPriority, NotificationType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationGateway } from './notification.gateway';
-import { NotificationType, NotificationPriority } from '@prisma/client';
 
 export interface CreateNotificationDto {
   userId?: string;
@@ -46,10 +46,7 @@ export class NotificationService {
   async findAllForUser(userId: string, query: { isRead?: boolean; limit?: number } = {}) {
     return this.prisma.notification.findMany({
       where: {
-        OR: [
-          { userId },
-          { userId: null },
-        ],
+        OR: [{ userId }, { userId: null }],
         isRead: query.isRead,
       },
       orderBy: { createdAt: 'desc' },

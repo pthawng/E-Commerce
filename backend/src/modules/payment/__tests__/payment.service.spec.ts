@@ -16,8 +16,8 @@ import { PayPalProvider } from '../providers/paypal/paypal.provider';
 import { VietQRProvider } from '../providers/vietqr/vietqr.provider';
 import { VNPayProvider } from '../providers/vnpay/vnpay.provider';
 import { IdempotencyService } from '../services/idempotency.service';
-import { WebhookIdempotencyService } from '../services/webhook-idempotency.service';
 import { PaymentStateMachine } from '../services/payment-state.machine';
+import { WebhookIdempotencyService } from '../services/webhook-idempotency.service';
 import { TransactionStatus } from '../types/payment.types';
 
 describe('PaymentService', () => {

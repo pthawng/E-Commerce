@@ -20,7 +20,7 @@ export class PaymentReconciliationService {
     private readonly stateMachine: PaymentStateMachine,
     private readonly paymentService: PaymentService,
     private readonly orderService: OrderService,
-  ) { }
+  ) {}
 
   /**
    * Cron job to reconcile stale payments every 5 minutes

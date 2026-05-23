@@ -342,9 +342,7 @@ export class ProductService {
       attributeValueIds?: string[];
     };
 
-    const variantsInput: VariantInput[] = hasVariants
-      ? (dto.variants as VariantInput[]) || []
-      : [];
+    const variantsInput: VariantInput[] = hasVariants ? (dto.variants as VariantInput[]) || [] : [];
 
     if (!hasVariants) {
       const defaultVariant = await tx.productVariant.create({
@@ -621,7 +619,9 @@ export class ProductService {
   // REPORT MEDIA ISSUE
   // ---------------------------
   async reportMediaIssue(dto: ReportMediaDto, clientId: string) {
-    console.log(`[ProductService] Received media anomaly report: product=${dto.productId}, client=${clientId}`);
+    console.log(
+      `[ProductService] Received media anomaly report: product=${dto.productId}, client=${clientId}`,
+    );
     // We emit an event instead of directly writing to DB to prevent abuse and decouple logic.
     this.eventEmitter.emit('product.media.anomaly_reported', {
       productId: dto.productId,

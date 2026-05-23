@@ -1,9 +1,15 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Cache } from 'cache-manager';
-import type { AiSearchResponse, AiSearchResult, ProductEmbeddingPayload, RecommendationResponse, SimilarProduct } from '@shared';
 import type { Prisma } from '@prisma/client';
+import type {
+  AiSearchResponse,
+  AiSearchResult,
+  ProductEmbeddingPayload,
+  RecommendationResponse,
+  SimilarProduct,
+} from '@shared';
+import type { Cache } from 'cache-manager';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 interface AiSearchOptions {
@@ -41,20 +47,26 @@ export class AiService {
     this.embeddingTimeoutMs = Number(this.configService.get('AI_EMBED_TIMEOUT_MS', 3000));
     this.searchTimeoutMs = Number(this.configService.get('AI_SEARCH_TIMEOUT_MS', 800));
     this.searchCacheTtlMs = Number(this.configService.get('AI_SEARCH_CACHE_TTL_MS', 2 * 60 * 1000));
-    this.recommendationCacheTtlMs = Number(this.configService.get(
-      'AI_RECOMMENDATION_CACHE_TTL_MS',
-      10 * 60 * 1000,
-    ));
-    this.internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN', 'dev_internal_token_123');
+    this.recommendationCacheTtlMs = Number(
+      this.configService.get('AI_RECOMMENDATION_CACHE_TTL_MS', 10 * 60 * 1000),
+    );
+    this.internalToken = this.configService.get<string>(
+      'INTERNAL_SERVICE_TOKEN',
+      'dev_internal_token_123',
+    );
   }
 
   async syncProduct(payload: ProductEmbeddingPayload): Promise<void> {
     const startedAt = Date.now();
 
-    await this.request(`${this.aiServiceUrl}/products/embed`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }, this.embeddingTimeoutMs);
+    await this.request(
+      `${this.aiServiceUrl}/products/embed`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      this.embeddingTimeoutMs,
+    );
 
     this.logger.log(`Synced product ${payload.id} to ai-service in ${Date.now() - startedAt}ms`);
   }
@@ -62,7 +74,9 @@ export class AiService {
   async getRecommendations(productId: string, limit: number = 4): Promise<RecommendationResponse> {
     const normalizedLimit = clampLimit(limit);
     const cacheKey =
-      normalizedLimit === 4 ? `recommend:${productId}` : `recommend:${productId}:${normalizedLimit}`;
+      normalizedLimit === 4
+        ? `recommend:${productId}`
+        : `recommend:${productId}:${normalizedLimit}`;
     const cached = await this.cacheManager.get<RecommendationResponse>(cacheKey);
 
     if (cached) {
@@ -90,7 +104,9 @@ export class AiService {
         cached: false,
       };
 
-      await this.cacheManager.set(cacheKey, freshResponse, this.recommendationCacheTtlMs).catch(() => undefined);
+      await this.cacheManager
+        .set(cacheKey, freshResponse, this.recommendationCacheTtlMs)
+        .catch(() => undefined);
       return freshResponse;
     } catch (error) {
       this.logger.warn(
@@ -98,7 +114,9 @@ export class AiService {
       );
 
       const fallback = await this.getFallbackRecommendations(productId, normalizedLimit);
-      await this.cacheManager.set(cacheKey, fallback, this.recommendationCacheTtlMs).catch(() => undefined);
+      await this.cacheManager
+        .set(cacheKey, fallback, this.recommendationCacheTtlMs)
+        .catch(() => undefined);
       return fallback;
     }
   }
@@ -128,8 +146,12 @@ export class AiService {
             filters: {
               isActive: true,
               ...(normalizedOptions.category ? { category: normalizedOptions.category } : {}),
-              ...(normalizedOptions.minPrice !== undefined ? { minPrice: normalizedOptions.minPrice } : {}),
-              ...(normalizedOptions.maxPrice !== undefined ? { maxPrice: normalizedOptions.maxPrice } : {}),
+              ...(normalizedOptions.minPrice !== undefined
+                ? { minPrice: normalizedOptions.minPrice }
+                : {}),
+              ...(normalizedOptions.maxPrice !== undefined
+                ? { maxPrice: normalizedOptions.maxPrice }
+                : {}),
             },
           }),
         },
@@ -148,7 +170,9 @@ export class AiService {
         latencyMs: response.latencyMs,
       };
 
-      await this.cacheManager.set(cacheKey, freshResponse, this.searchCacheTtlMs).catch(() => undefined);
+      await this.cacheManager
+        .set(cacheKey, freshResponse, this.searchCacheTtlMs)
+        .catch(() => undefined);
       return freshResponse;
     } catch (error) {
       this.logger.warn(
@@ -275,13 +299,14 @@ export class AiService {
       this.logger.log(`Chat response generated in ${Date.now() - startedAt}ms`);
       return response;
     } catch (error) {
-      this.logger.error(`AI chat failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      this.logger.error(
+        `AI chat failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
       throw error;
     }
   }
 
   private async getFallbackSearchResults(
-
     query: string,
     options: NormalizedAiSearchOptions,
   ): Promise<AiSearchResponse> {
@@ -310,12 +335,8 @@ export class AiService {
             },
           }
         : {}),
-      ...(options.minPrice !== undefined
-        ? { displayPriceMax: { gte: options.minPrice } }
-        : {}),
-      ...(options.maxPrice !== undefined
-        ? { displayPriceMin: { lte: options.maxPrice } }
-        : {}),
+      ...(options.minPrice !== undefined ? { displayPriceMax: { gte: options.minPrice } } : {}),
+      ...(options.maxPrice !== undefined ? { displayPriceMin: { lte: options.maxPrice } } : {}),
     };
 
     const products = await this.prisma.product.findMany({

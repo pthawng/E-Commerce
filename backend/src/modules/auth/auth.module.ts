@@ -1,8 +1,8 @@
 import { AdminAuthController } from '@modules/auth/admin-auth.controller';
 import { AuthController } from '@modules/auth/auth.controller';
-import { OAuthAuthController } from '@modules/auth/controllers/oauth-auth.controller';
 import { AuthService } from '@modules/auth/auth.service';
 import { GuestVerificationController } from '@modules/auth/controllers/guest-verification.controller';
+import { OAuthAuthController } from '@modules/auth/controllers/oauth-auth.controller';
 import { JwtAccessGuard } from '@modules/auth/guard/access-jwt.guard';
 import { AdminJwtAccessGuard } from '@modules/auth/guard/admin-access-jwt.guard';
 import { JwtRefreshGuard } from '@modules/auth/guard/refresh-jwt.guard';
@@ -23,6 +23,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from 'src/prisma/prisma.module';
 
+/**
+ * Authentication module.
+ * Provides services, guards, and strategies for authentication and token validation.
+ */
 @Module({
   imports: [
     PrismaModule,
@@ -35,13 +39,18 @@ import { PrismaModule } from 'src/prisma/prisma.module';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (_configService: ConfigService) => ({
-        // JwtModule config cho JwtService (dùng trong AuthService)
-        // Strategies sẽ tự config secret riêng
+        // Configure JwtModule for JwtService (used in AuthService)
+        // Strategies will configure their own secrets
       }),
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, AdminAuthController, GuestVerificationController, OAuthAuthController],
+  controllers: [
+    AuthController,
+    AdminAuthController,
+    GuestVerificationController,
+    OAuthAuthController,
+  ],
   providers: [
     AuthService,
     JwtAccessStrategy,

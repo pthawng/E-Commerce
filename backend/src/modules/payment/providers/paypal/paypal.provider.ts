@@ -22,7 +22,7 @@ export class PayPalProvider extends BasePaymentProvider {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly currencyService: CurrencyService
+    private readonly currencyService: CurrencyService,
   ) {
     super('PayPalProvider');
 

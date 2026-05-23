@@ -1,5 +1,5 @@
-import { ConfigService } from '@nestjs/config';
 import { CurrencyService } from '@modules/system/currency.service';
+import { ConfigService } from '@nestjs/config';
 import { PayPalProvider } from './paypal.provider';
 
 const mockExecute = jest.fn();
@@ -13,6 +13,7 @@ jest.mock('@paypal/checkout-server-sdk', () => {
 
     requestBody(body: any) {
       this.body = body;
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       mockLastCreateRequest = this;
     }
   }

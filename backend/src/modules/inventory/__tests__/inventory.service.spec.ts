@@ -138,8 +138,6 @@ describe('InventoryService', () => {
     });
   });
 
-
-
   describe('receiveStock', () => {
     it('should increment stock and log IMPORT action', async () => {
       mockPrismaService.inventoryItem.upsert.mockResolvedValue({ id: 'inv1', quantity: 15 });

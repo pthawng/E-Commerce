@@ -19,7 +19,7 @@ import { PaymentService } from './payment.service';
 @UseGuards(AdminJwtAccessGuard, PermissionGuard)
 @UseInterceptors(AuditLogInterceptor)
 export class AdminPaymentController {
-  constructor(private readonly paymentService: PaymentService) { }
+  constructor(private readonly paymentService: PaymentService) {}
 
   @Get('transactions')
   @ApiOperation({ summary: 'Lấy danh sách giao dịch thanh toán (Admin)' })

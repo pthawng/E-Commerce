@@ -1,6 +1,4 @@
-import { Permission } from '@modules/rbac/decorators/permission.decorator';
 import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
-import { PERMISSIONS } from '@modules/rbac/permissions.constants';
 import {
   Body,
   Controller,
@@ -10,22 +8,16 @@ import {
   Ip,
   Param,
   ParseUUIDPipe,
-  Patch,
   Post,
   Query,
-  UploadedFiles,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from 'src/common/decorators/public.decorator';
 import { PaginationRateLimitGuard } from 'src/common/guards/pagination-rate-limit.guard';
-import { CreateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { ReportMediaDto } from './dto/report-media.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 
 @ApiTags('products')
@@ -76,5 +68,4 @@ export class ProductController {
     const clientId = sessionId || ip || 'unknown';
     return this.productService.reportMediaIssue(dto, clientId);
   }
-
 }

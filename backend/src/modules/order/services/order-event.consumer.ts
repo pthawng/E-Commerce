@@ -3,9 +3,9 @@ import { Logger } from '@nestjs/common';
 import { OrderStatusEnum } from '@prisma/client';
 import { Job } from 'bull';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { TracingService } from '../../infra/tracing.service';
 import { InventoryService } from '../../inventory/inventory.service';
 import { MailService } from '../../mail/mail.service';
-import { TracingService } from '../../infra/tracing.service';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -21,18 +21,19 @@ export class OrderEventConsumer {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-
   @Process('order.status.changed')
-  async handleOrderStatusChanged(job: Job<{
-    orderId: string;
-    oldStatus: OrderStatusEnum;
-    newStatus: OrderStatusEnum;
-    actorId?: string;
-    stateMetadata?: any;
-    outboxId?: string;
-  }>) {
+  async handleOrderStatusChanged(
+    job: Job<{
+      orderId: string;
+      oldStatus: OrderStatusEnum;
+      newStatus: OrderStatusEnum;
+      actorId?: string;
+      stateMetadata?: any;
+      outboxId?: string;
+    }>,
+  ) {
     const payload = job.data;
-    
+
     return this.tracing.trace(`order.event.process:${payload.newStatus}`, async (span) => {
       span.setAttributes({
         'order.id': payload.orderId,
@@ -41,14 +42,20 @@ export class OrderEventConsumer {
         'outbox.id': payload.outboxId || 'none',
       });
 
-      this.logger.log(`[Bull] Processing order.status.changed for ${payload.orderId}: ${payload.oldStatus} -> ${payload.newStatus}`);
+      this.logger.log(
+        `[Bull] Processing order.status.changed for ${payload.orderId}: ${payload.oldStatus} -> ${payload.newStatus}`,
+      );
 
       try {
         // 1. Inventory Logic
-        await this.tracing.trace('inventory.side_effect', () => this.handleInventorySideEffects(payload));
+        await this.tracing.trace('inventory.side_effect', () =>
+          this.handleInventorySideEffects(payload),
+        );
 
         // 2. Notification Logic
-        await this.tracing.trace('notification.side_effect', () => this.handleNotifications(payload));
+        await this.tracing.trace('notification.side_effect', () =>
+          this.handleNotifications(payload),
+        );
 
         // 3. Mark Outbox as PROCESSED
         if (payload.outboxId) {
@@ -65,26 +72,24 @@ export class OrderEventConsumer {
           status: payload.newStatus,
           timestamp: new Date().toISOString(),
         });
-
       } catch (error) {
         this.logger.error(`Error processing order.status.changed for ${payload.orderId}:`, error);
-        
+
         if (payload.outboxId) {
           await this.prisma.domainEventOutbox.update({
             where: { id: payload.outboxId },
-            data: { 
-              status: 'FAILED', 
+            data: {
+              status: 'FAILED',
               lastError: (error as Error).message,
-              retryCount: { increment: 1 } 
+              retryCount: { increment: 1 },
             },
           });
         }
-        
+
         throw error;
       }
     });
   }
-
 
   private async handleInventorySideEffects(payload: {
     orderId: string;
@@ -108,10 +113,7 @@ export class OrderEventConsumer {
     }
   }
 
-  private async handleNotifications(payload: {
-    orderId: string;
-    newStatus: OrderStatusEnum;
-  }) {
+  private async handleNotifications(payload: { orderId: string; newStatus: OrderStatusEnum }) {
     // Implement resilient notifications here
   }
 }

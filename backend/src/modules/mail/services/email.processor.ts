@@ -1,10 +1,10 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Job } from 'bull';
 import * as fs from 'fs/promises';
 import * as handlebars from 'handlebars';
 import * as path from 'path';
-import { ConfigService } from '@nestjs/config';
 import { SendGridProvider } from '../providers/sendgrid.provider';
 import { SesProvider } from '../providers/ses.provider';
 import { SmtpProvider } from '../providers/smtp.provider';
@@ -24,7 +24,7 @@ export class EmailProcessor {
     private readonly sesProvider: SesProvider,
     private readonly smtpProvider: SmtpProvider,
     private readonly circuitBreaker: CircuitBreakerService,
-  ) { }
+  ) {}
 
   @Process('send-email')
   async handleSendEmail(job: Job<any>) {

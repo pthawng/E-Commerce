@@ -6,13 +6,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UploadMediaDto } from './dto/upload-media.dto';
 
 /**
- * Product Storage Service
- *
- * Service quản lý media (ảnh) của product:
- * - Upload ảnh lên storage và lưu metadata vào database
- * - Xóa ảnh từ storage và database
- * - Set thumbnail cho product
- * - Sắp xếp lại thứ tự ảnh
+ * Product media storage service.
+ * Manages product images, uploads, thumbnail selection, and reordering.
  */
 @Injectable()
 export class ProductStorageService {
@@ -22,12 +17,7 @@ export class ProductStorageService {
   ) {}
 
   /**
-   * Upload media cho product
-   *
-   * @param productId - ID của product
-   * @param file - File ảnh từ multer
-   * @param dto - DTO chứa altText, isThumbnail, order
-   * @returns ProductMedia đã được tạo
+   * Uploads media for a product.
    */
   async uploadMedia(
     productId: string,
@@ -37,33 +27,33 @@ export class ProductStorageService {
   ) {
     const client = tx ?? this.prisma;
 
-    // 1. Kiểm tra product tồn tại
+    // Check if product exists
     const product = await client.product.findUnique({ where: { id: productId } });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
-    // 2. Validate file type (chỉ cho phép ảnh)
+    // Validate that file type is an image
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(file.mimetype)) {
       throw new BadRequestException('Chỉ cho phép upload file ảnh (JPEG, PNG, WebP, GIF)');
     }
 
-    // 3. Validate file size (max 5MB)
+    // Validate file size does not exceed limit
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       throw new BadRequestException('Kích thước file không được vượt quá 5MB');
     }
 
-    // 4. Tạo filename unique
+    // Create unique filename
     const timestamp = Date.now();
     const filename = `${timestamp}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-    // 5. Upload lên storage
+    // Upload to storage
     const storagePath = StoragePath.productImage(productId, filename);
     const url = await this.storageService.upload(storagePath, file);
 
-    // 6. Nếu set làm thumbnail, unset các thumbnail khác
+    // If setting as thumbnail, unset other product thumbnails
     if (dto.isThumbnail) {
       await client.productMedia.updateMany({
         where: { productId, isThumbnail: true },
@@ -71,7 +61,7 @@ export class ProductStorageService {
       });
     }
 
-    // 7. Lấy order mặc định (max order + 1)
+    // Get next order value
     let order = dto.order ?? 0;
     if (dto.order === undefined) {
       const maxOrder = await client.productMedia.findFirst({
@@ -82,7 +72,7 @@ export class ProductStorageService {
       order = maxOrder ? maxOrder.order + 1 : 0;
     }
 
-    // 8. Lưu vào database
+    // Save media metadata to database
     return client.productMedia.create({
       data: {
         productId,
@@ -96,13 +86,10 @@ export class ProductStorageService {
   }
 
   /**
-   * Xóa media
-   *
-   * @param productId - ID của product
-   * @param mediaId - ID của media cần xóa
+   * Deletes a specific media item.
    */
   async deleteMedia(productId: string, mediaId: string) {
-    // 1. Kiểm tra media tồn tại và thuộc về product
+    // Verify media exists and belongs to the product
     const media = await this.prisma.productMedia.findFirst({
       where: { id: mediaId, productId },
     });
@@ -111,9 +98,7 @@ export class ProductStorageService {
       throw new NotFoundException('Media not found');
     }
 
-    // 2. Xóa file trên storage
-    // Extract path từ URL (hoặc lưu path riêng trong DB)
-    // Tạm thời dùng URL để extract path
+    // Delete file from storage
     try {
       const urlParts = media.url.split('/');
       const pathIndex = urlParts.findIndex((part) => part === 'products');
@@ -122,24 +107,21 @@ export class ProductStorageService {
         await this.storageService.delete(storagePath);
       }
     } catch (error) {
-      // Log error nhưng vẫn tiếp tục xóa record trong DB
+      // Proceed with database deletion even if storage deletion fails
       console.error('Error deleting file from storage:', error);
     }
 
-    // 3. Xóa record trong database
+    // Delete media metadata from database
     return this.prisma.productMedia.delete({
       where: { id: mediaId },
     });
   }
 
   /**
-   * Set thumbnail cho product
-   *
-   * @param productId - ID của product
-   * @param mediaId - ID của media cần set làm thumbnail
+   * Sets a specific media item as the product's thumbnail.
    */
   async setThumbnail(productId: string, mediaId: string) {
-    // 1. Kiểm tra media tồn tại và thuộc về product
+    // Verify media exists and belongs to the product
     const media = await this.prisma.productMedia.findFirst({
       where: { id: mediaId, productId },
     });
@@ -148,13 +130,13 @@ export class ProductStorageService {
       throw new NotFoundException('Media not found');
     }
 
-    // 2. Unset tất cả thumbnail khác
+    // Unset all other thumbnails
     await this.prisma.productMedia.updateMany({
       where: { productId, isThumbnail: true },
       data: { isThumbnail: false },
     });
 
-    // 3. Set media này làm thumbnail
+    // Set selected media as thumbnail
     return this.prisma.productMedia.update({
       where: { id: mediaId },
       data: { isThumbnail: true },
@@ -162,13 +144,10 @@ export class ProductStorageService {
   }
 
   /**
-   * Sắp xếp lại thứ tự media
-   *
-   * @param productId - ID của product
-   * @param mediaOrders - Array of { mediaId, order }
+   * Reorders the positions of media items for a product.
    */
   async reorderMedia(productId: string, mediaOrders: Array<{ mediaId: string; order: number }>) {
-    // Validate tất cả media thuộc về product
+    // Verify all media IDs belong to the product
     const mediaIds = mediaOrders.map((mo) => mo.mediaId);
     const mediaCount = await this.prisma.productMedia.count({
       where: { id: { in: mediaIds }, productId },
@@ -178,7 +157,7 @@ export class ProductStorageService {
       throw new BadRequestException('Một hoặc nhiều media không thuộc về product này');
     }
 
-    // Update order cho từng media
+    // Update position order for each media item
     const updates = mediaOrders.map(({ mediaId, order }) =>
       this.prisma.productMedia.update({
         where: { id: mediaId },
@@ -188,7 +167,7 @@ export class ProductStorageService {
 
     await Promise.all(updates);
 
-    // Trả về danh sách media đã được sắp xếp lại
+    // Return updated list of ordered media
     return this.prisma.productMedia.findMany({
       where: { productId, id: { in: mediaIds } },
       orderBy: { order: 'asc' },

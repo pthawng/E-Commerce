@@ -29,7 +29,7 @@ export class SeedHistoryTracker {
   /**
    * Simple checksum of the run function string (optional)
    */
-  static calculateChecksum(fn: Function): string {
+  static calculateChecksum(fn: (...args: any[]) => any): string {
     return crypto.createHash('sha256').update(fn.toString()).digest('hex');
   }
 }

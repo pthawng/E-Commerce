@@ -4,10 +4,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { StockQueryDto } from './dto';
 
 /**
- * StockMovementService
- *
- * Handles stock transfers between warehouses and movement history queries.
- * All transfer operations use transactions + row-level locking.
+ * Stock movement service.
+ * Handles stock transfers between warehouses and queries movement history.
  */
 @Injectable()
 export class StockMovementService {
@@ -15,13 +13,8 @@ export class StockMovementService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // ============================================
-  // TRANSFER STOCK — Atomic transaction
-  // ============================================
-
   /**
-   * Quick Transfer (Atomic)
-   * Deprecated in favor of lifecycle-based transfers but kept for backward compatibility.
+   * Performs an atomic stock transfer.
    */
   async transfer(
     variantId: string,
@@ -31,11 +24,21 @@ export class StockMovementService {
     actorId?: string,
     note?: string,
   ): Promise<void> {
-    const transfer = await this.createTransfer(variantId, fromWarehouseId, toWarehouseId, quantity, actorId, note);
+    const transfer = await this.createTransfer(
+      variantId,
+      fromWarehouseId,
+      toWarehouseId,
+      quantity,
+      actorId,
+      note,
+    );
     await this.shipTransfer(transfer.id, actorId);
     await this.receiveTransfer(transfer.id, actorId);
   }
 
+  /**
+   * Creates a new pending stock transfer record.
+   */
   async createTransfer(
     variantId: string,
     fromWarehouseId: string,
@@ -61,11 +64,14 @@ export class StockMovementService {
     });
   }
 
+  /**
+   * Ships stock out of the source warehouse.
+   */
   async shipTransfer(transferId: string, actorId?: string) {
     return this.prisma.$transaction(async (tx) => {
       const transfer = await tx.inventoryTransfer.findUnique({
         where: { id: transferId },
-        include: { fromWarehouse: true, toWarehouse: true }
+        include: { fromWarehouse: true, toWarehouse: true },
       });
 
       if (!transfer || transfer.status !== 'PENDING') {
@@ -83,19 +89,25 @@ export class StockMovementService {
         throw new NotFoundException('Inventory item not found in source warehouse');
       }
 
-      if ((fromItem.quantity - fromItem.reservedQuantity - fromItem.damagedQuantity) < transfer.quantity) {
+      if (
+        fromItem.quantity - fromItem.reservedQuantity - fromItem.damagedQuantity <
+        transfer.quantity
+      ) {
         throw new BadRequestException('Insufficient available stock in source warehouse');
       }
 
-      // 1. Deduct from source on-hand
       await tx.inventoryItem.update({
         where: { id: fromItem.id },
         data: { quantity: { decrement: transfer.quantity } },
       });
 
-      // 2. Increment destination in-transit
       await tx.inventoryItem.upsert({
-        where: { productVariantId_warehouseId: { productVariantId: transfer.variantId, warehouseId: transfer.toWarehouseId } },
+        where: {
+          productVariantId_warehouseId: {
+            productVariantId: transfer.variantId,
+            warehouseId: transfer.toWarehouseId,
+          },
+        },
         create: {
           productVariantId: transfer.variantId,
           warehouseId: transfer.toWarehouseId,
@@ -105,13 +117,11 @@ export class StockMovementService {
         update: { inTransitQuantity: { increment: transfer.quantity } },
       });
 
-      // 3. Update transfer status
       const updated = await tx.inventoryTransfer.update({
         where: { id: transferId },
         data: { status: 'SHIPPED', actorId },
       });
 
-      // Log movement
       await tx.inventoryLog.create({
         data: {
           inventoryItemId: fromItem.id,
@@ -132,11 +142,14 @@ export class StockMovementService {
     });
   }
 
+  /**
+   * Receives shipped stock into the destination warehouse.
+   */
   async receiveTransfer(transferId: string, actorId?: string) {
     return this.prisma.$transaction(async (tx) => {
       const transfer = await tx.inventoryTransfer.findUnique({
         where: { id: transferId },
-        include: { toWarehouse: true }
+        include: { toWarehouse: true },
       });
 
       if (!transfer || transfer.status !== 'SHIPPED') {
@@ -154,22 +167,19 @@ export class StockMovementService {
         throw new BadRequestException('In-transit quantity mismatch in destination');
       }
 
-      // 1. Move from in-transit to on-hand
       await tx.inventoryItem.update({
         where: { id: toItem.id },
-        data: { 
+        data: {
           inTransitQuantity: { decrement: transfer.quantity },
-          quantity: { increment: transfer.quantity }
+          quantity: { increment: transfer.quantity },
         },
       });
 
-      // 2. Update transfer status
       const updated = await tx.inventoryTransfer.update({
         where: { id: transferId },
         data: { status: 'COMPLETED', actorId },
       });
 
-      // Log movement
       await tx.inventoryLog.create({
         data: {
           inventoryItemId: toItem.id,
@@ -190,12 +200,8 @@ export class StockMovementService {
     });
   }
 
-  // ============================================
-  // MOVEMENT HISTORY
-  // ============================================
-
   /**
-   * Query inventory movement history with filters and pagination.
+   * Queries inventory movement history with filters and pagination.
    */
   async getMovementHistory(queryDto: StockQueryDto) {
     const where: Prisma.InventoryLogWhereInput = {};
@@ -251,6 +257,9 @@ export class StockMovementService {
     };
   }
 
+  /**
+   * Retrieves all inventory transfers.
+   */
   async getTransfers() {
     return this.prisma.inventoryTransfer.findMany({
       include: {

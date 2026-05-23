@@ -6,28 +6,26 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 /**
- * JWT Access Strategy
- *
- * Thiết kế cho Hybrid RBAC/ABAC:
- * - RBAC: Roles được lưu trong JWT payload (sub, roles, iat, exp)
- * - ABAC: Permissions có thể được lazy load từ DB khi cần (dynamic hơn)
+ * JWT access strategy.
+ * Designed for hybrid RBAC/ABAC:
+ * - RBAC: Roles are stored in the JWT payload.
+ * - ABAC: Permissions can be lazy-loaded from the DB when needed.
  *
  * Flow:
- * 1. Extract JWT từ Authorization header HOẶC cookie
- * 2. Validate token type === 'access'
- * 3. Verify user tồn tại và active
- * 4. Extract roles từ JWT payload (không cần query DB - performance)
- * 5. Trả về RequestUserPayload với roles (permissions có thể lazy load sau)
+ * 1. Extract JWT from Authorization header or cookie.
+ * 2. Validate token type is 'access'.
+ * 3. Verify user exists and is active.
+ * 4. Extract roles from JWT payload.
+ * 5. Return RequestUserPayload with roles.
  */
 @Injectable()
 export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') {
   constructor(
-    private readonly configService: ConfigService,
+    configService: ConfigService,
     private readonly prismaService: PrismaService,
   ) {
     /**
-     * Lấy SECRET từ config và kiểm tra.
-     * Không dùng process.env trực tiếp để tránh anti-pattern.
+     * Retrieve and validate the JWT secret from configuration.
      */
     const secret = configService.get<string>('JWT_ACCESS_SECRET');
     if (!secret) {
@@ -45,24 +43,21 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
   }
 
   /**
-   * Validate JWT payload và trả về user context
+   * Validates JWT payload and returns the user context.
    *
-   * @param payload - JWT payload đã được decode (sub, type, roles, iat, exp)
-   * @returns RequestUserPayload - Thông tin user để gắn vào req.user
+   * @param payload - Decoded JWT payload.
+   * @returns The user context attached to the request.
    *
    * Design decisions:
-   * - Roles được lấy từ JWT payload (RBAC) - không query DB để tối ưu performance
-   * - Permissions không lưu trong JWT vì có thể thay đổi thường xuyên (ABAC)
-   * - Permissions sẽ được lazy load trong PermissionGuard khi cần check
-   * - User validation vẫn cần query DB để đảm bảo user còn active
+   * - Roles are extracted from the JWT payload (RBAC) to optimize performance.
+   * - Permissions are lazy-loaded when required instead of being stored in the token.
+   * - User validation queries the database to ensure the account is active.
    */
   async validate(payload: JwtAccessPayload): Promise<RequestUserPayload> {
-    // Validate token type
     if (payload.type !== 'access') {
       throw new UnauthorizedException('Invalid token type');
     }
 
-    // Validate user tồn tại và active
     const user = await this.prismaService.user.findUnique({
       where: { id: payload.sub },
       select: {
@@ -81,22 +76,12 @@ export class JwtAccessStrategy extends PassportStrategy(Strategy, 'jwt-access') 
       throw new UnauthorizedException('User is inactive');
     }
 
-    // Extract roles từ JWT payload (RBAC)
-    // Roles đã được encode trong token khi login/refresh
+    // Extract roles encoded in the JWT payload for RBAC
     const roles = payload.roles || [];
 
     /**
-     * Giá trị trả về của validate() sẽ được gắn vào req.user
-     * và có thể dùng tại Controller thông qua:
-     *
-     * @Req() req => req.user
-     * hoặc
-     * @CurrentUser() decorator custom
-     *
-     * Note: Permissions không được trả về ở đây vì:
-     * - Permissions có thể thay đổi thường xuyên (ABAC)
-     * - Sẽ được lazy load trong PermissionGuard khi cần check
-     * - Giảm kích thước JWT và tăng performance
+     * Returned payload is attached to req.user.
+     * Permissions are omitted to minimize token size and allow dynamic checks.
      */
     return {
       userId: payload.sub,

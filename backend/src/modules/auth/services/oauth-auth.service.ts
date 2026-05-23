@@ -118,7 +118,10 @@ export class OAuthAuthService {
     } catch (error) {
       const code = this.toPublicErrorCode(error);
       const detail = error instanceof Error ? error.message : String(error);
-      this.logger.error(`OAuth login failed via ${provider}: ${code} — ${detail}`, error instanceof Error ? error.stack : '');
+      this.logger.error(
+        `OAuth login failed via ${provider}: ${code} — ${detail}`,
+        error instanceof Error ? error.stack : '',
+      );
       this.redirectWithError(res, statePayload.returnTo, code);
     }
   }
@@ -353,7 +356,9 @@ export class OAuthAuthService {
   }
 
   private frontendUrl(): string {
-    return this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173').replace(/\/$/, '');
+    return this.configService
+      .get<string>('FRONTEND_URL', 'http://localhost:5173')
+      .replace(/\/$/, '');
   }
 
   private requiredConfig(key: string): string {
@@ -375,9 +380,15 @@ export class OAuthAuthService {
   }
 
   private toPublicErrorCode(error: unknown): string {
-    if (error instanceof ForbiddenException || error instanceof BadRequestException || error instanceof UnauthorizedException) {
+    if (
+      error instanceof ForbiddenException ||
+      error instanceof BadRequestException ||
+      error instanceof UnauthorizedException
+    ) {
       const response = error.getResponse() as any;
-      return typeof response === 'string' ? response.toLowerCase() : response?.message || 'oauth_failed';
+      return typeof response === 'string'
+        ? response.toLowerCase()
+        : response?.message || 'oauth_failed';
     }
 
     return 'oauth_failed';

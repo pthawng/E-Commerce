@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { seedInventory } from './inventory';
-import { seedCRM } from './crm';
 import { seedAttributes } from './attributes';
+import { seedCRM } from './crm';
+import { seedInventory } from './inventory';
 
 export interface DemoSeedScript {
   name: string;

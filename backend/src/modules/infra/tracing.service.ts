@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { trace, Span, SpanStatusCode, Tracer } from '@opentelemetry/api';
+import { Span, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 
 @Injectable()
 export class TracingService implements OnModuleInit {
@@ -9,7 +9,11 @@ export class TracingService implements OnModuleInit {
     this.tracer = trace.getTracer('ray-paradis-backend');
   }
 
-  async trace<T>(name: string, fn: (span: Span) => Promise<T>, attributes?: Record<string, any>): Promise<T> {
+  async trace<T>(
+    name: string,
+    fn: (span: Span) => Promise<T>,
+    attributes?: Record<string, any>,
+  ): Promise<T> {
     return this.tracer.startActiveSpan(name, async (span) => {
       if (attributes) {
         span.setAttributes(attributes);

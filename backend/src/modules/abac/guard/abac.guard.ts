@@ -1,6 +1,6 @@
 /**
  * ABAC Guard
- * Enterprise-level guard với policy engine, caching, và comprehensive error handling
+ * Enterprise-level guard with policy engine, caching, and comprehensive error handling
  */
 
 import type { RequestUserPayload } from '@common/types/jwt.types';
@@ -33,13 +33,13 @@ export class AbacGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Get policy metadata từ decorator
+    // Get policy metadata from decorator
     const metadata = this.reflector.getAllAndOverride<PolicyMetadata>(CHECK_POLICY_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
-    // Nếu không có policy metadata, allow access
+    // If no policy metadata is found, allow access
     if (!metadata) {
       return true;
     }
@@ -69,14 +69,16 @@ export class AbacGuard implements CanActivate {
       this.logger.warn(
         `Policy denied: ${metadata.policy.name}.${metadata.action} for user ${user.userId}. Reason: ${result.reason || 'Unknown'}`,
       );
-      throw new ForbiddenException(result.reason || 'Bạn không có quyền thực hiện hành động này');
+      throw new ForbiddenException(
+        result.reason || 'You do not have permission to perform this action',
+      );
     }
 
     return true;
   }
 
   /**
-   * Build policy context từ request
+   * Builds policy context from request.
    */
   private async buildPolicyContext(
     request: Request,
@@ -90,7 +92,7 @@ export class AbacGuard implements CanActivate {
       // Use custom resource resolver
       resource = await metadata.resourceResolver(request);
     } else if (metadata.param) {
-      // Auto-resolve resource từ Prisma
+      // Auto-resolve resource from Prisma
       const resourceId = request.params[metadata.param];
       if (resourceId) {
         resource = await this.resolveResourceFromPrisma(metadata.policy, resourceId);
@@ -137,14 +139,14 @@ export class AbacGuard implements CanActivate {
   }
 
   /**
-   * Resolve resource từ Prisma dựa trên policy name
+   * Resolves resource from Prisma based on the policy name.
    */
   private async resolveResourceFromPrisma(
     PolicyClass: new () => BasePolicy,
     resourceId: string,
   ): Promise<unknown> {
-    // Extract model name từ policy class name
-    // Ví dụ: OrderPolicy -> order
+    // Extract model name from policy class name
+    // Example: OrderPolicy -> order
     const policyName = PolicyClass.name;
     const modelName = policyName.replace('Policy', '').toLowerCase();
 

@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
 import { IOwnable } from 'src/common/interfaces/ownable.interface';
 import { Principal, PrincipalType } from 'src/common/types/principal.types';
 import { OwnershipRegistry } from '../ownership.registry';

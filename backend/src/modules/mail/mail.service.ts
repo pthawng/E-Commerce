@@ -33,7 +33,6 @@ export class MailService {
         sgMail.setApiKey(apiKey);
       }
     }
-
   }
 
   /**

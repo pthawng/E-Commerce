@@ -5,7 +5,6 @@ import { getRedisConnectionOptions } from '../../config/redis.config';
 import { DistributedLockService } from './distributed-lock.service';
 import { TracingService } from './tracing.service';
 
-
 @Global()
 @Module({
   imports: [ConfigModule],
@@ -25,6 +24,5 @@ import { TracingService } from './tracing.service';
     TracingService,
   ],
   exports: ['REDIS_CLIENT', DistributedLockService, TracingService],
-
 })
 export class InfraModule {}

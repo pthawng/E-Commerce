@@ -32,10 +32,10 @@ export class CsrfGuard implements CanActivate {
       return true;
     }
 
-    const csrfTokenHeader = request.headers['x-csrf-token'] as string;
-    const csrfTokenCookie = request.cookies['csrfToken'];
+    const csrfTokenHeader = request.headers['x-csrf-token'];
+    const csrfTokenCookie = request.cookies ? request.cookies['csrfToken'] : undefined;
 
-    if (!csrfTokenHeader || !csrfTokenCookie) {
+    if (!csrfTokenHeader || typeof csrfTokenHeader !== 'string' || !csrfTokenCookie) {
       throw new ForbiddenException({
         code: 'CSRF_TOKEN_MISSING',
         message: 'Security validation failed (CSRF token missing).',

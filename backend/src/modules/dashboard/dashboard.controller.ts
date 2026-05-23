@@ -7,7 +7,7 @@ import { PERMISSIONS } from '../rbac/permissions.constants';
 @Controller('admin/dashboard')
 @UseGuards(PermissionGuard)
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) { }
+  constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('stats')
   @Permission(PERMISSIONS.DASHBOARD.VIEW)

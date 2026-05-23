@@ -12,19 +12,19 @@ import { PaymentProcessingStatus, TransactionStatusEnum } from '@prisma/client';
  *   INIT       = no transactions
  */
 export function derivePaymentStatus(
-    transactionStatuses: TransactionStatusEnum[],
+  transactionStatuses: TransactionStatusEnum[],
 ): PaymentProcessingStatus {
-    if (transactionStatuses.length === 0) {
-        return PaymentProcessingStatus.INIT;
-    }
+  if (transactionStatuses.length === 0) {
+    return PaymentProcessingStatus.INIT;
+  }
 
-    if (transactionStatuses.some((s) => s === TransactionStatusEnum.success)) {
-        return PaymentProcessingStatus.SUCCESS;
-    }
+  if (transactionStatuses.some((s) => s === TransactionStatusEnum.success)) {
+    return PaymentProcessingStatus.SUCCESS;
+  }
 
-    if (transactionStatuses.every((s) => s === TransactionStatusEnum.failed)) {
-        return PaymentProcessingStatus.FAILED;
-    }
+  if (transactionStatuses.every((s) => s === TransactionStatusEnum.failed)) {
+    return PaymentProcessingStatus.FAILED;
+  }
 
-    return PaymentProcessingStatus.PROCESSING;
+  return PaymentProcessingStatus.PROCESSING;
 }

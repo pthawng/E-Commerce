@@ -26,6 +26,10 @@ import { PaymentService } from './payment.service';
 import { CassoWebhookPayload, VietQRMatchingService } from './services/vietqr-matching.service';
 import { PaymentMethodEnum } from './types/payment.types';
 
+/**
+ * Payment controller.
+ * Handles endpoints for payment creation, provider callbacks, webhooks, refunds, and status checks.
+ */
 @ApiTags('Payment')
 @Controller('payment')
 @OptionalAuth()
@@ -40,7 +44,7 @@ export class PaymentController {
   ) {}
 
   /**
-   * Create payment for an order
+   * Creates a payment for an order.
    */
   @Post('create')
   @ApiOperation({ summary: 'Create payment for an order' })
@@ -91,8 +95,7 @@ export class PaymentController {
   }
 
   /**
-   * VNPAY IPN Callback
-   * This endpoint is called by VNPAY after payment
+   * Handles browser redirect callbacks from VNPAY.
    */
   @Get('vnpay/callback')
   @Public()
@@ -103,8 +106,7 @@ export class PaymentController {
   })
   async vnpayCallback(@Query() query: any, @Res() res: Response) {
     try {
-      // Principal-level hardening: Execute full callback processing on redirect
-      // even if IPN hasn't arrived. Unified lock in Service ensures safety.
+      // Principal-level hardening: Execute callback processing on redirect
       const verifiedData = await this.paymentService.processCallback(
         PaymentMethodEnum.VNPAY,
         query,
@@ -127,6 +129,9 @@ export class PaymentController {
     }
   }
 
+  /**
+   * Handles direct IPN notifications from VNPAY.
+   */
   @Get('vnpay/ipn')
   @Public()
   @ApiOperation({ summary: 'VNPAY IPN handler' })
@@ -134,27 +139,21 @@ export class PaymentController {
     this.logger.log('Received VNPAY IPN notification');
 
     try {
-      // Process callback synchronously and atomically (Source of Truth)
-      // This is required by VNPAY to ensure reliability before returning RspCode: 00
+      // Process callback synchronously and atomically
       await this.paymentService.processCallback(PaymentMethodEnum.VNPAY, query);
 
-      // VNPAY expects this specific JSON response for IPN success
       return { RspCode: '00', Message: 'Confirm success' };
     } catch (error) {
       this.logger.error(`VNPAY IPN Error: ${error.message}`);
 
-      // Specific Error Mapping for VNPay IPN Spec
-      // 97: Invalid signature
       if (error.message === 'Invalid VNPAY signature') {
         return { RspCode: '97', Message: 'Invalid signature' };
       }
 
-      // 01: Order not found
       if (error instanceof NotFoundException) {
         return { RspCode: '01', Message: 'Order not found' };
       }
 
-      // 02: Order already confirmed
       if (
         error instanceof ConflictException ||
         (error instanceof BadRequestException && error.message.includes('transition'))
@@ -162,19 +161,16 @@ export class PaymentController {
         return { RspCode: '02', Message: 'Order already confirmed' };
       }
 
-      // 04: Invalid amount
       if (error instanceof BadRequestException && error.message.includes('Amount mismatch')) {
         return { RspCode: '04', Message: 'Invalid amount' };
       }
 
-      // 99: Other errors (System error)
       return { RspCode: '99', Message: 'Input data invalid' };
     }
   }
 
   /**
-   * PayPal Webhook Handler
-   * Receives webhook events from PayPal (Source of Truth)
+   * Handles webhook notification events from PayPal.
    */
   @Post('paypal/webhook')
   @Public()
@@ -186,7 +182,6 @@ export class PaymentController {
   async paypalWebhook(@Body() webhookData: any, @Req() req: Request) {
     this.logger.log(`Received PayPal Webhook: ${webhookData.event_type}`);
 
-    // Extract required headers for signature verification
     const headers = {
       'paypal-auth-algo': req.headers['paypal-auth-algo'],
       'paypal-cert-url': req.headers['paypal-cert-url'],
@@ -195,7 +190,6 @@ export class PaymentController {
       'paypal-transmission-time': req.headers['paypal-transmission-time'],
     };
 
-    // Add to background queue for reliable processing
     await this.paymentQueue.add(
       'process_callback',
       {
@@ -214,7 +208,7 @@ export class PaymentController {
   }
 
   /**
-   * Process refund for an order
+   * Processes a refund request for an order.
    */
   @Post('refund/:orderId')
   @ApiOperation({ summary: 'Process refund for an order' })
@@ -251,14 +245,13 @@ export class PaymentController {
   }
 
   /**
-   * Confirm VIETQR payment (staff only)
+   * Handles VietQR bank transfer webhooks from Casso or SePay.
    */
   @Post('vietqr/webhook')
   @Public()
   @ApiOperation({ summary: 'VietQR Bank Transfer Webhook (Casso / SePay)' })
   @ApiResponse({ status: 200, description: 'Webhook processed' })
   async vietqrWebhook(@Body() payload: CassoWebhookPayload, @Req() req: Request) {
-    // ─── Security ──────────────────────────────────────────────────────
     const apiKey = (req.headers['x-api-key'] as string) || '';
     const sourceIp =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
@@ -266,7 +259,6 @@ export class PaymentController {
       '';
 
     this.vietqrMatchingService.verifyWebhookRequest(apiKey, sourceIp);
-    // ─────────────────────────────────────────────────────────────────
 
     this.logger.log(
       `VietQR webhook received from IP=${sourceIp}, transactions=${payload?.data?.length ?? 0}`,
@@ -276,6 +268,9 @@ export class PaymentController {
     return { success: true, ...result };
   }
 
+  /**
+   * Manually confirms a pending VietQR payment.
+   */
   @Post('vietqr/confirm')
   @ApiOperation({ summary: 'Confirm VIETQR payment (staff only)' })
   @ApiResponse({
@@ -283,7 +278,7 @@ export class PaymentController {
     description: 'VIETQR payment confirmed',
   })
   async confirmVietQRPayment(@Body() dto: ConfirmVietQRPaymentDto, @Req() req: Request) {
-    // In production, get user ID from JWT token
+    // Retrieve confirmed user ID from request user context
     const confirmedBy = (req as any).user?.id || 'system';
 
     await this.paymentService.confirmVietQRPayment(dto.orderId, dto.amount, confirmedBy, dto.note);
@@ -294,7 +289,7 @@ export class PaymentController {
   }
 
   /**
-   * Get payment status for an order
+   * Retrieves the current payment processing status of an order.
    */
   @Get('status/:orderId')
   @ApiOperation({ summary: 'Get payment status for an order' })
@@ -336,7 +331,7 @@ export class PaymentController {
   }
 
   /**
-   * Get all transactions for admin (paginated)
+   * Retrieves and filters transaction records for administrative use.
    */
   async findAllTransactions(@Query() query: TransactionQueryDto) {
     return await this.paymentService.findTransactions(query);

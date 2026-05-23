@@ -7,7 +7,9 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { LedgerModule } from '../ledger/ledger.module';
 import { OrderModule } from '../order/order.module';
+import { SystemModule } from '../system/system.module';
 import { AdminPaymentController } from './admin-payment.controller';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
@@ -20,8 +22,6 @@ import { PaymentStateMachine } from './services/payment-state.machine';
 import { PaymentReconciliationService } from './services/reconciliation.service';
 import { VietQRMatchingService } from './services/vietqr-matching.service';
 import { WebhookIdempotencyService } from './services/webhook-idempotency.service';
-import { LedgerModule } from '../ledger/ledger.module';
-import { SystemModule } from '../system/system.module';
 
 @Module({
   imports: [
@@ -62,4 +62,4 @@ import { SystemModule } from '../system/system.module';
   ],
   exports: [PaymentService],
 })
-export class PaymentModule { }
+export class PaymentModule {}

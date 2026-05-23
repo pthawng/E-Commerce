@@ -6,15 +6,13 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AuthService } from '../auth.service';
 
 /**
- * Refresh Token Strategy
- * Supports Hybrid Extraction:
- * 1. Authorization: Bearer <token>
- * 2. Cookie: refreshToken
+ * JWT refresh token strategy.
+ * Extracts and validates refresh token from request headers, cookies, or body.
  */
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   constructor(
-    private readonly configService: ConfigService,
+    configService: ConfigService,
     private readonly authService: AuthService,
   ) {
     const secret = configService.get<string>('JWT_REFRESH_SECRET');
@@ -46,7 +44,7 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
       throw new UnauthorizedException('Refresh token missing');
     }
 
-    // Kiểm tra refresh token với DB (hash)
+    // Validate refresh token with database hash
     const user = await this.authService.validateRefreshToken(payload.sub, refreshToken);
 
     if (!user) throw new UnauthorizedException('Invalid refresh token');

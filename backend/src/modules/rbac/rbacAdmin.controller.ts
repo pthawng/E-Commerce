@@ -15,29 +15,14 @@ import { PERMISSIONS } from './permissions.constants';
 import { RbacService } from './rbac.service';
 
 /**
- * RBAC Admin Controller
- *
- * Controller này quản lý toàn bộ hệ thống phân quyền:
- * - CRUD Role (vai trò)
- * - CRUD Permission (quyền)
- * - Gán/bỏ role cho user
- * - Gán/bỏ permission cho user hoặc role
- *
- * Bảo vệ:
- * - Tất cả endpoints đều yêu cầu authentication (JwtAccessGuard - đã global)
- * - Yêu cầu permission "rbac.manage" để truy cập (RBAC authorization)
- *
- * Tư duy Senior:
- * - Separation of Concerns: Controller chỉ xử lý HTTP, logic nghiệp vụ ở Service
- * - Security: Luôn kiểm tra quyền trước khi cho phép thao tác
- * - Error Handling: Service throw exceptions, Controller để NestJS tự xử lý
- * - Audit Trail: Lưu assignedBy từ user hiện tại để biết ai gán quyền
+ * RBAC Admin Controller.
+ * Handles role-based and attribute-based access control management.
  */
 @ApiTags('rbac-admin')
 @Controller('admin/rbac')
 @UseGuards(AdminJwtAccessGuard, PermissionGuard)
 @Permission({
-  // Chỉ cho phép user có quyền quản lý role HOẶC user
+  // Verify user has update role, user, or role assignment permission
   permissions: [
     PERMISSIONS.AUTH.ROLE.UPDATE,
     PERMISSIONS.AUTH.USER.UPDATE,
@@ -49,15 +34,8 @@ import { RbacService } from './rbac.service';
 export class RbacAdminController {
   constructor(private readonly rbacService: RbacService) {}
 
-  // ==================== ROLE ENDPOINTS ====================
-
   /**
-   * GET /admin/rbac/roles
-   * Lấy danh sách tất cả roles
-   *
-   * Response: Array of roles với thông tin:
-   * - rolePermissions: Danh sách permissions của role
-   * - _count.userRoles: Số lượng user đang sử dụng role này
+   * Retrieves all roles.
    */
   @Get('roles')
   @ApiOperation({ summary: 'Lấy danh sách tất cả roles' })
@@ -67,10 +45,7 @@ export class RbacAdminController {
   }
 
   /**
-   * GET /admin/rbac/roles/:slug
-   * Lấy thông tin chi tiết một role theo slug
-   *
-   * @param slug - Slug của role (ví dụ: "admin", "manager")
+   * Retrieves a role by its unique slug.
    */
   @Get('roles/:slug')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết role theo slug' })
@@ -81,16 +56,7 @@ export class RbacAdminController {
   }
 
   /**
-   * POST /admin/rbac/roles
-   * Tạo mới role
-   *
-   * @param dto - Dữ liệu role mới (slug, name, description, isSystem)
-   * @param user - User hiện tại (từ JWT token)
-   *
-   * Lưu ý:
-   * - slug phải unique và theo format URL-friendly
-   * - name phải unique
-   * - isSystem = true: role hệ thống, không được xóa
+   * Creates a new role.
    */
   @Post('roles')
   @ApiOperation({ summary: 'Tạo mới role' })
@@ -107,15 +73,7 @@ export class RbacAdminController {
   }
 
   /**
-   * PATCH /admin/rbac/roles/:slug
-   * Cập nhật role
-   *
-   * @param slug - Slug của role cần cập nhật
-   * @param dto - Dữ liệu cập nhật (tất cả field optional)
-   *
-   * Lưu ý:
-   * - Không thể cập nhật role hệ thống (isSystem = true)
-   * - Không thể đổi slug (phải xóa và tạo mới)
+   * Updates an existing role by its slug.
    */
   @Patch('roles/:slug')
   @ApiOperation({ summary: 'Cập nhật role' })
@@ -130,15 +88,7 @@ export class RbacAdminController {
   }
 
   /**
-   * DELETE /admin/rbac/roles/:slug
-   * Xóa role (soft delete)
-   *
-   * @param slug - Slug của role cần xóa
-   *
-   * Lưu ý:
-   * - Không thể xóa role hệ thống (isSystem = true)
-   * - Không thể xóa role đang được sử dụng bởi user nào đó
-   * - Soft delete: chỉ đánh dấu deletedAt, không xóa thật
+   * Soft deletes a role by its slug.
    */
   @Delete('roles/:slug')
   @ApiOperation({ summary: 'Xóa role (soft delete)' })
@@ -152,15 +102,8 @@ export class RbacAdminController {
     return this.rbacService.deleteRole(slug);
   }
 
-  // ==================== PERMISSION ENDPOINTS ====================
-
   /**
-   * GET /admin/rbac/permissions
-   * Lấy danh sách tất cả permissions
-   *
-   * Response: Array of permissions với thông tin:
-   * - _count.roles: Số lượng roles đang sử dụng permission này
-   * - _count.userPermissions: Số lượng users đang có permission này trực tiếp
+   * Retrieves all permissions.
    */
   @Get('permissions')
   @ApiOperation({ summary: 'Lấy danh sách tất cả permissions' })
@@ -170,10 +113,7 @@ export class RbacAdminController {
   }
 
   /**
-   * GET /admin/rbac/permissions/:slug
-   * Lấy thông tin chi tiết một permission theo slug
-   *
-   * @param slug - Slug của permission (ví dụ: "user.create", "product.manage")
+   * Retrieves a permission by its unique slug.
    */
   @Get('permissions/:slug')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết permission theo slug' })
@@ -184,14 +124,7 @@ export class RbacAdminController {
   }
 
   /**
-   * POST /admin/rbac/permissions
-   * Tạo mới permission
-   *
-   * @param dto - Dữ liệu permission mới (slug, name, description, module, action)
-   *
-   * Lưu ý:
-   * - slug phải unique và theo format "module.action" hoặc "module.resource.action"
-   * - Ví dụ: "user.create", "product.manage", "rbac.role.update"
+   * Creates a new permission.
    */
   @Post('permissions')
   @ApiOperation({ summary: 'Tạo mới permission' })
@@ -209,14 +142,7 @@ export class RbacAdminController {
   }
 
   /**
-   * PATCH /admin/rbac/permissions/:slug
-   * Cập nhật permission
-   *
-   * @param slug - Slug của permission cần cập nhật
-   * @param dto - Dữ liệu cập nhật (tất cả field optional)
-   *
-   * Lưu ý:
-   * - Không thể đổi slug (phải xóa và tạo mới)
+   * Updates an existing permission by its slug.
    */
   @Patch('permissions/:slug')
   @ApiOperation({ summary: 'Cập nhật permission' })
@@ -232,14 +158,7 @@ export class RbacAdminController {
   }
 
   /**
-   * DELETE /admin/rbac/permissions/:slug
-   * Xóa permission
-   *
-   * @param slug - Slug của permission cần xóa
-   *
-   * Lưu ý:
-   * - Không thể xóa permission đang được sử dụng bởi role hoặc user nào đó
-   * - Hard delete: xóa hoàn toàn khỏi database
+   * Deletes a permission by its slug.
    */
   @Delete('permissions/:slug')
   @ApiOperation({ summary: 'Xóa permission' })
@@ -250,21 +169,8 @@ export class RbacAdminController {
     return this.rbacService.deletePermission(slug);
   }
 
-  // ==================== ASSIGNMENT ENDPOINTS ====================
-
   /**
-   * POST /admin/rbac/users/:userId/roles
-   * Gán role cho user
-   *
-   * @param userId - ID của user
-   * @param dto - Dữ liệu gán role (roleSlug)
-   * @param user - User hiện tại (để lưu assignedBy)
-   *
-   * Flow:
-   * 1. Kiểm tra user tồn tại và active
-   * 2. Kiểm tra role tồn tại
-   * 3. Gán role cho user (upsert: nếu đã có thì không làm gì, chưa có thì tạo mới)
-   * 4. Lưu assignedBy = user hiện tại (audit trail)
+   * Assigns a role to a user.
    */
   @Post('users/:userId/roles')
   @ApiOperation({ summary: 'Gán role cho user' })
@@ -279,11 +185,7 @@ export class RbacAdminController {
   }
 
   /**
-   * DELETE /admin/rbac/users/:userId/roles/:roleSlug
-   * Gỡ role khỏi user
-   *
-   * @param userId - ID của user
-   * @param roleSlug - Slug của role cần gỡ
+   * Removes a role from a user.
    */
   @Delete('users/:userId/roles/:roleSlug')
   @ApiOperation({ summary: 'Gỡ role khỏi user' })
@@ -294,8 +196,7 @@ export class RbacAdminController {
   }
 
   /**
-   * GET /admin/rbac/users/:userId/roles
-   * Lấy danh sách roles của user (UserRole + Role)
+   * Retrieves roles assigned to a user.
    */
   @Get('users/:userId/roles')
   @ApiOperation({ summary: 'Lấy roles của user' })
@@ -305,16 +206,7 @@ export class RbacAdminController {
   }
 
   /**
-   * POST /admin/rbac/users/:userId/permissions
-   * Gán permission trực tiếp cho user
-   *
-   * @param userId - ID của user
-   * @param dto - Dữ liệu gán permission (permissionSlug)
-   * @param user - User hiện tại (để lưu assignedBy)
-   *
-   * Lưu ý:
-   * - Permission có thể được gán trực tiếp cho user (không qua role)
-   * - Hữu ích khi cần gán quyền đặc biệt cho một user cụ thể
+   * Assigns a permission directly to a user.
    */
   @Post('users/:userId/permissions')
   @ApiOperation({ summary: 'Gán permission trực tiếp cho user' })
@@ -325,7 +217,7 @@ export class RbacAdminController {
     @Body() dto: AssignPermissionDto,
     @CurrentUser() user: RequestUserPayload,
   ) {
-    // Validate userId trong body phải khớp với userId trong URL
+    // Validate target ID matches URL parameter
     if (dto.targetId !== userId) {
       throw new Error('targetId trong body phải khớp với userId trong URL');
     }
@@ -334,11 +226,7 @@ export class RbacAdminController {
   }
 
   /**
-   * DELETE /admin/rbac/users/:userId/permissions/:permissionSlug
-   * Gỡ permission khỏi user
-   *
-   * @param userId - ID của user
-   * @param permissionSlug - Slug của permission cần gỡ
+   * Removes a direct permission assignment from a user.
    */
   @Delete('users/:userId/permissions/:permissionSlug')
   @ApiOperation({ summary: 'Gỡ permission khỏi user' })
@@ -352,8 +240,7 @@ export class RbacAdminController {
   }
 
   /**
-   * GET /admin/rbac/users/:userId/permissions
-   * Lấy danh sách permissions direct của user (UserPermission + Permission)
+   * Retrieves direct permission assignments for a user.
    */
   @Get('users/:userId/permissions')
   @ApiOperation({ summary: 'Lấy permissions trực tiếp của user' })
@@ -363,16 +250,7 @@ export class RbacAdminController {
   }
 
   /**
-   * POST /admin/rbac/roles/:roleSlug/permissions
-   * Gán permission cho role
-   *
-   * @param roleSlug - Slug của role
-   * @param dto - Dữ liệu gán permission (permissionSlug)
-   * @param user - User hiện tại (để lưu assignedBy)
-   *
-   * Lưu ý:
-   * - Tất cả users có role này sẽ tự động có permission này
-   * - Cách hiệu quả nhất để phân quyền cho nhiều users cùng lúc
+   * Assigns a permission to a role.
    */
   @Post('roles/:roleSlug/permissions')
   @ApiOperation({ summary: 'Gán permission cho role' })
@@ -387,14 +265,7 @@ export class RbacAdminController {
   }
 
   /**
-   * DELETE /admin/rbac/roles/:roleSlug/permissions/:permissionSlug
-   * Gỡ permission khỏi role
-   *
-   * @param roleSlug - Slug của role
-   * @param permissionSlug - Slug của permission cần gỡ
-   *
-   * Lưu ý:
-   * - Tất cả users có role này sẽ mất permission này (trừ khi có permission trực tiếp)
+   * Removes a permission assignment from a role.
    */
   @Delete('roles/:roleSlug/permissions/:permissionSlug')
   @ApiOperation({ summary: 'Gỡ permission khỏi role' })

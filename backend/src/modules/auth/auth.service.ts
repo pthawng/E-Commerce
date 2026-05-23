@@ -43,6 +43,10 @@ const USER_ROLES = {
   ADMIN: 'ADMIN',
 };
 
+/**
+ * Authentication service.
+ * Handles user registration, login, logout, and token lifecycle management.
+ */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -56,12 +60,11 @@ export class AuthService {
     private readonly forgotPassEmailService: ForgotPassEmailService,
     private readonly riskScoreService: RiskScoreService,
     private readonly eventBus: SecurityEventBus,
-  ) { }
+  ) {}
 
-  // ---------------------------
-  // PUBLIC API
-  // ---------------------------
-
+  /**
+   * Registers a new user.
+   */
   async register(dto: RegisterDto, reqIp?: string, reqUa?: string): Promise<AuthResponse> {
     const exists = await this.prismaService.user.count({ where: { email: dto.email } });
     if (exists > 0) throw new BadRequestException('Email already exists');
@@ -88,8 +91,7 @@ export class AuthService {
       );
     } catch (error) {
       this.logger.error(`Failed to trigger verify email for ${user.email}`, error);
-      // NOTE: We no longer delete the user here in L8 flow.
-      // The email is either queued in Outbox or the user can click "Resend".
+      // The email is queued in the outbox or can be resent manually
     }
 
     const { tokens } = await this.issueTokenPair(user.id);
@@ -100,16 +102,22 @@ export class AuthService {
     };
   }
 
+  /**
+   * Performs customer login.
+   */
   async login(dto: LoginDto): Promise<AuthResponse> {
     return this.handleLogin(dto, USER_ROLES.CUSTOMER);
   }
 
+  /**
+   * Performs administrative user login.
+   */
   async loginAdmin(dto: LoginDto): Promise<AuthResponse> {
     return this.handleLogin(dto, USER_ROLES.ADMIN);
   }
 
   /**
-   * Unified login handler for both Customers and Admins
+   * Unified login handler for both Customers and Admins.
    */
   private async handleLogin(dto: LoginDto, requiredRole: string): Promise<AuthResponse> {
     const user = await this.prismaService.user.findFirst({
@@ -126,12 +134,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // L8 Security: Enforce Email Verification
+    // Enforce email verification
     if (!user.isEmailVerified) {
       throw new ForbiddenException('UNVERIFIED_EMAIL');
     }
 
-    // Role Validation
+    // Validate role
     if (requiredRole === USER_ROLES.CUSTOMER) {
       const isCustomer = !(user as any).userType || (user as any).userType === 'CUSTOMER';
       if (!isCustomer) throw new UnauthorizedException('Invalid account type for this portal');
@@ -146,9 +154,9 @@ export class AuthService {
     );
   }
 
-  // ---------------------------
-  // PROFILE / ME
-  // ---------------------------
+  /**
+   * Retrieves the current user's profile.
+   */
   async getMe(userId: string): Promise<any> {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
@@ -162,6 +170,9 @@ export class AuthService {
     return sanitizeUser(user);
   }
 
+  /**
+   * Updates the current user's profile details.
+   */
   async updateMe(
     userId: string,
     dto: import('@modules/auth/dto/update-me.dto').UpdateMeDto,
@@ -172,13 +183,15 @@ export class AuthService {
       phone: dto.phone,
     });
 
-    this.logger.log(`User profile updated via unified UserService (Auth context) for ID: ${userId}`);
+    this.logger.log(
+      `User profile updated via unified UserService (Auth context) for ID: ${userId}`,
+    );
     return updatedUser;
   }
 
-  // ---------------------------
-  // REFRESH TOKEN (Atomic Rotation - Principal Grade)
-  // ---------------------------
+  /**
+   * Rotates refresh and access tokens atomically.
+   */
   async refreshToken(dto: RefreshTokenDto, reqIp?: string, reqUa?: string): Promise<AuthResponse> {
     if (!dto.refreshToken) {
       throw new BadRequestException('Refresh token is required');
@@ -199,17 +212,17 @@ export class AuthService {
       throw new ForbiddenException('Invalid refresh token');
     }
 
-    // 1. ATOMIC REUSE DETECTION (PANIC / GRACE WINDOW)
+    // Detect atomic reuse and handle grace window
     if (tokenRecord.revokedAt) {
       const gracePeriodMs = 5000;
       const tRecord = tokenRecord as any;
       const timeSinceRevocation = Date.now() - tRecord.revokedAt.getTime();
       const isWithinGrace = timeSinceRevocation < gracePeriodMs;
 
-      // Identity check for grace window: Must be same IP
+      // Check identity for grace window by matching IP address
       if (isWithinGrace && (tokenRecord as any).ipAddress === reqIp) {
         this.logger.debug(`Race condition grace hit for JTI ${jti}. IP: ${reqIp}. Skipping panic.`);
-        // Note: For now we throw a special error the client can handle or retry.
+        // Throw retry error for client to handle concurrent rotation
         throw new ForbiddenException('RETRY_DETECTED: Rotation already in progress.');
       }
 
@@ -223,7 +236,7 @@ export class AuthService {
         `REUSE DETECTED! JTI: ${jti}, User: ${tokenRecord.userId}. Revoke Reason: ${pToken.revokedReason}`,
       );
 
-      // Response: Critical Mitigation - Invalidate ALL user sessions
+      // Invalidate all user sessions as a security mitigation
       await this.prismaService.refreshToken.updateMany({
         where: { userId: tokenRecord.userId },
         data: {
@@ -235,7 +248,7 @@ export class AuthService {
       throw new ForbiddenException('Security compromise detected. All sessions revoked.');
     }
 
-    // 2. EXPIRY CHECK
+    // Check token expiration
     if (tokenRecord.expiresAt < new Date()) {
       await this.prismaService.refreshToken.update({
         where: { id: jti },
@@ -244,10 +257,10 @@ export class AuthService {
       throw new ForbiddenException('Refresh token expired');
     }
 
-    // 3. ATOMIC SUCCESSFUL ROTATION
+    // Revoke current token and issue new pair
     const audience = (payload as any).aud === 'admin' ? 'admin' : 'customer';
 
-    // Mark as revoked (used) to prevent reuse, but keep the record for forensic chain tracing
+    // Revoke current token but keep record for audit tracing
     await this.prismaService.refreshToken.update({
       where: { id: jti },
       data: {
@@ -266,6 +279,9 @@ export class AuthService {
     );
   }
 
+  /**
+   * Logs out the user by deleting the session.
+   */
   async logout(dto: import('@modules/auth/dto/logout.dto').LogoutDto) {
     try {
       const payload = (await this.jwtService.decode(dto.refreshToken)) as any;
@@ -281,10 +297,9 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  // ---------------------------
-  // HELPERS
-  // ---------------------------
-
+  /**
+   * Issues a new pair of access and refresh tokens.
+   */
   public async issueTokenPair(
     userId: string,
     audience: 'customer' | 'admin' = 'customer',
@@ -342,7 +357,7 @@ export class AuthService {
   }) {
     const tokenHash = await this.hashPassword(params.rawToken);
 
-    // L8 Device Signature Parsing
+    // Parse device signature
     let deviceName = 'Unknown Device';
     let deviceType = 'desktop';
 
@@ -396,15 +411,9 @@ export class AuthService {
   }
 
   /**
-   * Validate refresh token với database
-   * - Kiểm tra user tồn tại và active
-   * - Kiểm tra refresh token hash trong DB (khi có RefreshToken model)
-   * @param userId User ID từ JWT payload
-   * @param refreshToken Raw refresh token từ cookie (sẽ dùng khi có RefreshToken model)
-   * @returns User nếu hợp lệ, null nếu không
+   * Validates a refresh token against the database.
    */
   async validateRefreshToken(userId: string, refreshToken: string) {
-    // Kiểm tra user tồn tại và active
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
       include: this.userInclude,
@@ -423,7 +432,6 @@ export class AuthService {
       return null;
     }
 
-    // Verify token hash
     const isValid = await this.verifyPassword(tokenRecord.token, refreshToken);
     if (!isValid) return null;
 
@@ -438,9 +446,9 @@ export class AuthService {
     };
   }
 
-  // ---------------------------
-  // FORGOT PASSWORD
-  // ---------------------------
+  /**
+   * Initiates the forgot password flow by sending an email if the user exists.
+   */
   async forgotPassword(dto: ForgotPasswordDto) {
     if (!dto.email && !dto.phone) {
       throw new BadRequestException('Email hoặc phone là bắt buộc');
@@ -461,6 +469,9 @@ export class AuthService {
     return { message: 'Nếu tài khoản tồn tại, chúng tôi đã gửi email hướng dẫn đặt lại mật khẩu.' };
   }
 
+  /**
+   * Verifies the reset password token and returns user details.
+   */
   async verifyResetToken(token: string) {
     const tokenRecord = await this.prismaService.resetPasswordToken.findFirst({
       where: { token },
@@ -494,6 +505,9 @@ export class AuthService {
     };
   }
 
+  /**
+   * Resets the password using a reset token.
+   */
   async resetPassword(dto: ResetPasswordDto) {
     if (dto.newPassword !== dto.confirmPassword) {
       throw new BadRequestException('Passwords do not match');
@@ -527,6 +541,9 @@ export class AuthService {
     return { message: 'Password has been reset successfully' };
   }
 
+  /**
+   * Changes the user's password while validating the current password.
+   */
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.prismaService.user.findUnique({ where: { id: userId } });
     if (!user) throw new BadRequestException('User not found');
@@ -541,12 +558,15 @@ export class AuthService {
       data: { passwordHash: newPasswordHash },
     });
 
-    // Invalidate all sessions/refresh tokens
+    // Invalidate all sessions and refresh tokens
     await this.prismaService.refreshToken.deleteMany({ where: { userId } });
 
     return { message: 'Password changed successfully' };
   }
 
+  /**
+   * Retrieves active refresh token sessions for a user.
+   */
   async getSessions(userId: string) {
     return this.prismaService.refreshToken.findMany({
       where: {
@@ -567,6 +587,9 @@ export class AuthService {
     });
   }
 
+  /**
+   * Revokes a specific active session.
+   */
   async revokeSession(userId: string, jti: string) {
     const session = await this.prismaService.refreshToken.findFirst({
       where: { id: jti, userId },

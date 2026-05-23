@@ -1,14 +1,12 @@
+import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { GuestVerificationService } from '@modules/auth/services/guest-verification.service';
 
 @Injectable()
 export class CheckoutValidator {
   private readonly logger = new Logger(CheckoutValidator.name);
 
-  constructor(
-    private readonly guestVerificationService: GuestVerificationService
-  ) {}
+  constructor(private readonly guestVerificationService: GuestVerificationService) {}
 
   /**
    * Validates guest email verification token.
@@ -51,10 +49,10 @@ export class CheckoutValidator {
    * Validates price stability between token snapshot and current database state.
    */
   validatePriceStability(
-    currentTotal: number, 
-    tokenTotal: number, 
-    currentItems: any[], 
-    tokenItems: any[]
+    currentTotal: number,
+    tokenTotal: number,
+    currentItems: any[],
+    tokenItems: any[],
   ) {
     // 1. Total comparison (VND integer-safe)
     const isTotalSafe = Math.abs(Math.round(currentTotal) - Math.round(tokenTotal)) <= 1;
@@ -70,7 +68,7 @@ export class CheckoutValidator {
 
     // 2. Individual line item comparison (forensic check)
     for (const item of currentItems) {
-      const snapshotItem = tokenItems.find(ti => ti.variantId === item.productVariantId);
+      const snapshotItem = tokenItems.find((ti) => ti.variantId === item.productVariantId);
       const currentPrice = Math.round(Number(item.price));
       const snapshotPrice = Math.round(snapshotItem?.price || 0);
 
@@ -84,7 +82,6 @@ export class CheckoutValidator {
   }
 
   public generateCartHash(items: any[]): string {
-
     const data = items
       .map((i) => `${i.productVariantId}:${i.quantity}`)
       .sort()

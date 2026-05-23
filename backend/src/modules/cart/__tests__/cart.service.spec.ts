@@ -114,7 +114,14 @@ describe('CartService', () => {
     it('should merge guest items into user cart', async () => {
       const guestCart = { id: 'guest_c1' };
       const userCart = { id: 'user_c1' };
-      const guestItems = [{ productVariantId: 'v1', quantity: 3, cachedPrice: 100, productVariant: { inventoryItems: [{ quantity: 10, reservedQuantity: 0 }] } }];
+      const guestItems = [
+        {
+          productVariantId: 'v1',
+          quantity: 3,
+          cachedPrice: 100,
+          productVariant: { inventoryItems: [{ quantity: 10, reservedQuantity: 0 }] },
+        },
+      ];
 
       mockPrismaService.cart.findFirst
         .mockResolvedValueOnce(guestCart) // find guest cart

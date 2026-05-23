@@ -1,5 +1,5 @@
-import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { JwtModule } from '@nestjs/jwt';
@@ -15,18 +15,15 @@ import { AdminOrderController } from './admin-order.controller';
 import { CheckoutController } from './controllers/checkout.controller';
 import { OrderRecoveryController } from './controllers/order-recovery.controller';
 import { CleanupExpiredReservationsJob } from './jobs/cleanup-expired-reservations.job';
+import { NerveCenterController } from './nerve-center.controller';
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { CheckoutTokenService } from './services/checkout-token.service';
-import { OrderPaymentService } from './services/order-payment.service';
-import { RefundService } from './services/refund.service';
-import { PriceEngineService } from './services/price-engine.service';
 import { CheckoutValidator } from './services/checkout-validator.service';
 import { OrderEventConsumer } from './services/order-event.consumer';
-import { NerveCenterController } from './nerve-center.controller';
-
-
-
+import { OrderPaymentService } from './services/order-payment.service';
+import { PriceEngineService } from './services/price-engine.service';
+import { RefundService } from './services/refund.service';
 
 @Module({
   imports: [
@@ -80,7 +77,12 @@ import { NerveCenterController } from './nerve-center.controller';
 
     OrderEventConsumer,
   ],
-  exports: [OrderService, OrderPaymentService, CheckoutTokenService, RefundService, PriceEngineService],
+  exports: [
+    OrderService,
+    OrderPaymentService,
+    CheckoutTokenService,
+    RefundService,
+    PriceEngineService,
+  ],
 })
-export class OrderModule { }
-
+export class OrderModule {}

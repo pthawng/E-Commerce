@@ -18,14 +18,7 @@ export class GlobalThrottlerGuard extends ThrottlerGuard {
     const path = request.url || '';
 
     // P0: Exempt infrastructure paths and Admin routes (which have specific throttlers)
-    const exemptPaths = [
-      '/',
-      '/health',
-      '/api/health',
-      '/metrics',
-      '/api/metrics',
-      '/api',
-    ];
+    const exemptPaths = ['/', '/health', '/api/health', '/metrics', '/api/metrics', '/api'];
 
     if (
       exemptPaths.includes(path) ||
@@ -35,7 +28,6 @@ export class GlobalThrottlerGuard extends ThrottlerGuard {
     ) {
       return true;
     }
-
 
     // P1: Check for Render specific headers if path check is insufficient
     const userAgent = request.headers['user-agent'] || '';

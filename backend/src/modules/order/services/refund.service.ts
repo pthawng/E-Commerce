@@ -12,7 +12,7 @@ export class RefundService {
     private readonly prisma: PrismaService,
     private readonly paymentService: PaymentService,
     private readonly orderService: OrderService,
-  ) { }
+  ) {}
 
   /**
    * Financial-Grade Refund Initiation
@@ -32,7 +32,8 @@ export class RefundService {
 
       // Calculate max refundable: sum transaction amounts from successful payments
       const totalPaid = order.payments.reduce(
-        (acc, p) => acc + p.transactions.reduce((s, t) => s + Number(t.amount), 0), 0
+        (acc, p) => acc + p.transactions.reduce((s, t) => s + Number(t.amount), 0),
+        0,
       );
       const totalRefundedRecords = await (tx as any).refund.findMany({
         where: { orderId, status: 'SUCCESS' as any },

@@ -70,10 +70,10 @@ export async function seedInventory(prisma: PrismaClient) {
     const numPhysical = 3;
     for (let j = 0; j < numPhysical; j++) {
       const serialNumber = `SN-${v.sku}-${j}`;
-      
+
       // Check if serial exists to prevent unique constraint error
       const existingPhysical = await prisma.physicalItem.findUnique({
-        where: { serialNumber }
+        where: { serialNumber },
       });
 
       if (!existingPhysical) {
@@ -85,9 +85,9 @@ export async function seedInventory(prisma: PrismaClient) {
             status: 'AVAILABLE',
             metadata: {
               condition: 'New',
-              source: 'Demo Seed'
-            }
-          }
+              source: 'Demo Seed',
+            },
+          },
         });
         physicalCount++;
       }

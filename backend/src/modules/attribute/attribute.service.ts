@@ -10,9 +10,9 @@ import { AttributeValueUpsertDto } from './dto/upsert-attribute-value.dto';
 export class AttributeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // ---------------------------
-  // Attribute CRUD
-  // ---------------------------
+  /**
+   * Retrieves all attributes with their values.
+   */
   findAll() {
     return this.prisma.attribute.findMany({
       include: { values: { orderBy: { order: 'asc' } } },
@@ -20,21 +20,27 @@ export class AttributeService {
     });
   }
 
+  /**
+   * Retrieves a single attribute by ID.
+   */
   async findOne(id: string) {
     const attribute = await this.prisma.attribute.findUnique({
       where: { id },
       include: { values: { orderBy: { order: 'asc' } } },
     });
-    if (!attribute) throw new NotFoundException('Attribute không tồn tại');
+    if (!attribute) throw new NotFoundException('Attribute does not exist');
     return attribute;
   }
 
+  /**
+   * Creates a new attribute.
+   */
   async create(dto: CreateAttributeDto) {
-    // Unique code check
+    // Check for unique attribute code
     const exist = await this.prisma.attribute.findUnique({ where: { code: dto.code } });
-    if (exist) throw new BadRequestException('Mã attribute đã tồn tại');
+    if (exist) throw new BadRequestException('Attribute code already exists');
 
-    // Transaction: create attribute + optional values
+    // Create attribute and optional values in a transaction
     return this.prisma.$transaction(async (tx) => {
       const attribute = await tx.attribute.create({
         data: {
@@ -63,14 +69,17 @@ export class AttributeService {
     });
   }
 
+  /**
+   * Updates an existing attribute.
+   */
   async update(id: string, dto: UpdateAttributeDto) {
     return this.prisma.$transaction(async (tx) => {
       const attribute = await tx.attribute.findUnique({ where: { id } });
-      if (!attribute) throw new NotFoundException('Attribute không tồn tại');
+      if (!attribute) throw new NotFoundException('Attribute does not exist');
 
       if (dto.code && dto.code !== attribute.code) {
         const exist = await tx.attribute.findUnique({ where: { code: dto.code } });
-        if (exist) throw new BadRequestException('Mã attribute đã tồn tại');
+        if (exist) throw new BadRequestException('Attribute code already exists');
       }
 
       const updated = await tx.attribute.update({
@@ -95,6 +104,9 @@ export class AttributeService {
     });
   }
 
+  /**
+   * Deletes an attribute and its associated values.
+   */
   async remove(id: string) {
     await this.ensureAttributeExists(id);
 
@@ -102,21 +114,21 @@ export class AttributeService {
       await tx.attributeValue.deleteMany({ where: { attributeId: id } });
       await tx.attribute.delete({ where: { id } });
     });
-    return { message: 'Đã xoá attribute' };
+    return { message: 'Attribute deleted successfully' };
   }
 
-  // ---------------------------
-  // Attribute Value CRUD
-  // ---------------------------
+  /**
+   * Retrieves all attribute values, optionally filtered by search query.
+   */
   async listAllValues(search?: string) {
     const where: any = {};
 
-    // Search trong value JSON field (vi, en, ...)
+    // Search within metaValue field
     if (search) {
       where.OR = [
         { metaValue: { contains: search, mode: 'insensitive' } },
-        // Note: Prisma không hỗ trợ search trực tiếp trong JSON field
-        // Có thể cần dùng raw query hoặc full-text search nếu cần
+        // Note: Prisma does not support searching directly within JSON fields.
+        // Consider using raw queries or full-text search if needed.
       ];
     }
 
@@ -135,6 +147,9 @@ export class AttributeService {
     });
   }
 
+  /**
+   * Retrieves all values for a specific attribute.
+   */
   async listValues(attributeId: string) {
     await this.ensureAttributeExists(attributeId);
     return this.prisma.attributeValue.findMany({
@@ -143,6 +158,9 @@ export class AttributeService {
     });
   }
 
+  /**
+   * Creates a new value for an attribute.
+   */
   async createValue(attributeId: string, dto: CreateAttributeValueDto) {
     await this.ensureAttributeExists(attributeId);
 
@@ -156,11 +174,14 @@ export class AttributeService {
     });
   }
 
+  /**
+   * Updates an existing attribute value.
+   */
   async updateValue(attributeId: string, valueId: string, dto: UpdateAttributeValueDto) {
     const value = await this.prisma.attributeValue.findUnique({ where: { id: valueId } });
-    if (!value) throw new NotFoundException('AttributeValue không tồn tại');
+    if (!value) throw new NotFoundException('Attribute value does not exist');
     if (value.attributeId !== attributeId) {
-      throw new BadRequestException('AttributeValue không thuộc attribute này');
+      throw new BadRequestException('Attribute value does not belong to this attribute');
     }
 
     return this.prisma.attributeValue.update({
@@ -173,23 +194,23 @@ export class AttributeService {
     });
   }
 
+  /**
+   * Deletes an attribute value.
+   */
   async removeValue(attributeId: string, valueId: string) {
     const value = await this.prisma.attributeValue.findUnique({ where: { id: valueId } });
-    if (!value) throw new NotFoundException('AttributeValue không tồn tại');
+    if (!value) throw new NotFoundException('Attribute value does not exist');
     if (value.attributeId !== attributeId) {
-      throw new BadRequestException('AttributeValue không thuộc attribute này');
+      throw new BadRequestException('Attribute value does not belong to this attribute');
     }
 
     await this.prisma.attributeValue.delete({ where: { id: valueId } });
-    return { message: 'Đã xoá attribute value' };
+    return { message: 'Attribute value deleted successfully' };
   }
 
-  // ---------------------------
-  // Helpers
-  // ---------------------------
   private async ensureAttributeExists(id: string) {
     const attribute = await this.prisma.attribute.findUnique({ where: { id } });
-    if (!attribute) throw new NotFoundException('Attribute không tồn tại');
+    if (!attribute) throw new NotFoundException('Attribute does not exist');
   }
 
   private async syncValuesTx(
@@ -197,7 +218,7 @@ export class AttributeService {
     attributeId: string,
     values: AttributeValueUpsertDto[],
   ) {
-    // Strategy: only add/update the provided items; do NOT delete missing ones.
+    // Strategy: only add or update the provided items; do not delete missing ones
     for (const [index, v] of values.entries()) {
       if (v.id) {
         await tx.attributeValue.update({

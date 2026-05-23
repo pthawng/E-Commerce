@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUrl, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsUrl, IsUUID } from 'class-validator';
 
 export class ReportMediaDto {
   @ApiProperty({ description: 'ID của sản phẩm bị lỗi ảnh' })

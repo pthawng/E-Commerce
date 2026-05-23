@@ -11,10 +11,11 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsBoolean()
   isEmailVerified?: boolean;
 
+  /** Plain text password to be hashed before saving if provided */
   @IsOptional()
   @IsString()
   @MinLength(6)
-  password?: string; // client gửi → BE hash → passwordHash
+  password?: string;
 
   @IsOptional()
   @IsString()

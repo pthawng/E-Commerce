@@ -12,8 +12,9 @@ export class CreateUserDto {
   @IsString()
   fullName: string;
 
+  /** Raw password to be hashed before storage */
   @IsString()
   @MinLength(6)
   @IsNotEmpty()
-  password: string; // để hash thành passwordHash
+  password: string;
 }

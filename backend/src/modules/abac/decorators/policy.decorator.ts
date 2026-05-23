@@ -1,6 +1,6 @@
 /**
  * Policy Decorator
- * Decorator để gắn policy check vào controller methods
+ * Decorator to attach policy checks to controller methods
  */
 
 import { SetMetadata } from '@nestjs/common';
@@ -17,7 +17,7 @@ export interface PolicyMetadata {
   policy: new () => BasePolicy;
   /** Action to check */
   action: PolicyAction;
-  /** Parameter name để extract resource ID từ request */
+  /** Parameter name to extract resource ID from request */
   param?: string;
   /** Custom resource resolver function */
   resourceResolver?: (request: any) => Promise<unknown> | unknown;
@@ -30,7 +30,7 @@ export interface PolicyMetadata {
  * @CheckPolicy(OrderPolicy, PolicyAction.UPDATE, 'id')
  * @Patch(':id')
  * async updateOrder(@Param('id') id: string) {
- *   // Policy sẽ check OrderPolicy.canUpdate()
+ *   // Policy will check OrderPolicy.canUpdate()
  * }
  *
  * @example With custom resource resolver
@@ -39,7 +39,7 @@ export interface PolicyMetadata {
  * })
  * @Get(':id')
  * async getOrder(@Param('id') id: string) {
- *   // Policy sẽ check với custom resource
+ *   // Policy will check with custom resource
  * }
  */
 export const CheckPolicy = (

@@ -32,12 +32,11 @@ import { UserService } from './user.service';
 @Controller('admin/rbac/users')
 @UseGuards(AdminJwtAccessGuard, PermissionGuard)
 export class AdminUserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   @Get()
   @UseGuards(PaginationRateLimitGuard)
   @Throttle({ default: { limit: 100, ttl: 60000 } })
-
   @ApiOperation({ summary: 'Lấy danh sách user quản trị (phân trang)' })
   @ApiResponse({ status: 200, description: 'Danh sách user' })
   @Permission(PERMISSIONS.AUTH.USER.READ)
@@ -62,7 +61,6 @@ export class AdminUserController {
   }
 
   @Patch(':id')
-
   @ApiOperation({ summary: 'Cập nhật user quản trị' })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   @Permission(PERMISSIONS.AUTH.USER.UPDATE)

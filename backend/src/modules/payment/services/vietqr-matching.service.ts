@@ -50,6 +50,10 @@ export interface CassoWebhookPayload {
  * Dirty Payment Handling (STRICT mode):
  *  - Wrong amount → log CONFLICT, mark payment as EXPIRED, do NOT confirm
  */
+/**
+ * VietQR webhook transaction matching service.
+ * Verifies webhook payloads and processes matching payment transactions.
+ */
 @Injectable()
 export class VietQRMatchingService {
   private readonly logger = new Logger(VietQRMatchingService.name);
@@ -68,11 +72,10 @@ export class VietQRMatchingService {
   }
 
   /**
-   * Verify the incoming webhook request is from a trusted source.
-   * Called by the controller BEFORE processing.
+   * Verifies the incoming webhook request is from a trusted source.
    */
   verifyWebhookRequest(apiKey: string, sourceIp: string): void {
-    // 1. API Key check (Casso sends token set in dashboard as "API-Key")
+    // API Key check (Casso sends token set in dashboard as "API-Key")
     if (!this.webhookSecret) {
       this.logger.warn('VIETQR_WEBHOOK_SECRET is not set — webhook security is disabled!');
     } else if (apiKey !== this.webhookSecret) {
@@ -80,7 +83,7 @@ export class VietQRMatchingService {
       throw new UnauthorizedException('Invalid webhook API key');
     }
 
-    // 2. IP Whitelist check
+    // IP Whitelist check
     if (this.allowedIps.length > 0 && !this.allowedIps.includes(sourceIp)) {
       this.logger.warn(`VietQR webhook: rejected request from non-whitelisted IP ${sourceIp}`);
       throw new UnauthorizedException(`IP ${sourceIp} is not in the VietQR webhook whitelist`);
@@ -88,7 +91,7 @@ export class VietQRMatchingService {
   }
 
   /**
-   * Main entry point: process a list of transactions from the Casso/SePay webhook.
+   * Processes a list of transactions from the Casso/SePay webhook.
    */
   async processCassoWebhook(payload: CassoWebhookPayload): Promise<{
     processed: number;
@@ -114,8 +117,7 @@ export class VietQRMatchingService {
   }
 
   /**
-   * Process a single bank transaction.
-   * Returns 'matched', 'skipped' (idempotency), or 'no_match'.
+   * Processes a single bank transaction and validates it against pending payments.
    */
   async processIncomingTransaction(
     bankTx: BankTransaction,
@@ -125,7 +127,7 @@ export class VietQRMatchingService {
       `Processing bank transaction [${bankTxId}]: ${bankTx.amount} VND | "${bankTx.description}"`,
     );
 
-    // ── Idempotency check ─────────────────────────────────────────────
+    // Check for idempotency
     const alreadyProcessed = await this.prisma.paymentTransaction.findFirst({
       where: { providerTransactionId: bankTxId },
     });
@@ -134,7 +136,7 @@ export class VietQRMatchingService {
       return 'skipped';
     }
 
-    // ── Optimize: Extract Transfer Code from Description ─────────────────────
+    // Extract transfer code from transaction description
     // Regex to find RPXXXX codes (Ray Paradis standard: RP followed by digits)
     const codeMatch = bankTx.description.match(/RP\d+/i);
     if (!codeMatch) {
@@ -143,7 +145,7 @@ export class VietQRMatchingService {
     }
     const transferCode = codeMatch[0].toUpperCase();
 
-    // ── Find exact payment with this transferCode (O(1) approach) ───────────
+    // Find payment matching the transfer code
     // We use queryRaw for high-performance JSON matching in PostgreSQL
     const matchingPayments = await this.prisma.$queryRaw<any[]>`
             SELECT * FROM "Payment" 
@@ -161,14 +163,14 @@ export class VietQRMatchingService {
     const payment = matchingPayments[0];
     const metadata = payment.rawPayload as any;
 
-    // ── Strict matching rules ───────────────────────────────────────────
+    // Enforce strict matching rules
 
-    // 1. Amount check (STRICT)
+    // Validate payment amount
     const isAmountMatch = Number(payment.amount) === bankTx.amount;
     if (!isAmountMatch) {
       this.logger.warn(
         `[CONFLICT] transferCode=${transferCode} matched but amount mismatch: ` +
-        `expected ${payment.amount}, got ${bankTx.amount}. Marking CONFLICT.`,
+          `expected ${payment.amount}, got ${bankTx.amount}. Marking CONFLICT.`,
       );
       await this.prisma.payment.update({
         where: { id: payment.id },
@@ -186,7 +188,7 @@ export class VietQRMatchingService {
       return 'conflict';
     }
 
-    // 2. Check expiration
+    // Validate payment expiration
     const expiresAt = metadata?.expiresAt ? new Date(metadata.expiresAt) : null;
     if (expiresAt && new Date() > expiresAt) {
       this.logger.warn(`[EXPIRED] Payment ${payment.id} expired at ${expiresAt.toISOString()}`);
@@ -200,7 +202,7 @@ export class VietQRMatchingService {
       return 'no_match';
     }
 
-    // ── Full match: confirm the payment ───────────────────────────
+    // Confirm payment upon successful validation
     this.logger.log(`[MATCH] Payment ${payment.id} | transferCode=${transferCode}`);
 
     try {
@@ -221,10 +223,5 @@ export class VietQRMatchingService {
       this.logger.error(`Failed to confirm VietQR payment: ${error.message}`);
       return 'no_match';
     }
-
-    this.logger.warn(
-      `[NO_MATCH] No pending payment found for: "${bankTx.description}" | ${bankTx.amount} VND`,
-    );
-    return 'no_match';
   }
 }

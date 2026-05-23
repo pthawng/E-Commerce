@@ -44,6 +44,10 @@ import {
 
 import { clearAuthCookies, setAuthCookies } from './utils/auth-cookie.helper';
 
+/**
+ * Authentication controller.
+ * Exposes endpoints for user registration, login, logout, and session management.
+ */
 @ApiTags('Authentication')
 @Throttle({ strict: { limit: 5, ttl: 60000 } })
 @Controller('auth')
@@ -52,7 +56,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly verifyEmailService: VerifyEmailService,
     private readonly permissionCacheService: PermissionCacheService,
-  ) { }
+  ) {}
 
   @Public()
   @UseGuards(ThrottlerGuard)
@@ -161,8 +165,8 @@ export class AuthController {
     const ip = req.ip;
     const ua = req.headers['user-agent'] as string | undefined;
 
-    // L8 Hybrid Refresh: Support both Body (Header-based) and Cookie (HttpOnly)
-    // If dto.refreshToken is missing, use the one extracted by JwtRefreshGuard from cookies
+    // Support refresh tokens from either request body or HTTP-only cookies
+    // Use the token from request body if available, otherwise fallback to cookies
     const token = dto.refreshToken || (req.user as any)?.refreshToken;
 
     if (!token) {
@@ -220,7 +224,7 @@ export class AuthController {
     const ip = req.ip;
 
     await this.verifyEmailService.resendVerification(dto.email, ip, ua);
-    // Security: Luôn trả về success message giống nhau cho dù email tồn tại hay không
+    // Always return the same success message regardless of whether the email exists
     return {
       success: true,
       message: 'Nếu email tồn tại trong hệ thống, link kích hoạt đã được gửi tới hòm thư của bạn.',

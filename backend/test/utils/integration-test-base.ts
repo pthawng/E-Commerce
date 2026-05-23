@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { softDeleteExtension } from 'src/prisma/extensions/soft-delete.extension';
 
 /**
- * L8 Pattern: Transactional test isolation.
+ * Transactional test isolation.
  *
  * Each test wraps all DB operations in a transaction that is ROLLED BACK
  * in afterEach. This is 10x faster than truncation and avoids FK cascade

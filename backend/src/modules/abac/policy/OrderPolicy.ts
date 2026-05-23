@@ -7,12 +7,12 @@ import { PolicyAction } from '../types/policy.types';
 @Injectable()
 export class OrderPolicy extends BasePolicy<Order> {
   /**
-   * Main evaluate method - central logic cho tất cả actions
+   * Main evaluate method - central logic for all actions
    */
   async evaluate(context: PolicyContext<Order>): Promise<PolicyResult> {
     const { user, resource: order, action } = context;
 
-    // Admin có full access
+    // Admin has full access
     if (this.hasRole(user, 'admin')) {
       return this.allow({ reason: 'Admin has full access' });
     }
@@ -58,7 +58,7 @@ export class OrderPolicy extends BasePolicy<Order> {
       return this.allow();
     }
 
-    return this.deny('Bạn chỉ có thể xem đơn hàng của chính mình');
+    return this.deny('You can only view your own orders');
   }
 
   /**
@@ -69,17 +69,17 @@ export class OrderPolicy extends BasePolicy<Order> {
   private handleCreate(user: PolicyContext['user'], _context: PolicyContext<Order>): PolicyResult {
     // Check if user has permission
     if (!this.hasPermission(user, 'order.create')) {
-      return this.deny('Bạn không có quyền tạo đơn hàng');
+      return this.deny('You do not have permission to create orders');
     }
 
     // Business hours check (example) - can be enabled if needed
     // if (!this.isBusinessHours(context.environment?.timestamp)) {
-    //   return this.deny('Chỉ có thể tạo đơn hàng trong giờ làm việc (9h-18h)');
+    //   return this.deny('Orders can only be created during business hours (9:00 - 18:00)');
     // }
 
     // Check user account status (example)
     if (user.attributes?.accountStatus === 'suspended') {
-      return this.deny('Tài khoản của bạn đã bị tạm khóa');
+      return this.deny('Your account has been temporarily suspended');
     }
 
     return this.allow();
@@ -108,7 +108,7 @@ export class OrderPolicy extends BasePolicy<Order> {
     // Staff can update non-completed orders
     if (this.hasRole(user, 'staff')) {
       if (order.status === OrderStatusEnum.COMPLETED) {
-        return this.deny('Không thể cập nhật đơn hàng đã hoàn thành');
+        return this.deny('Completed orders cannot be updated');
       }
       return this.allow();
     }
@@ -116,13 +116,16 @@ export class OrderPolicy extends BasePolicy<Order> {
     // User can only update own pending orders
     const orderUserId = order.userId ?? undefined;
     if (this.isOwner(user, { ...order, userId: orderUserId })) {
-      if (order.status === OrderStatusEnum.PENDING_PAYMENT || order.status === OrderStatusEnum.CONFIRMED) {
+      if (
+        order.status === OrderStatusEnum.PENDING_PAYMENT ||
+        order.status === OrderStatusEnum.CONFIRMED
+      ) {
         return this.allow();
       }
-      return this.deny('Chỉ có thể cập nhật đơn hàng đang chờ xử lý');
+      return this.deny('Only pending orders can be updated');
     }
 
-    return this.deny('Bạn chỉ có thể cập nhật đơn hàng của chính mình');
+    return this.deny('You can only update your own orders');
   }
 
   /**
@@ -139,6 +142,6 @@ export class OrderPolicy extends BasePolicy<Order> {
       return this.allow();
     }
 
-    return this.deny('Chỉ admin mới có quyền xóa đơn hàng');
+    return this.deny('Only administrators can delete orders');
   }
 }

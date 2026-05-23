@@ -9,6 +9,10 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PermissionCacheService } from './cache/permission-cache.service';
 
+/**
+ * Role-Based Access Control (RBAC) service.
+ * Manages roles, permissions, user assignments, and authorization checks.
+ */
 @Injectable()
 export class RbacService implements OnModuleInit {
   private readonly logger = new Logger(RbacService.name);
@@ -16,13 +20,15 @@ export class RbacService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private permissionCacheService: PermissionCacheService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     this.logger.log('RbacService initialized. Seeding skip (handled by orchestrator).');
   }
 
-  /** Đảm bảo user tồn tại và đang hoạt động */
+  /**
+   * Ensures the user exists and is currently active.
+   */
   async ensureActiveUser(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -46,8 +52,8 @@ export class RbacService implements OnModuleInit {
   }
 
   /**
-   * Hydrate user permissions with precedence.
-   * Rule: DENY > ALLOW > ROLE FALLBACK
+   * Hydrates user permissions with precedence.
+   * Logic sequence: DENY override > ALLOW override > role assignments.
    */
   async getUserPermissions(userId: string): Promise<string[]> {
     const rolePermissions = await this.prisma.userRole.findMany({
@@ -68,7 +74,7 @@ export class RbacService implements OnModuleInit {
       include: { permission: true },
     });
 
-    // 1. Base set from Roles
+    // Build base permission set from assigned roles
     const roleSlugs = new Set<string>(
       rolePermissions
         .flatMap((ur) => ur.role.rolePermissions)
@@ -76,7 +82,7 @@ export class RbacService implements OnModuleInit {
         .filter((slug): slug is string => Boolean(slug)),
     );
 
-    // 2. Map overrides
+    // Resolve explicit user overrides
     const allowOverrides = userSpecificOverrides
       .filter((up) => up.effect === 'ALLOW')
       .map((up) => up.permission.action)
@@ -89,10 +95,9 @@ export class RbacService implements OnModuleInit {
         .filter((a): a is string => !!a),
     );
 
-    // 3. Composite logic: (Roles + ALLOW) - DENY
+    // Combine role and allowance overrides, then remove denied permissions
     const effectivePermissions = new Set([...roleSlugs, ...allowOverrides]);
 
-    // Explicit DENY always wins
     for (const denied of denyOverrides) {
       effectivePermissions.delete(denied);
     }
@@ -100,7 +105,9 @@ export class RbacService implements OnModuleInit {
     return Array.from(effectivePermissions);
   }
 
-  /** Gán role cho user */
+  /**
+   * Assigns a role to a user.
+   */
   async assignRoleToUser(userId: string, roleSlug: string, assignedBy?: string) {
     await this.ensureActiveUser(userId);
 
@@ -115,14 +122,15 @@ export class RbacService implements OnModuleInit {
       create: { userId, roleId: role.id, assignedAt: new Date(), assignedBy },
     });
 
-    // Invalidate permission cache for the affected user so changes take effect immediately.
-    // Swallow cache errors to avoid failing the primary operation.
+    // Invalidate permission cache for the affected user
     this.permissionCacheService.clearCache(userId).catch(() => null);
 
     return result;
   }
 
-  /** Gán permission trực tiếp cho user */
+  /**
+   * Assigns a permission directly to a user.
+   */
   async assignPermissionToUser(userId: string, permissionSlug: string, assignedBy?: string) {
     await this.ensureActiveUser(userId);
 
@@ -139,13 +147,14 @@ export class RbacService implements OnModuleInit {
       create: { userId, permissionId: permission.id, assignedAt: new Date(), assignedBy },
     });
 
-    // Invalidate cache for this user
     this.permissionCacheService.clearCache(userId).catch(() => null);
 
     return result;
   }
 
-  /** Gán permission cho role */
+  /**
+   * Assigns a permission to a role.
+   */
   async assignPermissionToRole(roleSlug: string, permissionSlug: string, assignedBy?: string) {
     const role = await this.prisma.role.findUnique({ where: { slug: roleSlug } });
     const permission = await this.prisma.permission.findUnique({
@@ -161,7 +170,7 @@ export class RbacService implements OnModuleInit {
       create: { roleId: role.id, permissionId: permission.id, assignedAt: new Date(), assignedBy },
     });
 
-    // Invalidate permission cache for all users that have this role
+    // Invalidate permission cache for all users with this role
     const usersWithRole = await this.prisma.userRole.findMany({
       where: { roleId: role.id },
       select: { userId: true },
@@ -173,9 +182,9 @@ export class RbacService implements OnModuleInit {
     return result;
   }
 
-  // ==================== ROLE CRUD ====================
-
-  /** Lấy danh sách tất cả roles */
+  /**
+   * Retrieves all roles.
+   */
   async findAllRoles() {
     return this.prisma.role.findMany({
       where: { deletedAt: null },
@@ -191,7 +200,9 @@ export class RbacService implements OnModuleInit {
     });
   }
 
-  /** Lấy role theo slug */
+  /**
+   * Retrieves a role by its slug.
+   */
   async findRoleBySlug(slug: string) {
     const role = await this.prisma.role.findUnique({
       where: { slug, deletedAt: null },
@@ -212,15 +223,15 @@ export class RbacService implements OnModuleInit {
     return role;
   }
 
-  /** Tạo mới role */
+  /**
+   * Creates a new role.
+   */
   async createRole(data: { slug: string; name: string; description?: string; isSystem?: boolean }) {
-    // Kiểm tra slug đã tồn tại chưa
     const existing = await this.prisma.role.findUnique({ where: { slug: data.slug } });
     if (existing) {
       throw new ForbiddenException(`Role với slug "${data.slug}" đã tồn tại`);
     }
 
-    // Kiểm tra name đã tồn tại chưa
     const existingName = await this.prisma.role.findUnique({ where: { name: data.name } });
     if (existingName) {
       throw new ForbiddenException(`Role với tên "${data.name}" đã tồn tại`);
@@ -236,16 +247,16 @@ export class RbacService implements OnModuleInit {
     });
   }
 
-  /** Cập nhật role */
+  /**
+   * Updates an existing role by its slug.
+   */
   async updateRole(slug: string, data: { name?: string; description?: string }) {
     const role = await this.findRoleBySlug(slug);
 
-    // Không cho phép cập nhật role hệ thống
     if (role.isSystem) {
       throw new ForbiddenException('Không thể cập nhật role hệ thống');
     }
 
-    // Kiểm tra name mới có trùng không (nếu có thay đổi)
     if (data.name && data.name !== role.name) {
       const existingName = await this.prisma.role.findUnique({ where: { name: data.name } });
       if (existingName) {
@@ -262,16 +273,16 @@ export class RbacService implements OnModuleInit {
     });
   }
 
-  /** Xóa role (soft delete) */
+  /**
+   * Soft deletes a role by its slug.
+   */
   async deleteRole(slug: string) {
     const role = await this.findRoleBySlug(slug);
 
-    // Không cho phép xóa role hệ thống
     if (role.isSystem) {
       throw new ForbiddenException('Không thể xóa role hệ thống');
     }
 
-    // Kiểm tra role có đang được sử dụng không
     const userCount = await this.prisma.userRole.count({ where: { roleId: role.id } });
     if (userCount > 0) {
       throw new ForbiddenException(`Không thể xóa role đang được sử dụng bởi ${userCount} user(s)`);
@@ -283,7 +294,9 @@ export class RbacService implements OnModuleInit {
     });
   }
 
-  /** Gỡ role khỏi user */
+  /**
+   * Removes a role from a user.
+   */
   async removeRoleFromUser(userId: string, roleSlug: string) {
     await this.ensureActiveUser(userId);
 
@@ -296,13 +309,14 @@ export class RbacService implements OnModuleInit {
       where: { userId_roleId: { userId, roleId: role.id } },
     });
 
-    // Invalidate cache for the affected user
     this.permissionCacheService.clearCache(userId).catch(() => null);
 
     return result;
   }
 
-  /** Lấy danh sách roles của user */
+  /**
+   * Retrieves all roles assigned to a user.
+   */
   async getUserRoles(userId: string) {
     await this.ensureActiveUser(userId);
 
@@ -315,7 +329,9 @@ export class RbacService implements OnModuleInit {
     return userRoles;
   }
 
-  /** Gỡ permission khỏi user */
+  /**
+   * Removes a permission directly from a user.
+   */
   async removePermissionFromUser(userId: string, permissionSlug: string) {
     await this.ensureActiveUser(userId);
 
@@ -330,13 +346,14 @@ export class RbacService implements OnModuleInit {
       where: { userId_permissionId: { userId, permissionId: permission.id } },
     });
 
-    // Invalidate cache for the affected user
     this.permissionCacheService.clearCache(userId).catch(() => null);
 
     return result;
   }
 
-  /** Lấy danh sách permissions direct của user (UserPermission + Permission) */
+  /**
+   * Retrieves direct permission overrides assigned to a user.
+   */
   async getUserPermissionAssignments(userId: string) {
     await this.ensureActiveUser(userId);
 
@@ -349,7 +366,9 @@ export class RbacService implements OnModuleInit {
     return userPermissions;
   }
 
-  /** Gỡ permission khỏi role */
+  /**
+   * Removes a permission assignment from a role.
+   */
   async removePermissionFromRole(roleSlug: string, permissionSlug: string) {
     const role = await this.prisma.role.findUnique({ where: { slug: roleSlug } });
     const permission = await this.prisma.permission.findUnique({
@@ -359,7 +378,7 @@ export class RbacService implements OnModuleInit {
       throw new NotFoundException('Role or Permission not found');
     }
 
-    // gather users first, then delete the role-permission mapping and invalidate their caches
+    // Retrieve affected users, delete the mapping, and invalidate their caches
     const usersWithRole = await this.prisma.userRole.findMany({
       where: { roleId: role.id },
       select: { userId: true },
@@ -376,9 +395,9 @@ export class RbacService implements OnModuleInit {
     return result;
   }
 
-  // ==================== PERMISSION CRUD ====================
-
-  /** Lấy danh sách tất cả permissions */
+  /**
+   * Retrieves all permissions.
+   */
   async findAllPermissions() {
     return this.prisma.permission.findMany({
       include: {
@@ -393,7 +412,9 @@ export class RbacService implements OnModuleInit {
     });
   }
 
-  /** Lấy permission theo slug (slug được lưu ở cột `action`) */
+  /**
+   * Retrieves a permission by its action slug.
+   */
   async findPermissionBySlug(slug: string) {
     const permission = await this.prisma.permission.findUnique({
       where: { action: slug },
@@ -414,7 +435,9 @@ export class RbacService implements OnModuleInit {
     return permission;
   }
 
-  /** Tạo mới permission */
+  /**
+   * Creates a new permission.
+   */
   async createPermission(data: {
     slug: string;
     name: string;
@@ -422,7 +445,6 @@ export class RbacService implements OnModuleInit {
     module?: string;
     action?: string;
   }) {
-    // Kiểm tra slug (được map vào cột action) đã tồn tại chưa
     const existing = await this.prisma.permission.findUnique({ where: { action: data.slug } });
     if (existing) {
       throw new ForbiddenException(`Permission với slug "${data.slug}" đã tồn tại`);
@@ -433,13 +455,14 @@ export class RbacService implements OnModuleInit {
         name: data.name,
         description: data.description,
         module: data.module as any,
-        // Lưu business slug (vd: "product.category.create") vào cột `action`
         action: data.slug,
       },
     });
   }
 
-  /** Cập nhật permission */
+  /**
+   * Updates a permission by its action slug.
+   */
   async updatePermission(
     slug: string,
     data: { name?: string; description?: string; module?: string; action?: string },
@@ -447,7 +470,6 @@ export class RbacService implements OnModuleInit {
     await this.findPermissionBySlug(slug);
 
     return this.prisma.permission.update({
-      // slug map vào cột action
       where: { action: slug },
       data: {
         name: data.name,
@@ -458,11 +480,12 @@ export class RbacService implements OnModuleInit {
     });
   }
 
-  /** Xóa permission */
+  /**
+   * Deletes a permission by its action slug.
+   */
   async deletePermission(slug: string) {
     const permission = await this.findPermissionBySlug(slug);
 
-    // Kiểm tra permission có đang được sử dụng không
     const roleCount = await this.prisma.rolePermission.count({
       where: { permissionId: permission.id },
     });
@@ -476,7 +499,6 @@ export class RbacService implements OnModuleInit {
       );
     }
 
-    // slug map vào cột action
     return this.prisma.permission.delete({ where: { action: slug } });
   }
 

@@ -13,25 +13,22 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { OrderStatusEnum, PaymentMethodEnum, Prisma } from '@prisma/client';
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryAllocatorService } from '../../inventory/inventory-allocator.service';
 import { InventoryService } from '../../inventory/inventory.service';
 import { MailService } from '../../mail/mail.service';
+import { AdminCreateOrderDto } from '../dto/admin-create-order.dto';
 import { CreateOrderWithPaymentDto } from '../dto/create-order-with-payment.dto';
 import { OrderPaymentResponseDto } from '../dto/order-payment-response.dto';
 import { PaymentFlowStatus } from '../enums/payment-flow-status.enum';
-import { OrderStatusValidator } from '../utils/order-status.validator';
 import { CheckoutTokenService } from './checkout-token.service';
-import { PriceEngineService } from './price-engine.service';
 import { CheckoutValidator } from './checkout-validator.service';
-import { AdminCreateOrderDto } from '../dto/admin-create-order.dto';
-
-
+import { PriceEngineService } from './price-engine.service';
 
 /**
- * Staff+ (L8) Internal Type Extension
- * Bracketing the Prisma type lag with strict shadow interfaces.
+ * Internal type extension for Prisma order operations.
+ * Resolves type compatibility constraints for exchange rates and currency fields.
  */
 type HardenedOrderCreateInput = Prisma.OrderCreateInput & {
   exchangeRate: number | Prisma.Decimal;
@@ -47,10 +44,8 @@ type HardenedTx = Prisma.TransactionClient & {
 };
 
 /**
- * OrderPaymentService
- *
- * Core orchestrator for Order-Payment integration flow.
- * Enforces Staff-level invariants and state-machine transitions.
+ * Order payment service.
+ * Handles the core orchestration of order and payment integration flow.
  */
 @Injectable()
 export class OrderPaymentService {
@@ -73,12 +68,10 @@ export class OrderPaymentService {
     private readonly currencyService: CurrencyService,
     private readonly priceEngine: PriceEngineService,
     private readonly checkoutValidator: CheckoutValidator,
-  ) { }
-
-
+  ) {}
 
   /**
-   * Step 1: Validate cart and reserve inventory (snapshot)
+   * Validates checkout cart and reserves inventory snapshot.
    */
   async validateCheckout(
     userId?: string,
@@ -103,7 +96,6 @@ export class OrderPaymentService {
       const { totals } = this.calculateOrderTotals(cart.items, variants);
       const expiresAt = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
       const cartHash = this.checkoutValidator.generateCartHash(cart.items);
-
 
       const checkoutToken = await this.checkoutTokenService.generateToken({
         cartHash,
@@ -134,7 +126,7 @@ export class OrderPaymentService {
   }
 
   /**
-   * Step 2: Create order with payment integration
+   * Creates an order with payment integration.
    */
   async createOrderWithPayment(
     dto: CreateOrderWithPaymentDto,
@@ -144,7 +136,7 @@ export class OrderPaymentService {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
       this.logger.log(`Creating order: method=${dto.paymentMethod}, userId=${userId}`);
 
-      // 1. Authoritative Guest & Token Ownership Checks
+      // Validate guest token and verify checkout token ownership
       await this.checkoutValidator.validateGuest(dto.guestEmail, dto.guestVerifyToken);
 
       const tokenPayload = await this.checkoutTokenService.verifyToken(dto.checkoutToken);
@@ -152,17 +144,22 @@ export class OrderPaymentService {
 
       const idempotencyKey = tokenPayload.jti;
 
-      // 2. Global Idempotency Check using authoritative JTI
+      // Check request idempotency using the token identifier
       const existingOrder = await this.prisma.order.findUnique({
         where: { idempotencyKey },
         include: { transactions: true },
       });
       if (existingOrder) {
         this.logger.warn(`Idempotent request for JTI ${idempotencyKey}: returning existing order`);
-        return this.buildOrderPaymentResponse(existingOrder, existingOrder.transactions[0], null, false);
+        return this.buildOrderPaymentResponse(
+          existingOrder,
+          existingOrder.transactions[0],
+          null,
+          false,
+        );
       }
 
-      // 3. Fetch current state and cross-verify with token snapshot
+      // Retrieve current cart status and validate against token snapshot
       const { cart, variants } = await this.getCartAndVariants(userId, sessionId);
       if (!cart || cart.items.length === 0) throw new BadRequestException('Cart is empty');
 
@@ -181,8 +178,7 @@ export class OrderPaymentService {
         tokenPayload.lineItems,
       );
 
-
-      // 4. Atomic Execution (Saga Step 1: Record Intent & Reserve)
+      // Create order record and reserve inventory inside transaction
       const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
       const targetCurrency = dto.paymentMethod === PaymentMethodEnum.PAYPAL ? 'USD' : 'VND';
       const exchangeRate = await this.currencyService.getRate(targetCurrency);
@@ -237,7 +233,7 @@ export class OrderPaymentService {
         return { order, payment };
       });
 
-      // 5. External Interaction (Saga Step 2: Payment Gateway Integration)
+      // Integrate with payment gateway provider
       let paymentUrl: string | null = null;
       if (dto.paymentMethod !== PaymentMethodEnum.VIETQR) {
         try {
@@ -251,13 +247,13 @@ export class OrderPaymentService {
           );
         } catch (error) {
           this.logger.error(`[Saga] Payment Gateway failure for Order ${result.order.id}`, error);
-          // ⚠️ Saga Compensation: If external gateway fails, we MUST revert the DB transaction state
+          // Revert order status and release inventory if the payment gateway is unreachable
           await this.cancelOrderAndReleaseInventory(result.order.id, 'Payment gateway unreachable');
           throw new BadRequestException('Payment system currently unavailable. Order cancelled.');
         }
       }
 
-      // 6. Completion (Saga Step 3: Access Control & Response)
+      // Generate access token and build response
       const orderAccessToken = await this.jwtService.signAsync(
         { orderId: result.order.id, sub: 'order_access' },
         { secret: this.configService.get('JWT_CHECKOUT_SECRET'), expiresIn: '1h' },
@@ -273,14 +269,12 @@ export class OrderPaymentService {
     });
   }
 
-
   async confirmOrder(orderId: string, tx?: Prisma.TransactionClient): Promise<void> {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
       this.logger.log(`Confirming order: ${orderId}`);
 
       const executeInTransaction = async (currentTx: Prisma.TransactionClient) => {
-        // 1. Pessimistic Lock (L8 Production Standard)
-        // We lock the Order record to prevent race conditions between callback and syncStatus.
+        // Lock the order record to prevent race conditions during concurrent updates
         const orders = await currentTx.$queryRawUnsafe<any[]>(
           `SELECT * FROM "Order" WHERE "id" = $1 FOR UPDATE`,
           orderId,
@@ -292,17 +286,16 @@ export class OrderPaymentService {
           return;
         }
 
-        // 2. Idempotency Gate (Post-lock)
+        // Skip processing if the order is already confirmed
         if (order.status === OrderStatusEnum.CONFIRMED) {
           this.logger.log(`Order ${orderId} already confirmed. Skipping.`);
           return;
         }
 
-        // 3. Status Transition Validation
+        // Validate status transition
         // OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.CONFIRMED);
 
-        // 4. Atomic Side Effects
-        // Deduction (Reserve -> Confirm)
+        // Deduct inventory items
         await this.inventoryService.deduct(orderId, currentTx);
 
         // Update Order Status and Version
@@ -316,7 +309,7 @@ export class OrderPaymentService {
           },
         });
 
-        // Audit Trail with Sequence Version
+        // Create audit trail entry for status change
         await currentTx.orderTimeline.create({
           data: {
             orderId,
@@ -329,14 +322,14 @@ export class OrderPaymentService {
           },
         });
 
-        // Reliable Notification (Transactional Outbox)
+        // Send order confirmation email
         const recipientEmail = order.userId
           ? (
-            await currentTx.user.findUnique({
-              where: { id: order.userId },
-              select: { email: true },
-            })
-          )?.email
+              await currentTx.user.findUnique({
+                where: { id: order.userId },
+                select: { email: true },
+              })
+            )?.email
           : order.guestEmail;
 
         if (recipientEmail) {
@@ -383,7 +376,7 @@ export class OrderPaymentService {
           );
         }
 
-        // Clear Cart
+        // Clear cart items for the user session
         await currentTx.cart.deleteMany({
           where: order.userId ? { userId: order.userId } : { sessionId: order.sessionId },
         });
@@ -463,7 +456,6 @@ export class OrderPaymentService {
       },
     };
   }
-
 
   private assertPricingInvariant(params: {
     subTotal: number;
@@ -569,8 +561,6 @@ export class OrderPaymentService {
     });
   }
 
-
-
   private buildOrderPaymentResponse(
     order: any,
     payment: any,
@@ -606,7 +596,7 @@ export class OrderPaymentService {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
       this.logger.log(`Admin creating order for customer=${dto.customerId || dto.customerEmail}`);
 
-      // 1. Allocate inventory
+      // Allocate inventory
       const allocations = await this.inventoryAllocator.allocate(
         dto.items.map((item) => ({
           variantId: item.variantId,
@@ -614,20 +604,20 @@ export class OrderPaymentService {
         })),
       );
 
-      // 2. Fetch variants for mapping
+      // Retrieve product variants for details
       const variantIds = dto.items.map((item) => item.variantId);
       const variants = await this.prisma.productVariant.findMany({
         where: { id: { in: variantIds } },
         include: { product: true },
       });
 
-      // 3. Calculate totals
+      // Calculate order totals
       const subTotal = dto.items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
       const totalAmount = subTotal + this.SHIPPING_FEE;
       const orderCode = this.generateOrderCode();
       const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
 
-      // 4. Save order & reserve stock atomically
+      // Create order and reserve stock atomically
       const order = await this.prisma.$transaction(async (tx) => {
         const hardenedTx = tx as HardenedTx;
         const createdOrder = await hardenedTx.order.create({
@@ -668,9 +658,12 @@ export class OrderPaymentService {
                 const variant = variants.find((v) => v.id === item.variantId);
                 return {
                   productVariantId: item.variantId,
-                  productName: typeof variant?.product?.name === 'string'
-                    ? variant.product.name
-                    : (variant?.product?.name as any)?.vi || (variant?.product?.name as any)?.en || 'Sản phẩm',
+                  productName:
+                    typeof variant?.product?.name === 'string'
+                      ? variant.product.name
+                      : (variant?.product?.name as any)?.vi ||
+                        (variant?.product?.name as any)?.en ||
+                        'Product',
                   sku: variant?.sku || '',
                   variantTitle: variant?.variantTitle || {},
                   quantity: item.quantity,
@@ -683,7 +676,7 @@ export class OrderPaymentService {
           include: { items: true },
         });
 
-        // 5. Reserve stock
+        // Reserve inventory stock
         await this.inventoryService.reserve(
           createdOrder.id,
           allocations,
@@ -692,7 +685,7 @@ export class OrderPaymentService {
           dto.customerId,
         );
 
-        // 6. Audit Trail
+        // Create audit trail entry
         await tx.orderTimeline.create({
           data: {
             orderId: createdOrder.id,
@@ -706,15 +699,26 @@ export class OrderPaymentService {
         return createdOrder;
       });
 
-      // 7. Send Confirmation Email
-      const recipientEmail = dto.customerEmail || 
-        (dto.customerId ? (await this.prisma.user.findUnique({ where: { id: dto.customerId }, select: { email: true } }))?.email : null);
+      // Send order confirmation email
+      const recipientEmail =
+        dto.customerEmail ||
+        (dto.customerId
+          ? (
+              await this.prisma.user.findUnique({
+                where: { id: dto.customerId },
+                select: { email: true },
+              })
+            )?.email
+          : null);
 
       if (recipientEmail) {
         try {
           await this.mailService.sendAdminOrderConfirmation(recipientEmail, order, dto);
         } catch (mailError) {
-          this.logger.error(`Failed to send order confirmation email to ${recipientEmail}`, mailError);
+          this.logger.error(
+            `Failed to send order confirmation email to ${recipientEmail}`,
+            mailError,
+          );
           // We intentionally swallow the error here so the order creation API succeeds
         }
       }

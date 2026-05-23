@@ -10,7 +10,7 @@ export class OrderRecoveryController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   @Post(':id/resend-confirmation')
   @UseGuards(JwtAccessGuard)

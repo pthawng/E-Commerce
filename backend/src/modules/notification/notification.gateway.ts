@@ -1,13 +1,12 @@
+import { Logger } from '@nestjs/common';
 import {
-  WebSocketGateway,
-  WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
-import { AdminJwtAccessGuard } from '../auth/guard/admin-access-jwt.guard';
 
 @WebSocketGateway({
   namespace: 'notifications',
@@ -25,7 +24,7 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   private userSockets = new Map<string, Set<string>>();
 
   handleConnection(client: Socket) {
-    // In production, we'd verify JWT here. 
+    // In production, we'd verify JWT here.
     // For now, we expect the client to emit 'join' with their userId.
     this.logger.log(`Client connected: ${client.id}`);
   }
@@ -45,7 +44,7 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   @SubscribeMessage('join')
   handleJoin(client: Socket, userId: string) {
     if (!userId) return;
-    
+
     if (!this.userSockets.has(userId)) {
       this.userSockets.set(userId, new Set());
     }

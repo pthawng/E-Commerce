@@ -22,7 +22,9 @@ export class StorageService {
     this.client = createClient(url, serviceKey);
   }
 
-  // Upload buffer
+  /**
+   * Uploads a file buffer to storage.
+   */
   async upload(path: string, file: Express.Multer.File) {
     const { error } = await this.client.storage.from(this.bucket).upload(path, file.buffer, {
       upsert: true,
@@ -31,18 +33,22 @@ export class StorageService {
 
     if (error) throw error;
 
-    // trả signed URL nếu bucket private
+    // Returns public or signed URL depending on bucket configuration
     return this.getPublicUrl(path);
   }
 
-  // Generate public URL (hoặc signed)
+  /**
+   * Generates a public URL for a given path.
+   */
   getPublicUrl(path: string) {
     const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
 
     return data.publicUrl;
   }
 
-  // Signed URL
+  /**
+   * Generates a signed URL for temporary access to a private file.
+   */
   async getSignedUrl(path: string, expiresInSec = 3600) {
     const { data, error } = await this.client.storage
       .from(this.bucket)
@@ -53,7 +59,9 @@ export class StorageService {
     return data.signedUrl;
   }
 
-  // Delete file
+  /**
+   * Deletes a file from storage.
+   */
   async delete(path: string) {
     const { error } = await this.client.storage.from(this.bucket).remove([path]);
 

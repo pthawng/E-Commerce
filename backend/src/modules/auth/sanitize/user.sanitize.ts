@@ -1,15 +1,13 @@
 import type { User } from '@shared';
 
-export function sanitizeUser(
-  user: any,
-): User {
+export function sanitizeUser(user: any): User {
   const roles = user.userRoles?.map((ur: any) => ur.role.slug) || [];
 
   // 1. Get base role permissions
   const effectivePermissions = new Set<string>(
-    user.userRoles?.flatMap((ur: any) =>
-      ur.role.rolePermissions?.map((rp: any) => rp.permission.action) || []
-    ).filter(Boolean) || []
+    user.userRoles
+      ?.flatMap((ur: any) => ur.role.rolePermissions?.map((rp: any) => rp.permission.action) || [])
+      .filter(Boolean) || [],
   );
 
   // 2. Apply explicit user overrides

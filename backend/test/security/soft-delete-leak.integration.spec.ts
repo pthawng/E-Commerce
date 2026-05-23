@@ -4,17 +4,17 @@ import { IntegrationTestBase } from '../utils/integration-test-base';
 /**
  * INTEGRATION TEST: Soft-Delete Raw Query Leak Detection
  *
- * L8 Philosophy: Trust but verify. The Prisma Extension provides
+ * Trust but verify. The Prisma Extension provides
  * automatic filtering via ORM methods. This test suite verifies:
  *
- * 1. ORM methods (findMany, count, aggregate) NEVER return soft-deleted records.
- * 2. Raw SQL WITHOUT filter CAN still see deleted records (documented risk).
- * 3. Raw SQL WITH "deletedAt IS NULL" filter works correctly.
+ * - ORM methods (findMany, count, aggregate) never return soft-deleted records.
+ * - Raw SQL without filters can still see deleted records (documented risk).
+ * - Raw SQL with a "deletedAt IS NULL" filter works correctly.
  *
- * The purpose of test #2 is to ACT AS AN ALARM — it is the enforcement
- * mechanism. If a future developer patches the raw query to remove the
- * filter, this test catches it. If raw queries start failing test #2,
- * it means RLS needs to be implemented at the DB level.
+ * The purpose of test #2 is to act as an alarm to enforce that
+ * if a developer patches raw queries to remove filters, this test will catch it.
+ * If raw queries start failing this test, it indicates database-level Row Level Security
+ * needs to be implemented.
  */
 describe('[Integration] Soft-Delete Safety', () => {
   const base = new IntegrationTestBase();
@@ -83,10 +83,10 @@ describe('[Integration] Soft-Delete Safety', () => {
   });
 
   /**
-   * ⚠️ RISK DOCUMENTATION TEST
-   * This test INTENTIONALLY demonstrates the raw query bypass risk.
+   * Risk documentation test
+   * This test intentionally demonstrates the raw query bypass risk.
    * If this starts failing (i.e., raw queries stop showing deleted records),
-   * it likely means RLS has been implemented — which is the desired end state.
+   * it likely means database-level Row Level Security has been implemented.
    */
   it('$queryRaw WITHOUT deletedAt filter CAN leak soft-deleted records (documented risk)', async () => {
     const results = await prisma.$queryRaw<{ id: string }[]>`

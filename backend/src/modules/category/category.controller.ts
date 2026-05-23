@@ -1,24 +1,9 @@
-import { Permission } from '@modules/rbac/decorators/permission.decorator';
 import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
-import { PERMISSIONS } from '@modules/rbac/permissions.constants';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public.decorator';
 import { CategoryService } from './category.service';
 import { CategoryTreeQueryDto } from './dto/category-tree-query.dto';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('categories')
 @Controller('categories')

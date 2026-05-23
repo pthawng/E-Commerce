@@ -1,4 +1,4 @@
-import { Controller, Sse, MessageEvent } from '@nestjs/common';
+import { Controller, MessageEvent, Sse } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable, fromEvent, map } from 'rxjs';
 

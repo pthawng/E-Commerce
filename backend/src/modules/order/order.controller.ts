@@ -89,4 +89,3 @@ export class OrderController {
     return this.orderService.getOrder(id, principal);
   }
 }
-

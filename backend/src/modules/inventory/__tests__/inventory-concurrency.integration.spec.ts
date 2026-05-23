@@ -5,14 +5,11 @@ import { IntegrationTestBase } from '../../../../test/utils/integration-test-bas
 /**
  * INTEGRATION TEST: Inventory Concurrency (Deterministic)
  *
- * L8 Philosophy: This test validates the DATABASE BEHAVIOR directly —
- * the row-level lock (SELECT ... FOR UPDATE NOWAIT) + atomic reservation.
+ * Direct database behavior validation for row-level locking (SELECT ... FOR UPDATE NOWAIT)
+ * and atomic reservations.
  *
- * We do NOT import InventoryService here because that drags in NestJS DI
- * and context decorators. Instead, we test the exact SQL pattern that
- * InventoryService executes, against real Postgres.
- *
- * This is more pure: we own the assertion surface area completely.
+ * We do not import InventoryService here to avoid NestJS dependency injection overhead.
+ * Instead, we test the exact SQL pattern executed by the service against a Postgres database.
  */
 describe('[Integration] Inventory Concurrency', () => {
   const base = new IntegrationTestBase();
@@ -75,8 +72,7 @@ describe('[Integration] Inventory Concurrency', () => {
   });
 
   /**
-   * Executes the same lock+reserve logic as InventoryService.reserve()
-   * using a raw pg connection.
+   * Executes the same lock and reserve logic as the service using a raw Postgres connection.
    */
   async function tryReserve(requestId: number): Promise<'success' | 'locked' | 'insufficient'> {
     const client = await pool.connect();
@@ -112,7 +108,7 @@ describe('[Integration] Inventory Concurrency', () => {
       return 'success';
     } catch (err: any) {
       await client.query('ROLLBACK').catch(() => {});
-      // 55P03 = lock_not_available (NOWAIT)
+      // PostgreSQL error 55P03 represents lock_not_available
       if (err.code === '55P03') return 'locked';
       throw err;
     } finally {
@@ -151,8 +147,8 @@ describe('[Integration] Inventory Concurrency', () => {
 
   it('should maintain DB invariant after contention (quantity unchanged)', async () => {
     const item = await prisma.inventoryItem.findUnique({ where: { id: inventoryItemId } });
-    // quantity itself is only decremented on deduct, not on reserve
+    // Quantity is only decremented on deduct, not on reserve
     expect(item!.quantity).toBe(INITIAL_STOCK);
-    expect(item!.reservedQuantity).toBe(0); // fresh beforeEach — no reservations yet
+    expect(item!.reservedQuantity).toBe(0); // Fresh beforeEach with no active reservations
   });
 });

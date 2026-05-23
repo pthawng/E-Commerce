@@ -49,9 +49,10 @@ export class UserResponseDto implements Omit<User, 'deletedAt'> {
   @Expose()
   @Transform(({ obj }) => {
     const direct = obj.userPermissions?.map((up: any) => up.permission?.action) || [];
-    const fromRoles = obj.userRoles?.flatMap((ur: any) =>
-      ur.role?.rolePermissions?.map((rp: any) => rp.permission?.action) || []
-    ) || [];
+    const fromRoles =
+      obj.userRoles?.flatMap(
+        (ur: any) => ur.role?.rolePermissions?.map((rp: any) => rp.permission?.action) || [],
+      ) || [];
     return Array.from(new Set([...direct, ...fromRoles])).filter(Boolean);
   })
   permissions: string[];

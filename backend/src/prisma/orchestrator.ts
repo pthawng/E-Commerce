@@ -59,7 +59,7 @@ async function main() {
           logger.log(`⚙️ Applying ${seed.version}: ${seed.name}...`);
 
           await prisma.$transaction(async (tx) => {
-            // @ts-ignore - tx as prisma is usually fine for basic operations
+            // @ts-expect-error - tx as prisma is usually fine for basic operations
             await seed.run(tx);
             await SeedHistoryTracker.markApplied(tx as any, seed);
           });

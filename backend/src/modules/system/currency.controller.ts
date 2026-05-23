@@ -3,7 +3,14 @@ import { AdminJwtAccessGuard } from '@modules/auth/guard/admin-access-jwt.guard'
 import { Permission } from '@modules/rbac/decorators/permission.decorator';
 import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
 import { PERMISSIONS } from '@modules/rbac/permissions.constants';
-import { Controller, Get, Logger, Query, ServiceUnavailableException, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Logger,
+  Query,
+  ServiceUnavailableException,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrencyService } from './currency.service';
 
@@ -32,7 +39,9 @@ async function resolveRates(currencyService: CurrencyService, targets?: string) 
     }
 
     unavailable.push(target);
-    logger.warn(`Exchange rate unavailable for ${target}: ${result.reason?.message ?? 'unknown error'}`);
+    logger.warn(
+      `Exchange rate unavailable for ${target}: ${result.reason?.message ?? 'unknown error'}`,
+    );
   });
 
   if (Object.keys(rates).length === 0) {

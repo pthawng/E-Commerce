@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import * as crypto from 'crypto';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class WebhookIdempotencyService {
@@ -42,14 +42,18 @@ export class WebhookIdempotencyService {
           // If it's been processing for too long (e.g., > 5 mins), we might want to allow a retry
           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
           if (existing.processedAt < fiveMinutesAgo) {
-            this.logger.warn(`Webhook ${provider}:${externalTxnId} stuck in PROCESSING for >5m. Allowing retry.`);
+            this.logger.warn(
+              `Webhook ${provider}:${externalTxnId} stuck in PROCESSING for >5m. Allowing retry.`,
+            );
             await this.prisma.processedWebhook.update({
               where: { id: existing.id },
               data: { status: 'PROCESSING', processedAt: new Date() },
             });
             return true;
           }
-          this.logger.warn(`Webhook ${provider}:${externalTxnId} is currently being processed by another worker.`);
+          this.logger.warn(
+            `Webhook ${provider}:${externalTxnId} is currently being processed by another worker.`,
+          );
           return false;
         }
 
@@ -77,12 +81,14 @@ export class WebhookIdempotencyService {
   }
 
   async fail(provider: string, externalTxnId: string, error: string): Promise<void> {
-    await this.prisma.processedWebhook.update({
-      where: { provider_externalTxnId: { provider, externalTxnId } },
-      data: {
-        status: 'FAILED',
-        metadata: { error, failedAt: new Date().toISOString() },
-      },
-    }).catch(err => this.logger.error(`Failed to mark webhook as failed: ${err.message}`));
+    await this.prisma.processedWebhook
+      .update({
+        where: { provider_externalTxnId: { provider, externalTxnId } },
+        data: {
+          status: 'FAILED',
+          metadata: { error, failedAt: new Date().toISOString() },
+        },
+      })
+      .catch((err) => this.logger.error(`Failed to mark webhook as failed: ${err.message}`));
   }
 }

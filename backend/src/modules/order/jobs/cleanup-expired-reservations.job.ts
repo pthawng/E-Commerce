@@ -15,7 +15,7 @@ export class CleanupExpiredReservationsJob {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventoryService: InventoryService,
-  ) { }
+  ) {}
 
   /**
    * Cron job: Runs every minute

@@ -6,17 +6,17 @@ const INTERNAL_TOKEN = 'dev_internal_token_123';
 
 async function main() {
   console.log('🚀 Starting AI Re-indexing...');
-  
+
   const products = await prisma.product.findMany({
     where: { deletedAt: null },
     include: {
-      categories: { 
-        include: { 
-          category: true 
-        } 
+      categories: {
+        include: {
+          category: true,
+        },
       },
-      media: true
-    }
+      media: true,
+    },
   });
 
   console.log(`📦 Found ${products.length} products. Syncing to Qdrant...`);
@@ -28,13 +28,15 @@ async function main() {
     // Map JSON localized values to plain strings
     const name = (p.name as any)?.vi || (p.name as any)?.en || 'No Name';
     const description = (p.description as any)?.vi || (p.description as any)?.en || '';
-    
+
     // Get category name
     const catNameObj = p.categories[0]?.category?.name;
-    const category = catNameObj ? ((catNameObj as any)?.vi || (catNameObj as any)?.en) : 'Uncategorized';
-    
+    const category = catNameObj
+      ? (catNameObj as any)?.vi || (catNameObj as any)?.en
+      : 'Uncategorized';
+
     // Get thumbnail
-    const thumbnail = p.media.find(m => m.isThumbnail)?.url || p.media[0]?.url || '';
+    const thumbnail = p.media.find((m) => m.isThumbnail)?.url || p.media[0]?.url || '';
 
     const payload = {
       id: p.id,
@@ -47,7 +49,7 @@ async function main() {
       isActive: p.isActive,
       isFeatured: p.isFeatured,
       updatedAt: p.updatedAt.toISOString(),
-      locale: 'vi'
+      locale: 'vi',
     };
 
     try {
@@ -55,9 +57,9 @@ async function main() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Internal-Token': INTERNAL_TOKEN
+          'X-Internal-Token': INTERNAL_TOKEN,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (res.ok || res.status === 202) {
@@ -79,14 +81,14 @@ async function main() {
   console.log(`\n✨ AI Re-indexing complete!`);
   console.log(`✅ Success: ${success}`);
   console.log(`❌ Failed: ${failed}`);
-  
+
   if (success > 0) {
     console.log('💡 All products are now indexed in Qdrant and ready for AI Search.');
   }
 }
 
 main()
-  .catch(e => {
+  .catch((e) => {
     console.error('💥 Fatal error during re-indexing:', e);
     process.exit(1);
   })

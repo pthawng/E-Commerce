@@ -1,25 +1,25 @@
+import { UserResponseDto } from '@modules/user/dto/user-response.dto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { PaginationDto, PaginationService, type PaginatedResult } from 'src/common/pagination';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { GuestCustomerResponseDto } from './dto/guest-customer-response.dto';
-import { UserResponseDto } from '@modules/user/dto/user-response.dto';
 import type { User } from '@shared';
 import argon2 from 'argon2';
 import { plainToInstance } from 'class-transformer';
+import { PaginationDto, PaginationService, type PaginatedResult } from 'src/common/pagination';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { GuestCustomerResponseDto } from './dto/guest-customer-response.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paginationService: PaginationService,
-  ) { }
+  ) {}
 
-  // ---------------------------
-  // CREATE USER
-  // ---------------------------
+  /**
+   * Creates a new user.
+   */
   async create(dto: CreateUserDto): Promise<User> {
     // Check unique email
     const existEmail = await this.prisma.user.findUnique({
@@ -55,9 +55,9 @@ export class UserService {
     return plainToInstance(UserResponseDto, user);
   }
 
-  // ---------------------------
-  // GET ALL USERS
-  // ---------------------------
+  /**
+   * Retrieves all users.
+   */
   async findAll(): Promise<User[]> {
     const users = await this.prisma.user.findMany({
       where: { deletedAt: null },
@@ -69,9 +69,9 @@ export class UserService {
     });
   }
 
-  // ---------------------------
-  // GET ALL USERS (PAGINATED)
-  // ---------------------------
+  /**
+   * Retrieves a paginated list of users with lifetime value metrics.
+   */
   async findAllUserPaginated(dto: PaginationDto): Promise<PaginatedResult<User>> {
     type PrismaUser = Prisma.UserGetPayload<Record<string, never>>;
     type UserWhereInput = Prisma.UserWhereInput;
@@ -100,7 +100,6 @@ export class UserService {
             ...this.userInclude,
             _count: { select: { orders: true } },
           },
-
         });
       },
       count: (args) => {
@@ -116,18 +115,18 @@ export class UserService {
       joinCount: 1,
     });
 
-    // 3. Post-processing: Bulk calculate LTVs for the page items (Efficient)
+    // Bulk calculate lifetime values for the paginated items
     const userIds = result.items.map((u: any) => u.id);
     const ltvAgg = await this.prisma.order.groupBy({
       by: ['userId'],
       where: {
         userId: { in: userIds },
-        status: { not: 'CANCELLED' as any }
+        status: { not: 'CANCELLED' as any },
       },
-      _sum: { totalAmount: true }
+      _sum: { totalAmount: true },
     });
 
-    const ltvMap = new Map(ltvAgg.map(a => [a.userId, Number(a._sum.totalAmount || 0)]));
+    const ltvMap = new Map(ltvAgg.map((a) => [a.userId, Number(a._sum.totalAmount || 0)]));
 
     const items = result.items.map((u: any) => {
       const orderCount = u._count?.orders ?? 0;
@@ -150,16 +149,15 @@ export class UserService {
       return mapped;
     });
 
-
     return {
       ...result,
       items,
     };
   }
 
-  // ---------------------------
-  // GET ONE USER
-  // ---------------------------
+  /**
+   * Retrieves a single user by ID.
+   */
   async findOne(id: string): Promise<User> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
@@ -171,19 +169,20 @@ export class UserService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    // 1. Calculate intelligence metrics
+    // Calculate patron intelligence metrics
     const orderCount = (user as any)._count?.orders ?? 0;
-    const ltv = (user as any).orders?.reduce((acc: number, o: any) => {
-      const amt = Number(o.totalAmount);
-      return acc + (isNaN(amt) ? 0 : amt);
-    }, 0) ?? 0;
+    const ltv =
+      (user as any).orders?.reduce((acc: number, o: any) => {
+        const amt = Number(o.totalAmount);
+        return acc + (isNaN(amt) ? 0 : amt);
+      }, 0) ?? 0;
 
-    // 2. Strip internal types
+    // Strip internal database fields
     const { _count, orders, ...userPlain } = user as any;
 
     const mapped: any = plainToInstance(UserResponseDto, userPlain);
 
-    // 3. Hydrate
+    // Hydrate response properties
     mapped.orderCount = orderCount;
     mapped.ltv = ltv;
 
@@ -191,20 +190,19 @@ export class UserService {
   }
 
   /**
-   * Guest Customer Registry (FAANG Aggregation pattern)
-   * Optimized for scale: Uses database-level distinct counting and aggregation.
+   * Retrieves a paginated list of guest customers with lifetime value metrics.
    */
   async findAllGuestCustomersPaginated(dto: any) {
     const page = Number(dto.page || 1);
     const limit = Number(dto.limit || 20);
     const skip = (page - 1) * limit;
 
-    // 1. Fetch aggregated guest data (O(limit) scan)
+    // Fetch aggregated guest transaction details
     const guestCounts = await this.prisma.order.groupBy({
       by: ['guestEmail'],
       where: {
         userId: null,
-        guestEmail: { not: null, notIn: [''] }
+        guestEmail: { not: null, notIn: [''] },
       },
       _count: { _all: true },
       _sum: { totalAmount: true },
@@ -214,19 +212,17 @@ export class UserService {
       take: limit,
     });
 
-    // 2. Optimized Total Count (Avoid distinct in-memory count)
-    // For large scale, we use a cached estimate or a specific count query
+    // Retrieve the total count of guest customer orders
     const totalCountResult = await this.prisma.order.aggregate({
       where: { userId: null, guestEmail: { not: null, notIn: [''] } },
       _count: { guestEmail: true },
     });
-    
-    // Note: Accurate distinct count in Prisma for millions of records is expensive.
-    // In L9, we would use a HyperLogLog or a denormalized table.
-    // For now, we use a high-performance distinct count if supported, or estimate.
+
+    // Accurate distinct count in Prisma for large datasets is expensive.
+    // Large scale data may require a denormalized view or hyperloglog representation.
     const total = totalCountResult._count.guestEmail;
 
-    const items = guestCounts.map(g => ({
+    const items = guestCounts.map((g) => ({
       email: g.guestEmail,
       orderCount: g._count._all,
       ltv: Number(g._sum.totalAmount || 0),
@@ -247,10 +243,9 @@ export class UserService {
     };
   }
 
-
-  // ---------------------------
-  // UPDATE USER
-  // ---------------------------
+  /**
+   * Updates an existing user's information.
+   */
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
@@ -273,14 +268,14 @@ export class UserService {
       if (existPhone) throw new BadRequestException('Phone already exists');
     }
 
-    // Hash password nếu client gửi
+    // Hash password if provided by the client
     const passwordHash = dto.password
       ? await argon2.hash(dto.password, {
-        type: argon2.argon2id,
-        timeCost: 2,
-        memoryCost: 19456,
-        parallelism: 1,
-      })
+          type: argon2.argon2id,
+          timeCost: 2,
+          memoryCost: 19456,
+          parallelism: 1,
+        })
       : undefined;
 
     const updated = await this.prisma.user.update({
@@ -326,9 +321,9 @@ export class UserService {
     };
   }
 
-  // ---------------------------
-  // SOFT DELETE USER
-  // ---------------------------
+  /**
+   * Performs a soft delete on a user by setting the deletion timestamp.
+   */
   async softDelete(id: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
@@ -344,65 +339,65 @@ export class UserService {
   }
 
   /**
-   * FAANG L8: Patron Strategic Analytics for Concierge Desk
-   * Optimized for extreme scale: Performs aggregation at the database level.
+   * Retrieves patron strategic analytics using database-level aggregations.
    */
   async getPatronStrategicStats() {
-    // 1. Fetch Top 100 Patrons by LTV using Database Aggregation (Efficient)
+    // Fetch the top patrons by lifetime value using database aggregation
     const topPatronsAgg = await this.prisma.order.groupBy({
       by: ['userId'],
       where: {
         userId: { not: null },
-        status: { not: 'CANCELLED' as any }
+        status: { not: 'CANCELLED' as any },
       },
       _sum: { totalAmount: true },
       orderBy: { _sum: { totalAmount: 'desc' } },
-      take: 100
+      take: 100,
     });
 
-    // 2. Fetch names for these top patrons in a single bulk query
-    const userIds = topPatronsAgg.map(p => p.userId as string);
+    // Retrieve names for the top patrons in a single query
+    const userIds = topPatronsAgg.map((p) => p.userId as string);
     const users = await this.prisma.user.findMany({
       where: { id: { in: userIds } },
-      select: { id: true, fullName: true }
+      select: { id: true, fullName: true },
     });
 
-    const userMap = new Map(users.map(u => [u.id, u.fullName]));
+    const userMap = new Map(users.map((u) => [u.id, u.fullName]));
 
-    const patronMetrics = topPatronsAgg.map(p => ({
+    const patronMetrics = topPatronsAgg.map((p) => ({
       id: p.userId,
       fullName: userMap.get(p.userId as string) || 'Unknown Patron',
       ltv: Number(p._sum.totalAmount || 0),
     }));
 
-    // 3. Overall stats calculation using aggregations (O(1) memory)
+    // Calculate overall statistics using database aggregation
     const overallStats = await this.prisma.order.aggregate({
       where: {
         userId: { not: null },
-        status: { not: 'CANCELLED' as any }
+        status: { not: 'CANCELLED' as any },
       },
       _sum: { totalAmount: true },
       _count: { userId: true },
     });
 
     const uniquePatronCount = await this.prisma.user.count({
-      where: { deletedAt: null }
+      where: { deletedAt: null },
     });
 
     const totalLtv = Number(overallStats._sum.totalAmount || 0);
     const averageLtv = uniquePatronCount > 0 ? totalLtv / uniquePatronCount : 0;
 
     const bespokeInquiries = await this.prisma.order.count({
-      where: { status: 'IN_PRODUCTION' as any }
+      where: { status: 'IN_PRODUCTION' as any },
     });
 
     return {
-      topPatron: patronMetrics[0] ? { name: patronMetrics[0].fullName, ltv: patronMetrics[0].ltv } : null,
+      topPatron: patronMetrics[0]
+        ? { name: patronMetrics[0].fullName, ltv: patronMetrics[0].ltv }
+        : null,
       averageLtv: Number(averageLtv.toFixed(2)),
       newInquiries: bespokeInquiries,
       patronCount: uniquePatronCount,
-      topPatrons: patronMetrics.slice(0, 5)
+      topPatrons: patronMetrics.slice(0, 5),
     };
   }
-
 }

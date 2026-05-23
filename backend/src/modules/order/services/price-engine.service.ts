@@ -1,6 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 
 export interface PriceSnapshot {
   subtotal: number;
@@ -31,7 +29,7 @@ export class PriceEngineService {
   }): PriceSnapshot {
     const currency = params.currency || 'VND';
     const exchangeRate = params.exchangeRate || 1.0;
-    
+
     // 1. Calculate Subtotal (Base currency: VND)
     const subtotal = params.items.reduce((sum, item) => {
       return sum + Math.round(item.price * item.quantity);
@@ -39,7 +37,7 @@ export class PriceEngineService {
 
     const shipping = params.shippingFee ?? this.DEFAULT_SHIPPING_FEE;
     const discount = params.discountAmount ?? 0;
-    
+
     // 2. Calculate Tax
     const tax = params.taxRate ? Math.round((subtotal - discount) * params.taxRate) : 0;
 
@@ -61,7 +59,7 @@ export class PriceEngineService {
   }
 
   /**
-   * Enforces strict financial rules. 
+   * Enforces strict financial rules.
    * Throws PRICING_INVARIANT_VIOLATION if the math doesn't add up.
    */
   private assertInvariants(snapshot: Omit<PriceSnapshot, 'currency' | 'exchangeRate'>) {
@@ -69,7 +67,9 @@ export class PriceEngineService {
     const drift = Math.abs(expected - snapshot.total);
 
     if (drift > 0) {
-      this.logger.error(`[PriceEngine] Invariant Violation: expected=${expected}, actual=${snapshot.total}, drift=${drift}`);
+      this.logger.error(
+        `[PriceEngine] Invariant Violation: expected=${expected}, actual=${snapshot.total}, drift=${drift}`,
+      );
       throw new ConflictException({
         code: 'PRICING_INVARIANT_VIOLATION',
         message: 'Order total calculation drift detected.',
@@ -82,7 +82,7 @@ export class PriceEngineService {
    * Useful for PayPal/USD checkouts.
    */
   convertToDisplay(amount: number, exchangeRate: number): number {
-    // For USD, we round to 2 decimal places. 
+    // For USD, we round to 2 decimal places.
     // For VND, we round to 0 decimal places.
     if (exchangeRate === 1) return Math.round(amount);
     return Number((amount * exchangeRate).toFixed(2));

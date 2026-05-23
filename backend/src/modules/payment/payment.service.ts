@@ -23,15 +23,15 @@ import {
 } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
-import { OrderPaymentService } from '../order/services/order-payment.service';
 import { LedgerIntegrationService } from '../ledger/ledger-integration.service';
+import { OrderPaymentService } from '../order/services/order-payment.service';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { PayPalProvider } from './providers/paypal/paypal.provider';
 import { VietQRProvider } from './providers/vietqr/vietqr.provider';
 import { VNPayProvider } from './providers/vnpay/vnpay.provider';
 import { IdempotencyService } from './services/idempotency.service';
-import { WebhookIdempotencyService } from './services/webhook-idempotency.service';
 import { PaymentStateMachine } from './services/payment-state.machine';
+import { WebhookIdempotencyService } from './services/webhook-idempotency.service';
 import {
   CallbackData,
   IPaymentGatewayProvider,
@@ -216,7 +216,9 @@ export class PaymentService {
         callbackData,
       );
       if (!isNew) {
-        this.logger.warn(`Webhook ${verifiedData.transactionId} already processed or processing (DB).`);
+        this.logger.warn(
+          `Webhook ${verifiedData.transactionId} already processed or processing (DB).`,
+        );
         return verifiedData;
       }
 
@@ -227,7 +229,11 @@ export class PaymentService {
           `Concurrent execution detected for transaction ${verifiedData.transactionId}`,
         );
         // If we can't get the lock, we must fail the idempotency record so it can be retried
-        await this.webhookIdempotency.fail(paymentMethod, verifiedData.transactionId, 'Concurrent lock timeout');
+        await this.webhookIdempotency.fail(
+          paymentMethod,
+          verifiedData.transactionId,
+          'Concurrent lock timeout',
+        );
         throw new ConflictException('Payment processing in progress. Please retry.');
       }
 
@@ -333,9 +339,10 @@ export class PaymentService {
           await tx.paymentTransaction.update({
             where: { id: transaction.id },
             data: {
-              status: verifiedData.status === TransactionStatus.SUCCESS
-                ? TransactionStatusEnum.success
-                : TransactionStatusEnum.failed,
+              status:
+                verifiedData.status === TransactionStatus.SUCCESS
+                  ? TransactionStatusEnum.success
+                  : TransactionStatusEnum.failed,
               gatewayResponse: verifiedData.gatewayResponse,
               rawPayload: verifiedData.gatewayResponse,
               captureId: verifiedData.gatewayResponse?.captureId || null,
@@ -347,7 +354,7 @@ export class PaymentService {
           const allTs = await tx.paymentTransaction.findMany({
             where: { paymentId: payment.id },
           });
-          const transactionStatuses = allTs.map(t => t.status);
+          const transactionStatuses = allTs.map((t) => t.status);
 
           // Use our new derivation logic (Fix 3 Requirement)
           const { derivePaymentStatus } = await import('./payment-status.derive');
@@ -357,7 +364,8 @@ export class PaymentService {
             where: { id: payment.id },
             data: {
               status: finalPaymentStatus,
-              verifiedAt: finalPaymentStatus === PaymentProcessingStatus.SUCCESS ? new Date() : undefined,
+              verifiedAt:
+                finalPaymentStatus === PaymentProcessingStatus.SUCCESS ? new Date() : undefined,
             },
           });
 
@@ -427,7 +435,11 @@ export class PaymentService {
         await this.webhookIdempotency.complete(paymentMethod, verifiedData.transactionId);
         return verifiedData;
       } catch (error) {
-        await this.webhookIdempotency.fail(paymentMethod, verifiedData.transactionId, error.message);
+        await this.webhookIdempotency.fail(
+          paymentMethod,
+          verifiedData.transactionId,
+          error.message,
+        );
         throw error;
       } finally {
         await this.idempotencyService.releaseLock(executionKey, lockToken);
@@ -443,7 +455,7 @@ export class PaymentService {
         where: { id: paymentId },
         include: {
           order: true,
-          transactions: { orderBy: { createdAt: 'desc' }, take: 1 }
+          transactions: { orderBy: { createdAt: 'desc' }, take: 1 },
         },
       });
 
@@ -505,21 +517,24 @@ export class PaymentService {
           await tx.paymentTransaction.update({
             where: { id: lastTx.id },
             data: {
-              status: verifiedData.status === TransactionStatus.SUCCESS ? TransactionStatusEnum.success : TransactionStatusEnum.failed,
+              status:
+                verifiedData.status === TransactionStatus.SUCCESS
+                  ? TransactionStatusEnum.success
+                  : TransactionStatusEnum.failed,
               gatewayResponse: verifiedData.gatewayResponse,
-            }
+            },
           });
 
           // 2. Refetch all transactions and derive status
           const allTs = await tx.paymentTransaction.findMany({ where: { paymentId } });
           const { derivePaymentStatus } = await import('./payment-status.derive');
-          const finalStatus = derivePaymentStatus(allTs.map(t => t.status));
+          const finalStatus = derivePaymentStatus(allTs.map((t) => t.status));
 
           await tx.payment.update({
             where: { id: paymentId },
             data: {
               status: finalStatus,
-              verifiedAt: finalStatus === PaymentProcessingStatus.SUCCESS ? new Date() : undefined
+              verifiedAt: finalStatus === PaymentProcessingStatus.SUCCESS ? new Date() : undefined,
             },
           });
 
@@ -673,9 +688,9 @@ export class PaymentService {
           where: {
             orderId,
             status: PaymentProcessingStatus.INIT,
-            transactions: { some: { provider: 'VIETQR' } }
+            transactions: { some: { provider: 'VIETQR' } },
           },
-          include: { transactions: true }
+          include: { transactions: true },
         });
 
         if (!vietqrPayment) throw new BadRequestException('No pending VIETQR payment found');
@@ -687,7 +702,9 @@ export class PaymentService {
         );
 
         // 1. Update/Create Transaction
-        const lastTx = vietqrPayment.transactions.find(t => t.status === TransactionStatusEnum.pending) || vietqrPayment.transactions[0];
+        const lastTx =
+          vietqrPayment.transactions.find((t) => t.status === TransactionStatusEnum.pending) ||
+          vietqrPayment.transactions[0];
 
         if (lastTx) {
           await tx.paymentTransaction.update({
@@ -700,9 +717,11 @@ export class PaymentService {
         }
 
         // 2. Derive and update Payment status
-        const allTs = await tx.paymentTransaction.findMany({ where: { paymentId: vietqrPayment.id } });
+        const allTs = await tx.paymentTransaction.findMany({
+          where: { paymentId: vietqrPayment.id },
+        });
         const { derivePaymentStatus } = await import('./payment-status.derive');
-        const finalStatus = derivePaymentStatus(allTs.map(t => t.status));
+        const finalStatus = derivePaymentStatus(allTs.map((t) => t.status));
 
         await tx.payment.update({
           where: { id: vietqrPayment.id },
@@ -898,7 +917,11 @@ export class PaymentService {
 
   private hasAmountMismatch(
     paymentMethod: PaymentMethodEnum,
-    transaction: { amount: Prisma.Decimal | number; amountUsd?: Prisma.Decimal | number | null; exchangeRate?: Prisma.Decimal | number | null },
+    transaction: {
+      amount: Prisma.Decimal | number;
+      amountUsd?: Prisma.Decimal | number | null;
+      exchangeRate?: Prisma.Decimal | number | null;
+    },
     verifiedData: CallbackData,
   ): boolean {
     const verifiedAmount = Number(verifiedData.amount);

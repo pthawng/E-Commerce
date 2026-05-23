@@ -6,35 +6,33 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class PermissionCacheService {
   private readonly logger = new Logger(PermissionCacheService.name);
-  private readonly TTL = 1800 * 1000; // 30 phút
+  private readonly TTL = 1800 * 1000; // 30 minutes
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
-   * Lấy quyền của User (Ưu tiên Cache -> Fallback DB)
-   * Chiến lược: Cache-Aside
+   * Retrieves permissions for a user using a cache-aside strategy.
    */
   async getPermissions(userId: string): Promise<string[]> {
     const key = `auth:permissions:${userId}`;
 
-    // 1. Kiểm tra cache Redis
+    // Check Redis cache
     try {
       const cached = await this.cacheManager.get<string[]>(key);
       if (cached) {
-        // this.logger.debug(`Hit cache for user ${userId}`);
         return cached;
       }
     } catch (error) {
       this.logger.error('Redis error', error);
-      // Không throw error, để nó chạy xuống query DB
+      // Do not throw error, fallback to database query
     }
 
-    // 2. Cache Miss -> Query DB (Logic gộp quyền Role + Permission lẻ)
+    // Cache miss, retrieve permissions from database
     const permissions = await this.fetchPermissionsFromDb(userId);
 
-    // 3. Save to Cache (Fire and forget - không cần await để tăng tốc response)
+    // Save to cache without awaiting to optimize response time
     this.cacheManager
       .set(key, permissions, this.TTL)
       .catch((e) => this.logger.error('Failed to set cache', e));
@@ -43,7 +41,7 @@ export class PermissionCacheService {
   }
 
   /**
-   * Xóa Cache khi có thay đổi (Invalidation)
+   * Clears the cached permissions for a user.
    */
   async clearCache(userId: string) {
     const key = `auth:permissions:${userId}`;
@@ -51,7 +49,7 @@ export class PermissionCacheService {
     this.logger.log(`Cleared permission cache for user ${userId}`);
   }
 
-  // --- Private Helper: Logic Query DB phức tạp nằm ở đây ---
+  // Complex database query logic for fetching permissions
   private async fetchPermissionsFromDb(userId: string): Promise<string[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -71,7 +69,7 @@ export class PermissionCacheService {
 
     if (!user) return [];
 
-    // 1. Roles baseline
+    // Populate permissions baseline from roles
     const rolePermissions = new Set<string>();
     user.userRoles.forEach((ur) => {
       ur.role.rolePermissions.forEach((rp) => {
@@ -81,7 +79,7 @@ export class PermissionCacheService {
       });
     });
 
-    // 2. Resolve Overrides (ALLOW / DENY)
+    // Resolve allowance and denial overrides
     const allowOverrides = user.userPermissions
       .filter((up) => up.effect === 'ALLOW')
       .map((up) => up.permission.action)
@@ -94,7 +92,7 @@ export class PermissionCacheService {
         .filter((a): a is string => Boolean(a)),
     );
 
-    // 3. Final Composite: (Roles + ALLOW) - DENY
+    // Calculate effective permissions
     const effectiveSet = new Set([...rolePermissions, ...allowOverrides]);
     for (const denied of denyOverrides) {
       effectiveSet.delete(denied);

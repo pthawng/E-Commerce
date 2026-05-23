@@ -7,12 +7,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActionType, LuxurySegment, OrderStatusEnum, PaymentStatusEnum, Prisma } from '@prisma/client';
+import { LuxurySegment, OrderStatusEnum, PaymentStatusEnum, Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { IOwnable } from 'src/common/interfaces/ownable.interface';
 import { Principal, PrincipalType } from 'src/common/types/principal.types';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStateMachine } from './utils/order-state-machine';
 
 export enum TimelineActorType {
@@ -31,7 +30,7 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly ownershipRegistry: OwnershipRegistry,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   // ============================================
   // PUBLIC API
@@ -44,8 +43,6 @@ export class OrderService {
       customerId: userId,
     });
   }
-
-
 
   async getOrder(id: string, principal: Principal) {
     const order = await this.prisma.order.findUnique({
@@ -107,26 +104,32 @@ export class OrderService {
       OrderStatusEnum.SHIPPED,
     ];
 
-    const [total, processing, completed, issues, backlogValuation, deliverySla] = await Promise.all([
-      this.prisma.order.count(),
-      this.prisma.order.count({ where: { status: { in: activeStatuses } } }),
-      this.prisma.order.count({ where: { status: OrderStatusEnum.COMPLETED } }),
-      this.prisma.order.count({ 
-        where: { status: { in: [OrderStatusEnum.CANCELLED, OrderStatusEnum.RETURNED, OrderStatusEnum.REFUNDED] } } 
-      }),
-      this.prisma.order.aggregate({
-        _sum: { totalAmount: true },
-        where: { status: { in: activeStatuses } },
-      }),
-      this.prisma.order.count({
-        where: {
-          status: { in: activeStatuses },
-          createdAt: {
-            lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // > 24h
+    const [total, processing, completed, issues, backlogValuation, deliverySla] = await Promise.all(
+      [
+        this.prisma.order.count(),
+        this.prisma.order.count({ where: { status: { in: activeStatuses } } }),
+        this.prisma.order.count({ where: { status: OrderStatusEnum.COMPLETED } }),
+        this.prisma.order.count({
+          where: {
+            status: {
+              in: [OrderStatusEnum.CANCELLED, OrderStatusEnum.RETURNED, OrderStatusEnum.REFUNDED],
+            },
           },
-        },
-      }),
-    ]);
+        }),
+        this.prisma.order.aggregate({
+          _sum: { totalAmount: true },
+          where: { status: { in: activeStatuses } },
+        }),
+        this.prisma.order.count({
+          where: {
+            status: { in: activeStatuses },
+            createdAt: {
+              lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // > 24h
+            },
+          },
+        }),
+      ],
+    );
 
     return {
       total,
@@ -152,7 +155,6 @@ export class OrderService {
   }) {
     this.logger.debug(`[OrderPagination] Incoming DTO: ${JSON.stringify(dto)}`);
     try {
-
       const limit = Math.min(Number(dto.limit || 20), 100);
       const { search, status, sort, customerId, guestEmail, cursor } = dto;
       const queue = dto.queue?.toLowerCase();
@@ -247,9 +249,8 @@ export class OrderService {
       }
 
       const total = await this.prisma.order.count({ where });
-      
-      this.logger.debug(`[OrderPagination] Filter: ${JSON.stringify(where)} | Total: ${total}`);
 
+      this.logger.debug(`[OrderPagination] Filter: ${JSON.stringify(where)} | Total: ${total}`);
 
       const mappedItems = items.map((item) => ({
         ...item,
@@ -257,7 +258,7 @@ export class OrderService {
       }));
 
       const totalPages = Math.ceil(total / limit);
-      
+
       return {
         items: mappedItems,
         /** @deprecated Use `items` instead. Will be removed in v2. */
@@ -273,14 +274,17 @@ export class OrderService {
         },
         links: {
           self: `/admin/orders?page=${dto.page || 1}&limit=${limit}`,
-          next: Number(dto.page || 1) < totalPages ? `/admin/orders?page=${Number(dto.page || 1) + 1}&limit=${limit}` : null,
-          prev: Number(dto.page || 1) > 1 ? `/admin/orders?page=${Number(dto.page || 1) - 1}&limit=${limit}` : null,
-        }
+          next:
+            Number(dto.page || 1) < totalPages
+              ? `/admin/orders?page=${Number(dto.page || 1) + 1}&limit=${limit}`
+              : null,
+          prev:
+            Number(dto.page || 1) > 1
+              ? `/admin/orders?page=${Number(dto.page || 1) - 1}&limit=${limit}`
+              : null,
+        },
       };
-
-
     } catch (error) {
-
       this.logger.error('Error fetching paginated orders:', error);
       throw error;
     }
@@ -354,7 +358,7 @@ export class OrderService {
             oldStatus: order.status,
             newStatus: nextStatus,
             actorId,
-            stateMetadata: (updatedOrder as any).stateMetadata
+            stateMetadata: (updatedOrder as any).stateMetadata,
           },
           status: 'PENDING',
         },
@@ -512,14 +516,14 @@ export class OrderService {
     // Phase 3 Architecture: Event-Driven Choreography via Transactional Outbox
     // We completely decouple the Order Domain from the Inventory Domain.
     // Instead of inline N+1 Postgres locks, we emit a domain event that the Inventory Service will consume.
-    
+
     await tx.domainEventOutbox.create({
       data: {
         eventType: 'inventory.reserve_requested',
         payload: {
           orderId,
           orderCode,
-          items: cartItems.map(item => ({
+          items: cartItems.map((item) => ({
             productVariantId: item.productVariantId,
             quantity: item.quantity,
           })),

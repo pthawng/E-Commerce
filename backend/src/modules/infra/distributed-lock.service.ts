@@ -5,9 +5,7 @@ import Redis from 'ioredis';
 export class DistributedLockService {
   private readonly logger = new Logger(DistributedLockService.name);
 
-  constructor(
-    @Inject('REDIS_CLIENT') private readonly redis: Redis
-  ) {}
+  constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
 
   /**
    * FAANG-Grade Distributed Lock (Redlock algorithm equivalent)
@@ -21,11 +19,11 @@ export class DistributedLockService {
     try {
       const result = await this.redis.set(lockKey, lockValue, 'PX', ttlMs, 'NX');
       const acquired = result === 'OK';
-      
+
       if (acquired) {
         this.logger.debug(`[DistributedLock] Acquired lock for: ${resourceKey}`);
       }
-      
+
       return acquired;
     } catch (error) {
       this.logger.error(`[DistributedLock] Error acquiring lock for: ${resourceKey}`, error);
@@ -39,9 +37,9 @@ export class DistributedLockService {
    */
   async releaseLock(resourceKey: string): Promise<void> {
     const lockKey = `lock:${resourceKey}`;
-    
+
     // For full Redlock-compliance, we would pass the original lockValue.
-    // In this MVP, we simply DEL. 
+    // In this MVP, we simply DEL.
     try {
       await this.redis.del(lockKey);
       this.logger.debug(`[DistributedLock] Released lock for: ${resourceKey}`);

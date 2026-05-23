@@ -1,24 +1,7 @@
-import { Permission } from '@modules/rbac/decorators/permission.decorator';
 import { PermissionGuard } from '@modules/rbac/guards/rbac.guard';
-import { PERMISSIONS } from '@modules/rbac/permissions.constants';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AttributeService } from './attribute.service';
-import { CreateAttributeValueDto } from './dto/create-attribute-value.dto';
-import { CreateAttributeDto } from './dto/create-attribute.dto';
-import { UpdateAttributeValueDto } from './dto/update-attribute-value.dto';
-import { UpdateAttributeDto } from './dto/update-attribute.dto';
 
 @ApiTags('attributes')
 @Controller('attributes')

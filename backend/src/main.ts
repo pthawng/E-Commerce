@@ -19,7 +19,7 @@ register({
 import { getConfig, validateEnv } from '@config/env.validator';
 import * as dotenv from 'dotenv';
 
-// Load environment variable file and Validate/Freeze BEFORE anything else
+// Load environment variables and validate configuration before other imports
 const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
 dotenv.config({ path: envFile });
 validateEnv();
@@ -45,7 +45,6 @@ async function bootstrap() {
 
   // Support Render.com proxy trust for correct rate limiting
   if (isProduction) {
-    // @ts-ignore - set() exists on Express instance
     app.getHttpAdapter().getInstance().set('trust proxy', TRUST_PROXY_DEPTH);
     Logger.log(`🛡️ Trust Proxy set to depth: ${TRUST_PROXY_DEPTH}`, 'Bootstrap');
   }
@@ -53,7 +52,7 @@ async function bootstrap() {
   app.useLogger(isProduction ? ['error', 'warn'] : ['log', 'debug', 'error', 'warn', 'verbose']);
   app.use(cookieParser());
 
-  // 🔍 Request Tracepoint
+  // Request tracepoint
   app.use((req: any, res: any, next: any) => {
     if (req.method !== 'OPTIONS') {
       Logger.log(`[INCOMING] ${req.method} ${req.url}`, 'NetworkTrace');
@@ -64,7 +63,7 @@ async function bootstrap() {
     exclude: ['/'],
   });
 
-  // CORS Configuration
+  // CORS configuration
   Logger.log(`🔒 CORS origins: ${corsOrigins.join(', ')}`, 'Bootstrap');
 
   app.enableCors({
@@ -76,19 +75,19 @@ async function bootstrap() {
     exposedHeaders: ['x-csrf-token', 'x-correlation-id'],
   });
 
-  // Bật global validation pipe ( Chuẩn hóa dữ liệu đầu vào )
+  // Enable global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Chỉ nhận field có trong DTO
-      forbidNonWhitelisted: true, // Nếu client gửi field thừa → 400
-      transform: true, // Tự cast type (string → number)
+      whitelist: true, // Strip non-whitelisted properties
+      forbidNonWhitelisted: true, // Reject requests with unknown properties
+      transform: true, // Automatically transform payload types
       transformOptions: { enableImplicitConversion: true },
     }),
   );
 
-  // Bật global response interceptor ( Chuẩn hóa dữ liệu đầu ra )
+  // Enable global response interceptor
   app.useGlobalInterceptors(new ResponseInterceptor());
-  // Bật global exception filter ( Chuẩn hóa lỗi trả về )
+  // Enable global exception filter
   app.useGlobalFilters(new AllExceptionFilter());
 
   const config = new DocumentBuilder()
