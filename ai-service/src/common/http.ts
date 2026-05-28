@@ -5,7 +5,8 @@ export async function requestJson<T>(
   url: string,
   init: RequestInit & { timeoutMs?: number; maxRetries?: number } = {},
 ): Promise<T> {
-  const { timeoutMs = 5000, maxRetries = 2, headers, ...rest } = init;
+  const { timeoutMs: rawTimeout = 5000, maxRetries = 2, headers, ...rest } = init;
+  const timeoutMs = isNaN(Number(rawTimeout)) ? 5000 : Number(rawTimeout);
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -29,7 +30,7 @@ export async function requestJson<T>(
 
       if (!response.ok) {
         const error = new AiHttpError(`HTTP ${response.status} for ${url}`, response.status, payload ?? rawText);
-        
+
         // Retry only on 503 (Service Unavailable) or 429 (Rate Limit)
         if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
           lastError = error;
@@ -44,7 +45,7 @@ export async function requestJson<T>(
       if (attempt === maxRetries) throw err;
     }
   }
-  
+
   throw lastError;
 }
 

@@ -21,7 +21,7 @@ export const UserMenu: React.FC<{ isOpaque?: boolean }> = ({ isOpaque = false })
       console.error('Failed to clear cart during logout:', err);
     }
 
-    clearAuth();
+    await clearAuth();
     navigate('/');
   };
 

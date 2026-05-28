@@ -29,8 +29,8 @@ export class GeminiClient implements ChatProvider, EmbeddingProvider {
     this.apiKey = this.configService.get<string>('GEMINI_API_KEY')!;
     this.embeddingModel = this.configService.get<string>('GEMINI_EMBEDDING_MODEL', 'gemini-embedding-001');
     this.chatModel = this.configService.get<string>('GEMINI_CHAT_MODEL', 'gemini-flash-latest');
-    this.requestTimeoutMs = this.configService.get<number>('AI_REQUEST_TIMEOUT_MS', 5000);
-    this.dimensions = this.configService.get<number>('AI_EMBEDDING_DIMENSIONS', 768);
+    this.requestTimeoutMs = Number(this.configService.get<number>('AI_REQUEST_TIMEOUT_MS', 5000));
+    this.dimensions = Number(this.configService.get<number>('AI_EMBEDDING_DIMENSIONS', 768));
   }
 
   async createEmbedding(input: string): Promise<number[]> {

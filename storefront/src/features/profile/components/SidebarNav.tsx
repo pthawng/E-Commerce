@@ -10,8 +10,8 @@ export const SidebarNav: React.FC = () => {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    clearAuth();
+  const handleLogout = async () => {
+    await clearAuth();
     navigate('/');
   };
 

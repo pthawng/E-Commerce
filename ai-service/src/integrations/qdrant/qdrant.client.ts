@@ -38,6 +38,7 @@ export interface QdrantSearchOptions {
 export class QdrantClient {
   private readonly logger = new Logger(QdrantClient.name);
   private collectionReady = false;
+  private collectionInitPromise?: Promise<void>;
   private readonly breaker: CircuitBreaker;
   private readonly baseUrl: string;
   private readonly collectionName: string;
@@ -48,19 +49,32 @@ export class QdrantClient {
   constructor(private readonly configService: ConfigService) {
     this.baseUrl = this.configService.get<string>('QDRANT_URL')!.replace(/\/$/, '');
     this.collectionName = this.configService.get<string>('QDRANT_COLLECTION', 'products');
-    this.vectorSize = this.configService.get<number>('AI_EMBEDDING_DIMENSIONS', 768);
-    this.requestTimeoutMs = this.configService.get<number>('AI_REQUEST_TIMEOUT_MS', 5000);
+    this.vectorSize = Number(this.configService.get<number>('AI_EMBEDDING_DIMENSIONS', 768));
+    this.requestTimeoutMs = Number(this.configService.get<number>('AI_REQUEST_TIMEOUT_MS', 5000));
     this.apiKey = this.configService.get<string>('QDRANT_API_KEY');
-    
+
     this.breaker = new CircuitBreaker({
       name: 'qdrant-db',
-      failureThreshold: this.configService.get<number>('CIRCUIT_BREAKER_THRESHOLD', 5),
+      failureThreshold: Number(this.configService.get<number>('CIRCUIT_BREAKER_THRESHOLD', 5)),
     });
   }
 
   async ensureCollection(): Promise<void> {
     if (this.collectionReady) return;
 
+    if (!this.collectionInitPromise) {
+      this.collectionInitPromise = this.doEnsureCollection();
+    }
+
+    try {
+      await this.collectionInitPromise;
+    } catch (error) {
+      this.collectionInitPromise = undefined;
+      throw error;
+    }
+  }
+
+  private async doEnsureCollection(): Promise<void> {
     const headers = this.headers();
     const collectionUrl = this.collectionUrl();
 
@@ -108,7 +122,7 @@ export class QdrantClient {
   async upsert(record: VectorRecord & { sparseVector?: any }): Promise<void> {
     await this.ensureCollection();
 
-    await this.breaker.execute(() => 
+    await this.breaker.execute(() =>
       requestJson(this.pointsUrl(), {
         method: 'PUT',
         timeoutMs: this.requestTimeoutMs,
@@ -117,7 +131,7 @@ export class QdrantClient {
           points: [
             {
               id: record.id,
-              vector: record.sparseVector 
+              vector: record.sparseVector
                 ? { default: record.vector, text: record.sparseVector }
                 : { default: record.vector },
               payload: record.payload,
@@ -131,7 +145,7 @@ export class QdrantClient {
   async getVector(productId: string): Promise<number[]> {
     await this.ensureCollection();
 
-    const response = await this.breaker.execute(() => 
+    const response = await this.breaker.execute(() =>
       requestJson<QdrantRetrieveResponse>(this.pointsUrl(), {
         method: 'POST',
         timeoutMs: this.requestTimeoutMs,
@@ -180,7 +194,7 @@ export class QdrantClient {
       body.using = 'default';
     }
 
-    const response = await this.breaker.execute(() => 
+    const response = await this.breaker.execute(() =>
       requestJson<QdrantSearchResponse>(this.queryUrl(), {
         method: 'POST',
         timeoutMs: this.requestTimeoutMs,

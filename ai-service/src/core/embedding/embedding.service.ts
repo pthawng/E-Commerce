@@ -20,11 +20,11 @@ export class EmbeddingService {
     @InjectRedis() private readonly redis: Redis,
     private readonly configService: ConfigService,
   ) {
-    this.expectedDimensions = this.configService.get<number>('AI_EMBEDDING_DIMENSIONS', 768);
+    this.expectedDimensions = Number(this.configService.get<number>('AI_EMBEDDING_DIMENSIONS', 768));
     this.ttlSeconds = 24 * 60 * 60; // 24 hours
     this.breaker = new CircuitBreaker({
       name: 'embedding-provider',
-      failureThreshold: this.configService.get<number>('CIRCUIT_BREAKER_THRESHOLD', 5),
+      failureThreshold: Number(this.configService.get<number>('CIRCUIT_BREAKER_THRESHOLD', 5)),
     });
   }
 

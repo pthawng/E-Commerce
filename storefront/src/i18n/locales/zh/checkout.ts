@@ -64,5 +64,15 @@ export default {
         retryPayment: '重启协议',
         contactSupport: '咨询 Maison',
         backToHome: '返回首页',
+    },
+    validation: {
+        nameTooShort: '姓名太短',
+        nameTooLong: '姓名太长',
+        invalidPhone: '手机号码格式不正确',
+        invalidEmail: '电子邮件地址无效',
+        addressTooShort: '地址太短',
+        wardRequired: '必须填写街道/乡镇',
+        districtRequired: '必须填写区/县',
+        provinceRequired: '必须填写省/市',
     }
 };

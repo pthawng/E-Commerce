@@ -21,6 +21,12 @@ export const useAuthStore = create<AuthState>()(
       },
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       clearAuth: async () => {
+        try {
+          const { apiPost } = await import('@/services/apiClient');
+          await apiPost('/api/auth/logout', {});
+        } catch (error) {
+          console.error('Failed to call logout API:', error);
+        }
         set({ user: null, isAuthenticated: false });
         // Clear cart on logout
         const { useCartStore } = await import('@/features/cart/store/useCartStore');

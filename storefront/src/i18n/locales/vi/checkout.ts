@@ -66,5 +66,15 @@ export default {
         retryPayment: 'Bắt Đầu Lại Giao Thức',
         contactSupport: 'Tư Vấn Maison',
         backToHome: 'Về Trang Chủ',
+    },
+    validation: {
+        nameTooShort: 'Họ tên quá ngắn',
+        nameTooLong: 'Họ tên quá dài',
+        invalidPhone: 'Định dạng số điện thoại không hợp lệ',
+        invalidEmail: 'Địa chỉ email không hợp lệ',
+        addressTooShort: 'Địa chỉ quá ngắn',
+        wardRequired: 'Phường/Xã là bắt buộc',
+        districtRequired: 'Quận/Huyện là bắt buộc',
+        provinceRequired: 'Tỉnh/Thành phố là bắt buộc',
     }
 };

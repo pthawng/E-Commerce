@@ -5,13 +5,13 @@ import { z } from 'zod';
  * Ensures strict address, email, and phone formatting
  */
 export const CheckoutShippingSchemaV1: z.ZodType<CheckoutShippingV1> = z.object({
-  fullName: z.string().trim().min(2, 'Name too short').max(100, 'Name too long'),
-  phone: z.string().trim().regex(/^[0-9+]{8,15}$/, 'Invalid phone number format'),
-  email: z.string().trim().email('Invalid email address').max(150),
-  addressLine: z.string().trim().min(5, 'Address too short').max(200),
-  ward: z.string().trim().min(1, 'Ward required').max(100),
-  district: z.string().trim().min(1, 'District required').max(100),
-  province: z.string().trim().min(1, 'Province required').max(100),
+  fullName: z.string().trim().min(2, 'checkout.validation.nameTooShort').max(100, 'checkout.validation.nameTooLong'),
+  phone: z.string().trim().regex(/^[0-9+]{8,15}$/, 'checkout.validation.invalidPhone'),
+  email: z.string().trim().email('checkout.validation.invalidEmail').max(150),
+  addressLine: z.string().trim().min(5, 'checkout.validation.addressTooShort').max(200),
+  ward: z.string().trim().min(1, 'checkout.validation.wardRequired').max(100),
+  district: z.string().trim().min(1, 'checkout.validation.districtRequired').max(100),
+  province: z.string().trim().min(1, 'checkout.validation.provinceRequired').max(100),
 });
 
 export const CreateOrderSchemaV1 = z.object({

@@ -284,6 +284,9 @@ export class AuthService {
    */
   async logout(dto: import('@modules/auth/dto/logout.dto').LogoutDto) {
     try {
+      if (!dto.refreshToken) {
+        return { message: 'Logged out successfully' };
+      }
       const payload = (await this.jwtService.decode(dto.refreshToken)) as any;
       const jti = payload?.jti;
       if (!jti) return { message: 'Logged out successfully' };

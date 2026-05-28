@@ -183,9 +183,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng xuất (Thu hồi refresh token)' })
   @ApiOkResponse({ description: 'Đăng xuất thành công' })
-  async logout(@Body() dto: LogoutDto, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Body() dto: LogoutDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     clearAuthCookies(res);
-    return this.authService.logout(dto);
+    const token = dto.refreshToken || req.cookies?.['refreshToken'];
+    return this.authService.logout({ refreshToken: token });
   }
 
   @Public()

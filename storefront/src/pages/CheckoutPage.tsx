@@ -209,7 +209,7 @@ export const CheckoutPage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-[10px] text-destructive mt-1 flex items-center gap-1 font-body lowercase tracking-wide"
             >
-                <AlertCircle className="w-2.5 h-2.5" /> {error.message}
+                <AlertCircle className="w-2.5 h-2.5" /> {t(error.message)}
             </motion.p>
         );
     };

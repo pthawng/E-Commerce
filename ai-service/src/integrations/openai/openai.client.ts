@@ -21,8 +21,9 @@ export class OpenAiClient implements ChatProvider, EmbeddingProvider {
     this.apiKey = this.configService.get<string>('OPENAI_API_KEY')!;
     this.embeddingModel = this.configService.get<string>('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small');
     this.chatModel = this.configService.get<string>('OPENAI_CHAT_MODEL', 'gpt-4o-mini');
-    this.requestTimeoutMs = this.configService.get<number>('AI_REQUEST_TIMEOUT_MS', 5000);
-    this.dimensions = this.configService.get<number>('AI_EMBEDDING_DIMENSIONS');
+    this.requestTimeoutMs = Number(this.configService.get<number>('AI_REQUEST_TIMEOUT_MS', 5000));
+    const rawDimensions = this.configService.get<number>('AI_EMBEDDING_DIMENSIONS');
+    this.dimensions = rawDimensions ? Number(rawDimensions) : undefined;
   }
 
   async createEmbedding(input: string, user?: string): Promise<number[]> {

@@ -66,5 +66,15 @@ export default {
         retryPayment: 'Restart Protocol',
         contactSupport: 'Consult the Maison',
         backToHome: 'Return to Home',
+    },
+    validation: {
+        nameTooShort: 'Name is too short',
+        nameTooLong: 'Name is too long',
+        invalidPhone: 'Invalid phone number format',
+        invalidEmail: 'Invalid email address',
+        addressTooShort: 'Address is too short',
+        wardRequired: 'Ward is required',
+        districtRequired: 'District is required',
+        provinceRequired: 'Province is required',
     }
 };
