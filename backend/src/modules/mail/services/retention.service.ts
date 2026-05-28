@@ -21,7 +21,7 @@ export class EmailRetentionService {
   }
 
   /**
-   * L8 Tiered Retention Policy
+   * Tiered retention policy.
    * Hot DB -> Local Archive (Pre-S3 Stub) -> Delete
    * Runs every day at 3 AM.
    */

@@ -18,11 +18,11 @@
 ## English
 
 ### 1. Overview
-**Ray Paradis** is a distributed, headless e-commerce platform engineered for the unique complexities of high-end jewelry retail (dynamic multi-variant matrices of metal, sizing, gem cut, and dynamically calculated pricing). It implements a **Modular Monolith core** optimized for high-concurrency checkouts, zero-trust authorization, sub-10ms cache retrieval, and an independent microservice for AI-powered semantic similarity recommendations.
+**Ray Paradis** is a headless e-commerce platform engineered for the unique complexities of high-end jewelry retail (dynamic multi-variant matrices of metal, sizing, gem cut, and dynamically calculated pricing). It implements a **Modular Monolith core** with guarded checkout concurrency, backend-authoritative authorization, Redis-backed permission caching, and an independent service for AI-powered semantic similarity recommendations.
 
 ### 2. Core Capabilities
 * **🔒 Atomic Stock Governance**: Row-level locks (`SELECT FOR UPDATE NOWAIT`) combined with an async outbox queue prevent database hangs and double-selling under high concurrency.
-* **⚡ Active Authorization Caching**: User RBAC/ABAC role trees are flattened and cached inside Redis, reducing validation latency from ~50ms (PostgreSQL join) to **<0.5ms** on every request.
+* **⚡ Active Authorization Caching**: User RBAC/ABAC role trees are flattened and cached inside Redis to avoid repeated PostgreSQL multi-table joins on protected requests.
 * **🔄 Idempotent Payment Webhooks**: Replay-attack protection for VNPay and PayPal callbacks using unique transaction states and JWT `jti` (JWT ID) checking.
 * **🛍️ Headless Storefront**: Feature-Sliced Design (FSD) React client built to eliminate suspense waterfalls and optimize Core Web Vitals (LCP, FID).
 * **🧠 AI Embedding Search**: High-dimensional vector generation via Google Gemini API (`gemini-embedding-2`) mapped into a Qdrant Vector Database for similarity search.
@@ -81,7 +81,7 @@ npx prisma db seed
 cd ..
 
 # 4. Boot all workspaces in development mode
-npm run dev --workspaces
+npm run dev
 ```
 * Core Backend API: `http://localhost:4000`
 * Vite Storefront: `http://localhost:5173`
@@ -92,7 +92,7 @@ npm run dev --workspaces
 * **Modular Monolith core**: Keeps modules strictly isolated by NestJS Dependency Injection. Prisma Query Extensions throw database-level exceptions if outside controllers try to query databases directly bypassing Services.
 * **Nowait DB Reservation**: Executes `SELECT FOR UPDATE NOWAIT` on PostgreSQL rows. An exponential backoff helper `withRetry` retries lock acquisitions up to 5 times.
 * **Transactional Outbox**: Decouples orders from inventory events using `DomainEventOutbox` and BullMQ background workers to maintain eventual consistency.
-* **Active Authorization Cache**: Flattens roles at login and caches them in Redis to resolve privileges in under **0.5ms**.
+* **Active Authorization Cache**: Flattens roles at login and caches them in Redis so permission checks can avoid repeated join-heavy queries.
 * **AI Vector Resilience**: Protects Google Gemini calls with local **LRU Cache**, **Token Bucket Rate Limiter**, and **3-State Circuit Breaker** to prevent cascading failures.
 
 ---
@@ -100,11 +100,11 @@ npm run dev --workspaces
 ## Tiếng Việt
 
 ### 1. Tổng quan
-**Ray Paradis** là một nền tảng thương mại điện tử headless (không đầu), phân tán, được thiết kế cho các nghiệp vụ trang sức xa xỉ phức tạp (cấu hình biến thể đa chiều gồm chất liệu, size nhẫn, giác cắt đá, và cách tính giá động). Dự án phát triển **lõi Modular Monolith** tối ưu cho việc thanh toán đồng thời cao, phân quyền bảo mật zero-trust, phản hồi cache dưới 10ms và một microservice độc lập xử lý gợi ý sản phẩm ngữ nghĩa qua AI.
+**Ray Paradis** là một nền tảng thương mại điện tử headless (không đầu), được thiết kế cho các nghiệp vụ trang sức xa xỉ phức tạp (cấu hình biến thể đa chiều gồm chất liệu, size nhẫn, giác cắt đá, và cách tính giá động). Dự án phát triển **lõi Modular Monolith** với cơ chế bảo vệ checkout đồng thời, phân quyền do backend kiểm soát, cache quyền bằng Redis và một service độc lập xử lý gợi ý sản phẩm ngữ nghĩa qua AI.
 
 ### 2. Các chức năng chính
 * **🔒 Quản trị tồn kho Atomic**: Áp dụng cơ chế khóa dòng Postgres (`SELECT FOR UPDATE NOWAIT`) kết hợp hàng đợi sự kiện outbox bất đồng bộ để tránh treo DB và bán vượt tồn kho dưới tải cao.
-* **⚡ Phân quyền hiệu năng cao**: Toàn bộ danh sách quyền hạn được làm phẳng và lưu ở Redis, giảm độ trễ xác thực từ ~50ms (SQL Join) xuống **<0.5ms** trên mỗi request.
+* **⚡ Phân quyền có cache**: Toàn bộ danh sách quyền hạn được làm phẳng và lưu ở Redis để tránh lặp lại các truy vấn join nhiều bảng trên mỗi request cần phân quyền.
 * **🔄 Idempotent Payment Webhooks**: Chống tấn công lặp lại (replay attacks) cho các callback VNPay/PayPal bằng trạng thái giao dịch duy nhất và đối soát JWT `jti` (JWT ID).
 * **🛍️ Giao diện Headless**: Client React phát triển theo chuẩn thiết kế Feature-Sliced Design (FSD) loại bỏ hiện tượng giật lag màn hình và tối ưu hóa các chỉ số Core Web Vitals (LCP, FID).
 * **🧠 Tìm kiếm ngữ nghĩa AI**: Tự động chuyển siêu dữ liệu sản phẩm thành vector 768 chiều qua Google Gemini (`gemini-embedding-2`) và lưu vào Qdrant Vector DB để truy vấn gợi ý.
@@ -162,8 +162,8 @@ npx prisma migrate dev
 npx prisma db seed
 cd ..
 
-# 4. Chạy toàn bộ workspaces ở chế độ phát triển (dev mode)
-npm run dev --workspaces
+# 4. Chạy toàn bộ các service ở chế độ phát triển (dev mode)
+npm run dev
 ```
 * Core Backend API: `http://localhost:4000`
 * Vite Storefront: `http://localhost:5173`
@@ -174,5 +174,10 @@ npm run dev --workspaces
 * **Lõi Modular Monolith**: Độc lập hóa các module nghiệp vụ qua NestJS DI. Sử dụng Prisma Query Extension để tự động chặn các truy vấn sửa đổi database trực tiếp không qua tầng Service được quy định.
 * **Đặt chỗ tồn kho Nowait**: Thực thi `SELECT FOR UPDATE NOWAIT` trên dòng Postgres. Hỗ trợ cơ chế thử lại tự động `withRetry` tối đa 5 lần để xử lý xung đột khóa dòng.
 * **Domain Decoupling qua Outbox**: Phân tách luồng thanh toán và trừ kho thông qua bảng trung gian `DomainEventOutbox` và BullMQ worker chạy ngầm để bảo đảm tính nhất quán sau cùng.
-* **Cache phân quyền động**: Flatten danh sách phân quyền của User tại thời điểm đăng nhập và cache vào Redis giúp phân quyền thời gian thực chỉ mất **<0.5ms**.
+* **Cache phân quyền động**: Flatten danh sách phân quyền của User tại thời điểm đăng nhập và cache vào Redis để giảm truy vấn join lặp lại.
+
+### 8. Runtime Readiness Notes
+* **Production-like and tested locally**: checkout idempotency, inventory row locks, payment webhook idempotency, refresh-token rotation, CSRF enforcement, and permission-cache invalidation.
+* **Local/staging-ready**: Docker Compose for PostgreSQL, Redis, Qdrant, and Mailpit; CI gates for build, test, security audit, and frontend build.
+* **Template/infrastructure starter**: Kubernetes and Terraform files are reference manifests, not a complete production platform by themselves.
 * **Độ bền bỉ của AI Pipeline**: Bảo vệ Gemini API hạn mức gọi bằng **LRU Cache**, bộ lọc tần suất **Token Bucket** và bộ ngắt mạch tự động **3-State Circuit Breaker** tránh sập hệ thống dây chuyền.

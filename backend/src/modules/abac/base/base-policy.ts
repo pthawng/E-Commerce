@@ -91,7 +91,7 @@ export abstract class BasePolicy<TResource = unknown> {
   }
 
   /**
-   * Check if user has permission (L8 RBAC Precedence)
+   * Check if user has permission with RBAC precedence.
    * Rule: DENY > user ALLOW > role permission
    */
   protected hasPermission(user: PolicyContext['user'], permission: string): boolean {
@@ -104,7 +104,7 @@ export abstract class BasePolicy<TResource = unknown> {
   }
 
   /**
-   * Check if user has any of the permissions (L8 RBAC Precedence)
+   * Check if user has any of the permissions with RBAC precedence.
    */
   protected hasAnyPermission(user: PolicyContext['user'], permissions: string[]): boolean {
     return permissions.some((permission) => this.hasPermission(user, permission));

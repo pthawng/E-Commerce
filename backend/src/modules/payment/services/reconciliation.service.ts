@@ -64,7 +64,7 @@ export class PaymentReconciliationService {
   /**
    * Reconcile a single stale payment
    *
-   * SE L8 Pattern: Wrapping sensitive mutation logic in @SystemAction
+   * Wrap sensitive mutation logic in @SystemAction.
    * ensures background reconciliation is authorized while preserving
    * invariant protection for the rest of the app.
    */

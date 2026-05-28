@@ -15,7 +15,7 @@ export class RefundService {
   ) {}
 
   /**
-   * Financial-Grade Refund Initiation
+   * Refund initiation.
    * 1. Create stateful PENDING Refund record
    * 2. Call Payment Gateway
    * 3. Sync success/fail status

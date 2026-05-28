@@ -21,7 +21,8 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ghcr.io/${{ github.repository }}/backend:latest
+        # Template value: render this in CI/CD before applying to a cluster.
+        image: ghcr.io/OWNER/REPOSITORY/ray-paradis-backend:latest
         ports:
         - containerPort: 4000
         resources:

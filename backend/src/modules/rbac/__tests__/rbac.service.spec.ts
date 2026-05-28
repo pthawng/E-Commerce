@@ -12,7 +12,7 @@ describe('RbacService', () => {
   const mockPrismaService = {
     user: { findUnique: jest.fn() },
     userRole: { findMany: jest.fn(), upsert: jest.fn(), delete: jest.fn() },
-    userPermission: { findMany: jest.fn(), upsert: jest.fn() },
+    userPermission: { findMany: jest.fn(), upsert: jest.fn(), delete: jest.fn() },
     role: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     permission: { findUnique: jest.fn(), findMany: jest.fn(), upsert: jest.fn() },
     rolePermission: { upsert: jest.fn() },
@@ -80,6 +80,28 @@ describe('RbacService', () => {
     it('should throw UnauthorizedException if user does not exist', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       await expect(service.assignRoleToUser('u1', 'admin')).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should clear user cache when removing a role', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1', isActive: true });
+      mockPrismaService.role.findUnique.mockResolvedValue({ id: 'r1', slug: 'admin' });
+      mockPrismaService.userRole.delete.mockResolvedValue({});
+
+      await service.removeRoleFromUser('u1', 'admin');
+
+      expect(mockPrismaService.userRole.delete).toHaveBeenCalled();
+      expect(cache.clearCache).toHaveBeenCalledWith('u1');
+    });
+
+    it('should clear user cache when removing a direct permission', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'u1', isActive: true });
+      mockPrismaService.permission.findUnique.mockResolvedValue({ id: 'p1', action: 'order.read' });
+      mockPrismaService.userPermission.delete.mockResolvedValue({});
+
+      await service.removePermissionFromUser('u1', 'order.read');
+
+      expect(mockPrismaService.userPermission.delete).toHaveBeenCalled();
+      expect(cache.clearCache).toHaveBeenCalledWith('u1');
     });
   });
 });

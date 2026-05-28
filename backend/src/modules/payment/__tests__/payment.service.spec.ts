@@ -53,6 +53,7 @@ describe('PaymentService', () => {
     cart: {
       deleteMany: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
   };
 
@@ -127,8 +128,11 @@ describe('PaymentService', () => {
 
     service = module.get<PaymentService>(PaymentService);
     jest.clearAllMocks();
+    mockPrismaService.$transaction.mockImplementation((callback) => callback(mockPrismaService));
+    mockPrismaService.$queryRaw.mockResolvedValue([]);
     mockIdempotencyService.getResult.mockResolvedValue(null);
     mockIdempotencyService.acquireLock.mockResolvedValue('token');
+    mockWebhookIdempotencyService.startProcessing.mockResolvedValue(true);
   });
 
   describe('createPayment', () => {
@@ -270,6 +274,58 @@ describe('PaymentService', () => {
       });
 
       await expect(service.processCallback(PaymentMethodEnum.PAYPAL, {})).rejects.toThrow(
+        'Amount mismatch detected.',
+      );
+    });
+
+    it('does not process a replayed webhook that is already complete', async () => {
+      mockVNPayProvider.verifyCallback.mockResolvedValue({
+        orderId: 'o1',
+        transactionId: 'vnpay-tx-1',
+        amount: 1000,
+        status: TransactionStatus.SUCCESS,
+        paymentMethod: PaymentMethodEnum.VNPAY,
+        gatewayResponse: {},
+      });
+      mockWebhookIdempotencyService.startProcessing.mockResolvedValue(false);
+
+      const result = await service.processCallback(PaymentMethodEnum.VNPAY, {});
+
+      expect(result.transactionId).toBe('vnpay-tx-1');
+      expect(mockIdempotencyService.acquireLock).not.toHaveBeenCalled();
+      expect(mockPrismaService.paymentTransaction.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('confirmVietQRPayment', () => {
+    it('locks the order and skips an already confirmed order', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([{ id: 'o1' }]);
+      mockPrismaService.order.findUnique.mockResolvedValue({
+        id: 'o1',
+        totalAmount: 1000,
+        paymentStatus: 'paid',
+        status: 'CONFIRMED',
+        transactions: [],
+      });
+
+      await service.confirmVietQRPayment('o1', 1000, 'admin-1');
+
+      expect(mockPrismaService.$queryRaw).toHaveBeenCalled();
+      expect(mockPrismaService.payment.findFirst).not.toHaveBeenCalled();
+      expect(mockOrderPaymentService.confirmOrder).not.toHaveBeenCalled();
+    });
+
+    it('rejects manual VietQR confirmation with a mismatched amount', async () => {
+      mockPrismaService.$queryRaw.mockResolvedValue([{ id: 'o1' }]);
+      mockPrismaService.order.findUnique.mockResolvedValue({
+        id: 'o1',
+        totalAmount: 1000,
+        paymentStatus: 'unpaid',
+        status: 'PENDING_PAYMENT',
+        transactions: [],
+      });
+
+      await expect(service.confirmVietQRPayment('o1', 900, 'admin-1')).rejects.toThrow(
         'Amount mismatch detected.',
       );
     });

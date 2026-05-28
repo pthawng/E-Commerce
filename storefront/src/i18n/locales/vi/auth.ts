@@ -28,6 +28,8 @@ export default {
         rememberPassword: 'Quay lại đăng nhập',
         login: 'Đăng Nhập',
         register: 'Gia Nhập',
+        orWith: 'Hoặc đăng nhập bằng',
+        continueWithGoogle: 'Tiếp tục với Google',
     },
     validation: {
         invalidEmail: 'Địa chỉ email không đúng định dạng.',

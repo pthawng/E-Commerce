@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 /**
- * SE L8 STRESS TEST: 10,000 CONCURRENT USERS
+ * Stress test scenario.
  * 
  * Scenarios:
  * 1. Guest Browsing (GET /products)

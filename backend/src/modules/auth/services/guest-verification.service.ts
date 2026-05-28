@@ -25,7 +25,7 @@ export class GuestVerificationService {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const cacheKey = `guest_otp:${email}`;
 
-    // Rate limiting: check if OTP was recently sent (optional but L8 standard)
+    // Rate limiting: check if OTP was recently sent.
     const existing = await this.cacheManager.get(cacheKey);
     if (existing) {
       this.logger.warn(`OTP already sent to ${email}, ignoring request.`);

@@ -20,7 +20,7 @@ export class SecurityMiddleware implements NestMiddleware {
 
     // Strict CSP Header
     // Note: In development, we relax some rules ('unsafe-inline' for HMR)
-    // Strict CSP Header - Principal Grade Shielding
+    // Strict CSP header.
     const { CORS_ORIGIN: corsOrigins } = getConfig();
 
     const scriptSrc = isProduction

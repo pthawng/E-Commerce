@@ -71,6 +71,7 @@
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
+    "google-auth-library": "^10.6.2",
     "ioredis": "^5.8.2",
     "module-alias": "^2.3.4",
     "multer": "^2.0.2",

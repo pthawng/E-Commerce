@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
- * L8 Feature Gating Service.
+ * Feature gating service.
  * Enables controlled releases and traffic splitting without redeployment.
  */
 @Injectable()
@@ -15,7 +15,7 @@ export class FeatureFlagService {
   }
 
   private initializeFlags() {
-    // In a real L8 system, this would fetch from Redis or a Flag provider (LaunchDarkly/Flagsmith)
+    // In production, this would fetch from Redis or a flag provider.
     // For now, we seed from Environment Variables to establish the contract.
     const rawFlags = this.configService.get<string>('FEATURE_FLAGS') || '';
     rawFlags.split(',').forEach((flag) => {

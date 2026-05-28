@@ -27,7 +27,7 @@ export class MailAdminController {
   }
 
   /**
-   * L8 Audit-Safe Override: Creates a new Outbox record linked to the original.
+   * Audit-safe override: creates a new outbox record linked to the original.
    * Preserves the original failure context while allowing delivery correction.
    */
   @Post(':id/retry-override')

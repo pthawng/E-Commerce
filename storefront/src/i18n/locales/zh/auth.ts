@@ -28,6 +28,8 @@ export default {
         rememberPassword: '返回登录',
         login: '立即登录',
         register: '立即加入',
+        orWith: '或通过以下方式继续',
+        continueWithGoogle: '使用 Google 账号登录',
     },
     validation: {
         invalidEmail: '请输入有效的电子邮箱格式。',

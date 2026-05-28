@@ -14,7 +14,7 @@ export class LedgerIntegrationService {
 
   /**
    * Records revenue and asset increase from a successful order payment.
-   * L8 Grade: Creates an atomic journal entry with debit/credit pairs.
+   * Creates an atomic journal entry with debit/credit pairs.
    */
   async recordOrderPayment(orderId: string, amount: number, tx: Prisma.TransactionClient) {
     this.logger.log(`Recording ledger entry for order payment: ${orderId}`);

@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StockQueryDto } from './dto';
+import { lockInventoryItem } from './inventory-lock.helper';
 
 /**
  * Stock movement service.
@@ -78,16 +79,13 @@ export class StockMovementService {
         throw new BadRequestException('Transfer not found or not in PENDING status');
       }
 
-      // Lock source inventory
-      const [fromItem] = await tx.$queryRawUnsafe<any>(
-        `SELECT id, quantity, "reservedQuantity", "damagedQuantity" FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE`,
-        transfer.variantId,
-        transfer.fromWarehouseId,
-      );
-
-      if (!fromItem) {
-        throw new NotFoundException('Inventory item not found in source warehouse');
-      }
+      const fromItem = await lockInventoryItem(tx, {
+        variantId: transfer.variantId,
+        warehouseId: transfer.fromWarehouseId,
+        logger: this.logger,
+        context: 'InventoryTransferShip',
+        notFoundMessage: 'Inventory item not found in source warehouse',
+      });
 
       if (
         fromItem.quantity - fromItem.reservedQuantity - fromItem.damagedQuantity <
@@ -156,12 +154,13 @@ export class StockMovementService {
         throw new BadRequestException('Transfer not found or not in SHIPPED status');
       }
 
-      // Lock destination inventory
-      const [toItem] = await tx.$queryRawUnsafe<any>(
-        `SELECT id, quantity, "inTransitQuantity" FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE`,
-        transfer.variantId,
-        transfer.toWarehouseId,
-      );
+      const toItem = await lockInventoryItem(tx, {
+        variantId: transfer.variantId,
+        warehouseId: transfer.toWarehouseId,
+        logger: this.logger,
+        context: 'InventoryTransferReceive',
+        notFoundMessage: 'Inventory item not found in destination warehouse',
+      });
 
       if (!toItem || toItem.inTransitQuantity < transfer.quantity) {
         throw new BadRequestException('In-transit quantity mismatch in destination');

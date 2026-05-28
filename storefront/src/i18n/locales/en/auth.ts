@@ -28,6 +28,8 @@ export default {
         rememberPassword: 'Back to Sign In',
         login: 'Sign In',
         register: 'Join the Circle',
+        orWith: 'Or continue with',
+        continueWithGoogle: 'Continue with Google',
     },
     validation: {
         invalidEmail: 'The archive requires a valid email format.',

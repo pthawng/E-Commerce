@@ -22,7 +22,7 @@ function parseMetricValue(metrics: string, metricName: string): number | null {
 }
 
 async function runChaos() {
-    console.log(`Starting FAANG Chaos Test with ${WORKERS} workers...`);
+    console.log(`Starting checkout chaos test with ${WORKERS} workers...`);
     console.log(`Session ID: ${SESSION_ID}`);
     console.log(`Variant ID: ${VARIANT_ID}`);
 

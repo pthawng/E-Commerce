@@ -61,7 +61,7 @@ export class PayPalProvider extends BasePaymentProvider {
     const cancelUrl = metadata?.cancelUrl || 'http://localhost:8080/payment-result?status=failed';
 
     // Currency conversion: VND -> USD
-    // L8: Use frozen exchange rate from metadata (preferred) or dynamic service fallback
+    // Use frozen exchange rate from metadata when available.
     let rate: number;
     if (metadata?.exchangeRate) {
       rate = Number(metadata.exchangeRate);

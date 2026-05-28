@@ -10,7 +10,7 @@ export class AnalyticsService {
 
   /**
    * Executive Scorecard: Revenue, Profit, AOV
-   * FAANG standard: Include period-over-period delta
+   * Include period-over-period delta.
    */
   async getExecutiveOverview(range: string = '30d') {
     const days = parseInt(range.replace('d', '')) || 30;
@@ -169,7 +169,7 @@ export class AnalyticsService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // FAANG production logic: Calculate transition time between states
+    // Calculate transition time between states.
     const orderTransitions: Record<string, any> = {};
 
     timelines.forEach((t) => {

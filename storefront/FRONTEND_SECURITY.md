@@ -1,10 +1,10 @@
-# Storefront Security Architecture (Zero-Trust Model)
+# Storefront Security Architecture (Backend-Authoritative Model)
 
-This document outlines the security refactor of the Ray Paradis storefront, transitioning from an untrusted client-side state to a backend-authoritative, zero-trust architecture.
+This document outlines the security refactor of the Ray Paradis storefront, transitioning from untrusted client-side state to backend-authoritative checks.
 
 ## 🛡️ Core Security Principles
 
-1. **Zero-Trust Frontend**: The frontend is considered untrusted. All security checks, business logic, and pricing calculations are strictly enforced by the backend.
+1. **Untrusted Frontend**: The frontend is considered untrusted. All security checks, business logic, and pricing calculations are strictly enforced by the backend.
 2. **Backend Authority**: The source of truth for sessions, pricing, and idempotency resides exclusively on the server.
 3. **Defense in Depth**: Multiple overlapping security layers (HttpOnly cookies, CSRF tokens, CSP, Session Binding) ensure a resilient system.
 

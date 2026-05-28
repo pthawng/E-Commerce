@@ -47,17 +47,13 @@ export class EmailOutboxService {
    */
   async getPendingBatch(batchSize: number = 20) {
     // Prisma doesn't natively support SKIP LOCKED in the fluent API for all versions.
-    // We use $queryRaw to ensure standard-compliant L8 performance.
-    return this.prisma.$queryRawUnsafe<any[]>(
-      `
+    return this.prisma.$queryRaw<any[]>`
       SELECT * FROM "email_outbox"
       WHERE "status" = 'PENDING' AND "scheduledAt" <= NOW()
       ORDER BY "scheduledAt" ASC
-      LIMIT $1
+      LIMIT ${batchSize}
       FOR UPDATE SKIP LOCKED
-    `,
-      batchSize,
-    );
+    `;
   }
 
   async markAsProcessing(ids: string[]) {

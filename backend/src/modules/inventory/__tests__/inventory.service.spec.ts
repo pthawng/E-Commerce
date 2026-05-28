@@ -24,7 +24,7 @@ describe('InventoryService', () => {
       create: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
-    $queryRawUnsafe: jest.fn(),
+    $queryRaw: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -64,7 +64,7 @@ describe('InventoryService', () => {
     const expiresAt = new Date();
 
     it('should successfully reserve stock', async () => {
-      mockPrismaService.$queryRawUnsafe.mockResolvedValue([
+      mockPrismaService.$queryRaw.mockResolvedValue([
         { id: 'inv1', quantity: 10, reservedQuantity: 0 },
       ]);
       mockPrismaService.inventoryReservation.create.mockResolvedValue({ id: 'res1' });
@@ -79,7 +79,7 @@ describe('InventoryService', () => {
     });
 
     it('should throw ConflictException if insufficient stock in warehouse', async () => {
-      mockPrismaService.$queryRawUnsafe.mockResolvedValue([
+      mockPrismaService.$queryRaw.mockResolvedValue([
         { id: 'inv1', quantity: 10, reservedQuantity: 7 },
       ]);
 
@@ -94,7 +94,7 @@ describe('InventoryService', () => {
       mockPrismaService.inventoryReservation.findMany.mockResolvedValue([
         { id: 'res1', variantId: 'v1', warehouseId: 'w1', quantity: 5 },
       ]);
-      mockPrismaService.$queryRawUnsafe.mockResolvedValue([
+      mockPrismaService.$queryRaw.mockResolvedValue([
         { id: 'inv1', quantity: 10, reservedQuantity: 5 },
       ]);
 
@@ -119,7 +119,7 @@ describe('InventoryService', () => {
       mockPrismaService.inventoryReservation.findMany.mockResolvedValue([
         { id: 'res1', variantId: 'v1', warehouseId: 'w1', quantity: 5 },
       ]);
-      mockPrismaService.$queryRawUnsafe.mockResolvedValue([
+      mockPrismaService.$queryRaw.mockResolvedValue([
         { id: 'inv1', quantity: 10, reservedQuantity: 5 },
       ]);
 
@@ -166,7 +166,9 @@ describe('InventoryService', () => {
 
   describe('adjustStock', () => {
     it('should set stock to exact quantity and log ADJUSTMENT', async () => {
-      mockPrismaService.inventoryItem.findUnique.mockResolvedValue({ id: 'inv1', quantity: 10 });
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        { id: 'inv1', quantity: 10, reservedQuantity: 0, damagedQuantity: 0, inTransitQuantity: 0 },
+      ]);
 
       await service.adjustStock('v1', 'w1', 25, 'Physical count');
 

@@ -8,7 +8,7 @@ export class DistributedLockService {
   constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) {}
 
   /**
-   * FAANG-Grade Distributed Lock (Redlock algorithm equivalent)
+   * Distributed lock with a token-checked release path.
    * Prevents DB connection pool exhaustion during flash sales (Stock Race Conditions).
    * Uses NX (Not Exists) and PX (Expire) for atomicity.
    */

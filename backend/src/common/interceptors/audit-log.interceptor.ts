@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 /**
  * AuditLogInterceptor
  *
- * Principal-Grade Hardening:
+ * Security hardening:
  * 1. Correlation Tracing: Every request gets an 'x-request-id' for log aggregation.
  * 2. Forensic Context: Captures IP, User-Agent, and Actor ID.
  * 3. Mutation Tracking: Logs state-changing requests (POST/PATCH/DELETE) for high-value modules.

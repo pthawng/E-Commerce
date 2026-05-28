@@ -151,11 +151,12 @@ export class OrderPaymentService {
       });
       if (existingOrder) {
         this.logger.warn(`Idempotent request for JTI ${idempotencyKey}: returning existing order`);
+        const paymentUrl = await this.resolveExistingPaymentUrl(existingOrder, dto);
         return this.buildOrderPaymentResponse(
           existingOrder,
           existingOrder.transactions[0],
-          null,
-          false,
+          paymentUrl,
+          existingOrder.paymentMethod === PaymentMethodEnum.VIETQR,
         );
       }
 
@@ -187,50 +188,18 @@ export class OrderPaymentService {
         cart.items.map((item) => ({ variantId: item.productVariantId, quantity: item.quantity })),
       );
 
-      const result = await this.prisma.$transaction(async (tx) => {
-        const order = await this.createOrder(tx, {
-          userId,
-          sessionId: userId ? null : sessionId,
-          dto,
-          orderItemsData,
-          subTotal: totals.subtotal,
-          totalAmount: totals.total,
-          status: OrderStatusEnum.PENDING_PAYMENT,
-          paymentDeadline,
-          idempotencyKey,
-          exchangeRate,
-          displayCurrency: targetCurrency,
-        });
-
-        await this.inventoryService.reserve(
-          order.id,
-          allocations.map((a) => ({
-            ...a,
-            cartItemId: cart.items.find((i) => i.productVariantId === a.variantId)?.id,
-          })),
-          paymentDeadline,
-          tx,
-          userId,
-          sessionId,
-        );
-
-        const payment = await this.createPaymentTransaction(tx, {
-          orderId: order.id,
-          amount: totals.total,
-          provider: dto.paymentMethod,
-          status: 'pending',
-        });
-
-        await tx.orderTimeline.create({
-          data: {
-            orderId: order.id,
-            action: 'ORDER_INITIATED',
-            description: `Order created with payment method ${dto.paymentMethod}`,
-            metadata: { idempotencyKey, version: 1 },
-          },
-        });
-
-        return { order, payment };
+      const result = await this.createOrderReservationAndPayment({
+        userId,
+        sessionId,
+        dto,
+        orderItemsData,
+        totals,
+        paymentDeadline,
+        idempotencyKey,
+        exchangeRate,
+        displayCurrency: targetCurrency,
+        allocations,
+        cartItems: cart.items,
       });
 
       // Integrate with payment gateway provider
@@ -275,10 +244,12 @@ export class OrderPaymentService {
 
       const executeInTransaction = async (currentTx: Prisma.TransactionClient) => {
         // Lock the order record to prevent race conditions during concurrent updates
-        const orders = await currentTx.$queryRawUnsafe<any[]>(
-          `SELECT * FROM "Order" WHERE "id" = $1 FOR UPDATE`,
-          orderId,
-        );
+        const orders = await currentTx.$queryRaw<any[]>`
+          SELECT *
+          FROM "Order"
+          WHERE "id" = ${orderId}
+          FOR UPDATE
+        `;
         const order = orders[0];
 
         if (!order) {
@@ -504,7 +475,7 @@ export class OrderPaymentService {
         shippingFee: this.SHIPPING_FEE,
         totalAmount: params.totalAmount,
         note: params.dto.note,
-        idempotencyKey: params.dto.idempotencyKey,
+        idempotencyKey: params.idempotencyKey,
         exchangeRate: params.exchangeRate,
         displayCurrency: params.displayCurrency,
         version: 1,
@@ -512,6 +483,108 @@ export class OrderPaymentService {
       },
       include: { items: true },
     });
+  }
+
+  private async createOrderReservationAndPayment(params: {
+    userId?: string;
+    sessionId?: string;
+    dto: CreateOrderWithPaymentDto;
+    orderItemsData: any[];
+    totals: any;
+    paymentDeadline: Date;
+    idempotencyKey: string;
+    exchangeRate: number | Prisma.Decimal;
+    displayCurrency: string;
+    allocations: Array<{ variantId: string; warehouseId: string; quantity: number }>;
+    cartItems: Array<{ id: string; productVariantId: string }>;
+  }) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const order = await this.createOrder(tx, {
+          userId: params.userId,
+          sessionId: params.userId ? null : params.sessionId,
+          dto: params.dto,
+          orderItemsData: params.orderItemsData,
+          subTotal: params.totals.subtotal,
+          totalAmount: params.totals.total,
+          status: OrderStatusEnum.PENDING_PAYMENT,
+          paymentDeadline: params.paymentDeadline,
+          idempotencyKey: params.idempotencyKey,
+          exchangeRate: params.exchangeRate,
+          displayCurrency: params.displayCurrency,
+        });
+
+        await this.inventoryService.reserve(
+          order.id,
+          params.allocations.map((a) => ({
+            ...a,
+            cartItemId: params.cartItems.find((i) => i.productVariantId === a.variantId)?.id,
+          })),
+          params.paymentDeadline,
+          tx,
+          params.userId,
+          params.sessionId,
+        );
+
+        const payment = await this.createPaymentTransaction(tx, {
+          orderId: order.id,
+          amount: params.totals.total,
+          provider: params.dto.paymentMethod,
+          status: 'pending',
+        });
+
+        await tx.orderTimeline.create({
+          data: {
+            orderId: order.id,
+            action: 'ORDER_INITIATED',
+            description: `Order created with payment method ${params.dto.paymentMethod}`,
+            metadata: { idempotencyKey: params.idempotencyKey, version: 1 },
+          },
+        });
+
+        return { order, payment };
+      });
+    } catch (error: any) {
+      if (error?.code !== 'P2002') {
+        throw error;
+      }
+
+      const existingOrder = await this.prisma.order.findUnique({
+        where: { idempotencyKey: params.idempotencyKey },
+        include: { transactions: true },
+      });
+
+      if (!existingOrder) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `Recovered concurrent idempotent checkout for JTI ${params.idempotencyKey}`,
+      );
+
+      return {
+        order: existingOrder,
+        payment: existingOrder.transactions[0] ?? null,
+      };
+    }
+  }
+
+  private async resolveExistingPaymentUrl(
+    order: any,
+    dto: CreateOrderWithPaymentDto,
+  ): Promise<string | null> {
+    if (order.paymentMethod === PaymentMethodEnum.VIETQR || order.paymentMethod === PaymentMethodEnum.COD) {
+      return null;
+    }
+
+    return this.paymentService.generatePaymentUrl(
+      order.id,
+      order.code,
+      Number(order.totalAmount),
+      order.paymentMethod,
+      dto.returnUrl,
+      dto.cancelUrl,
+    );
   }
 
   private async createPaymentTransaction(tx: Prisma.TransactionClient, params: any) {

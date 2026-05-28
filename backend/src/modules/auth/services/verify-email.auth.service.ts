@@ -10,7 +10,7 @@ import { AuthService } from '../auth.service';
 @Injectable()
 export class VerifyEmailService {
   private readonly logger = new Logger(VerifyEmailService.name);
-  private readonly TOKEN_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes (Strict L8 security)
+  private readonly TOKEN_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes.
   private readonly TOKEN_BYTE_LENGTH = 32;
 
   constructor(
@@ -73,7 +73,7 @@ export class VerifyEmailService {
   async resendVerification(email: string, reqIp?: string, reqUserAgent?: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // Do not reveal email absence, just return true (L8 Security)
+      // Do not reveal email absence.
       return true;
     }
 
@@ -128,7 +128,7 @@ export class VerifyEmailService {
       this.prisma.verifyEmailToken.delete({ where: { id: record.id } }),
     ]);
 
-    // L8 Security check for Auto-Login
+    // Security check for auto-login.
     // Only auto-login if they clicked it on the same device/IP (if recorded)
     let safeToAutoLogin = true;
     if (record.ipAddress && reqIp && record.ipAddress !== reqIp) safeToAutoLogin = false;

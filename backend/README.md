@@ -13,9 +13,9 @@ The `@ray-paradis/backend` application is the core transaction processing engine
 
 ### 2. Core Capabilities
 * **🔒 Concurrency Guard & Row Locks**: Employs PostgreSQL row locks (`SELECT FOR UPDATE NOWAIT`) and an automated **Exponential Backoff Retry** mechanism to prevent overselling on hot-SKUs and avoid DB pool exhaustion.
-* **⚡ Sub-10ms Active Authorization**: User permissions are cached in Redis as flat arrays, bypassing expensive PostgreSQL multi-table joins on every incoming HTTP call.
+* **⚡ Active Authorization Cache**: User permissions are cached in Redis as flat arrays, bypassing repeated PostgreSQL multi-table joins on protected HTTP calls.
 * **📬 Event-Driven Decoupling**: Implements the **Transactional Outbox Pattern** to write events (like inventory deduction) to an `Outbox` table in the same transaction as order creation. A background queue processor ensures eventual consistency without delaying checkout response times.
-* **🛡️ Security Hardening**: Enforces Double Submit Cookie pattern for CSRF protection, HttpOnly/SameSite cookies for JWT session validation, and intercepts direct database mutation attempts outside authorized service classes using a custom **Prisma Invariant Guard**.
+* **🛡️ Security Hardening**: Enforces Double Submit Cookie pattern for CSRF protection, HttpOnly/SameSite cookies for JWT session validation, and backend-authoritative authorization checks.
 
 ---
 
@@ -83,7 +83,7 @@ npm run start:prod
 
 ### 2. Các chức năng chính
 * **🔒 Chống trùng lặp & Khóa dòng**: Áp dụng cơ chế khóa dòng PostgreSQL (`SELECT FOR UPDATE NOWAIT`) kết hợp giải thuật **Thử lại với thời gian chờ tăng dần (Exponential Backoff)** để ngăn ngừa bán vượt tồn kho (overselling) đối với các sản phẩm hot mà không làm treo hàng đợi kết nối DB.
-* **⚡ Phân quyền hiệu năng cao (Sub-10ms)**: Toàn bộ danh sách quyền hạn của tài khoản đăng nhập được làm phẳng và lưu ở Redis, bỏ qua việc thực hiện truy vấn JOIN nhiều bảng trong Postgres trên mỗi request.
+* **⚡ Phân quyền có cache**: Toàn bộ danh sách quyền hạn của tài khoản đăng nhập được làm phẳng và lưu ở Redis, giảm việc thực hiện truy vấn JOIN nhiều bảng trong Postgres trên các request cần phân quyền.
 * **📬 Khử liên kết bất đồng bộ (Outbox Pattern)**: Triển khai mô hình **Transactional Outbox Pattern** để ghi nhận các sự kiện nghiệp vụ (như trừ kho) vào bảng `Outbox` ngay trong cùng transaction tạo đơn hàng. Worker chạy ngầm sau đó sẽ xử lý hàng đợi này nhằm bảo đảm tính nhất quán sau cùng (Eventual Consistency).
 * **🛡️ Bảo mật nghiêm ngặt (Hardening)**: Áp dụng Double Submit Cookie để phòng chống tấn công CSRF, lưu trữ token phiên trong cookie bảo mật HttpOnly/SameSite. Đặc biệt sử dụng **Prisma Invariant Guard** tùy chỉnh để tự động chặn các thao tác sửa đổi database trái phép từ bên ngoài lớp Service được chỉ định.
 

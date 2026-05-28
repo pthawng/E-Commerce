@@ -20,7 +20,7 @@ export class CleanupExpiredReservationsJob {
   /**
    * Cron job: Runs every minute
    *
-   * SE L8 Pattern: Use systemic @SystemAction decorator to authorize
+   * Use the @SystemAction decorator to authorize this scheduled task.
    * background mutations while maintaining strict audit boundaries.
    */
   @Cron(CronExpression.EVERY_MINUTE)

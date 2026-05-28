@@ -31,7 +31,7 @@ export interface CassoWebhookPayload {
 }
 
 /**
- * VietQR Matching Service (Production-Grade)
+ * VietQR matching service.
  *
  * Security Model:
  *  - X-Api-Key header must match VIETQR_WEBHOOK_SECRET

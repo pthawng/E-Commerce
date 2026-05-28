@@ -89,7 +89,7 @@ export class DomainEventRelayService {
 
     if (stuckEvents > 0) {
       this.logger.error(`[CRITICAL] OUTBOX LAG DETECTED: ${stuckEvents} events stuck > 5m!`);
-      // FAANG Grade: Here we would trigger an incident alert (PagerDuty/Slack)
+      // Production deployments should wire this to the team's alerting channel.
     }
   }
 }

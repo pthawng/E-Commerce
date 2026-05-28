@@ -15,7 +15,7 @@ export class DoubleEntryEngine {
 
   /**
    * Posts a journal entry to the ledger.
-   * L8 Grade: Enforces zero-sum balance, atomic posting, and 4-Eyes Principle.
+   * Enforces zero-sum balance, atomic posting, and approval policy.
    */
   async postJournal(journalId: string, approverId?: string) {
     return this.prisma.$transaction(async (tx) => {
@@ -28,7 +28,7 @@ export class DoubleEntryEngine {
       if (journal.status === JournalStatus.POSTED)
         throw new BadRequestException('Journal already posted');
 
-      // 1. FAANG Hardening: Enforce 4-Eyes Principle for high-value postings
+      // 1. Enforce a 4-eyes approval rule for high-value postings.
       // In production, we check if there's an APPROVED request for this journal
       await this.approvalService.verifyApproved(ApprovalType.LEDGER_POSTING, journalId);
 

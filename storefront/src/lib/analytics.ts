@@ -15,9 +15,8 @@ interface EventProperties {
 }
 
 export const trackEvent = (name: EventName, props?: EventProperties) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[Analytics] Tracked: "${name}"`, props);
-  }
+  void name;
+  void props;
 
   // Future implementation:
   // if (window.gtag) {

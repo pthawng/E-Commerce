@@ -119,7 +119,7 @@ export class EmailProcessor {
       return this.templateCache.get(cacheKey)!(context);
     }
 
-    // Path includes versioning for safety (L8 requirement)
+    // Path includes versioning for safety.
     // For now, if version folder doesn't exist, we fall back to the root templates dir
     let filePath = path.join(this.templatesDir, version, `${name}.hbs`);
 

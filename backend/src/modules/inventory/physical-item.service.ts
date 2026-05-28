@@ -11,7 +11,7 @@ export class PhysicalItemService {
 
   /**
    * Registers a new physical item (e.g., a specific diamond ring).
-   * L8 Grade: Includes integrity checks and atomic creation.
+   * Includes integrity checks and atomic creation.
    */
   async registerItem(data: {
     productVariantId: string;
@@ -35,7 +35,7 @@ export class PhysicalItemService {
 
   /**
    * Transitions an item's status with audit trail support.
-   * FAANG Grade: Verifies data integrity before any status transition.
+   * Verifies data integrity before any status transition.
    */
   async updateStatus(id: string, status: ItemStatus, metadata?: Prisma.InputJsonValue) {
     return this.prisma.$transaction(async (tx) => {
@@ -62,7 +62,7 @@ export class PhysicalItemService {
         },
       });
 
-      // 3. L8 Grade: Auto-sync with quantitative InventoryItem
+      // 3. Auto-sync with quantitative InventoryItem
       await this.syncInventoryCount(
         tx,
         item.productVariantId,

@@ -382,7 +382,7 @@ export class CartService {
   }
 
   // ============================================
-  // 5. MERGE CART (FAANG Strategy: SUM)
+  // 5. MERGE CART (sum quantities for matching variants)
   // ============================================
   async mergeCart(userId: string, sessionId: string) {
     const timer = this.durationHistogram.startTimer({ operation: 'merge' });
@@ -586,7 +586,7 @@ export class CartService {
   }
 
   /**
-   * FAANG L8+ Mapping Strategy:
+   * Cart mapping strategy:
    * 1. Centralized mapper to ensure consistency across all cart operations (get/add/update/merge).
    * 2. Defensive Image Fallbacks: Variant Thumb > Variant Media > Product Media > Placeholder.
    * 3. Robust localized name handling.

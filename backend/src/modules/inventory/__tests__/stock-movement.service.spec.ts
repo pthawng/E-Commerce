@@ -32,7 +32,7 @@ describe('StockMovementService', () => {
       create: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
-    $queryRawUnsafe: jest.fn(),
+    $queryRaw: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -55,11 +55,13 @@ describe('StockMovementService', () => {
 
     it('should successfully transfer stock between warehouses', async () => {
       // Source warehouse has enough stock
-      mockPrismaService.$queryRawUnsafe
+      mockPrismaService.$queryRaw
         .mockResolvedValueOnce([
-          { id: 'inv1', quantity: 50, reservedQuantity: 0, damagedQuantity: 0 },
+          { id: 'inv1', quantity: 50, reservedQuantity: 0, damagedQuantity: 0, inTransitQuantity: 0 },
         ]) // from
-        .mockResolvedValueOnce([{ id: 'inv2', quantity: 20, inTransitQuantity: 10 }]); // to
+        .mockResolvedValueOnce([
+          { id: 'inv2', quantity: 20, reservedQuantity: 0, damagedQuantity: 0, inTransitQuantity: 10 },
+        ]); // to
 
       mockPrismaService.inventoryTransfer.create.mockResolvedValue({ id: 'trf1' });
       mockPrismaService.inventoryTransfer.findUnique
@@ -128,15 +130,15 @@ describe('StockMovementService', () => {
     });
 
     it('should throw BadRequestException if source stock is insufficient', async () => {
-      mockPrismaService.$queryRawUnsafe.mockResolvedValueOnce([
-        { id: 'inv1', quantity: 5, reservedQuantity: 0 },
+      mockPrismaService.$queryRaw.mockResolvedValueOnce([
+        { id: 'inv1', quantity: 5, reservedQuantity: 0, damagedQuantity: 0, inTransitQuantity: 0 },
       ]);
 
       await expect(service.transfer('v1', 'w1', 'w2', 10)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if internal record not found', async () => {
-      mockPrismaService.$queryRawUnsafe.mockResolvedValueOnce([]); // from not found
+      mockPrismaService.$queryRaw.mockResolvedValueOnce([]); // from not found
 
       await expect(service.transfer('v1', 'w1', 'w2', 10)).rejects.toThrow(NotFoundException);
     });

@@ -1,7 +1,7 @@
 import { PaymentProcessingStatus, TransactionStatusEnum } from '@prisma/client';
 
 /**
- * Payment Status Derivation Engine (Stripe-Grade)
+ * Payment status derivation engine.
  *
  * Payment is an aggregate — its status is DERIVED from its transactions.
  *

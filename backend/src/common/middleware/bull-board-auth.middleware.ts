@@ -25,7 +25,7 @@ export class BullBoardAuthMiddleware implements NestMiddleware {
       const secret = this.configService.get<string>('JWT_ACCESS_SECRET');
       const payload = await this.jwtService.verifyAsync<RequestUserPayload>(token, { secret });
 
-      // Enforcement of FAANG internal structural constraints
+      // Enforce internal queue-dashboard access constraints.
       if (payload.aud !== 'admin' || payload.userType === 'CUSTOMER') {
         this.logger.warn(`Forbidden BullBoard structural access from user: ${payload.userId}`);
         throw new UnauthorizedException('Only backoffice staff can access queues');

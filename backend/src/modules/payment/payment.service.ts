@@ -108,7 +108,7 @@ export class PaymentService {
           throw new NotFoundException(`Order ${orderId} not found`);
         }
 
-        // FAANG Security: Verify ownership before initiating any payment action
+        // Verify ownership before initiating any payment action.
         if (principal) {
           const isOwner =
             (principal.type === 'USER' && order.userId === principal.id) ||
@@ -380,7 +380,7 @@ export class PaymentService {
             // Standard Confirmation Flow (Consolidated)
             await this.orderPaymentService.confirmOrder(payment.orderId, tx);
 
-            // FAANG Grade: Atomic Ledger Entry
+            // Atomic ledger entry is written in the same payment confirmation transaction.
             await this.ledgerIntegration.recordOrderPayment(
               payment.orderId,
               Number(transaction.amount),
@@ -677,12 +677,35 @@ export class PaymentService {
   ): Promise<void> {
     return SystemContextStore.asInternal('PaymentService', async () => {
       await this.prisma.$transaction(async (tx) => {
+        const [lockedOrder] = await tx.$queryRaw<Array<{ id: string }>>`
+          SELECT id
+          FROM "Order"
+          WHERE id = ${orderId}
+          FOR UPDATE
+        `;
+
+        if (!lockedOrder) {
+          throw new NotFoundException(`Order ${orderId} not found`);
+        }
+
         const order = await tx.order.findUnique({
           where: { id: orderId },
           include: { transactions: true },
         });
 
         if (!order) throw new NotFoundException(`Order ${orderId} not found`);
+
+        if (
+          order.paymentStatus === PaymentStatusEnum.paid ||
+          order.status === OrderStatusEnum.CONFIRMED
+        ) {
+          this.logger.log(`VietQR order ${orderId} already confirmed. Skipping.`);
+          return;
+        }
+
+        if (Math.abs(Number(order.totalAmount) - amount) > 0.01) {
+          throw new BadRequestException('Amount mismatch detected.');
+        }
 
         const vietqrPayment = await tx.payment.findFirst({
           where: {
@@ -796,7 +819,7 @@ export class PaymentService {
 
     if (!order) throw new NotFoundException(`Order or Payment Token ${orderIdOrToken} not found`);
 
-    // FAANG Security: Verify ownership before returning status
+    // Verify ownership before returning status.
     if (principal) {
       const isOwner =
         (principal.type === 'USER' && order.userId === principal.id) ||
@@ -1078,7 +1101,7 @@ export class PaymentService {
           recon.find((r) => r.reconciliationStatus === ('MISMATCH' as any))?._count._all || 0,
         unreconciledCount:
           recon.find((r) => r.reconciliationStatus === ('UNVERIFIED' as any))?._count._all || 0,
-        matchedAmount: Number(volume._sum.amount || 0), // L8 Note: In production, sum by matched status
+        matchedAmount: Number(volume._sum.amount || 0), // In production, sum by matched status.
       },
     };
   }

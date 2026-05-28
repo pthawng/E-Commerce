@@ -11,7 +11,7 @@ import { BasePaymentProvider } from '../base-payment.provider';
 const VIETQR_BASE_URL = 'https://img.vietqr.io/image';
 
 /**
- * VietQR Payment Provider (Production-Grade)
+ * VietQR payment provider.
  *
  * Generates a unique, tamper-resistant transferCode per order.
  * Provides a dynamic QR code URL pre-filled with amount and description.

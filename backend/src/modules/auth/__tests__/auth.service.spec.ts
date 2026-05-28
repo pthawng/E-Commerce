@@ -227,5 +227,27 @@ describe('AuthService', () => {
         ForbiddenException,
       );
     });
+
+    it('should not global-revoke sessions for same-IP refresh races inside grace window', async () => {
+      mockJwtService.verifyAsync.mockResolvedValue({ sub: 'u1', aud: 'customer', jti: 'rt1' });
+      mockPrismaService.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt1',
+        userId: 'u1',
+        token: 'hashed_rt',
+        expiresAt: new Date(Date.now() + 10000),
+        revokedAt: new Date(),
+        revokedReason: 'ROTATED',
+        ipAddress: '127.0.0.1',
+        version: 1,
+      });
+      (argon2.verify as jest.Mock).mockResolvedValue(true);
+
+      await expect(
+        service.refreshToken({ refreshToken: 'old_rt' }, '127.0.0.1'),
+      ).rejects.toThrow('RETRY_DETECTED');
+
+      expect(mockPrismaService.refreshToken.updateMany).not.toHaveBeenCalled();
+      expect(mockSecurityEventBus.emit).not.toHaveBeenCalled();
+    });
   });
 });

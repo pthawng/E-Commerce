@@ -1,7 +1,7 @@
 import { SystemContextStore } from '../context/system-context.store';
 
 /**
- * SystemAction Decorator (L8 pattern)
+ * SystemAction decorator.
  *
  * Automatically wraps a method in SystemContextStore.asInternal context.
  * Useful for Cron jobs, Queue processors, and other background tasks

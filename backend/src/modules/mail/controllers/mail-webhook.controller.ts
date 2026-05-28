@@ -33,7 +33,7 @@ export class MailWebhookController {
   ) {
     const publicKey = this.configService.get<string>('SENDGRID_WEBHOOK_PUBLIC_KEY');
 
-    // In L8 production, verify signatures strictly
+    // In production, verify signatures strictly.
     if (publicKey && signature && timestamp) {
       try {
         const verify = new EventWebhook();

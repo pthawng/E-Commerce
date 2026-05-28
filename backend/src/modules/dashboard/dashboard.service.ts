@@ -88,7 +88,7 @@ export class DashboardService {
     }
 
     const days = parseInt(range.replace('d', '')) || 7;
-    // L8 SE: Ensure 'Today' is always included as the final anchor
+    // Ensure today is always included as the final anchor.
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -120,7 +120,7 @@ export class DashboardService {
     }
 
     try {
-      // L8 SE: Reduced cache TTL to 5 mins for real-time dashboard feel
+      // Reduced cache TTL to 5 minutes for a fresher dashboard.
       await this.cacheManager.set(cacheKey, fullSeries, 300 * 1000);
     } catch (e) {
       this.logger.error('Failed to set cache', e);
@@ -184,7 +184,7 @@ export class DashboardService {
     });
 
     return orders.map((order) => {
-      // L8 SE Logic: High-Fidelity Workload Calculation
+      // Workload calculation.
       // Weighted by total quantity of items and order value as a proxy for production complexity
       const itemWeight = order.items.reduce((sum, item) => sum + item.quantity, 0) * 15;
       const valueWeight = Math.min(50, order.totalAmount.toNumber() / 1000);

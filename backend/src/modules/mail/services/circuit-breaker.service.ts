@@ -9,8 +9,8 @@ export enum CircuitBreakerState {
 }
 
 /**
- * L8-Grade Stateful Circuit Breaker
- * Uses Redis to maintain state and sliding window error rates across distributed workers.
+ * Stateful circuit breaker.
+ * Uses Redis to maintain state and sliding window error rates across workers.
  */
 @Injectable()
 export class CircuitBreakerService {

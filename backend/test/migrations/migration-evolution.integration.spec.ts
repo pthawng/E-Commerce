@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 /**
  * INTEGRATION TEST: Migration Evolution & Fault Tolerance
  *
- * L8 Philosophy: Migrations are the riskiest operation in production.
+ * Migrations are one of the riskiest production operations.
  * They must be tested against REAL data to ensure:
  * 1. Forward compatibility: existing data survives new migrations.
  * 2. Idempotency: `migrate deploy` is safe to re-run after a crash.

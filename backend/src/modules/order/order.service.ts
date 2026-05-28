@@ -291,7 +291,7 @@ export class OrderService {
   }
 
   /**
-   * Elite State Transition (FAANG-Grade)
+   * Guarded state transition.
    * 1. Acquire row-level lock (FOR UPDATE)
    * 2. Validate against OrderStateMachine (Fail-Closed)
    * 3. Capture before/after state snapshots for immutable audit
@@ -331,7 +331,7 @@ export class OrderService {
         },
       });
 
-      // 4. Immutable Financial-Grade Audit Log
+      // 4. Immutable payment audit log.
       await tx.orderTimeline.create({
         data: {
           orderId: id,
@@ -462,7 +462,7 @@ export class OrderService {
         );
       }
 
-      // Check Price Mismatch (FAANG-grade decimal precision)
+      // Check price mismatch with decimal precision.
       if (!new Prisma.Decimal(variant.price).equals(item.cachedPrice)) {
         priceMismatches.push({
           variantId: variant.id,

@@ -7,7 +7,7 @@ export class HealthService {
 
   async check() {
     try {
-      // L8 Tip: Check critical dependencies (DB, Redis) correctly
+      // Check critical dependencies (DB, Redis).
       await this.prisma.$queryRaw`SELECT 1`;
       return {
         status: 'ok',

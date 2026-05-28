@@ -8,7 +8,7 @@ import { DomainEventRelayService } from './domain-event-relay.service';
     PrismaModule,
     BullModule.registerQueue({
       name: 'system-events',
-      // DLQ / Resilience Config for L8 Standard
+      // DLQ / resilience configuration.
       defaultJobOptions: {
         attempts: 5,
         backoff: {

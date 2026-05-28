@@ -59,8 +59,7 @@ export const PaymentResultPage: React.FC = () => {
   /**
    * Observability: Track payment result events
    */
-  const trackEvent = useCallback((event: string, properties?: Record<string, unknown>) => {
-    console.log(`[Tracking] ${event}`, properties);
+  const trackEvent = useCallback((_event: string, _properties?: Record<string, unknown>) => {
     // Add real tracking library call here, e.g., segment.track(...)
   }, []);
 

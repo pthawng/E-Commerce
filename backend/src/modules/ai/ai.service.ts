@@ -50,10 +50,7 @@ export class AiService {
     this.recommendationCacheTtlMs = Number(
       this.configService.get('AI_RECOMMENDATION_CACHE_TTL_MS', 10 * 60 * 1000),
     );
-    this.internalToken = this.configService.get<string>(
-      'INTERNAL_SERVICE_TOKEN',
-      'dev_internal_token_123',
-    );
+    this.internalToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN') || '';
   }
 
   async syncProduct(payload: ProductEmbeddingPayload): Promise<void> {
@@ -379,6 +376,10 @@ export class AiService {
   }
 
   private async request<T>(url: string, init: RequestInit, timeoutMs: number): Promise<T> {
+    if (!this.internalToken) {
+      throw new Error('INTERNAL_SERVICE_TOKEN is required before calling ai-service');
+    }
+
     const response = await fetch(url, {
       ...init,
       headers: {

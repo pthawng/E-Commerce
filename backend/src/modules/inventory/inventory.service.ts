@@ -1,14 +1,13 @@
 import { SystemContextStore } from '@common/context/system-context.store';
-import { withRetry } from '@common/utils/retry.util';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { ActionType, Prisma, ReservationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { lockInventoryItem } from './inventory-lock.helper';
 
 /**
  * Allocation item details.
@@ -73,29 +72,12 @@ export class InventoryService {
         const reservationIds: string[] = [];
 
         for (const alloc of allocations) {
-          // Use NOWAIT and retry logic for concurrent safety without hanging
-          const inventoryItem = await withRetry(
-            async () => {
-              const [item] = await tx.$queryRawUnsafe<
-                Array<{ id: string; quantity: number; reservedQuantity: number }>
-              >(
-                `SELECT id, quantity, "reservedQuantity"
-               FROM "InventoryItem"
-               WHERE "productVariantId" = $1 AND "warehouseId" = $2
-               FOR UPDATE NOWAIT`,
-                alloc.variantId,
-                alloc.warehouseId,
-              );
-              return item;
-            },
-            { logger: this.logger, context: 'InventoryReserve' },
-          );
-
-          if (!inventoryItem) {
-            throw new NotFoundException(
-              `No inventory found for variant=${alloc.variantId} warehouse=${alloc.warehouseId}`,
-            );
-          }
+          const inventoryItem = await lockInventoryItem(tx, {
+            variantId: alloc.variantId,
+            warehouseId: alloc.warehouseId,
+            logger: this.logger,
+            context: 'InventoryReserve',
+          });
 
           const available = inventoryItem.quantity - inventoryItem.reservedQuantity;
 
@@ -167,24 +149,12 @@ export class InventoryService {
         });
 
         for (const res of reservations) {
-          const inventoryItem = await withRetry(
-            async () => {
-              const [item] = await tx.$queryRawUnsafe<
-                Array<{ id: string; quantity: number; reservedQuantity: number }>
-              >(
-                `SELECT id, quantity, "reservedQuantity"
-               FROM "InventoryItem"
-               WHERE "productVariantId" = $1 AND "warehouseId" = $2
-               FOR UPDATE NOWAIT`,
-                res.variantId,
-                res.warehouseId,
-              );
-              return item;
-            },
-            { logger: this.logger, context: 'InventoryDeduct' },
-          );
-
-          if (!inventoryItem) continue;
+          const inventoryItem = await lockInventoryItem(tx, {
+            variantId: res.variantId,
+            warehouseId: res.warehouseId,
+            logger: this.logger,
+            context: 'InventoryDeduct',
+          });
 
           const beforeQuantity = inventoryItem.quantity;
 
@@ -233,24 +203,12 @@ export class InventoryService {
         });
 
         for (const res of reservations) {
-          const inventoryItem = await withRetry(
-            async () => {
-              const [item] = await tx.$queryRawUnsafe<
-                Array<{ id: string; quantity: number; reservedQuantity: number }>
-              >(
-                `SELECT id, quantity, "reservedQuantity"
-               FROM "InventoryItem"
-               WHERE "productVariantId" = $1 AND "warehouseId" = $2
-               FOR UPDATE NOWAIT`,
-                res.variantId,
-                res.warehouseId,
-              );
-              return item;
-            },
-            { logger: this.logger, context: 'InventoryRelease' },
-          );
-
-          if (!inventoryItem) continue;
+          const inventoryItem = await lockInventoryItem(tx, {
+            variantId: res.variantId,
+            warehouseId: res.warehouseId,
+            logger: this.logger,
+            context: 'InventoryRelease',
+          });
 
           const beforeQuantity = inventoryItem.quantity;
 
@@ -341,23 +299,14 @@ export class InventoryService {
   async adjustStock(variantId: string, warehouseId: string, newQuantity: number, reason?: string) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
-        const inventoryItem = await withRetry(
-          async () => {
-            const [item] = await tx.$queryRawUnsafe<any>(
-              `SELECT id, quantity FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE NOWAIT`,
-              variantId,
-              warehouseId,
-            );
-            return item;
-          },
-          { logger: this.logger, context: 'InventoryAdjust' },
-        );
-
-        if (!inventoryItem) {
-          throw new NotFoundException(
+        const inventoryItem = await lockInventoryItem(tx, {
+          variantId,
+          warehouseId,
+          logger: this.logger,
+          context: 'InventoryAdjust',
+          notFoundMessage:
             `Inventory item not found for variant=${variantId} in warehouse=${warehouseId}`,
-          );
-        }
+        });
 
         const beforeQuantity = inventoryItem.quantity;
 
@@ -396,17 +345,13 @@ export class InventoryService {
   ) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
-        const inventoryItem = await withRetry(
-          async () => {
-            const [item] = await tx.$queryRawUnsafe<any>(
-              `SELECT id, quantity FROM "InventoryItem" WHERE "productVariantId" = $1 AND "warehouseId" = $2 FOR UPDATE NOWAIT`,
-              variantId,
-              warehouseId,
-            );
-            return item;
-          },
-          { logger: this.logger, context: 'InventoryDamage' },
-        );
+        const inventoryItem = await lockInventoryItem(tx, {
+          variantId,
+          warehouseId,
+          logger: this.logger,
+          context: 'InventoryDamage',
+          notFoundMessage: 'Inventory item not found',
+        });
 
         if (!inventoryItem || inventoryItem.quantity < quantity) {
           throw new BadRequestException('Insufficient stock to report damage');

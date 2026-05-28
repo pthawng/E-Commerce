@@ -1,7 +1,7 @@
 const autocannon = require('autocannon');
 
 /**
- * STRESS TEST: 10,000 CONCURRENT CONNECTIONS (Autocannon)
+ * Autocannon stress test scenario.
  * TARGETING CRITICAL SYSTEM ENDPOINTS
  */
 

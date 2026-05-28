@@ -101,7 +101,7 @@ export const envSchema = z.object({
   AI_SEARCH_CACHE_TTL_MS: z.coerce.number().default(120000),
   AI_RECOMMENDATION_CACHE_TTL_MS: z.coerce.number().default(600000),
   AI_CHAT_TIMEOUT_MS: z.coerce.number().default(30000),
-  INTERNAL_SERVICE_TOKEN: z.string().default('dev_internal_token_123'),
+  INTERNAL_SERVICE_TOKEN: z.string().min(16).optional(),
 
   // Currency
   SYSTEM_BASE_CURRENCY: z.string().default('VND'),
@@ -111,6 +111,14 @@ export const envSchema = z.object({
   TRUST_PROXY_DEPTH: z.coerce.number().default(1),
   SEED_ADMIN_PASSWORD: z.string().min(8),
   ALLOW_PROD_SEED: z.preprocess((v) => v === 'true', z.boolean().default(false)),
+}).superRefine((value, ctx) => {
+  if (value.NODE_ENV === 'production' && !value.INTERNAL_SERVICE_TOKEN) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'INTERNAL_SERVICE_TOKEN is required in production',
+      path: ['INTERNAL_SERVICE_TOKEN'],
+    });
+  }
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -78,8 +78,10 @@ export class QdrantClient {
           headers,
           body: JSON.stringify({
             vectors: {
-              size: this.vectorSize,
-              distance: 'Cosine',
+              default: {
+                size: this.vectorSize,
+                distance: 'Cosine',
+              },
             },
             sparse_vectors: {
               "text": { index: { on_disk: true } }
@@ -116,8 +118,8 @@ export class QdrantClient {
             {
               id: record.id,
               vector: record.sparseVector 
-                ? { "": record.vector, "text": record.sparseVector } 
-                : record.vector,
+                ? { default: record.vector, text: record.sparseVector }
+                : { default: record.vector },
               payload: record.payload,
             },
           ],
@@ -169,12 +171,13 @@ export class QdrantClient {
 
     if (options.sparseVector) {
       body.prefetch = [
-        { query: vector, limit: limit * 2 },
-        { query: { sparse: { name: "text", vector: options.sparseVector } }, limit: limit * 2 }
+        { query: vector, using: 'default', limit: limit * 2 },
+        { query: options.sparseVector, using: 'text', limit: limit * 2 }
       ];
       body.query = { fusion: "rrf" };
     } else {
       body.query = vector;
+      body.using = 'default';
     }
 
     const response = await this.breaker.execute(() => 

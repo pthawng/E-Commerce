@@ -5,7 +5,7 @@ import { IntegrationTestBase } from '../../../../test/utils/integration-test-bas
 /**
  * CHAOS TEST: Inventory Concurrency with Network Jitter & Random Failures
  *
- * L8 Philosophy: This test lives in the NIGHTLY pipeline.
+ * This test is intended for the nightly pipeline.
  * Uses raw pg connections (same as the integration test), but adds:
  * - Random jitter before acquiring the lock
  * - Forced 10% failure injection (simulates network timeout)

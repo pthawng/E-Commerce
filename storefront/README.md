@@ -14,7 +14,7 @@ The `@ray-paradis/storefront` is the consumer-facing Single Page Application (SP
 ### 2. Core Capabilities
 * **💎 Dynamic Variant Configuration**: Interactive configuration loops that handle combinations of metals, sizes, and gem cuts, instantly updating high-definition media carousels.
 * **⚡ Optimistic Cart Syncer**: Local-first cart storage synchronized to the backend via TanStack Query, showing instant cart count increments for better UX.
-* **🛡️ Zero-Trust Security**: Standardized token lifecycle management using HttpOnly, SameSite secure cookies to prevent XSS. It automatically appends CSRF validation headers using the Double Submit Cookie pattern. (See [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md) for details).
+* **🛡️ Backend-authoritative Security**: Standardized token lifecycle management using HttpOnly, SameSite secure cookies to reduce XSS token theft risk. It automatically appends CSRF validation headers using the Double Submit Cookie pattern. (See [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md) for details).
 * **🔄 Payment Return Orchestrator**: Safely handles redirections back from VNPay/PayPal by polling the secure backend API (`GET /payment/status/:orderId`) rather than relying on insecure URL parameters.
 
 ---
@@ -75,7 +75,7 @@ npm run preview
 ### 2. Các chức năng chính
 * **💎 Cấu hình biến thể sản phẩm động**: Giao diện tương tác trực quan cho phép khách hàng kết hợp các loại chất liệu, kích thước ni tay nhẫn và giác cắt đá quý, lập tức cập nhật hình ảnh độ nét cao.
 * **⚡ Đồng bộ hóa giỏ hàng Optimistic**: Giỏ hàng lưu trữ ưu tiên ở local và đồng bộ ngầm với backend qua TanStack Query, tăng số lượng hiển thị ngay lập tức để tối ưu trải nghiệm (UX).
-* **🛡️ Bảo mật Zero-Trust**: Quản lý vòng đời token qua cookie HttpOnly, SameSite an toàn để phòng chống tấn công XSS. Tự động đính kèm mã bảo mật CSRF qua cơ chế Double Submit Cookie (Chi tiết tại [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md)).
+* **🛡️ Bảo mật do backend kiểm soát**: Quản lý vòng đời token qua cookie HttpOnly, SameSite để giảm rủi ro đánh cắp token qua XSS. Tự động đính kèm mã bảo mật CSRF qua cơ chế Double Submit Cookie (Chi tiết tại [FRONTEND_SECURITY.md](./FRONTEND_SECURITY.md)).
 * **🔄 Điều phối kết quả thanh toán**: Nhận diện phản hồi chuyển hướng từ cổng VNPay/PayPal, thực hiện gọi API kiểm tra trạng thái thực tế từ backend (`GET /payment/status/:orderId`) thay vì tin tưởng các tham số không an toàn trên URL.
 
 ---

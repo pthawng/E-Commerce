@@ -10,10 +10,15 @@ const ARGON_OPTIONS: argon2.Options = {
 
 async function main() {
   const prisma = new PrismaClient();
-  const email = 'admin@rayparadis.vn';
-  const newPassword = 'RayParadis@2026';
+  const email = process.env.RESET_ADMIN_EMAIL || 'admin@rayparadis.vn';
+  const newPassword = process.env.RESET_ADMIN_PASSWORD || process.env.SEED_ADMIN_PASSWORD;
+  const shouldPrintPassword = process.argv.includes('--print-password');
 
-  console.log(`🔐 Resetting password for: ${email}`);
+  if (!newPassword) {
+    throw new Error('RESET_ADMIN_PASSWORD or SEED_ADMIN_PASSWORD is required');
+  }
+
+  console.log(`Resetting password for: ${email}`);
 
   const hashedPassword = await argon2.hash(newPassword, ARGON_OPTIONS);
 
@@ -35,8 +40,12 @@ async function main() {
     },
   });
 
-  console.log(`✅ Admin user ${user.email} has been reset/created.`);
-  console.log(`👉 New Password: ${newPassword}`);
+  console.log(`Admin user ${user.email} has been reset/created.`);
+  if (shouldPrintPassword) {
+    console.log(`New password: ${newPassword}`);
+  } else {
+    console.log('Password was updated. Re-run with --print-password only in local dev if needed.');
+  }
 
   await prisma.$disconnect();
 }

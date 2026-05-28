@@ -18,18 +18,20 @@ async function bootstrap() {
 
   // Simple Global Auth Guard (Internal Token)
   const internalToken = configService.get<string>('INTERNAL_SERVICE_TOKEN');
-  if (internalToken) {
-    app.use((req: any, res: any, next: any) => {
-      // Skip health check
-      if (req.url === '/health') return next();
-      
-      const token = req.headers['x-internal-token'];
-      if (token !== internalToken) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-      next();
-    });
+  if (!internalToken) {
+    throw new Error('INTERNAL_SERVICE_TOKEN is required for ai-service');
   }
+
+  app.use((req: any, res: any, next: any) => {
+    // Skip health check
+    if (req.url === '/health') return next();
+
+    const token = req.headers['x-internal-token'];
+    if (token !== internalToken) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    next();
+  });
 
   await app.listen(port);
   logger.log(`AI Service is running on: http://localhost:${port}`);

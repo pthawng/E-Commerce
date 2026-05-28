@@ -2,10 +2,21 @@ import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 
 const prisma = new PrismaClient();
-const AI_SERVICE_URL = 'http://localhost:4100/products/embed';
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL
+  ? `${process.env.AI_SERVICE_URL.replace(/\/$/, '')}/products/embed`
+  : 'http://localhost:4100/products/embed';
+const INTERNAL_TOKEN = requireEnv('INTERNAL_SERVICE_TOKEN');
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required to sync AI products`);
+  }
+  return value;
+}
 
 async function sync() {
-  console.log('🚀 Starting AI Product Sync...');
+  console.log('Starting AI product sync...');
 
   const products = await prisma.product.findMany({
     include: {
@@ -21,12 +32,11 @@ async function sync() {
     },
   });
 
-  console.log(`📦 Found ${products.length} products to sync.`);
+  console.log(`Found ${products.length} products to sync.`);
 
   let successCount = 0;
   let errorCount = 0;
 
-  // Helper to extract string from Json (assuming format like { en: "Name" } or just string)
   const extractText = (val: any) => {
     if (typeof val === 'string') return val;
     if (val && typeof val === 'object') return val.en || val.vi || Object.values(val)[0] || '';
@@ -51,26 +61,25 @@ async function sync() {
 
       await axios.post(AI_SERVICE_URL, payload, {
         headers: {
-          'X-Internal-Token': process.env.INTERNAL_SERVICE_TOKEN || 'dev_internal_token_123',
+          'X-Internal-Token': INTERNAL_TOKEN,
           'Content-Type': 'application/json',
         },
       });
       successCount++;
-      console.log(`...Synced ${product.name} (${successCount}/10)`);
+      console.log(`Synced ${product.id} (${successCount}/${products.length})`);
     } catch (error: any) {
       errorCount++;
       console.error(
-        `❌ Failed to sync product ${product.id}: ${error?.response?.data?.message || error.message}`,
+        `Failed to sync product ${product.id}: ${error?.response?.data?.message || error.message}`,
       );
     }
 
-    // Always delay 4 seconds to respect Gemini Free Tier 15 RPM limits
-    await new Promise((r) => setTimeout(r, 4000));
+    await new Promise((resolve) => setTimeout(resolve, 4000));
   }
 
-  console.log('\n✨ Sync Completed!');
-  console.log(`✅ Success: ${successCount}`);
-  console.log(`❌ Failed: ${errorCount}`);
+  console.log('\nSync completed.');
+  console.log(`Success: ${successCount}`);
+  console.log(`Failed: ${errorCount}`);
 
   await prisma.$disconnect();
 }

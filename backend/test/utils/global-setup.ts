@@ -4,7 +4,7 @@ import { execSync } from 'child_process';
 let container: StartedPostgreSqlContainer;
 
 /**
- * L8 Pattern: Global setup starts ONE container for the entire integration
+ * Global setup starts one container for the integration suite.
  * test run, shared across all test files (but isolated via transactions).
  * This avoids the overhead of spinning up/down a container per file.
  */

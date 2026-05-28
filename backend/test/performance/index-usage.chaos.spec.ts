@@ -16,7 +16,7 @@ interface ExplainResult {
 /**
  * CHAOS TEST: GIN/Trigram Index Usage Verification
  *
- * L8 Philosophy: Having an index means nothing if the query planner
+ * Having an index means little if the query planner
  * doesn't USE it. This test verifies the planner's choice by seeding
  * enough rows to trigger index usage, then asserting on COST THRESHOLD
  * rather than scan type (which avoids false positives on small tables).
@@ -57,7 +57,7 @@ describe('[Chaos] GIN Index Usage Verification', () => {
     }
 
     // Update planner statistics
-    await prisma.$queryRawUnsafe('ANALYZE "categories"');
+    await prisma.$executeRaw`ANALYZE "categories"`;
   });
 
   afterAll(async () => {

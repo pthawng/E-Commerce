@@ -9,15 +9,17 @@
     "build:frontend": "npm run build:shared && cd storefront && npm install && npm run build",
     "prisma:generate": "cd backend && npx prisma generate",
     "prisma:migrate": "cd backend && npx prisma migrate deploy",
-    "release": "cd backend && npm run release --"
+    "release": "cd backend && npm run release --",
+    "dev": "concurrently --kill-others -n \"shared,backend,storefront,back-office,ai-service\" -c \"gray,blue,green,magenta,cyan\" \"npm run watch --prefix shared\" \"npm run start:dev --prefix backend\" \"npm run dev --prefix storefront\" \"npm run dev --prefix back-office\" \"npm run dev --prefix ai-service\""
   },
   "prisma": {
     "seed": "ts-node backend/src/prisma/seed.ts"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",
+    "concurrently": "^10.0.0",
     "dotenv": "^17.4.2",
-    "typescript": "^5.7.3",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }
