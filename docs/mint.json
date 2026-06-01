@@ -1,0 +1,94 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Ray Paradis",
+  "colors": {
+    "primary": "#D4AF37",
+    "light": "#D4AF37",
+    "dark": "#15130f"
+  },
+  "topbarLinks": [
+    {
+      "name": "Back-office",
+      "url": "https://admin.rayparadis.com"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Bắt đầu",
+      "pages": [
+        "vi/getting-started/introduction",
+        "vi/getting-started/quick-start",
+        "vi/getting-started/environment-setup",
+        "vi/getting-started/project-structure"
+      ]
+    },
+    {
+      "group": "Kiến trúc Hệ thống",
+      "pages": [
+        "vi/architecture/system-overview",
+        "vi/architecture/modular-monolith",
+        "vi/architecture/concurrency-control",
+        "vi/architecture/auth-and-caching",
+        "vi/architecture/ai-pipeline"
+      ]
+    },
+    {
+      "group": "Architecture Decision Records",
+      "pages": [
+        "vi/architecture/adr/001-modular-monolith",
+        "vi/architecture/adr/002-http-only-cookie-auth",
+        "vi/architecture/adr/003-inventory-locking-strategy",
+        "vi/architecture/adr/004-outbox-pattern",
+        "vi/architecture/adr/005-vector-search-qdrant"
+      ]
+    },
+    {
+      "group": "Development",
+      "pages": [
+        "vi/development/coding-conventions",
+        "vi/development/testing-strategy",
+        "vi/development/commit-and-branching",
+        "vi/development/database-migration",
+        "vi/development/pull-request-checklist"
+      ]
+    },
+    {
+      "group": "Phân hệ Nghiệp vụ",
+      "pages": [
+        "vi/modules/inventory/overview",
+        "vi/modules/inventory/architecture",
+        "vi/modules/order/overview",
+        "vi/modules/payment/overview",
+        "vi/modules/product/overview",
+        "vi/modules/auth/overview",
+        "vi/modules/rbac/overview",
+        "vi/modules/rbac/permissions"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "vi/api-reference/authentication",
+        "vi/api-reference/error-codes",
+        "vi/api-reference/pagination",
+        "vi/api-reference/rate-limiting"
+      ]
+    },
+    {
+      "group": "Vận hành",
+      "pages": [
+        "vi/operations/local-dev",
+        "vi/operations/deployment",
+        "vi/operations/environment-vars",
+        "vi/operations/runbook"
+      ]
+    },
+    {
+      "group": "Bảo mật",
+      "pages": [
+        "vi/security/overview",
+        "vi/security/audit-log"
+      ]
+    }
+  ]
+}
