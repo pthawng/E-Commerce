@@ -2,7 +2,6 @@
   "name": "@ecommerce/shared",
   "version": "1.0.0",
   "description": "Shared types, enums, utils, and config for E-Commerce project",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

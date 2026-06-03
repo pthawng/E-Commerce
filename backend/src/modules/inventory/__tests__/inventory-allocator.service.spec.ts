@@ -8,7 +8,7 @@ describe('InventoryAllocatorService', () => {
   let prisma: PrismaService;
 
   const mockPrismaService = {
-    inventoryItem: {
+    inventoryBalance: {
       findMany: jest.fn(),
     },
   };
@@ -31,7 +31,7 @@ describe('InventoryAllocatorService', () => {
     const items = [{ variantId, quantity: 10 }];
 
     it('should allocate from a single warehouse if stock is sufficient', async () => {
-      mockPrismaService.inventoryItem.findMany.mockResolvedValue([
+      mockPrismaService.inventoryBalance.findMany.mockResolvedValue([
         { warehouseId: 'w1', quantity: 20, reservedQuantity: 0, warehouse: { name: 'W1' } },
       ]);
 
@@ -42,7 +42,7 @@ describe('InventoryAllocatorService', () => {
     });
 
     it('should split allocation across multiple warehouses (Largest-Stock-First)', async () => {
-      mockPrismaService.inventoryItem.findMany.mockResolvedValue([
+      mockPrismaService.inventoryBalance.findMany.mockResolvedValue([
         { warehouseId: 'w1', quantity: 8, reservedQuantity: 0, warehouse: { name: 'W1' } },
         { warehouseId: 'w2', quantity: 15, reservedQuantity: 0, warehouse: { name: 'W2' } },
         { warehouseId: 'w3', quantity: 3, reservedQuantity: 0, warehouse: { name: 'W3' } },
@@ -57,7 +57,7 @@ describe('InventoryAllocatorService', () => {
 
     it('should split allocation when one warehouse is not enough', async () => {
       const largeRequest = [{ variantId, quantity: 20 }];
-      mockPrismaService.inventoryItem.findMany.mockResolvedValue([
+      mockPrismaService.inventoryBalance.findMany.mockResolvedValue([
         { warehouseId: 'w1', quantity: 15, reservedQuantity: 0, warehouse: { name: 'W1' } },
         { warehouseId: 'w2', quantity: 10, reservedQuantity: 0, warehouse: { name: 'W2' } },
       ]);
@@ -71,7 +71,7 @@ describe('InventoryAllocatorService', () => {
     });
 
     it('should throw ConflictException if total stock is insufficient', async () => {
-      mockPrismaService.inventoryItem.findMany.mockResolvedValue([
+      mockPrismaService.inventoryBalance.findMany.mockResolvedValue([
         { warehouseId: 'w1', quantity: 5, reservedQuantity: 0, warehouse: { name: 'W1' } },
       ]);
 
@@ -79,7 +79,7 @@ describe('InventoryAllocatorService', () => {
     });
 
     it('should ignore warehouses with no available stock', async () => {
-      mockPrismaService.inventoryItem.findMany.mockResolvedValue([
+      mockPrismaService.inventoryBalance.findMany.mockResolvedValue([
         { warehouseId: 'w1', quantity: 10, reservedQuantity: 10, warehouse: { name: 'W1' } },
         { warehouseId: 'w2', quantity: 15, reservedQuantity: 0, warehouse: { name: 'W2' } },
       ]);

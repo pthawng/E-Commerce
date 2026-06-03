@@ -1,6 +1,7 @@
 import { IS_OPTIONAL_AUTH_KEY } from '@common/decorators/optional-auth.decorator';
 import { IS_PUBLIC_KEY } from '@common/decorators/public.decorator';
-import { ExecutionContext, Injectable } from '@nestjs/common';
+import { SKIP_JWT_AUTH_KEY } from '@common/decorators/skip-jwt-auth.decorator';
+import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -14,7 +15,7 @@ export class JwtAccessGuard extends AuthGuard('jwt-access') {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // 1. Check for @Public() - Skip all auth
+    // 1. Check for @Public() - Skip all auth and cross-cutting auth guards.
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -24,7 +25,18 @@ export class JwtAccessGuard extends AuthGuard('jwt-access') {
       return true;
     }
 
-    // 2. Check for @OptionalAuth() - Mark for non-blocking auth
+    // 2. Check for @SkipJwtAuth() - Skip only the global storefront JWT guard.
+    // Route-specific guards, CSRF, throttling, and interceptors still run.
+    const skipJwtAuth = this.reflector.getAllAndOverride<boolean>(SKIP_JWT_AUTH_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (skipJwtAuth) {
+      return true;
+    }
+
+    // 3. Check for @OptionalAuth() - Mark for non-blocking auth
     const isOptional = this.reflector.getAllAndOverride<boolean>(IS_OPTIONAL_AUTH_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -39,10 +51,26 @@ export class JwtAccessGuard extends AuthGuard('jwt-access') {
     try {
       const canActivate = (await super.canActivate(context)) as boolean;
       if (isOptional) return true;
+      this.enforceAdminBoundary(context);
       return canActivate;
     } catch (err) {
       if (isOptional) return true;
       throw err;
+    }
+  }
+
+  private enforceAdminBoundary(context: ExecutionContext) {
+    const request = context.switchToHttp().getRequest();
+    const rawUrl = String(request.originalUrl ?? request.url ?? '');
+    const path = rawUrl.split('?')[0] ?? rawUrl;
+
+    if (!/(^|\/)admin(\/|$)/.test(path)) {
+      return;
+    }
+
+    const user = request.user;
+    if (!user || user.aud !== 'admin' || user.userType === 'CUSTOMER') {
+      throw new UnauthorizedException('Admin access token required');
     }
   }
 

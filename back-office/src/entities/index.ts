@@ -1,2 +1,0 @@
-// Business entities
-export {};

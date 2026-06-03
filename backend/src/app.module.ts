@@ -12,11 +12,15 @@ import { FeatureFlagModule } from '@modules/infra/feature-flag/feature-flag.modu
 import { InfraModule } from '@modules/infra/infra.module';
 
 import { AnalyticsModule } from '@modules/analytics/analytics.module';
+import { BackOfficeAuthModule } from '@modules/back-office-auth/back-office-auth.module';
+import { CatalogModule } from '@modules/back-office/catalog/catalog.module';
+import { VipCareModule } from '@modules/back-office/vip-care/vip-care.module';
 import { HealthModule } from '@modules/infra/health/health.module';
 import { InventoryModule } from '@modules/inventory/inventory.module';
 import { LedgerModule } from '@modules/ledger/ledger.module';
 import { MailModule } from '@modules/mail/mail.module';
 import { NotificationModule } from '@modules/notification/notification.module';
+import { ObservabilityModule } from '@modules/observability/observability.module';
 import { OrderModule } from '@modules/order/order.module';
 import { PaymentModule } from '@modules/payment/payment.module';
 import { ProductModule } from '@modules/product/product.module';
@@ -47,6 +51,7 @@ import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { SessionMiddleware } from './common/middleware/session.middleware';
 import { AppConfigModule } from './config/app-config.module';
 import { bullConfigFactory, cacheConfigFactory } from './config/redis.config';
+import { CorrelationIdMiddleware } from './modules/observability/correlation-id.middleware';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -87,12 +92,16 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     PrismaModule,
     InfraModule,
+    ObservabilityModule,
     AiModule,
     UserModule,
     AuthModule,
     MailModule,
     RbacModule,
     SecurityModule,
+    BackOfficeAuthModule,
+    CatalogModule,
+    VipCareModule,
     StorageModule,
     ProductModule,
     CategoryModule,
@@ -161,6 +170,6 @@ export class AppModule implements NestModule {
     consumer.apply(BullBoardAuthMiddleware).forRoutes('admin/queues', 'admin/queues/*path');
 
     // Wrap the entire application with security and session middleware
-    consumer.apply(SecurityMiddleware, SessionMiddleware).forRoutes('*');
+    consumer.apply(CorrelationIdMiddleware, SecurityMiddleware, SessionMiddleware).forRoutes('*');
   }
 }

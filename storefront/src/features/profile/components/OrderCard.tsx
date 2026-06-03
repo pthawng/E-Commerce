@@ -5,6 +5,10 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { Order } from '../types';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import {
+  getOrderStatusLabel,
+  getOrderStatusToneClass,
+} from '@/features/profile/utils/orderStatus';
 
 
 interface OrderCardProps {
@@ -21,19 +25,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
-  const statusColors: Record<string, string> = {
-
-    pending: 'text-gold-light border-gold-light/20 bg-gold-shimmer/10',
-    confirmed: 'text-gold border-gold/20 bg-gold-shimmer/20',
-    shipping: 'text-blue-500 border-blue-500/20 bg-blue-500/5',
-    delivered: 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5',
-    completed: 'text-primary/60 border-primary/10 bg-primary/5',
-    cancelled: 'text-destructive border-destructive/20 bg-destructive/5',
-    failed: 'text-destructive border-destructive/20 bg-destructive/5',
-  };
-
-  const getStatusLabel = (status: string) => t(`account.orders.status.${status}`);
-
   const items = order.items || [];
 
   return (
@@ -47,8 +38,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
         {/* Order Header Info */}
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <span className={`px-3 py-1 text-[9px] uppercase tracking-ultra border ${statusColors[order.status] || 'text-muted-foreground border-primary/10'}`}>
-              {getStatusLabel(order.status)}
+            <span className={`px-3 py-1 text-[9px] uppercase tracking-ultra border ${getOrderStatusToneClass(order.status)}`}>
+              {getOrderStatusLabel(order.status, t)}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
               {new Date(order.createdAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : language === 'vi' ? 'vi-VN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

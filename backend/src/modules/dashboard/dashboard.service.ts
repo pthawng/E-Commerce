@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OrderStatusEnum } from '@prisma/client';
 import { Cache } from 'cache-manager';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SystemSettingService } from '../system/system-setting.service';
 
 @Injectable()
 export class DashboardService {
@@ -11,6 +12,7 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly settings: SystemSettingService,
   ) {}
 
   async getStats() {
@@ -25,6 +27,7 @@ export class DashboardService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const lowStockThreshold = await this.settings.getNumber('inventory.lowStockThreshold');
     const [revenueData, ordersToday, activeOrders, lowStockItems, totalOrders, totalSessions] =
       await Promise.all([
         this.prisma.order.aggregate({
@@ -49,8 +52,8 @@ export class DashboardService {
             },
           },
         }),
-        this.prisma.inventoryItem.count({
-          where: { quantity: { lt: 5 } },
+        this.prisma.inventoryBalance.count({
+          where: { quantity: { lt: lowStockThreshold } },
         }),
         this.prisma.order.count(),
         this.prisma.order
@@ -101,7 +104,7 @@ export class DashboardService {
         COALESCE(SUM("totalAmount")::FLOAT, 0) as amount
       FROM "Order"
       WHERE "createdAt" >= ${startDate}
-        AND status != 'cancelled'
+        AND status != ${OrderStatusEnum.CANCELLED}::"OrderStatusEnum"
       GROUP BY DATE_TRUNC('day', "createdAt")
       ORDER BY DATE_TRUNC('day', "createdAt") ASC
     `;
@@ -134,7 +137,9 @@ export class DashboardService {
     try {
       const cached = await this.cacheManager.get(cacheKey);
       if (cached) return cached;
-    } catch {}
+    } catch (e) {
+      this.logger.error('Failed to read top products cache', e);
+    }
 
     const topItems = await this.prisma.orderItem.groupBy({
       by: ['productVariantId'],
@@ -211,8 +216,9 @@ export class DashboardService {
   }
 
   async getLowStockAlerts(limit: number = 10) {
-    return this.prisma.inventoryItem.findMany({
-      where: { quantity: { lt: 10 } },
+    const lowStockThreshold = await this.settings.getNumber('inventory.lowStockThreshold');
+    return this.prisma.inventoryBalance.findMany({
+      where: { quantity: { lt: lowStockThreshold } },
       orderBy: { quantity: 'asc' },
       take: limit,
       include: {

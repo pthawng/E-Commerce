@@ -70,7 +70,7 @@ describe('CartService', () => {
         isActive: true,
         price: 150000,
         product: { isActive: true },
-        inventoryItems: [{ quantity: 10, reservedQuantity: 0 }],
+        inventoryBalances: [{ quantity: 10, reservedQuantity: 0 }],
       };
       mockPrismaService.productVariant.findUnique.mockResolvedValue(variant);
       mockPrismaService.cart.findFirst.mockResolvedValue({ id: 'c1' });
@@ -102,7 +102,7 @@ describe('CartService', () => {
         id: 'v1',
         isActive: true,
         product: { isActive: true },
-        inventoryItems: [{ quantity: 5, reservedQuantity: 4 }], // Only 1 available
+        inventoryBalances: [{ quantity: 5, reservedQuantity: 4 }], // Only 1 available
       };
       mockPrismaService.productVariant.findUnique.mockResolvedValue(variant);
 
@@ -119,7 +119,10 @@ describe('CartService', () => {
           productVariantId: 'v1',
           quantity: 3,
           cachedPrice: 100,
-          productVariant: { inventoryItems: [{ quantity: 10, reservedQuantity: 0 }] },
+          productVariant: {
+            productId: 'p1',
+            inventoryBalances: [{ quantity: 10, reservedQuantity: 0 }],
+          },
         },
       ];
 
@@ -136,7 +139,7 @@ describe('CartService', () => {
           price: 100,
           isActive: true,
           product: { isActive: true, name: { en: 'V1 Product' }, slug: 'v1-product' },
-          inventoryItems: [{ quantity: 10, reservedQuantity: 0 }],
+          inventoryBalances: [{ quantity: 10, reservedQuantity: 0 }],
         },
       ]);
 

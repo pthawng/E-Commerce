@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { IOwnable } from 'src/common/interfaces/ownable.interface';
 import { Principal, PrincipalType } from 'src/common/types/principal.types';
+import { RequestContextService } from '../../observability/request-context.service';
 import { OwnershipRegistry } from '../ownership.registry';
 import { SecurityEventBus, SecurityEventType } from '../security-event-bus.service';
 
@@ -25,6 +26,10 @@ describe('OwnershipRegistry Integration', () => {
       providers: [
         OwnershipRegistry,
         SecurityEventBus,
+        {
+          provide: RequestContextService,
+          useValue: { get: jest.fn() },
+        },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
       ],

@@ -242,9 +242,9 @@ describe('AuthService', () => {
       });
       (argon2.verify as jest.Mock).mockResolvedValue(true);
 
-      await expect(
-        service.refreshToken({ refreshToken: 'old_rt' }, '127.0.0.1'),
-      ).rejects.toThrow('RETRY_DETECTED');
+      await expect(service.refreshToken({ refreshToken: 'old_rt' }, '127.0.0.1')).rejects.toThrow(
+        'RETRY_DETECTED',
+      );
 
       expect(mockPrismaService.refreshToken.updateMany).not.toHaveBeenCalled();
       expect(mockSecurityEventBus.emit).not.toHaveBeenCalled();

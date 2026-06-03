@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Prisma } from '@prisma/client';
-import type { ProductEmbeddingPayload } from '@shared';
+import { getProductThumbnailUrl, type ProductEmbeddingPayload } from '@shared';
 import { PaginationService, type PaginatedResult } from 'src/common/pagination';
 import { slugify } from 'src/common/utils/string.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -581,7 +581,7 @@ export class ProductService {
   }
 
   private toEmbeddingPayload(product: any): ProductEmbeddingPayload {
-    const thumbnail = product.media?.find((media: any) => media.isThumbnail) ?? product.media?.[0];
+    const imageUrl = getProductThumbnailUrl(product, { fallbackUrl: null }) ?? undefined;
 
     return {
       id: product.id,
@@ -589,7 +589,7 @@ export class ProductService {
       description: this.getLocalizedString(product.description),
       category: this.getLocalizedString(product.categories?.[0]?.category?.name),
       slug: product.slug,
-      imageUrl: thumbnail?.url,
+      imageUrl,
       price: Number(product.displayPriceMin ?? product.displayPriceMax ?? 0),
       locale: 'vi',
       updatedAt: product.updatedAt ? new Date(product.updatedAt).toISOString() : undefined,

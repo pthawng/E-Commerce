@@ -15,6 +15,7 @@ export class PhysicalItemService {
    */
   async registerItem(data: {
     productVariantId: string;
+    warehouseId: string;
     serialNumber?: string;
     rfidTag?: string;
     locationId?: string;
@@ -57,16 +58,14 @@ export class PhysicalItemService {
           metadata: metadata
             ? (Object.assign({}, (item.metadata as object) || {}, metadata) as any)
             : item.metadata,
-          // If properties that affect the hash change, we should update the hash too.
-          // For now, only status and metadata change, which are NOT in our current hash payload.
         },
       });
 
-      // 3. Auto-sync with quantitative InventoryItem
+      // 3. Auto-sync with quantitative InventoryBalance
       await this.syncInventoryCount(
         tx,
         item.productVariantId,
-        item.locationId,
+        item.warehouseId,
         status,
         item.status,
       );
@@ -78,25 +77,15 @@ export class PhysicalItemService {
   /**
    * Warehouse-aware inventory sync.
    * PhysicalItem = single source of truth.
-   * InventoryItem = materialized cache (derived).
+   * InventoryBalance = materialized cache (derived).
    */
   private async syncInventoryCount(
     tx: Prisma.TransactionClient,
     variantId: string,
-    locationId: string | null,
+    warehouseId: string,
     newStatus: ItemStatus,
     oldStatus: ItemStatus,
   ) {
-    if (!locationId) return;
-
-    const location = await tx.inventoryLocation.findUnique({
-      where: { id: locationId },
-      select: { warehouseId: true },
-    });
-    if (!location?.warehouseId) return;
-
-    const warehouseId = location.warehouseId;
-
     // Advisory lock: serialize sync for this variant+warehouse pair
     await tx.$executeRawUnsafe(
       `SELECT pg_advisory_xact_lock(hashtext($1))`,
@@ -109,19 +98,19 @@ export class PhysicalItemService {
         where: {
           productVariantId: variantId,
           status: ItemStatus.AVAILABLE,
-          location: { warehouseId },
+          warehouseId,
         },
       }),
       tx.physicalItem.count({
         where: {
           productVariantId: variantId,
           status: ItemStatus.RESERVED,
-          location: { warehouseId },
+          warehouseId,
         },
       }),
     ]);
 
-    await tx.inventoryItem.upsert({
+    await tx.inventoryBalance.upsert({
       where: {
         productVariantId_warehouseId: {
           productVariantId: variantId,

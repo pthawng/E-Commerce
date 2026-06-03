@@ -258,7 +258,9 @@ export class PaginationService {
 
     try {
       this.cacheManager.set(cacheKey, total, COUNT_CACHE_TTL_MS).catch(() => {});
-    } catch {}
+    } catch (e) {
+      this.logger.error('Redis count cache write error', e);
+    }
 
     return total;
   }

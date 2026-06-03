@@ -1,6 +1,7 @@
+import { SystemSettingService } from '@modules/system/system-setting.service';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
 
 export interface CheckoutTokenPayload {
@@ -25,13 +26,15 @@ export class CheckoutTokenService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly settings: SystemSettingService,
   ) {}
 
   async generateToken(payload: Omit<CheckoutTokenPayload, 'expiresAt' | 'jti'>): Promise<string> {
     try {
-      const expiresIn = this.configService.get<string>('JWT_CHECKOUT_EXPIRES_IN', '15m');
+      const timeoutMinutes = await this.settings.getNumber('order.checkoutTimeoutMinutes');
+      const expiresIn = `${timeoutMinutes}m` as NonNullable<JwtSignOptions['expiresIn']>;
       const jti = randomUUID();
-      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
+      const expiresAt = Date.now() + timeoutMinutes * 60 * 1000;
 
       this.logger.debug(`Generating checkout token with JTI: ${jti}`);
 
@@ -43,7 +46,7 @@ export class CheckoutTokenService {
         },
         {
           secret: this.configService.get<string>('JWT_CHECKOUT_SECRET'),
-          expiresIn: expiresIn as any,
+          expiresIn,
         },
       );
     } catch (error) {

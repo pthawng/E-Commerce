@@ -45,9 +45,9 @@ export async function seedInventory(prisma: PrismaClient) {
     const wh = warehouses[v.sku.length % warehouses.length];
     const locId = locationsMap.get(wh.id);
 
-    // 2. Upsert InventoryItem (Aggregate Stock)
+    // 2. Upsert InventoryBalance (Aggregate Stock)
     const quantity = 50; // Fixed default for demo
-    await prisma.inventoryItem.upsert({
+    await prisma.inventoryBalance.upsert({
       where: {
         productVariantId_warehouseId: {
           productVariantId: v.id,
@@ -80,6 +80,7 @@ export async function seedInventory(prisma: PrismaClient) {
         await prisma.physicalItem.create({
           data: {
             productVariantId: v.id,
+            warehouseId: wh.id,
             locationId: locId,
             serialNumber,
             status: 'AVAILABLE',

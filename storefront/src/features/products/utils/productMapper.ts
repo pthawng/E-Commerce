@@ -1,11 +1,19 @@
-import { Product, LocalizedString } from '../types';
+import {
+  getProductThumbnail,
+  getSecondaryProductMedia,
+  type ProductMediaOwnerLike,
+} from "@shared";
+import { Product, LocalizedString } from "../types";
 
 /**
  * Helper to get localized string based on current language
  */
-export const getLocalized = (str: LocalizedString | undefined, lang: string): string => {
-    if (!str) return '';
-    return str[lang] || str['en'] || Object.values(str)[0] || '';
+export const getLocalized = (
+  str: LocalizedString | undefined,
+  lang: string,
+): string => {
+  if (!str) return "";
+  return str[lang] || str["en"] || Object.values(str)[0] || "";
 };
 
 /**
@@ -13,31 +21,37 @@ export const getLocalized = (str: LocalizedString | undefined, lang: string): st
  * Transforms Backend Product model to Frontend Display model
  */
 export const mapProductToCardProps = (
-    product: Product,
-    lang: string,
-    formatPrice: (price: number) => string
+  product: Product,
+  lang: string,
+  formatPrice: (price: number) => string,
 ) => {
-    // 1. Get Thumbnail
-    const thumbnail = product.media.find(m => m.isThumbnail) || product.media[0];
-    const hoverMedia = product.media.find(m => !m.isThumbnail) || product.media[1];
+  // 1. Get Thumbnail
+  const mediaProduct = product as ProductMediaOwnerLike;
+  const thumbnail = getProductThumbnail(mediaProduct);
+  const hoverMedia = getSecondaryProductMedia(mediaProduct);
 
-    // 2. Get Primary Category
-    const categoryObj = product.categories?.[0]?.category;
-    const categoryName = categoryObj ? getLocalized(categoryObj.name, lang) : 'Luxury';
+  // 2. Get Primary Category
+  const categoryObj = product.categories?.[0]?.category;
+  const categoryName = categoryObj
+    ? getLocalized(categoryObj.name, lang)
+    : "Luxury";
 
-    // 3. Handle Price
-    const rawPrice = product.displayPriceMin || product.variants?.[0]?.price || 0;
+  // 3. Handle Price
+  const rawPrice = product.displayPriceMin || product.variants?.[0]?.price || 0;
 
-    return {
-        id: product.id,
-        variantId: product.variants?.find(v => v.isDefault)?.id || product.variants?.[0]?.id || product.id,
-        name: getLocalized(product.name, lang),
-        price: formatPrice(rawPrice),
-        rawPrice: rawPrice,
-        category: categoryName,
-        image: thumbnail?.url || '',
-        hoverImage: hoverMedia?.url,
-        isNew: product.isFeatured || false,
-        slug: product.slug
-    };
+  return {
+    id: product.id,
+    variantId:
+      product.variants?.find((v) => v.isDefault)?.id ||
+      product.variants?.[0]?.id ||
+      product.id,
+    name: getLocalized(product.name, lang),
+    price: formatPrice(rawPrice),
+    rawPrice: rawPrice,
+    category: categoryName,
+    image: thumbnail.url || "",
+    hoverImage: hoverMedia?.url || undefined,
+    isNew: product.isFeatured || false,
+    slug: product.slug,
+  };
 };

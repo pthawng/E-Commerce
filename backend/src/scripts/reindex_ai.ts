@@ -34,8 +34,7 @@ async function main() {
 
   for (const product of products) {
     const name = (product.name as any)?.vi || (product.name as any)?.en || 'No Name';
-    const description =
-      (product.description as any)?.vi || (product.description as any)?.en || '';
+    const description = (product.description as any)?.vi || (product.description as any)?.en || '';
 
     const categoryName = product.categories[0]?.category?.name;
     const category = categoryName

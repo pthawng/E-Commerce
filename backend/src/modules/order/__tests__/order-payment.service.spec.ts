@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -10,6 +10,7 @@ import { InventoryService } from '../../inventory/inventory.service';
 import { MailService } from '../../mail/mail.service';
 import { PaymentService } from '../../payment/payment.service';
 import { CurrencyService } from '../../system/currency.service';
+import { SystemSettingService } from '../../system/system-setting.service';
 import { CheckoutTokenService } from '../services/checkout-token.service';
 import { CheckoutValidator } from '../services/checkout-validator.service';
 import { OrderPaymentService } from '../services/order-payment.service';
@@ -54,6 +55,13 @@ describe('OrderPaymentService', () => {
     orderTimeline: {
       create: jest.fn(),
     },
+    orderItem: {
+      findMany: jest.fn(),
+    },
+    user: {
+      findUnique: jest.fn(),
+    },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn((callback) => callback(mockPrisma)),
   };
 
@@ -64,6 +72,7 @@ describe('OrderPaymentService', () => {
   const mockInventoryService = {
     reserve: jest.fn(),
     release: jest.fn(),
+    deduct: jest.fn(),
   };
 
   const mockInventoryAllocator = {
@@ -86,6 +95,16 @@ describe('OrderPaymentService', () => {
     calculateTotals: jest.fn(),
   };
 
+  const mockSettings = {
+    getNumber: jest.fn((key: string) => {
+      const values: Record<string, number> = {
+        'order.paymentTimeoutMinutes': 15,
+        'order.shippingFeeVnd': 30000,
+      };
+      return Promise.resolve(values[key] ?? 15);
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -98,10 +117,14 @@ describe('OrderPaymentService', () => {
         { provide: MailService, useValue: { sendMail: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('secret') } },
         { provide: GuestVerificationService, useValue: {} },
-        { provide: JwtService, useValue: { signAsync: jest.fn().mockResolvedValue('order-token') } },
+        {
+          provide: JwtService,
+          useValue: { signAsync: jest.fn().mockResolvedValue('order-token') },
+        },
         { provide: CurrencyService, useValue: { getRate: jest.fn().mockResolvedValue(1) } },
         { provide: PriceEngineService, useValue: mockPriceEngine },
         { provide: CheckoutValidator, useValue: mockCheckoutValidator },
+        { provide: SystemSettingService, useValue: mockSettings },
       ],
     }).compile();
 
@@ -109,6 +132,10 @@ describe('OrderPaymentService', () => {
     jest.clearAllMocks();
 
     mockPrisma.$transaction.mockImplementation((callback) => callback(mockPrisma));
+    mockPrisma.$queryRaw.mockResolvedValue([]);
+    mockPrisma.order.update.mockResolvedValue({ id: 'order-1', version: 2 });
+    mockPrisma.orderItem.findMany.mockResolvedValue([]);
+    mockPrisma.user.findUnique.mockResolvedValue(null);
     mockCheckoutTokenService.verifyToken.mockResolvedValue({
       jti: 'checkout-jti-1',
       cartHash: 'cart-hash',
@@ -241,9 +268,7 @@ describe('OrderPaymentService', () => {
     };
 
     mockPrisma.$transaction.mockRejectedValueOnce(uniqueError);
-    mockPrisma.order.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(existingOrder);
+    mockPrisma.order.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(existingOrder);
 
     const result = await service.createOrderWithPayment(
       {
@@ -284,5 +309,126 @@ describe('OrderPaymentService', () => {
         'user-1',
       ),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  describe('confirmOrder', () => {
+    it('commits inventory and marks a pending unpaid order as confirmed', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'order-1',
+          code: 'ORD-1',
+          status: OrderStatusEnum.PENDING_PAYMENT,
+          paymentStatus: 'unpaid',
+          userId: null,
+          guestEmail: null,
+          sessionId: 'session-1',
+          shippingAddress: {},
+          createdAt: new Date(),
+        },
+      ]);
+
+      await service.confirmOrder('order-1');
+
+      expect(mockInventoryService.deduct).toHaveBeenCalledWith('order-1', mockPrisma);
+      expect(mockPrisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'order-1' },
+        data: expect.objectContaining({
+          status: OrderStatusEnum.CONFIRMED,
+          paymentStatus: 'paid',
+        }),
+      });
+      expect(mockPrisma.orderTimeline.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ action: 'PAYMENT_SUCCESS_CONFIRMED' }),
+        }),
+      );
+    });
+
+    it('is idempotent when the order is already confirmed', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'order-1',
+          status: OrderStatusEnum.CONFIRMED,
+          paymentStatus: 'paid',
+        },
+      ]);
+
+      await service.confirmOrder('order-1');
+
+      expect(mockInventoryService.deduct).not.toHaveBeenCalled();
+      expect(mockPrisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('blocks payment confirmation for a cancelled order', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'order-1',
+          status: OrderStatusEnum.CANCELLED,
+          paymentStatus: 'unpaid',
+        },
+      ]);
+
+      await expect(service.confirmOrder('order-1')).rejects.toThrow(ConflictException);
+      expect(mockInventoryService.deduct).not.toHaveBeenCalled();
+      expect(mockPrisma.order.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cancelOrder', () => {
+    it('releases inventory once and fails pending payment transactions for unpaid orders', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'order-1',
+          status: OrderStatusEnum.PENDING_PAYMENT,
+          paymentStatus: 'unpaid',
+        },
+      ]);
+
+      await service.cancelOrder('order-1', 'Customer requested', 'admin-1');
+
+      expect(mockInventoryService.release).toHaveBeenCalledWith('order-1', mockPrisma);
+      expect(mockPrisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'order-1' },
+        data: expect.objectContaining({
+          status: OrderStatusEnum.CANCELLED,
+          cancelReason: 'Customer requested',
+        }),
+      });
+      expect(mockPrisma.paymentTransaction.updateMany).toHaveBeenCalledWith({
+        where: { orderId: 'order-1', status: 'pending' },
+        data: { status: 'failed' },
+      });
+    });
+
+    it('is idempotent when order is already cancelled', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'order-1',
+          status: OrderStatusEnum.CANCELLED,
+          paymentStatus: 'unpaid',
+        },
+      ]);
+
+      await service.cancelOrder('order-1', 'Already cancelled');
+
+      expect(mockInventoryService.release).not.toHaveBeenCalled();
+      expect(mockPrisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('does not release inventory for a confirmed paid order', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        {
+          id: 'order-1',
+          status: OrderStatusEnum.CONFIRMED,
+          paymentStatus: 'paid',
+        },
+      ]);
+
+      await expect(service.cancelOrder('order-1', 'Late cancel')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(mockInventoryService.release).not.toHaveBeenCalled();
+      expect(mockPrisma.order.update).not.toHaveBeenCalled();
+    });
   });
 });

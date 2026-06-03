@@ -71,8 +71,8 @@ async function bootstrap() {
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
-      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token, x-order-access-token, x-client-timestamp, x-client-signature, traceparent, x-correlation-id',
-    exposedHeaders: ['x-csrf-token', 'x-correlation-id'],
+      'Content-Type, Authorization, Accept, x-client-session-id, x-idempotency-key, x-csrf-token, x-order-access-token, x-client-timestamp, x-client-signature, traceparent, x-correlation-id, x-request-id',
+    exposedHeaders: ['x-csrf-token', 'x-correlation-id', 'x-request-id'],
   });
 
   // Enable global validation pipe

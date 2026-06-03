@@ -12,12 +12,19 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { OrderStatusEnum, PaymentMethodEnum, Prisma } from '@prisma/client';
+import {
+  OrderStatusEnum,
+  PaymentMethodEnum,
+  PaymentStatusEnum,
+  Prisma,
+  TransactionStatusEnum,
+} from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { InventoryAllocatorService } from '../../inventory/inventory-allocator.service';
 import { InventoryService } from '../../inventory/inventory.service';
 import { MailService } from '../../mail/mail.service';
+import { SystemSettingService } from '../../system/system-setting.service';
 import { AdminCreateOrderDto } from '../dto/admin-create-order.dto';
 import { CreateOrderWithPaymentDto } from '../dto/create-order-with-payment.dto';
 import { OrderPaymentResponseDto } from '../dto/order-payment-response.dto';
@@ -50,9 +57,7 @@ type HardenedTx = Prisma.TransactionClient & {
 @Injectable()
 export class OrderPaymentService {
   private readonly logger = new Logger(OrderPaymentService.name);
-  private readonly PAYMENT_TIMEOUT_MINUTES = 15;
   private readonly ORDER_CODE_PREFIX = 'ORD';
-  private readonly SHIPPING_FEE = 30000; // VND
 
   constructor(
     private readonly prisma: PrismaService,
@@ -68,6 +73,7 @@ export class OrderPaymentService {
     private readonly currencyService: CurrencyService,
     private readonly priceEngine: PriceEngineService,
     private readonly checkoutValidator: CheckoutValidator,
+    private readonly settings: SystemSettingService,
   ) {}
 
   /**
@@ -93,8 +99,10 @@ export class OrderPaymentService {
         })),
       );
 
-      const { totals } = this.calculateOrderTotals(cart.items, variants);
-      const expiresAt = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+      const shippingFee = await this.getShippingFeeVnd();
+      const paymentTimeoutMinutes = await this.getPaymentTimeoutMinutes();
+      const { totals } = this.calculateOrderTotals(cart.items, variants, undefined, shippingFee);
+      const expiresAt = new Date(Date.now() + paymentTimeoutMinutes * 60 * 1000);
       const cartHash = this.checkoutValidator.generateCartHash(cart.items);
 
       const checkoutToken = await this.checkoutTokenService.generateToken({
@@ -166,10 +174,13 @@ export class OrderPaymentService {
 
       this.checkoutValidator.validateCartStability(cart.items, tokenPayload.cartHash);
 
+      const shippingFee = await this.getShippingFeeVnd();
+      const paymentTimeoutMinutes = await this.getPaymentTimeoutMinutes();
       const { orderItemsData, totals } = this.calculateOrderTotals(
         cart.items,
         variants,
         dto.shippingMethodId,
+        shippingFee,
       );
 
       this.checkoutValidator.validatePriceStability(
@@ -180,7 +191,7 @@ export class OrderPaymentService {
       );
 
       // Create order record and reserve inventory inside transaction
-      const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+      const paymentDeadline = new Date(Date.now() + paymentTimeoutMinutes * 60 * 1000);
       const targetCurrency = dto.paymentMethod === PaymentMethodEnum.PAYPAL ? 'USD' : 'VND';
       const exchangeRate = await this.currencyService.getRate(targetCurrency);
 
@@ -200,6 +211,7 @@ export class OrderPaymentService {
         displayCurrency: targetCurrency,
         allocations,
         cartItems: cart.items,
+        shippingFee,
       });
 
       // Integrate with payment gateway provider
@@ -257,14 +269,25 @@ export class OrderPaymentService {
           return;
         }
 
-        // Skip processing if the order is already confirmed
+        // Skip processing if the order is already confirmed. Inventory was already committed.
         if (order.status === OrderStatusEnum.CONFIRMED) {
           this.logger.log(`Order ${orderId} already confirmed. Skipping.`);
           return;
         }
 
-        // Validate status transition
-        // OrderStatusValidator.validate(orderId, order.status, OrderStatusEnum.CONFIRMED);
+        if (order.status !== OrderStatusEnum.PENDING_PAYMENT) {
+          throw new ConflictException({
+            code: 'ORDER_NOT_PAYABLE',
+            message: `Cannot confirm payment for order=${orderId} in status=${order.status}`,
+          });
+        }
+
+        if (order.paymentStatus !== PaymentStatusEnum.unpaid) {
+          throw new ConflictException({
+            code: 'ORDER_PAYMENT_STATUS_NOT_PAYABLE',
+            message: `Cannot confirm payment for order=${orderId} with paymentStatus=${order.paymentStatus}`,
+          });
+        }
 
         // Deduct inventory items
         await this.inventoryService.deduct(orderId, currentTx);
@@ -274,7 +297,7 @@ export class OrderPaymentService {
           where: { id: orderId },
           data: {
             status: OrderStatusEnum.CONFIRMED,
-            paymentStatus: 'paid',
+            paymentStatus: PaymentStatusEnum.paid,
             confirmedAt: new Date(),
             version: { increment: 1 },
           },
@@ -363,9 +386,9 @@ export class OrderPaymentService {
     });
   }
 
-  async cancelOrder(orderId: string, reason: string): Promise<void> {
+  async cancelOrder(orderId: string, reason?: string, actorId?: string): Promise<any> {
     return SystemContextStore.asInternal('OrderPaymentService', async () => {
-      await this.cancelOrderAndReleaseInventory(orderId, reason);
+      return this.cancelOrderAndReleaseInventory(orderId, reason, actorId);
     });
   }
 
@@ -388,7 +411,12 @@ export class OrderPaymentService {
     return { cart, variants };
   }
 
-  private calculateOrderTotals(items: any[], variants: any[], shippingMethodId?: string) {
+  private calculateOrderTotals(
+    items: any[],
+    variants: any[],
+    shippingMethodId?: string,
+    shippingFee?: number,
+  ) {
     const itemsForEngine = items.map((item) => {
       const variant = variants.find((v) => v.id === item.productVariantId);
       return { price: Number(variant.price), quantity: item.quantity };
@@ -396,6 +424,7 @@ export class OrderPaymentService {
 
     const totals = this.priceEngine.calculateTotals({
       items: itemsForEngine,
+      shippingFee,
     });
 
     const orderItemsData = items.map((item) => {
@@ -451,7 +480,7 @@ export class OrderPaymentService {
 
     this.assertPricingInvariant({
       subTotal: params.subTotal,
-      shippingFee: this.SHIPPING_FEE,
+      shippingFee: params.shippingFee,
       taxAmount: 0,
       discountAmount: 0,
       totalAmount: params.totalAmount,
@@ -472,7 +501,7 @@ export class OrderPaymentService {
         billingAddress: params.dto.billingAddress || params.dto.shippingAddress,
         currency: 'VND',
         subTotal: params.subTotal,
-        shippingFee: this.SHIPPING_FEE,
+        shippingFee: params.shippingFee,
         totalAmount: params.totalAmount,
         note: params.dto.note,
         idempotencyKey: params.idempotencyKey,
@@ -497,6 +526,7 @@ export class OrderPaymentService {
     displayCurrency: string;
     allocations: Array<{ variantId: string; warehouseId: string; quantity: number }>;
     cartItems: Array<{ id: string; productVariantId: string }>;
+    shippingFee: number;
   }) {
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -512,6 +542,7 @@ export class OrderPaymentService {
           idempotencyKey: params.idempotencyKey,
           exchangeRate: params.exchangeRate,
           displayCurrency: params.displayCurrency,
+          shippingFee: params.shippingFee,
         });
 
         await this.inventoryService.reserve(
@@ -558,9 +589,7 @@ export class OrderPaymentService {
         throw error;
       }
 
-      this.logger.warn(
-        `Recovered concurrent idempotent checkout for JTI ${params.idempotencyKey}`,
-      );
+      this.logger.warn(`Recovered concurrent idempotent checkout for JTI ${params.idempotencyKey}`);
 
       return {
         order: existingOrder,
@@ -573,7 +602,10 @@ export class OrderPaymentService {
     order: any,
     dto: CreateOrderWithPaymentDto,
   ): Promise<string | null> {
-    if (order.paymentMethod === PaymentMethodEnum.VIETQR || order.paymentMethod === PaymentMethodEnum.COD) {
+    if (
+      order.paymentMethod === PaymentMethodEnum.VIETQR ||
+      order.paymentMethod === PaymentMethodEnum.COD
+    ) {
       return null;
     }
 
@@ -601,10 +633,33 @@ export class OrderPaymentService {
     });
   }
 
-  private async cancelOrderAndReleaseInventory(orderId: string, reason?: string) {
-    await this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({ where: { id: orderId } });
-      if (!order || order.status === OrderStatusEnum.CANCELLED) return;
+  private async cancelOrderAndReleaseInventory(orderId: string, reason?: string, actorId?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const [order] = await tx.$queryRaw<any[]>`
+        SELECT *
+        FROM "Order"
+        WHERE "id" = ${orderId}::uuid
+        FOR UPDATE
+      `;
+      if (!order) return null;
+      if (order.status === OrderStatusEnum.CANCELLED) return order;
+
+      if (
+        order.status !== OrderStatusEnum.PENDING_PAYMENT &&
+        order.status !== OrderStatusEnum.DRAFT
+      ) {
+        throw new ConflictException({
+          code: 'ORDER_NOT_CANCELLABLE',
+          message: `Cannot cancel order=${orderId} in status=${order.status}`,
+        });
+      }
+
+      if (order.paymentStatus === PaymentStatusEnum.paid) {
+        throw new ConflictException({
+          code: 'ORDER_ALREADY_PAID',
+          message: `Cannot release inventory for paid order=${orderId}`,
+        });
+      }
 
       await this.inventoryService.release(orderId, tx);
 
@@ -623,14 +678,18 @@ export class OrderPaymentService {
           orderId,
           action: 'ORDER_CANCELLED',
           description: reason || 'Order cancelled by system flow',
+          actorId,
+          actorType: actorId ? 'admin' : 'system',
           metadata: { version: updatedOrder.version },
         },
       });
 
       await tx.paymentTransaction.updateMany({
-        where: { orderId },
-        data: { status: 'failed' },
+        where: { orderId, status: TransactionStatusEnum.pending },
+        data: { status: TransactionStatusEnum.failed },
       });
+
+      return updatedOrder;
     });
   }
 
@@ -686,9 +745,11 @@ export class OrderPaymentService {
 
       // Calculate order totals
       const subTotal = dto.items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0);
-      const totalAmount = subTotal + this.SHIPPING_FEE;
+      const shippingFee = await this.getShippingFeeVnd();
+      const paymentTimeoutMinutes = await this.getPaymentTimeoutMinutes();
+      const totalAmount = subTotal + shippingFee;
       const orderCode = this.generateOrderCode();
-      const paymentDeadline = new Date(Date.now() + this.PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+      const paymentDeadline = new Date(Date.now() + paymentTimeoutMinutes * 60 * 1000);
 
       // Create order and reserve stock atomically
       const order = await this.prisma.$transaction(async (tx) => {
@@ -720,7 +781,7 @@ export class OrderPaymentService {
             } as any,
             currency: 'VND',
             subTotal,
-            shippingFee: this.SHIPPING_FEE,
+            shippingFee,
             totalAmount,
             note: dto.note,
             exchangeRate: 1,
@@ -803,6 +864,15 @@ export class OrderPaymentService {
   private generateOrderCode() {
     return `${this.ORDER_CODE_PREFIX}-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
+
+  private getPaymentTimeoutMinutes() {
+    return this.settings.getNumber('order.paymentTimeoutMinutes');
+  }
+
+  private getShippingFeeVnd() {
+    return this.settings.getNumber('order.shippingFeeVnd');
+  }
+
   private generateTransactionCode() {
     return `TXN-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }

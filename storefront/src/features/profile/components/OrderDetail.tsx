@@ -9,6 +9,11 @@ import { OrderItemsTable } from '@/features/profile/components/OrderItemsTable';
 import { ChevronLeft, AlertCircle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  getOrderStatusLabel,
+  getOrderStatusToneClass,
+  hasPaymentFailureTimeline,
+} from '@/features/profile/utils/orderStatus';
 
 export const OrderDetail: React.FC = () => {
   const { t, language } = useTranslation();
@@ -43,24 +48,14 @@ export const OrderDetail: React.FC = () => {
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string, color: string }> = {
-      pending: { label: t('account.orders.status.pending'), color: 'text-gold-light border-gold-light/20 bg-gold-shimmer/10' },
-      confirmed: { label: t('account.orders.status.confirmed'), color: 'text-gold border-gold/30 bg-gold-shimmer/20' },
-      processing: { label: t('account.orders.status.processing'), color: 'text-primary/70 border-primary/20 bg-primary/5' },
-      shipping: { label: t('account.orders.status.shipping'), color: 'text-blue-500 border-blue-500/20 bg-blue-500/5' },
-      delivered: { label: t('account.orders.status.delivered'), color: 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5' },
-      completed: { label: t('account.orders.status.completed'), color: 'text-primary/40 border-primary/10' },
-      cancelled: { label: t('account.orders.status.cancelled'), color: 'text-destructive border-destructive/20 bg-destructive/5' },
-      failed: { label: t('account.orders.status.failed'), color: 'text-destructive border-destructive/20 bg-destructive/5' },
-    };
-    const s = statusMap[status] || { label: status, color: 'text-muted-foreground border-primary/10' };
+  const getStatusBadge = (status: typeof order.status) => {
     return (
-      <span className={`px-4 py-1 text-[9px] uppercase tracking-[0.25em] border ${s.color}`}>
-        {s.label}
+      <span className={`px-4 py-1 text-[9px] uppercase tracking-[0.25em] border ${getOrderStatusToneClass(status)}`}>
+        {getOrderStatusLabel(status, t)}
       </span>
     );
   };
+  const hasFailedPayment = hasPaymentFailureTimeline(order.timelines);
 
   return (
     <div className="space-y-12 pb-20">
@@ -89,7 +84,7 @@ export const OrderDetail: React.FC = () => {
 
       {/* Warning Banners */}
       <AnimatePresence>
-        {order.status === 'failed' && (
+        {hasFailedPayment && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}

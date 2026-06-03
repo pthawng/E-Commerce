@@ -27,6 +27,6 @@ export class SystemSettingController {
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   @Permission(PERMISSIONS.SYSTEM.SETTING.UPDATE)
   update(@Body() dto: UpdateSystemSettingsDto, @CurrentUserId() userId: string) {
-    return this.systemSettingService.updateSettings(dto.settings, userId);
+    return this.systemSettingService.updateSettings(dto.settings, userId, dto.reason);
   }
 }

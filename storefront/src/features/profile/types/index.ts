@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import type {
+  OrderStatusValue,
+  PaymentStatusValue,
+  TransactionStatusValue,
+  UserTypeValue,
+} from '@shared';
 
 export interface UserProfile {
   id: string;
@@ -7,7 +13,7 @@ export interface UserProfile {
   fullName: string;
   lastLoginAt?: string | null;
   createdAt: string;
-  userType: 'CUSTOMER' | 'STAFF' | 'SUPER_ADMIN';
+  userType: UserTypeValue;
 }
 
 export interface ShippingAddress {
@@ -52,9 +58,11 @@ export interface OrderItem {
   totalLine: number;
 }
 
-export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipping' | 'delivered' | 'completed' | 'cancelled' | 'failed' | 'pending_payment' | 'returned' | 'refunded';
+export type OrderStatus = OrderStatusValue;
 
-export type PaymentStatus = 'unpaid' | 'paid' | 'partially_paid' | 'refunded';
+export type PaymentStatus = PaymentStatusValue;
+
+export type TransactionStatus = TransactionStatusValue;
 
 export interface OrderTimeline {
   id: string;
@@ -69,7 +77,7 @@ export interface OrderTimeline {
 export interface PaymentTransaction {
   id: string;
   amount: number;
-  status: 'pending' | 'success' | 'failed' | 'reversed';
+  status: TransactionStatus;
   provider: string;
   method?: string | null;
   transactionCode?: string | null;
@@ -96,5 +104,4 @@ export interface Order {
   paymentDeadline?: string | null;
   cancelReason?: string | null;
 }
-
 

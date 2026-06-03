@@ -1,3 +1,6 @@
+import { BackOfficeAuthModule } from '@modules/back-office-auth/back-office-auth.module';
+import { RbacModule } from '@modules/rbac/rbac.module';
+import { SystemModule } from '@modules/system/system.module';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { InventoryAllocatorService } from './inventory-allocator.service';
@@ -10,7 +13,7 @@ import { WarehouseService } from './warehouse.service';
 import { InventoryReconciliationService } from './inventory-reconciliation.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, BackOfficeAuthModule, RbacModule, SystemModule],
   controllers: [InventoryController],
   providers: [
     WarehouseService,

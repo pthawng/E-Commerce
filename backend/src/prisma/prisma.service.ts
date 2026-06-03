@@ -41,7 +41,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         query: {
           $allModels: {
             async $allOperations({ model, operation, args, query }) {
-              const sensitiveModels = ['InventoryItem', 'Order', 'Payment', 'InventoryReservation'];
+              const sensitiveModels = [
+                'InventoryBalance',
+                'Order',
+                'Payment',
+                'InventoryReservation',
+              ];
               const mutationActions = [
                 'create',
                 'update',

@@ -1,7 +1,9 @@
+import { SecurityEventBus, SecurityEventType } from '@modules/security/security-event-bus.service';
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
+import { PrincipalType } from 'src/common/types/principal.types';
 
 /**
  * CsrfGuard
@@ -12,7 +14,10 @@ import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
  */
 @Injectable()
 export class CsrfGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly securityEvents: SecurityEventBus,
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
@@ -36,6 +41,7 @@ export class CsrfGuard implements CanActivate {
     const csrfTokenCookie = request.cookies ? request.cookies['csrfToken'] : undefined;
 
     if (!csrfTokenHeader || typeof csrfTokenHeader !== 'string' || !csrfTokenCookie) {
+      this.emitCsrfFailure(request, 'CSRF_TOKEN_MISSING');
       throw new ForbiddenException({
         code: 'CSRF_TOKEN_MISSING',
         message: 'Security validation failed (CSRF token missing).',
@@ -43,6 +49,7 @@ export class CsrfGuard implements CanActivate {
     }
 
     if (csrfTokenHeader !== csrfTokenCookie) {
+      this.emitCsrfFailure(request, 'CSRF_TOKEN_INVALID');
       throw new ForbiddenException({
         code: 'CSRF_TOKEN_INVALID',
         message: 'Security validation failed (CSRF token mismatch).',
@@ -50,5 +57,33 @@ export class CsrfGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  private emitCsrfFailure(request: Request, reason: string) {
+    const requestWithUser = request as Request & {
+      user?: { userId?: string; id?: string };
+      correlationId?: string;
+    };
+
+    this.securityEvents.emit(
+      SecurityEventType.CSRF_FAILURE,
+      {
+        id:
+          requestWithUser.user?.userId ||
+          requestWithUser.user?.id ||
+          request.cookies?.['guestSessionId'] ||
+          request.ip ||
+          'anonymous',
+        type: requestWithUser.user ? PrincipalType.USER : PrincipalType.GUEST,
+        ip: request.ip,
+      },
+      {
+        reason,
+        method: request.method,
+        path: request.originalUrl || request.url,
+        correlationId: requestWithUser.correlationId,
+      },
+      'high',
+    );
   }
 }

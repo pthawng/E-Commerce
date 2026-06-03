@@ -1,6 +1,6 @@
 import axios from 'axios';
 import axiosRetry, { isNetworkOrIdempotentRequestError, exponentialDelay } from 'axios-retry';
-import type { AxiosInstance, AxiosRequestHeaders, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { buildApiUrl, API_ENDPOINTS } from '@shared';
 import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 
@@ -8,6 +8,10 @@ import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
 type FailedRequest = {
   resolve: (value?: unknown) => void;
   reject: (error: unknown) => void;
+};
+
+type RetriableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
 };
 
 const getCookie = (name: string): string | null => {
@@ -29,12 +33,19 @@ const axiosInstance: AxiosInstance = axios.create({
 axiosRetry(axiosInstance, {
   retries: 3,
   retryDelay: exponentialDelay,
-  retryCondition: (error) => {
+  retryCondition: (error: AxiosError) => {
     // Retry on network errors or 5xx idempotent requests
     return isNetworkOrIdempotentRequestError(error) || error.response?.status === 503;
   },
   onRetry: (retryCount, error, requestConfig) => {
-    console.warn(`[AxiosRetry] Retry attempt #${retryCount} for ${requestConfig.url}`);
+    const retryUrl =
+      requestConfig &&
+      typeof requestConfig === 'object' &&
+      'url' in requestConfig &&
+      typeof requestConfig.url === 'string'
+        ? requestConfig.url
+        : 'unknown URL';
+    console.warn(`[AxiosRetry] Retry attempt #${retryCount} for ${retryUrl}`);
   }
 });
 
@@ -79,12 +90,16 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    const status = error?.response?.status;
+  async (error: unknown) => {
+    if (!axios.isAxiosError(error)) {
+      return Promise.reject(error);
+    }
+
+    const originalRequest = error.config as RetriableRequestConfig | undefined;
+    const status = error.response?.status;
 
     // Handle 401 Unauthorized - trigger session refresh
-    if (status === 401 && !originalRequest._retry) {
+    if (status === 401 && originalRequest && !originalRequest._retry) {
       if (originalRequest.url?.includes('/auth/refresh')) {
         return Promise.reject(error); // Don't retry the refresh itself
       }

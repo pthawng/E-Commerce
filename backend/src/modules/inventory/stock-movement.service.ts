@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StockQueryDto } from './dto';
-import { lockInventoryItem } from './inventory-lock.helper';
+import { lockInventoryBalance } from './inventory-lock.helper';
 
 /**
  * Stock movement service.
@@ -15,7 +15,7 @@ export class StockMovementService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Performs an atomic stock transfer.
+   * Performs an atomic stock transfer (shortcut for instant completion, mainly for seeds/tests).
    */
   async transfer(
     variantId: string,
@@ -33,6 +33,7 @@ export class StockMovementService {
       actorId,
       note,
     );
+    await this.approveTransfer(transfer.id, actorId);
     await this.shipTransfer(transfer.id, actorId);
     await this.receiveTransfer(transfer.id, actorId);
   }
@@ -66,6 +67,72 @@ export class StockMovementService {
   }
 
   /**
+   * Approves a pending stock transfer.
+   */
+  async approveTransfer(transferId: string, actorId?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const transfer = await tx.inventoryTransfer.findUnique({
+        where: { id: transferId },
+      });
+
+      if (!transfer || transfer.status !== 'PENDING') {
+        throw new BadRequestException('Transfer not found or not in PENDING status');
+      }
+
+      const updated = await tx.inventoryTransfer.update({
+        where: { id: transferId },
+        data: { status: 'APPROVED', actorId },
+      });
+
+      await tx.inventoryAuditLog.create({
+        data: {
+          actorId: actorId || '00000000-0000-0000-0000-000000000000',
+          action: 'APPROVE_TRANSFER',
+          entityName: 'InventoryTransfer',
+          entityId: transferId,
+          beforeState: JSON.parse(JSON.stringify(transfer)),
+          afterState: JSON.parse(JSON.stringify(updated)),
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * Rejects a pending stock transfer.
+   */
+  async rejectTransfer(transferId: string, actorId?: string, note?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const transfer = await tx.inventoryTransfer.findUnique({
+        where: { id: transferId },
+      });
+
+      if (!transfer || transfer.status !== 'PENDING') {
+        throw new BadRequestException('Transfer not found or not in PENDING status');
+      }
+
+      const updated = await tx.inventoryTransfer.update({
+        where: { id: transferId },
+        data: { status: 'REJECTED', actorId, note: note || transfer.note },
+      });
+
+      await tx.inventoryAuditLog.create({
+        data: {
+          actorId: actorId || '00000000-0000-0000-0000-000000000000',
+          action: 'REJECT_TRANSFER',
+          entityName: 'InventoryTransfer',
+          entityId: transferId,
+          beforeState: JSON.parse(JSON.stringify(transfer)),
+          afterState: JSON.parse(JSON.stringify(updated)),
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
    * Ships stock out of the source warehouse.
    */
   async shipTransfer(transferId: string, actorId?: string) {
@@ -75,16 +142,16 @@ export class StockMovementService {
         include: { fromWarehouse: true, toWarehouse: true },
       });
 
-      if (!transfer || transfer.status !== 'PENDING') {
-        throw new BadRequestException('Transfer not found or not in PENDING status');
+      if (!transfer || transfer.status !== 'APPROVED') {
+        throw new BadRequestException('Transfer not found or not in APPROVED status');
       }
 
-      const fromItem = await lockInventoryItem(tx, {
+      const fromItem = await lockInventoryBalance(tx, {
         variantId: transfer.variantId,
         warehouseId: transfer.fromWarehouseId,
         logger: this.logger,
         context: 'InventoryTransferShip',
-        notFoundMessage: 'Inventory item not found in source warehouse',
+        notFoundMessage: 'Inventory balance not found in source warehouse',
       });
 
       if (
@@ -94,12 +161,12 @@ export class StockMovementService {
         throw new BadRequestException('Insufficient available stock in source warehouse');
       }
 
-      await tx.inventoryItem.update({
+      await tx.inventoryBalance.update({
         where: { id: fromItem.id },
         data: { quantity: { decrement: transfer.quantity } },
       });
 
-      await tx.inventoryItem.upsert({
+      await tx.inventoryBalance.upsert({
         where: {
           productVariantId_warehouseId: {
             productVariantId: transfer.variantId,
@@ -122,7 +189,7 @@ export class StockMovementService {
 
       await tx.inventoryLog.create({
         data: {
-          inventoryItemId: fromItem.id,
+          inventoryBalanceId: fromItem.id,
           productVariantId: transfer.variantId,
           warehouseId: transfer.fromWarehouseId,
           actionType: 'TRANSFER_OUT',
@@ -154,19 +221,19 @@ export class StockMovementService {
         throw new BadRequestException('Transfer not found or not in SHIPPED status');
       }
 
-      const toItem = await lockInventoryItem(tx, {
+      const toItem = await lockInventoryBalance(tx, {
         variantId: transfer.variantId,
         warehouseId: transfer.toWarehouseId,
         logger: this.logger,
         context: 'InventoryTransferReceive',
-        notFoundMessage: 'Inventory item not found in destination warehouse',
+        notFoundMessage: 'Inventory balance not found in destination warehouse',
       });
 
       if (!toItem || toItem.inTransitQuantity < transfer.quantity) {
         throw new BadRequestException('In-transit quantity mismatch in destination');
       }
 
-      await tx.inventoryItem.update({
+      await tx.inventoryBalance.update({
         where: { id: toItem.id },
         data: {
           inTransitQuantity: { decrement: transfer.quantity },
@@ -181,7 +248,7 @@ export class StockMovementService {
 
       await tx.inventoryLog.create({
         data: {
-          inventoryItemId: toItem.id,
+          inventoryBalanceId: toItem.id,
           productVariantId: transfer.variantId,
           warehouseId: transfer.toWarehouseId,
           actionType: 'TRANSFER_IN',

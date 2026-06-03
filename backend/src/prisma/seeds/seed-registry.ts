@@ -6,6 +6,7 @@ import { v4_initial_admin } from './versions/v4_initial_admin';
 import { v5_materials } from './versions/v5_materials';
 import { v6_crm_permissions } from './versions/v6_crm_permissions';
 import { v7_sync_permissions } from './versions/v7_sync_permissions';
+import { v8_backoffice_catalog } from './versions/v8_backoffice_catalog';
 
 /**
  * SYSTEM_REGISTRY
@@ -19,4 +20,5 @@ export const SYSTEM_REGISTRY: SeedScript[] = [
   v5_materials,
   v6_crm_permissions,
   v7_sync_permissions,
+  v8_backoffice_catalog,
 ];

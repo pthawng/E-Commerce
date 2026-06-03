@@ -1,11 +1,14 @@
 import { DashboardService } from '@modules/dashboard/dashboard.service';
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { SkipJwtAuth } from 'src/common/decorators/skip-jwt-auth.decorator';
+import { BackOfficeAuthGuard } from '../back-office-auth/guards/back-office-auth.guard';
 import { Permission } from '../rbac/decorators/permission.decorator';
 import { PermissionGuard } from '../rbac/guards/rbac.guard';
 import { PERMISSIONS } from '../rbac/permissions.constants';
 
-@Controller('admin/dashboard')
-@UseGuards(PermissionGuard)
+@SkipJwtAuth()
+@Controller('back-office/dashboard')
+@UseGuards(BackOfficeAuthGuard, PermissionGuard)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

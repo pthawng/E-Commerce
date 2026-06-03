@@ -19,7 +19,7 @@ describe('[Chaos] Inventory Concurrency — Dirty Conditions', () => {
 
   let variantId: string;
   let warehouseId: string;
-  let inventoryItemId: string;
+  let inventoryBalanceId: string;
   const INITIAL_STOCK = 10;
   const PARALLEL_WORKERS = 30;
 
@@ -52,7 +52,7 @@ describe('[Chaos] Inventory Concurrency — Dirty Conditions', () => {
     });
     variantId = variant.id;
 
-    const item = await prisma.inventoryItem.create({
+    const item = await prisma.inventoryBalance.create({
       data: {
         productVariantId: variantId,
         warehouseId,
@@ -60,11 +60,11 @@ describe('[Chaos] Inventory Concurrency — Dirty Conditions', () => {
         reservedQuantity: 0,
       },
     });
-    inventoryItemId = item.id;
+    inventoryBalanceId = item.id;
   });
 
   afterAll(async () => {
-    await prisma.inventoryItem.deleteMany({ where: { productVariantId: variantId } });
+    await prisma.inventoryBalance.deleteMany({ where: { productVariantId: variantId } });
     await prisma.productVariant.deleteMany({ where: { id: variantId } });
     await pool.end();
     await base.teardown();
@@ -83,8 +83,8 @@ describe('[Chaos] Inventory Concurrency — Dirty Conditions', () => {
       await client.query('BEGIN');
 
       const lockResult = await client.query(
-        `SELECT "reservedQuantity", quantity FROM "InventoryItem" WHERE id = $1 FOR UPDATE NOWAIT`,
-        [inventoryItemId],
+        `SELECT "reservedQuantity", quantity FROM "inventory_balances" WHERE id = $1 FOR UPDATE NOWAIT`,
+        [inventoryBalanceId],
       );
 
       const { quantity, reservedQuantity } = lockResult.rows[0];
@@ -94,8 +94,8 @@ describe('[Chaos] Inventory Concurrency — Dirty Conditions', () => {
       }
 
       await client.query(
-        `UPDATE "InventoryItem" SET "reservedQuantity" = "reservedQuantity" + 1 WHERE id = $1`,
-        [inventoryItemId],
+        `UPDATE "inventory_balances" SET "reservedQuantity" = "reservedQuantity" + 1 WHERE id = $1`,
+        [inventoryBalanceId],
       );
 
       await client.query('COMMIT');
@@ -118,7 +118,7 @@ describe('[Chaos] Inventory Concurrency — Dirty Conditions', () => {
       (r) => r.status === 'fulfilled' && r.value === 'success',
     ).length;
 
-    const final = await prisma.inventoryItem.findUnique({ where: { id: inventoryItemId } });
+    const final = await prisma.inventoryBalance.findUnique({ where: { id: inventoryBalanceId } });
     expect(final).not.toBeNull();
 
     // INVARIANT: reserved must never exceed stock

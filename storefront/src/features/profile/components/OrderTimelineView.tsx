@@ -1,25 +1,40 @@
 import { CheckCircle2, Clock, Package, Truck, XCircle, AlertCircle } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
-import { OrderTimeline, OrderStatus } from '../types';
+import { OrderStatus } from '@shared';
+import type { OrderTimeline, OrderStatus as OrderStatusValue } from '../types';
 
 interface OrderTimelineViewProps {
   timelines: OrderTimeline[];
-  currentStatus: OrderStatus;
+  currentStatus: OrderStatusValue;
 }
 
-export const OrderTimelineView: React.FC<OrderTimelineViewProps> = ({ timelines, currentStatus }) => {
+export const OrderTimelineView: React.FC<OrderTimelineViewProps> = ({ timelines }) => {
   const { t, language } = useTranslation();
-  const getIcon = (action: string, status?: OrderStatus | null) => {
+  const getIcon = (action: string, status?: OrderStatusValue | null) => {
     if (action.includes('CANCEL')) return <XCircle className="w-4 h-4 text-destructive" />;
     if (action.includes('PAYMENT_SUCCESS')) return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
     if (action.includes('PAYMENT_FAILED')) return <XCircle className="w-4 h-4 text-destructive" />;
 
     switch (status) {
-      case 'pending': return <Clock className="w-4 h-4 text-gold-light" />;
-      case 'confirmed': return <CheckCircle2 className="w-4 h-4 text-gold" />;
-      case 'processing': return <Package className="w-4 h-4 text-primary/60" />;
-      case 'shipping': return <Truck className="w-4 h-4 text-blue-400" />;
-      case 'delivered': return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+      case OrderStatus.DRAFT:
+      case OrderStatus.PENDING_PAYMENT:
+        return <Clock className="w-4 h-4 text-gold-light" />;
+      case OrderStatus.CONFIRMED:
+        return <CheckCircle2 className="w-4 h-4 text-gold" />;
+      case OrderStatus.MATERIAL_RESERVED:
+      case OrderStatus.IN_PRODUCTION:
+      case OrderStatus.QC:
+        return <Package className="w-4 h-4 text-primary/60" />;
+      case OrderStatus.READY_TO_SHIP:
+      case OrderStatus.SHIPPED:
+        return <Truck className="w-4 h-4 text-blue-400" />;
+      case OrderStatus.DELIVERED:
+      case OrderStatus.COMPLETED:
+        return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+      case OrderStatus.CANCELLED:
+      case OrderStatus.RETURNED:
+      case OrderStatus.REFUNDED:
+        return <XCircle className="w-4 h-4 text-destructive" />;
       default: return <Clock className="w-4 h-4 text-muted-foreground" />;
     }
   };

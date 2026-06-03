@@ -1,8 +1,8 @@
+import { withRetry } from '@common/utils/retry.util';
 import { Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { withRetry } from '@common/utils/retry.util';
 
-export interface LockedInventoryItem {
+export interface LockedInventoryBalance {
   id: string;
   quantity: number;
   reservedQuantity: number;
@@ -11,10 +11,10 @@ export interface LockedInventoryItem {
 }
 
 /**
- * Locks one inventory row with NOWAIT semantics.
+ * Locks one inventory balance row with NOWAIT semantics.
  * Keep this centralized so all stock mutations use the same parameterized query.
  */
-export async function lockInventoryItem(
+export async function lockInventoryBalance(
   tx: Prisma.TransactionClient,
   params: {
     variantId: string;
@@ -23,14 +23,14 @@ export async function lockInventoryItem(
     context?: string;
     notFoundMessage?: string;
   },
-): Promise<LockedInventoryItem> {
+): Promise<LockedInventoryBalance> {
   const item = await withRetry(
     async () => {
-      const [row] = await tx.$queryRaw<LockedInventoryItem[]>`
+      const [row] = await tx.$queryRaw<LockedInventoryBalance[]>`
         SELECT id, quantity, "reservedQuantity", "damagedQuantity", "inTransitQuantity"
-        FROM "InventoryItem"
-        WHERE "productVariantId" = ${params.variantId}
-          AND "warehouseId" = ${params.warehouseId}
+        FROM "inventory_balances"
+        WHERE "productVariantId" = ${params.variantId}::uuid
+          AND "warehouseId" = ${params.warehouseId}::uuid
         FOR UPDATE NOWAIT
       `;
 
@@ -45,7 +45,7 @@ export async function lockInventoryItem(
   if (!item) {
     throw new NotFoundException(
       params.notFoundMessage ??
-        `No inventory found for variant=${params.variantId} warehouse=${params.warehouseId}`,
+        `No inventory balance found for variant=${params.variantId} warehouse=${params.warehouseId}`,
     );
   }
 

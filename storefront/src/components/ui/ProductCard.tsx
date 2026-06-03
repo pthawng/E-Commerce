@@ -10,7 +10,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useStore } from "@/store/useStore";
 import { useModalStore } from "@/store/useModalStore";
 import { useVisibilityStore } from "@/store/useVisibilityStore";
-import axiosClient from "@/services/axiosClient";
+import { reportBrokenProductMedia } from "@/features/products/utils/mediaReport";
 
 interface ProductCardProps {
   id: string;
@@ -48,16 +48,17 @@ export const ProductCard = ({
   const { t } = useTranslation();
   const { language } = useStore();
   const [hasError, setHasError] = useState(false);
-  const reportInvalidProduct = useVisibilityStore(s => s.reportInvalidProduct);
+  const reportInvalidProduct = useVisibilityStore(
+    (s) => s.reportInvalidProduct,
+  );
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement, Event>,
+  ) => {
     if (!hasError) {
       setHasError(true);
       reportInvalidProduct(id);
-      axiosClient.post('/products/report-media-issue', {
-        productId: id,
-        mediaUrl: e.currentTarget.src,
-      }).catch(() => { /* Ignore errors silently */ });
+      reportBrokenProductMedia(id, e.currentTarget.src);
     }
   };
 
@@ -66,8 +67,8 @@ export const ProductCard = ({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isConciergeOnly) return; 
-    
+    if (isConciergeOnly) return;
+
     const idToUse = variantId || id;
     if (idToUse) {
       addItem(idToUse, 1, {
@@ -75,7 +76,7 @@ export const ProductCard = ({
         name: { [language]: name },
         price: rawPrice || 0,
         image: image,
-        slug: slug
+        slug: slug,
       });
     }
   };
@@ -87,11 +88,16 @@ export const ProductCard = ({
   };
 
   return (
-    <Card className={cn("group flex flex-col h-full overflow-hidden border-none bg-transparent shadow-none isolate", className)}>
+    <Card
+      className={cn(
+        "group flex flex-col h-full overflow-hidden border-none bg-transparent shadow-none isolate",
+        className,
+      )}
+    >
       <CardHeader className="p-0 relative aspect-[4/5] overflow-hidden bg-secondary/5 rounded-sm">
         {isNew && (
           <Badge className="absolute top-4 left-4 z-20 bg-background/80 backdrop-blur-md text-primary border-none rounded-sm px-4 py-1.5 text-[9px] uppercase tracking-[0.3em] pointer-events-none">
-            {t('common.badge.new')}
+            {t("common.badge.new")}
           </Badge>
         )}
         <motion.img
@@ -106,14 +112,16 @@ export const ProductCard = ({
         {hoverImage && (
           <motion.img
             src={hoverImage}
-            alt={t('common.actions.secondaryView', { name })}
+            alt={t("common.actions.secondaryView", { name })}
             loading="lazy"
             decoding="async"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
             className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-1000 ease-in-out group-hover:opacity-100"
           />
         )}
-        
+
         {/* Subtle vignette shadow on hover instead of hard borders */}
         <div className="absolute inset-0 shadow-[inset_0_0_40px_rgba(0,0,0,0.03)] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
 
@@ -123,7 +131,7 @@ export const ProductCard = ({
             to={`/product/${slug}`}
             className="w-full py-3 bg-background/80 backdrop-blur-md text-primary font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary hover:text-primary-foreground transition-colors duration-500"
           >
-            {t('common.actions.quickView')}
+            {t("common.actions.quickView")}
           </Link>
 
           {isConciergeOnly ? (
@@ -131,18 +139,18 @@ export const ProductCard = ({
               onClick={handleInquire}
               className="w-full py-3 bg-primary text-primary-foreground font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary/90 transition-colors duration-500"
             >
-              {t('shop.pdp.inquireToPurchase')}
+              {t("shop.pdp.inquireToPurchase")}
             </button>
           ) : (
             <button
               onClick={handleAddToCart}
               className="w-full py-3 bg-background/80 backdrop-blur-md text-primary font-body text-[10px] uppercase tracking-widest text-center hover:bg-primary hover:text-primary-foreground transition-colors duration-500"
             >
-              {t('shop.pdp.addToCollection')}
+              {t("shop.pdp.addToCollection")}
             </button>
           )}
         </div>
-        
+
         {/* Subtle gradient to make text readable on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
       </CardHeader>
@@ -155,7 +163,13 @@ export const ProductCard = ({
           {name}
         </CardTitle>
         <p className="font-body text-xs text-primary/80 tracking-widest">
-          {isConciergeOnly ? <span className="italic opacity-70">{t('shop.pdp.priceUponRequest')}</span> : price}
+          {isConciergeOnly ? (
+            <span className="italic opacity-70">
+              {t("shop.pdp.priceUponRequest")}
+            </span>
+          ) : (
+            price
+          )}
         </p>
       </CardContent>
     </Card>

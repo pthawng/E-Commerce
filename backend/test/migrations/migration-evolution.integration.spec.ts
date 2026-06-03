@@ -48,7 +48,7 @@ describe('[Integration] Migration Evolution', () => {
     const client = await pool.connect();
     try {
       // Verify that core tables exist and are queryable (no schema corruption)
-      const tables = ['User', 'Product', 'Order', 'InventoryItem', 'AuditLog'];
+      const tables = ['User', 'Product', 'Order', 'inventory_balances', 'AuditLog'];
       for (const table of tables) {
         const result = await client.query(
           `SELECT COUNT(*) FROM information_schema.tables

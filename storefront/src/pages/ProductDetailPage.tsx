@@ -6,499 +6,612 @@ import { Section } from "@/components/layout/Section";
 import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ui/ProductCard";
-import { 
-  Plus, 
-  Minus, 
-  ShieldCheck, 
-  Truck, 
+import {
+  Plus,
+  Minus,
+  ShieldCheck,
+  Truck,
   RotateCcw,
   ChevronRight,
   RefreshCw,
   ShoppingBag,
-  ArrowLeft
+  ArrowLeft,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { useRecommendations } from "@/features/ai/hooks/useRecommendations";
 import { useProduct, useProducts } from "@/features/products/hooks/useProducts";
-import { useCartStore } from '@/features/cart/store/useCartStore';
+import { useCartStore } from "@/features/cart/store/useCartStore";
 import { useStore } from "@/store/useStore";
 import { useTranslation } from "@/hooks/useTranslation";
 import { ProductCardSkeleton } from "@/features/products/components/ProductCardSkeleton";
-import { getLocalized, mapProductToCardProps } from "@/features/products/utils/productMapper";
+import {
+  getLocalized,
+  mapProductToCardProps,
+} from "@/features/products/utils/productMapper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { LocalizedString, AttributeValue } from "@/features/products/types";
-import axiosClient from "@/services/axiosClient";
+import { reportBrokenProductMedia } from "@/features/products/utils/mediaReport";
+import {
+  getProductGalleryMedia,
+  getProductThumbnail,
+  PRODUCT_MEDIA_FALLBACK_URL,
+  type ProductMediaOwnerLike,
+  type ProductVariantMediaLike,
+} from "@shared";
 
 export const ProductDetailPage = () => {
-    const { slug } = useParams<{ slug: string }>();
-    const { language, t } = useTranslation();
-    const { currency, exchangeRatesUpdatedAt, formatPrice } = useStore();
-    const { addItem } = useCartStore();
+  const { slug } = useParams<{ slug: string }>();
+  const { language, t } = useTranslation();
+  const { currency, exchangeRatesUpdatedAt, formatPrice } = useStore();
+  const { addItem } = useCartStore();
 
-    const [activeAccordion, setActiveAccordion] = useState<string | null>("craftsmanship");
-    const [reportedImages, setReportedImages] = useState<Set<string>>(new Set());
+  const [activeAccordion, setActiveAccordion] = useState<string | null>(
+    "craftsmanship",
+  );
 
-    // Fetch Main Product
-    const { data: product, isLoading, isError, refetch } = useProduct(slug || "");
+  // Fetch Main Product
+  const { data: product, isLoading, isError, refetch } = useProduct(slug || "");
 
-    // Fetch Recommendations (Memoized params to prevent re-render loops)
-    const categoryId = product?.categories?.[0]?.category?.id;
-    const recommendationsParams = useMemo(() => ({
-        categoryId,
-        limit: 4,
-    }), [categoryId]);
+  // Fetch Recommendations (Memoized params to prevent re-render loops)
+  const categoryId = product?.categories?.[0]?.category?.id;
+  const recommendationsParams = useMemo(
+    () => ({
+      categoryId,
+      limit: 4,
+    }),
+    [categoryId],
+  );
 
-    const { data: recommendationsRes } = useProducts(recommendationsParams);
-    const { data: aiRecommendationsRes, isLoading: isRecommendationsLoading } = useRecommendations(product?.id, 4);
+  const { data: recommendationsRes } = useProducts(recommendationsParams);
+  const { data: aiRecommendationsRes, isLoading: isRecommendationsLoading } =
+    useRecommendations(product?.id, 4);
 
-    const fallbackRecommendations = useMemo(() => {
-        const allProducts = recommendationsRes?.pages?.flatMap(page => page.data) || [];
-        return allProducts
-            .filter(p => p.id !== product?.id)
-            .slice(0, 4)
-            .map(p => mapProductToCardProps(p, language, formatPrice));
-    }, [recommendationsRes?.pages, product?.id, language, currency, exchangeRatesUpdatedAt, formatPrice]);
+  const fallbackRecommendations = useMemo(() => {
+    const allProducts =
+      recommendationsRes?.pages?.flatMap((page) => page.data) || [];
+    return allProducts
+      .filter((p) => p.id !== product?.id)
+      .slice(0, 4)
+      .map((p) => mapProductToCardProps(p, language, formatPrice));
+  }, [
+    recommendationsRes?.pages,
+    product?.id,
+    language,
+    currency,
+    exchangeRatesUpdatedAt,
+    formatPrice,
+  ]);
 
-    const aiRecommendations = useMemo(() => {
-        return (aiRecommendationsRes?.items || [])
-            .filter((item) => item.productId !== product?.id)
-            .filter((item) => !!item.slug)
-            .slice(0, 4)
-            .map((item) => ({
-                id: item.productId,
-                variantId: item.productId,
-                name: item.name || '',
-                price: formatPrice(item.price || 0),
-                rawPrice: item.price || 0,
-                category: item.category || 'Curated',
-                image: item.imageUrl || '',
-                slug: item.slug || '',
-            }));
-    }, [aiRecommendationsRes?.items, product?.id, formatPrice]);
+  const aiRecommendations = useMemo(() => {
+    return (aiRecommendationsRes?.items || [])
+      .filter((item) => item.productId !== product?.id)
+      .filter((item) => !!item.slug)
+      .slice(0, 4)
+      .map((item) => ({
+        id: item.productId,
+        variantId: item.productId,
+        name: item.name || "",
+        price: formatPrice(item.price || 0),
+        rawPrice: item.price || 0,
+        category: item.category || "Curated",
+        image: item.imageUrl || PRODUCT_MEDIA_FALLBACK_URL,
+        slug: item.slug || "",
+      }));
+  }, [aiRecommendationsRes?.items, product?.id, formatPrice]);
 
-    const recommendations = aiRecommendations.length > 0 ? aiRecommendations : fallbackRecommendations;
+  const recommendations =
+    aiRecommendations.length > 0 ? aiRecommendations : fallbackRecommendations;
 
-    // --- Senior Variant Selection Logic ---
+  // --- Senior Variant Selection Logic ---
 
-    // 1. Extract all available attributes across variants
-    const availableAttributes = useMemo(() => {
-        if (!product?.variants) return [];
+  // 1. Extract all available attributes across variants
+  const availableAttributes = useMemo(() => {
+    if (!product?.variants) return [];
 
-        const attrMap = new Map<string, { id: string; code: string; name: LocalizedString; values: Map<string, AttributeValue> }>();
+    const attrMap = new Map<
+      string,
+      {
+        id: string;
+        code: string;
+        name: LocalizedString;
+        values: Map<string, AttributeValue>;
+      }
+    >();
 
-        product.variants.forEach(variant => {
-            variant.attributes.forEach(va => {
-                const val = va.attributeValue;
-                const attr = val.attribute;
+    product.variants.forEach((variant) => {
+      variant.attributes.forEach((va) => {
+        const val = va.attributeValue;
+        const attr = val.attribute;
 
-                if (!attrMap.has(attr.code)) {
-                    attrMap.set(attr.code, {
-                        id: attr.id,
-                        code: attr.code,
-                        name: attr.name,
-                        values: new Map()
-                    });
-                }
-
-                const currentAttr = attrMap.get(attr.code)!;
-                if (!currentAttr.values.has(val.id)) {
-                    currentAttr.values.set(val.id, val);
-                }
-            });
-        });
-
-        return Array.from(attrMap.values()).map(attr => ({
-            ...attr,
-            values: Array.from(attr.values.values())
-        }));
-    }, [product]);
-
-    // 2. Selection State: attributeCode -> valueId
-    const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
-
-    // 3. Initialize selection from default variant
-    useEffect(() => {
-        if (product?.variants?.length && Object.keys(selectedAttributes).length === 0) {
-            const defaultVar = product.variants.find(v => v.isDefault) || product.variants[0];
-            const initialSelections: Record<string, string> = {};
-            defaultVar.attributes.forEach(va => {
-                if (va?.attributeValue?.attribute?.code) {
-                    initialSelections[va.attributeValue.attribute.code] = va.attributeValue.id;
-                }
-            });
-            
-            // Only update if we actually found attributes to select
-            if (Object.keys(initialSelections).length > 0) {
-                setSelectedAttributes(initialSelections);
-            }
+        if (!attrMap.has(attr.code)) {
+          attrMap.set(attr.code, {
+            id: attr.id,
+            code: attr.code,
+            name: attr.name,
+            values: new Map(),
+          });
         }
-    }, [product?.id, selectedAttributes]);
 
-    // 4. Resolve current variant based on selections
-    const selectedVariant = useMemo(() => {
-        if (!product?.variants) return null;
-
-        // Attempt to find a variant that matches ALL selected attributes
-        const match = product.variants.find(variant => {
-            return Object.entries(selectedAttributes).every(([attrCode, valId]) => {
-                return variant.attributes.some(va => 
-                    va.attributeValue.attribute.code === attrCode && va.attributeValue.id === valId
-                );
-            });
-        });
-
-        return match || product.variants.find(v => v.isDefault) || product.variants[0];
-    }, [product, selectedAttributes]);
-
-    // handleAddToCart Action
-    const handleAddToCart = () => {
-        if (!product || !selectedVariant) return;
-
-        addItem(selectedVariant.id, 1, {
-            productId: product.id,
-            name: product.name,
-            price: Number(selectedVariant.price),
-            image: selectedVariant.media?.[0]?.url || product.media?.[0]?.url || '',
-            slug: product.slug,
-            attributes: selectedVariant.attributes.map(va => ({
-                name: getLocalized(va.attributeValue.attribute.name, language),
-                value: getLocalized(va.attributeValue.value, language)
-            })),
-            stock: selectedVariant.stock
-        });
-    };
-
-    // --- SEO & Metadata ---
-    useEffect(() => {
-        if (product) {
-            const name = getLocalized(product.name, language);
-            document.title = `${name} | Ray Paradis`;
-
-            let metaDesc = document.querySelector('meta[name="description"]');
-            if (!metaDesc) {
-                metaDesc = document.createElement('meta');
-                metaDesc.setAttribute('name', 'description');
-                document.head.appendChild(metaDesc);
-            }
-            const desc = getLocalized(product.description, language)?.replace(/<[^>]*>/g, '').slice(0, 160);
-            metaDesc.setAttribute('content', desc || `Discover ${name} by Ray Paradis.`);
+        const currentAttr = attrMap.get(attr.code)!;
+        if (!currentAttr.values.has(val.id)) {
+          currentAttr.values.set(val.id, val);
         }
-    }, [product?.id, language]);
+      });
+    });
 
-    if (isLoading) {
-        return (
-            <Layout forceHeaderOpaque={true}>
-                <div className="pt-32 pb-20">
-                    <Container>
-                        <div className="flex flex-col lg:flex-row gap-16">
-                            <div className="w-full lg:w-[60%] space-y-8">
-                                <Skeleton className="aspect-[4/5] w-full rounded-xl" />
-                            </div>
-                            <div className="w-full lg:w-[40%] space-y-12">
-                                <div className="space-y-4">
-                                    <Skeleton className="h-4 w-32" />
-                                    <Skeleton className="h-16 w-full" />
-                                    <Skeleton className="h-8 w-40" />
-                                </div>
-                                <Skeleton className="h-32 w-full" />
-                                <div className="space-y-4">
-                                    <Skeleton className="h-14 w-full" />
-                                    <Skeleton className="h-14 w-full" />
-                                </div>
-                            </div>
-                        </div>
-                    </Container>
-                </div>
-            </Layout>
-        );
+    return Array.from(attrMap.values()).map((attr) => ({
+      ...attr,
+      values: Array.from(attr.values.values()),
+    }));
+  }, [product]);
+
+  // 2. Selection State: attributeCode -> valueId
+  const [selectedAttributes, setSelectedAttributes] = useState<
+    Record<string, string>
+  >({});
+
+  // 3. Initialize selection from default variant
+  useEffect(() => {
+    if (
+      product?.variants?.length &&
+      Object.keys(selectedAttributes).length === 0
+    ) {
+      const defaultVar =
+        product.variants.find((v) => v.isDefault) || product.variants[0];
+      const initialSelections: Record<string, string> = {};
+      defaultVar.attributes.forEach((va) => {
+        if (va?.attributeValue?.attribute?.code) {
+          initialSelections[va.attributeValue.attribute.code] =
+            va.attributeValue.id;
+        }
+      });
+
+      // Only update if we actually found attributes to select
+      if (Object.keys(initialSelections).length > 0) {
+        setSelectedAttributes(initialSelections);
+      }
     }
+  }, [product?.id, selectedAttributes]);
 
-    if (isError || !product) {
-        return (
-            <Layout forceHeaderOpaque={true}>
-                <div className="pt-40 pb-40 text-center">
-                    <Container>
-                        <Alert className="max-w-md mx-auto border-destructive/20 bg-destructive/5 py-12 shadow-luxury">
-                            <ShoppingBag className="w-12 h-12 text-destructive/20 mx-auto mb-6" />
-                            <AlertTitle className="text-destructive font-display text-2xl mb-4 italic">
-                                {t('shop.pdp.notFound.title')}
-                            </AlertTitle>
-                            <AlertDescription className="text-destructive/80 font-body text-sm mb-8">
-                                {t('shop.pdp.notFound.description')}
-                            </AlertDescription>
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <Button variant="outline" onClick={() => refetch()} className="border-destructive/20">
-                                    <RefreshCw className="mr-2 h-4 w-4" /> {t('shop.pdp.notFound.retry')}
-                                </Button>
-                                <Link to="/collections">
-                                    <Button variant="luxury">{t('shop.pdp.notFound.discover')}</Button>
-                                </Link>
-                            </div>
-                        </Alert>
-                    </Container>
-                </div>
-            </Layout>
+  // 4. Resolve current variant based on selections
+  const selectedVariant = useMemo(() => {
+    if (!product?.variants) return null;
+
+    // Attempt to find a variant that matches ALL selected attributes
+    const match = product.variants.find((variant) => {
+      return Object.entries(selectedAttributes).every(([attrCode, valId]) => {
+        return variant.attributes.some(
+          (va) =>
+            va.attributeValue.attribute.code === attrCode &&
+            va.attributeValue.id === valId,
         );
-    }
-
-    const images = product.media?.length 
-        ? product.media.map(m => m.url) 
-        : [selectedVariant?.media?.[0]?.url || ''];
-
-    const rawPrice = selectedVariant?.price || product.displayPriceMin || 0;
-    const priceFormatted = formatPrice(rawPrice);
-    
-    // Thresholds adjusted for demo data (10M - 90M) to demonstrate the hybrid UI.
-    // In production, these would be 125M ($5k) and 1.25B ($50k).
-    const isHighTier = rawPrice >= 80000000; 
-    const isMidTier = rawPrice >= 50000000 && rawPrice < 80000000;
-
-    const handleInquire = () => {
-        window.dispatchEvent(new CustomEvent('open-concierge-modal', { 
-            detail: { productId: product.id, name: getLocalized(product.name, language) } 
-        }));
-    };
-
-    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>, url: string) => {
-        e.currentTarget.src = '/placeholder.svg';
-        if (!reportedImages.has(url)) {
-            setReportedImages(prev => new Set(prev).add(url));
-            axiosClient.post('/products/report-media-issue', {
-                productId: product.id,
-                mediaUrl: url,
-            }).catch(() => { /* ignore */ });
-        }
-    };
+      });
+    });
 
     return (
-        <Layout forceHeaderOpaque={true}>
-            <div className="pt-20 sm:pt-28">
-                <Section padding="none">
-                    <Container>
-                        {/* Breadcrumb / Back */}
-                        <div className="mb-8">
-                            <Link to="/collections" className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors group">
-                                <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
-                                {t('shop.pdp.backToCollection')}
-                            </Link>
-                        </div>
-
-                        <div className="flex flex-col lg:flex-row gap-16 xl:gap-24 items-start min-h-[calc(100vh-120px)]">
-                            {/* Left: Immersive Editorial Gallery */}
-                            <div className="w-full lg:w-[60%] grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                                {images.map((img, i) => (
-                                    <motion.div
-                                        key={i}
-                                        className={cn(
-                                            "overflow-hidden bg-secondary/5 rounded-sm",
-                                            i === 0 ? "aspect-[4/5] md:col-span-2" : "aspect-square"
-                                        )}
-                                        initial={{ opacity: 0, scale: 0.98 }}
-                                        whileInView={{ opacity: 1, scale: 1 }}
-                                        viewport={{ once: true, margin: "-100px" }}
-                                        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                                    >
-                                        <img 
-                                            src={img} 
-                                            alt={`${getLocalized(product.name, language)} view ${i + 1}`} 
-                                            onError={(e) => handleImageError(e, img)}
-                                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-[2000ms] cursor-zoom-in"
-                                        />
-                                    </motion.div>
-                                ))}
-                            </div>
-
-                            {/* Right: Sticky Info Panel */}
-                            <div className="w-full lg:w-[40%] lg:sticky lg:top-32 space-y-12 pb-20">
-                                <header className="space-y-4">
-                                    <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">
-                                        High Jewelry / {getLocalized(product.categories?.[0]?.category?.name, language) || 'Necklaces'}
-                                    </p>
-                                    <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary italic font-normal tracking-luxury leading-tight">
-                                        {getLocalized(product.name, language)}
-                                    </h1>
-                                    <AnimatePresence mode="wait">
-                                        <motion.p 
-                                            key={selectedVariant?.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
-                                            className="font-body text-xl sm:text-2xl text-primary/80 font-light tracking-wide"
-                                        >
-                                            {isHighTier ? <span className="italic">{t('shop.pdp.priceUponRequest')}</span> : priceFormatted}
-                                        </motion.p>
-                                    </AnimatePresence>
-                                </header>
-
-                                <div className="space-y-10">
-                                    <div className="font-body text-base text-muted-foreground leading-relaxed max-w-sm"
-                                        dangerouslySetInnerHTML={{ __html: getLocalized(product.description, language) || '' }}
-                                    />
-
-                                    {/* --- Advanced Attribute Selectors --- */}
-                                    {availableAttributes.length > 0 && (
-                                        <div className="space-y-8">
-                                            {availableAttributes.map((attr) => (
-                                                <div key={attr.id} className="space-y-4">
-                                                    <label className="font-body text-[10px] uppercase tracking-widest text-primary/60 block">
-                                                        {getLocalized(attr.name, language)}
-                                                    </label>
-                                                    <div className="flex flex-wrap gap-2 sm:gap-3">
-                                                        {attr.values.map((val) => {
-                                                            const isSelected = selectedAttributes[attr.code] === val.id;
-                                                            return (
-                                                                <button
-                                                                    key={val.id}
-                                                                    onClick={() => setSelectedAttributes(prev => ({ ...prev, [attr.code]: val.id }))}
-                                                                    className={cn(
-                                                                        "px-4 sm:px-5 h-10 sm:h-12 rounded-xl border text-[9px] sm:text-[10px] uppercase tracking-widest transition-all duration-500",
-                                                                        isSelected
-                                                                            ? "border-gold bg-gold/5 text-primary shadow-luxury-soft ring-1 ring-gold/20"
-                                                                            : "border-border/10 text-muted-foreground hover:border-border/40 hover:bg-secondary/20"
-                                                                    )}
-                                                                >
-                                                                    {val.metaValue && (
-                                                                        <span 
-                                                                            className="inline-block w-2 h-2 rounded-full mr-2 mb-0.5" 
-                                                                            style={{ backgroundColor: val.metaValue }}
-                                                                        />
-                                                                    )}
-                                                                    {getLocalized(val.value, language)}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Actions (Hybrid Strategy) */}
-                                    <div className="space-y-4 pt-8 border-t border-border/10">
-                                        {isHighTier ? (
-                                            <Button 
-                                                variant="luxury" 
-                                                className="w-full h-14 group text-[10px] tracking-widest uppercase"
-                                                onClick={handleInquire}
-                                            >
-                                                <span className="mr-2">{t('shop.pdp.inquireToPurchase')}</span>
-                                                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                            </Button>
-                                        ) : isMidTier ? (
-                                            <div className="flex flex-col sm:flex-row gap-3">
-                                                <Button 
-                                                    variant="outline" 
-                                                    className="flex-1 h-14 group text-[10px] tracking-widest uppercase border-border/20 hover:border-gold hover:text-gold"
-                                                    onClick={handleAddToCart}
-                                                >
-                                                    <span className="mr-2">{t('shop.pdp.addToCollection')}</span>
-                                                </Button>
-                                                <Button 
-                                                    variant="luxury" 
-                                                    className="flex-1 h-14 group text-[10px] tracking-widest uppercase"
-                                                    onClick={handleInquire}
-                                                >
-                                                    <span className="mr-2">{t('shop.pdp.contactConcierge')}</span>
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <Button 
-                                                variant="luxury" 
-                                                className="w-full h-14 group text-[10px] tracking-widest uppercase"
-                                                onClick={handleAddToCart}
-                                            >
-                                                <span className="mr-2">{t('shop.pdp.addToCollection')}</span>
-                                                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                            </Button>
-                                        )}
-                                        <p className="text-center font-body text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-4">
-                                            GIA Certified / Handcrafted in Atelier / SKU: {selectedVariant?.sku}
-                                        </p>
-                                    </div>
-
-                                    {/* Info Tabs / Accordion */}
-                                    <div className="space-y-1 border-t border-border/10 pt-8">
-                                        {[
-                                            { 
-                                                id: "craftsmanship", 
-                                                label: t('shop.pdp.craftsmanship'), 
-                                                content: t('shop.pdp.content.craftsmanship'), 
-                                                icon: ShieldCheck 
-                                            },
-                                            { 
-                                                id: "shipping", 
-                                                label: t('shop.pdp.delivery'), 
-                                                content: t('shop.pdp.content.delivery'), 
-                                                icon: Truck 
-                                            },
-                                            { 
-                                                id: "care", 
-                                                label: t('shop.pdp.careGuide'), 
-                                                content: t('shop.pdp.content.careGuide'), 
-                                                icon: RotateCcw 
-                                            },
-                                        ].map((tab) => (
-                                            <div key={tab.id} className="border-b border-border/10 overflow-hidden">
-                                                <button 
-                                                    onClick={() => setActiveAccordion(activeAccordion === tab.id ? null : tab.id)}
-                                                    className="w-full flex items-center justify-between py-5 text-left group"
-                                                >
-                                                    <span className="font-body text-xs uppercase tracking-widest text-primary/80 group-hover:text-primary transition-colors">
-                                                        {tab.label}
-                                                    </span>
-                                                    <Plus className={cn("w-4 h-4 text-primary/40 transition-transform duration-500", activeAccordion === tab.id && "rotate-45")} />
-                                                </button>
-                                                <AnimatePresence>
-                                                    {activeAccordion === tab.id && (
-                                                        <motion.div
-                                                            initial={{ height: 0, opacity: 0 }}
-                                                            animate={{ height: "auto", opacity: 1 }}
-                                                            exit={{ height: 0, opacity: 0 }}
-                                                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                                                        >
-                                                            <p className="pb-8 font-body text-sm text-muted-foreground leading-relaxed">
-                                                                {tab.content}
-                                                            </p>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Container>
-                </Section>
-
-                {/* Recommendation Section */}
-                {(isRecommendationsLoading || recommendations.length > 0) && (
-                    <Section padding="lg" withHairline="top" className="bg-secondary/5">
-                        <Container>
-                            <div className="flex items-end justify-between mb-16">
-                                <div className="space-y-4">
-                                    <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">
-                                        Digital Atelier
-                                    </p>
-                                    <h2 className="font-display text-3xl sm:text-4xl italic font-normal tracking-luxury text-primary">
-                                        {t('shop.pdp.completeLook')}
-                                    </h2>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                                {isRecommendationsLoading && recommendations.length === 0
-                                    ? Array.from({ length: 4 }).map((_, index) => (
-                                        <ProductCardSkeleton key={index} />
-                                    ))
-                                    : recommendations.map((p) => (
-                                        <ProductCard key={p.id} {...p} />
-                                    ))}
-                            </div>
-                        </Container>
-                    </Section>
-                )}
-            </div>
-        </Layout>
+      match || product.variants.find((v) => v.isDefault) || product.variants[0]
     );
+  }, [product, selectedAttributes]);
+
+  // handleAddToCart Action
+  const handleAddToCart = () => {
+    if (!product || !selectedVariant) return;
+    const cartMedia = getProductThumbnail({
+      media: selectedVariant.media?.length
+        ? selectedVariant.media
+        : product.media,
+      thumbnailUrl: selectedVariant.thumbnailUrl,
+      variants: product.variants,
+    });
+
+    addItem(selectedVariant.id, 1, {
+      productId: product.id,
+      name: product.name,
+      price: Number(selectedVariant.price),
+      image: cartMedia.url || "",
+      slug: product.slug,
+      attributes: selectedVariant.attributes.map((va) => ({
+        name: getLocalized(va.attributeValue.attribute.name, language),
+        value: getLocalized(va.attributeValue.value, language),
+      })),
+      stock: selectedVariant.stock,
+    });
+  };
+
+  // --- SEO & Metadata ---
+  useEffect(() => {
+    if (product) {
+      const name = getLocalized(product.name, language);
+      document.title = `${name} | Ray Paradis`;
+
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement("meta");
+        metaDesc.setAttribute("name", "description");
+        document.head.appendChild(metaDesc);
+      }
+      const desc = getLocalized(product.description, language)
+        ?.replace(/<[^>]*>/g, "")
+        .slice(0, 160);
+      metaDesc.setAttribute(
+        "content",
+        desc || `Discover ${name} by Ray Paradis.`,
+      );
+    }
+  }, [product?.id, language]);
+
+  if (isLoading) {
+    return (
+      <Layout forceHeaderOpaque={true}>
+        <div className="pt-32 pb-20">
+          <Container>
+            <div className="flex flex-col lg:flex-row gap-16">
+              <div className="w-full lg:w-[60%] space-y-8">
+                <Skeleton className="aspect-[4/5] w-full rounded-xl" />
+              </div>
+              <div className="w-full lg:w-[40%] space-y-12">
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-8 w-40" />
+                </div>
+                <Skeleton className="h-32 w-full" />
+                <div className="space-y-4">
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                </div>
+              </div>
+            </div>
+          </Container>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isError || !product) {
+    return (
+      <Layout forceHeaderOpaque={true}>
+        <div className="pt-40 pb-40 text-center">
+          <Container>
+            <Alert className="max-w-md mx-auto border-destructive/20 bg-destructive/5 py-12 shadow-luxury">
+              <ShoppingBag className="w-12 h-12 text-destructive/20 mx-auto mb-6" />
+              <AlertTitle className="text-destructive font-display text-2xl mb-4 italic">
+                {t("shop.pdp.notFound.title")}
+              </AlertTitle>
+              <AlertDescription className="text-destructive/80 font-body text-sm mb-8">
+                {t("shop.pdp.notFound.description")}
+              </AlertDescription>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => refetch()}
+                  className="border-destructive/20"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />{" "}
+                  {t("shop.pdp.notFound.retry")}
+                </Button>
+                <Link to="/collections">
+                  <Button variant="luxury">
+                    {t("shop.pdp.notFound.discover")}
+                  </Button>
+                </Link>
+              </div>
+            </Alert>
+          </Container>
+        </div>
+      </Layout>
+    );
+  }
+
+  const images = getProductGalleryMedia(product as ProductMediaOwnerLike, {
+    variant: selectedVariant as ProductVariantMediaLike | null,
+    fallbackUrl: PRODUCT_MEDIA_FALLBACK_URL,
+  })
+    .map((media) => media.url)
+    .filter((url): url is string => Boolean(url));
+
+  const rawPrice = selectedVariant?.price || product.displayPriceMin || 0;
+  const priceFormatted = formatPrice(rawPrice);
+
+  // Thresholds adjusted for demo data (10M - 90M) to demonstrate the hybrid UI.
+  // In production, these would be 125M ($5k) and 1.25B ($50k).
+  const isHighTier = rawPrice >= 80000000;
+  const isMidTier = rawPrice >= 50000000 && rawPrice < 80000000;
+
+  const handleInquire = () => {
+    window.dispatchEvent(
+      new CustomEvent("open-concierge-modal", {
+        detail: {
+          productId: product.id,
+          name: getLocalized(product.name, language),
+        },
+      }),
+    );
+  };
+
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement, Event>,
+    url: string,
+  ) => {
+    e.currentTarget.src = PRODUCT_MEDIA_FALLBACK_URL;
+    reportBrokenProductMedia(product.id, url);
+  };
+
+  return (
+    <Layout forceHeaderOpaque={true}>
+      <div className="pt-20 sm:pt-28">
+        <Section padding="none">
+          <Container>
+            {/* Breadcrumb / Back */}
+            <div className="mb-8">
+              <Link
+                to="/collections"
+                className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors group"
+              >
+                <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
+                {t("shop.pdp.backToCollection")}
+              </Link>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-16 xl:gap-24 items-start min-h-[calc(100vh-120px)]">
+              {/* Left: Immersive Editorial Gallery */}
+              <div className="w-full lg:w-[60%] grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                {images.map((img, i) => (
+                  <motion.div
+                    key={i}
+                    className={cn(
+                      "overflow-hidden bg-secondary/5 rounded-sm",
+                      i === 0 ? "aspect-[4/5] md:col-span-2" : "aspect-square",
+                    )}
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <img
+                      src={img}
+                      alt={`${getLocalized(product.name, language)} view ${i + 1}`}
+                      onError={(e) => handleImageError(e, img)}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-[2000ms] cursor-zoom-in"
+                    />
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Right: Sticky Info Panel */}
+              <div className="w-full lg:w-[40%] lg:sticky lg:top-32 space-y-12 pb-20">
+                <header className="space-y-4">
+                  <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">
+                    High Jewelry /{" "}
+                    {getLocalized(
+                      product.categories?.[0]?.category?.name,
+                      language,
+                    ) || "Necklaces"}
+                  </p>
+                  <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-primary italic font-normal tracking-luxury leading-tight">
+                    {getLocalized(product.name, language)}
+                  </h1>
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={selectedVariant?.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="font-body text-xl sm:text-2xl text-primary/80 font-light tracking-wide"
+                    >
+                      {isHighTier ? (
+                        <span className="italic">
+                          {t("shop.pdp.priceUponRequest")}
+                        </span>
+                      ) : (
+                        priceFormatted
+                      )}
+                    </motion.p>
+                  </AnimatePresence>
+                </header>
+
+                <div className="space-y-10">
+                  <div
+                    className="font-body text-base text-muted-foreground leading-relaxed max-w-sm"
+                    dangerouslySetInnerHTML={{
+                      __html: getLocalized(product.description, language) || "",
+                    }}
+                  />
+
+                  {/* --- Advanced Attribute Selectors --- */}
+                  {availableAttributes.length > 0 && (
+                    <div className="space-y-8">
+                      {availableAttributes.map((attr) => (
+                        <div key={attr.id} className="space-y-4">
+                          <label className="font-body text-[10px] uppercase tracking-widest text-primary/60 block">
+                            {getLocalized(attr.name, language)}
+                          </label>
+                          <div className="flex flex-wrap gap-2 sm:gap-3">
+                            {attr.values.map((val) => {
+                              const isSelected =
+                                selectedAttributes[attr.code] === val.id;
+                              return (
+                                <button
+                                  key={val.id}
+                                  onClick={() =>
+                                    setSelectedAttributes((prev) => ({
+                                      ...prev,
+                                      [attr.code]: val.id,
+                                    }))
+                                  }
+                                  className={cn(
+                                    "px-4 sm:px-5 h-10 sm:h-12 rounded-xl border text-[9px] sm:text-[10px] uppercase tracking-widest transition-all duration-500",
+                                    isSelected
+                                      ? "border-gold bg-gold/5 text-primary shadow-luxury-soft ring-1 ring-gold/20"
+                                      : "border-border/10 text-muted-foreground hover:border-border/40 hover:bg-secondary/20",
+                                  )}
+                                >
+                                  {val.metaValue && (
+                                    <span
+                                      className="inline-block w-2 h-2 rounded-full mr-2 mb-0.5"
+                                      style={{ backgroundColor: val.metaValue }}
+                                    />
+                                  )}
+                                  {getLocalized(val.value, language)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Actions (Hybrid Strategy) */}
+                  <div className="space-y-4 pt-8 border-t border-border/10">
+                    {isHighTier ? (
+                      <Button
+                        variant="luxury"
+                        className="w-full h-14 group text-[10px] tracking-widest uppercase"
+                        onClick={handleInquire}
+                      >
+                        <span className="mr-2">
+                          {t("shop.pdp.inquireToPurchase")}
+                        </span>
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                      </Button>
+                    ) : isMidTier ? (
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-14 group text-[10px] tracking-widest uppercase border-border/20 hover:border-gold hover:text-gold"
+                          onClick={handleAddToCart}
+                        >
+                          <span className="mr-2">
+                            {t("shop.pdp.addToCollection")}
+                          </span>
+                        </Button>
+                        <Button
+                          variant="luxury"
+                          className="flex-1 h-14 group text-[10px] tracking-widest uppercase"
+                          onClick={handleInquire}
+                        >
+                          <span className="mr-2">
+                            {t("shop.pdp.contactConcierge")}
+                          </span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="luxury"
+                        className="w-full h-14 group text-[10px] tracking-widest uppercase"
+                        onClick={handleAddToCart}
+                      >
+                        <span className="mr-2">
+                          {t("shop.pdp.addToCollection")}
+                        </span>
+                        <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                      </Button>
+                    )}
+                    <p className="text-center font-body text-[9px] text-muted-foreground tracking-[0.2em] uppercase mt-4">
+                      GIA Certified / Handcrafted in Atelier / SKU:{" "}
+                      {selectedVariant?.sku}
+                    </p>
+                  </div>
+
+                  {/* Info Tabs / Accordion */}
+                  <div className="space-y-1 border-t border-border/10 pt-8">
+                    {[
+                      {
+                        id: "craftsmanship",
+                        label: t("shop.pdp.craftsmanship"),
+                        content: t("shop.pdp.content.craftsmanship"),
+                        icon: ShieldCheck,
+                      },
+                      {
+                        id: "shipping",
+                        label: t("shop.pdp.delivery"),
+                        content: t("shop.pdp.content.delivery"),
+                        icon: Truck,
+                      },
+                      {
+                        id: "care",
+                        label: t("shop.pdp.careGuide"),
+                        content: t("shop.pdp.content.careGuide"),
+                        icon: RotateCcw,
+                      },
+                    ].map((tab) => (
+                      <div
+                        key={tab.id}
+                        className="border-b border-border/10 overflow-hidden"
+                      >
+                        <button
+                          onClick={() =>
+                            setActiveAccordion(
+                              activeAccordion === tab.id ? null : tab.id,
+                            )
+                          }
+                          className="w-full flex items-center justify-between py-5 text-left group"
+                        >
+                          <span className="font-body text-xs uppercase tracking-widest text-primary/80 group-hover:text-primary transition-colors">
+                            {tab.label}
+                          </span>
+                          <Plus
+                            className={cn(
+                              "w-4 h-4 text-primary/40 transition-transform duration-500",
+                              activeAccordion === tab.id && "rotate-45",
+                            )}
+                          />
+                        </button>
+                        <AnimatePresence>
+                          {activeAccordion === tab.id && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{
+                                duration: 0.5,
+                                ease: [0.16, 1, 0.3, 1],
+                              }}
+                            >
+                              <p className="pb-8 font-body text-sm text-muted-foreground leading-relaxed">
+                                {tab.content}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Container>
+        </Section>
+
+        {/* Recommendation Section */}
+        {(isRecommendationsLoading || recommendations.length > 0) && (
+          <Section padding="lg" withHairline="top" className="bg-secondary/5">
+            <Container>
+              <div className="flex items-end justify-between mb-16">
+                <div className="space-y-4">
+                  <p className="font-body text-[10px] uppercase tracking-ultra text-muted-foreground">
+                    Digital Atelier
+                  </p>
+                  <h2 className="font-display text-3xl sm:text-4xl italic font-normal tracking-luxury text-primary">
+                    {t("shop.pdp.completeLook")}
+                  </h2>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {isRecommendationsLoading && recommendations.length === 0
+                  ? Array.from({ length: 4 }).map((_, index) => (
+                      <ProductCardSkeleton key={index} />
+                    ))
+                  : recommendations.map((p) => (
+                      <ProductCard key={p.id} {...p} />
+                    ))}
+              </div>
+            </Container>
+          </Section>
+        )}
+      </div>
+    </Layout>
+  );
 };

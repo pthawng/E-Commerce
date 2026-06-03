@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SecurityEvent, SecurityEventBus, SecurityEventType } from './security-event-bus.service';
 
@@ -18,8 +19,12 @@ export class SecurityOrchestrator implements OnModuleInit {
 
   private async handleEvent(event: SecurityEvent) {
     this.logger.warn(
-      `Security Event Captured: [${event.type}] for Principal [${event.principal.id}]`,
+      `Security Event Captured: [${event.type}] for Principal [${
+        event.principal.id
+      }] correlationId=${event.correlationId || 'none'}`,
     );
+
+    await this.persistEvent(event);
 
     switch (event.type) {
       case SecurityEventType.TOKEN_REPLAY:
@@ -29,6 +34,27 @@ export class SecurityOrchestrator implements OnModuleInit {
         await this.handleOwnershipViolation(event);
         break;
       // Future: Integration with external SIEM / PagerDuty / Honeypot
+    }
+  }
+
+  private async persistEvent(event: SecurityEvent) {
+    try {
+      await this.prisma.securityEventLog.create({
+        data: {
+          type: event.type,
+          principalId: event.principal.id,
+          principalType: event.principal.type,
+          severity: event.severity,
+          metadata: event.metadata as Prisma.InputJsonObject,
+          ipAddress: event.ipAddress,
+          userAgent: event.userAgent,
+          correlationId: event.correlationId,
+          createdAt: event.timestamp,
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to persist security event ${event.type}: ${message}`);
     }
   }
 

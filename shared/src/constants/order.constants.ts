@@ -1,43 +1,42 @@
 /**
  * Order Constants
- * Constants cho Order - labels, configs
+ * Labels and UI colors keyed by backend-canonical status values.
  */
 
 import { OrderStatus, PaymentStatus } from '../enums';
 
-/**
- * Order Status Labels (Vietnamese)
- */
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  [OrderStatus.PENDING]: 'Chờ xử lý',
-  [OrderStatus.CONFIRMED]: 'Đã xác nhận',
-  [OrderStatus.PROCESSING]: 'Đang xử lý',
-  [OrderStatus.SHIPPING]: 'Đang giao hàng',
-  [OrderStatus.DELIVERED]: 'Đã giao hàng',
-  [OrderStatus.COMPLETED]: 'Hoàn thành',
-  [OrderStatus.CANCELLED]: 'Đã hủy',
-  [OrderStatus.RETURNED]: 'Đã trả hàng',
-  [OrderStatus.REFUNDED]: 'Đã hoàn tiền',
+  [OrderStatus.DRAFT]: 'Draft',
+  [OrderStatus.PENDING_PAYMENT]: 'Pending payment',
+  [OrderStatus.CONFIRMED]: 'Confirmed',
+  [OrderStatus.MATERIAL_RESERVED]: 'Material reserved',
+  [OrderStatus.IN_PRODUCTION]: 'In production',
+  [OrderStatus.QC]: 'Quality check',
+  [OrderStatus.READY_TO_SHIP]: 'Ready to ship',
+  [OrderStatus.SHIPPED]: 'Shipped',
+  [OrderStatus.DELIVERED]: 'Delivered',
+  [OrderStatus.COMPLETED]: 'Completed',
+  [OrderStatus.CANCELLED]: 'Cancelled',
+  [OrderStatus.RETURNED]: 'Returned',
+  [OrderStatus.REFUNDED]: 'Refunded',
 };
 
-/**
- * Payment Status Labels (Vietnamese)
- */
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  [PaymentStatus.UNPAID]: 'Chưa thanh toán',
-  [PaymentStatus.PARTIALLY_PAID]: 'Thanh toán một phần',
-  [PaymentStatus.PAID]: 'Đã thanh toán',
-  [PaymentStatus.REFUNDED]: 'Đã hoàn tiền',
+  [PaymentStatus.UNPAID]: 'Unpaid',
+  [PaymentStatus.PARTIALLY_PAID]: 'Partially paid',
+  [PaymentStatus.PAID]: 'Paid',
+  [PaymentStatus.REFUNDED]: 'Refunded',
 };
 
-/**
- * Order Status Colors (for UI)
- */
 export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
-  [OrderStatus.PENDING]: 'yellow',
+  [OrderStatus.DRAFT]: 'gray',
+  [OrderStatus.PENDING_PAYMENT]: 'yellow',
   [OrderStatus.CONFIRMED]: 'blue',
-  [OrderStatus.PROCESSING]: 'purple',
-  [OrderStatus.SHIPPING]: 'indigo',
+  [OrderStatus.MATERIAL_RESERVED]: 'cyan',
+  [OrderStatus.IN_PRODUCTION]: 'purple',
+  [OrderStatus.QC]: 'amber',
+  [OrderStatus.READY_TO_SHIP]: 'teal',
+  [OrderStatus.SHIPPED]: 'indigo',
   [OrderStatus.DELIVERED]: 'green',
   [OrderStatus.COMPLETED]: 'green',
   [OrderStatus.CANCELLED]: 'red',
@@ -45,13 +44,9 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   [OrderStatus.REFUNDED]: 'gray',
 };
 
-/**
- * Payment Status Colors (for UI)
- */
 export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
   [PaymentStatus.UNPAID]: 'red',
   [PaymentStatus.PARTIALLY_PAID]: 'yellow',
   [PaymentStatus.PAID]: 'green',
   [PaymentStatus.REFUNDED]: 'gray',
 };
-

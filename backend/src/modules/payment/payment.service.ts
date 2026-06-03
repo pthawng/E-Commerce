@@ -300,10 +300,22 @@ export class PaymentService {
 
           const payment = transaction.payment;
 
+          if (this.hasOrderReferenceMismatch(transaction, payment, verifiedData)) {
+            this.logger.error(
+              `Order reference mismatch for payment ${payment.id}: expected=${payment.orderId}, received=${verifiedData.orderId}`,
+            );
+            throw new BadRequestException('Order reference mismatch detected.');
+          }
+
           // 2. Security: Amount mismatch check
           if (this.hasAmountMismatch(paymentMethod, transaction, verifiedData)) {
             this.logger.error(`Amount mismatch for payment ${payment.id}. Fraud suspected!`);
             throw new BadRequestException('Amount mismatch detected.');
+          }
+
+          if (this.hasCurrencyMismatch(paymentMethod, transaction, verifiedData)) {
+            this.logger.error(`Currency mismatch for payment ${payment.id}. Fraud suspected!`);
+            throw new BadRequestException('Currency mismatch detected.');
           }
 
           // 3. State Machine check using current payment status
@@ -865,6 +877,20 @@ export class PaymentService {
     tx: Prisma.TransactionClient,
     order: Prisma.OrderGetPayload<{ include: { items: true } }>,
   ): Promise<void> {
+    const existingRestoration = await tx.inventoryLog.findFirst({
+      where: {
+        referenceId: order.id,
+        referenceType: 'ORDER',
+        actionType: ActionType.RETURN,
+        quantityChange: { gt: 0 },
+      },
+    });
+
+    if (existingRestoration) {
+      this.logger.warn(`Inventory already restored for order ${order.id}. Skipping restoration.`);
+      return;
+    }
+
     // Find all original deduction logs for this order to know exactly where to return stock
     const deductionLogs = await tx.inventoryLog.findMany({
       where: {
@@ -885,21 +911,21 @@ export class PaymentService {
     for (const log of deductionLogs) {
       const quantityToRestore = Math.abs(log.quantityChange);
 
-      // Fetch current inventory item to get accurate beforeQuantity for logging
-      const inventoryItem = await tx.inventoryItem.findUnique({
-        where: { id: log.inventoryItemId },
+      // Fetch current inventory balance to get accurate beforeQuantity for logging
+      const inventoryBalance = await tx.inventoryBalance.findUnique({
+        where: { id: log.inventoryBalanceId },
       });
 
-      if (!inventoryItem) {
+      if (!inventoryBalance) {
         this.logger.error(
-          `Inventory item ${log.inventoryItemId} not found during restoration for order ${order.id}`,
+          `Inventory balance ${log.inventoryBalanceId} not found during restoration for order ${order.id}`,
         );
         continue;
       }
 
       // Restore stock
-      await tx.inventoryItem.update({
-        where: { id: inventoryItem.id },
+      await tx.inventoryBalance.update({
+        where: { id: inventoryBalance.id },
         data: {
           quantity: { increment: quantityToRestore },
         },
@@ -908,13 +934,13 @@ export class PaymentService {
       // Create return log
       await tx.inventoryLog.create({
         data: {
-          inventoryItemId: inventoryItem.id,
+          inventoryBalanceId: inventoryBalance.id,
           productVariantId: log.productVariantId,
           warehouseId: log.warehouseId,
           actionType: ActionType.RETURN,
           quantityChange: quantityToRestore,
-          beforeQuantity: inventoryItem.quantity,
-          afterQuantity: inventoryItem.quantity + quantityToRestore,
+          beforeQuantity: inventoryBalance.quantity,
+          afterQuantity: inventoryBalance.quantity + quantityToRestore,
           referenceType: 'ORDER',
           referenceId: order.id,
           note: 'Inventory restored to original warehouse due to refund',
@@ -936,6 +962,44 @@ export class PaymentService {
       throw new BadRequestException(`Unsupported payment method: ${method}`);
     }
     return provider;
+  }
+
+  private hasOrderReferenceMismatch(
+    transaction: { orderId: string },
+    payment: { orderId: string },
+    verifiedData: CallbackData,
+  ): boolean {
+    if (!verifiedData.orderId) return false;
+    return verifiedData.orderId !== transaction.orderId || verifiedData.orderId !== payment.orderId;
+  }
+
+  private hasCurrencyMismatch(
+    paymentMethod: PaymentMethodEnum,
+    transaction: {
+      currency?: string | null;
+    },
+    verifiedData: CallbackData,
+  ): boolean {
+    const receivedCurrency = this.extractGatewayCurrency(verifiedData.gatewayResponse);
+    if (!receivedCurrency) return false;
+
+    const expectedCurrency =
+      paymentMethod === PaymentMethodEnum.PAYPAL ? 'USD' : transaction.currency || 'VND';
+
+    return receivedCurrency.toUpperCase() !== expectedCurrency.toUpperCase();
+  }
+
+  private extractGatewayCurrency(gatewayResponse?: Record<string, any>): string | null {
+    if (!gatewayResponse) return null;
+
+    const currency =
+      gatewayResponse.currency ??
+      gatewayResponse.currencyCode ??
+      gatewayResponse.currency_code ??
+      gatewayResponse.amount?.currency_code ??
+      gatewayResponse.raw?.amount?.currency_code;
+
+    return typeof currency === 'string' ? currency : null;
   }
 
   private hasAmountMismatch(

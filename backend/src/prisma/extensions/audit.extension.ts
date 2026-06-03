@@ -11,7 +11,7 @@ export const auditExtension = Prisma.defineExtension((client) => {
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          const sensitiveModels = ['Order', 'InventoryItem', 'Payment', 'Refund'];
+          const sensitiveModels = ['Order', 'InventoryBalance', 'Payment', 'Refund'];
           const auditOperations = ['update', 'delete', 'upsert'];
 
           if (model && sensitiveModels.includes(model) && auditOperations.includes(operation)) {
@@ -36,7 +36,10 @@ export const auditExtension = Prisma.defineExtension((client) => {
               data: {
                 entityTable: model,
                 entityId: (result as any)?.id || (where as any)?.id || 'unknown',
+                actorType: 'system',
                 action: operation.toUpperCase(),
+                resourceType: model,
+                resourceId: (result as any)?.id || (where as any)?.id || 'unknown',
                 before: beforeState ? JSON.parse(JSON.stringify(beforeState)) : null,
                 after: afterState ? JSON.parse(JSON.stringify(afterState)) : null,
                 metadata: {
@@ -56,7 +59,10 @@ export const auditExtension = Prisma.defineExtension((client) => {
               data: {
                 entityTable: model,
                 entityId: (result as any)?.id || 'unknown',
+                actorType: 'system',
                 action: 'CREATE',
+                resourceType: model,
+                resourceId: (result as any)?.id || 'unknown',
                 before: null,
                 after: JSON.parse(JSON.stringify(result)),
                 metadata: {

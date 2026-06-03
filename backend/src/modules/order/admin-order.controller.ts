@@ -95,7 +95,7 @@ export class AdminOrderController {
     @Body() dto: CancelOrderDto,
     @CurrentUser() user: RequestUserPayload,
   ) {
-    return this.orderService.transitionTo(id, OrderStatusEnum.CANCELLED, user.userId, dto.reason);
+    return this.orderPaymentService.cancelOrder(id, dto.reason, user.userId);
   }
 
   @Post(':id/actions/refund')

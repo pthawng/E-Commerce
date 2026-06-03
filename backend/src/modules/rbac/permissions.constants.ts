@@ -51,6 +51,26 @@ export const PERMISSIONS = {
     },
   },
 
+  CATALOG: {
+    PRODUCT: {
+      READ: 'catalog.product.read',
+      CREATE: 'catalog.product.create',
+      UPDATE: 'catalog.product.update',
+      PUBLISH: 'catalog.product.publish',
+      DELETE: 'catalog.product.delete',
+    },
+    PRICING: {
+      READ: 'catalog.pricing.read',
+      UPDATE: 'catalog.pricing.update',
+    },
+    IMPORT: {
+      CREATE: 'catalog.import.create',
+    },
+    AUDIT: {
+      READ: 'catalog.audit.read',
+    },
+  },
+
   ORDER: {
     READ: 'order.read',
     UPDATE: 'order.update',
@@ -81,6 +101,10 @@ export const PERMISSIONS = {
   CRM: {
     GUEST: {
       READ: 'crm.guest.read',
+    },
+    VIP_CARE: {
+      READ: 'crm.vip-care.read',
+      MANAGE: 'crm.vip-care.manage',
     },
   },
 } as const;

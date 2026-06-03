@@ -1,0 +1,100 @@
+const zhDashboard = {
+  greeting: {
+    dayTime: "周四 · 2026年5月28日 · 巴黎",
+    welcome: "晚上好，Amélie。",
+    summary: "品牌运营参数正常。在今日结束前，有三项事务需要您的关注。",
+  },
+  badges: {
+    q2Pace: "第二季度 · 完成进度112%",
+  },
+  kpis: {
+    netRevenueMTD: "本月净收入",
+    ordersInAtelier: "工坊制作中订单",
+    ordersInAtelierHint: "6件定制订单",
+    vaultCoverage: "保险库安全覆盖率",
+    vaultCoverageHint: "3个SKU库存不足",
+    vipActive: "活跃VIP客户",
+    vipActiveHint: "22场活动",
+    vsMay25: "对比2025年5月",
+  },
+  revenuePanel: {
+    title: "收入走势",
+    subtitle: "过去12个月 · 全部精品店",
+    today: "今日",
+    forecastEoM: "月末预测",
+    vsAvg: "对比平均",
+    confidence: "置信区间",
+  },
+  atelierPipeline: {
+    title: "工坊制作流水线",
+    subtitle: "各制作阶段的进行中订单",
+    stages: {
+      stoneSelection: "宝石遴选",
+      cadWax: "CAD设计与蜡模",
+      casting: "铸造成型",
+      handFinishing: "手工精修",
+      qcHallmark: "质检与打标",
+    },
+  },
+  attentionPanel: {
+    title: "待处理事项",
+    subtitle: "3项运营异常",
+    openQueue: "打开队列",
+    columns: {
+      ref: "编号",
+      matter: "事项",
+      owner: "负责人",
+      sla: "SLA期限",
+    },
+    incidents: {
+      vaultDiscrepancy: "保险库差异 · Place Vendôme",
+      vaultDiscrepancyCtx: "1枚序列号在盘点周期后未核实",
+      vipEscalation: "VIP升级申诉 · 田中先生",
+      vipEscalationCtx: "定制委托交货已延期两次",
+      gemstoneMismatch: "宝石证书不符",
+      gemstoneMismatchCtx: "GIA报告瑕疵等级与库存不符 — SKU RP-2104-S",
+      today: "今日",
+      tomorrow: "明日",
+    },
+  },
+  pulse: {
+    title: "品牌脉搏",
+    revenuePulse: "收入 · 12个月",
+    ordersPulse: "订单 · 12个月",
+    newCommissions: "东京旗舰店新增3笔定制委托",
+    auditComplete: "盘点周期将于以下时间完成",
+    shippingReview: "发往利雅得的货物需要海关审查",
+    diamondLow: "钻石库存低于预警线（D-VVS1，2克拉以上）",
+  },
+  topBoutiques: {
+    title: "精品店销售排名 · 本月",
+    boutique: "精品店",
+    revenue: "营业额",
+    yoy: "同比",
+  },
+  vipLifecycle: {
+    title: "VIP客户生命周期",
+    tiers: {
+      foundersCircle: "创始人圈",
+      foundersCircleDesc: "终身消费 ≥ €200万",
+      atelierPrive: "Atelier Privé",
+      atelierPriveDesc: "定制客户",
+      maison: "Maison",
+      maisonDesc: "活跃VIP",
+      prospects: "潜在客户",
+      prospectsDesc: "礼宾专员跟进中",
+    },
+  },
+  auditTrail: {
+    title: "今日审计记录",
+    actions: {
+      approvedRefund: "批准退款 €18,400 · ORD-9914",
+      vaultMovement: "保险库动态：4枚序列号 → 日内瓦",
+      dailyRecon: "每日对账完成 · 0项差异",
+      publishedEditorial: "已发布2026婚嫁系列编辑内容",
+      onboardedVIP: "接纳新VIP · Mme. Ferreira",
+    },
+  },
+} as const;
+
+export default zhDashboard;

@@ -230,7 +230,7 @@ export async function seedCRM(prisma: PrismaClient) {
           // Inventory Integrity: Reserve Stock for Active Orders
           if (activeWorkStatuses.includes(status)) {
             for (const v of selectedVariants) {
-              await tx.inventoryItem.updateMany({
+              await tx.inventoryBalance.updateMany({
                 where: { productVariantId: v.id },
                 data: { reservedQuantity: { increment: 1 } },
               });

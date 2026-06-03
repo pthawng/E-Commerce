@@ -69,7 +69,7 @@ export const CheckoutService = {
      * Guest OTP: Request verification code
      */
     requestGuestOTP: async (email: string): Promise<{ message: string }> => {
-        const response = await apiPost<{ message: string }>('/api/auth/guest/verify-request', { email });
+        const response = await apiPost<{ message: string }>(API_ENDPOINTS.AUTH.GUEST_VERIFY_REQUEST, { email });
         return response.data;
     },
 
@@ -77,7 +77,7 @@ export const CheckoutService = {
      * Guest OTP: Verify code and get token
      */
     verifyGuestOTP: async (email: string, code: string): Promise<{ guestVerifyToken: string }> => {
-        const response = await apiPost<{ guestVerifyToken: string }>('/api/auth/guest/verify-confirm', { email, code });
+        const response = await apiPost<{ guestVerifyToken: string }>(API_ENDPOINTS.AUTH.GUEST_VERIFY_CONFIRM, { email, code });
         return response.data;
     }
 };

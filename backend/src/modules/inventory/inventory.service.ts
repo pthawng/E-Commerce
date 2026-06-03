@@ -1,13 +1,9 @@
 import { SystemContextStore } from '@common/context/system-context.store';
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { SystemSettingService } from '@modules/system/system-setting.service';
+import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ActionType, Prisma, ReservationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { lockInventoryItem } from './inventory-lock.helper';
+import { lockInventoryBalance } from './inventory-lock.helper';
 
 /**
  * Allocation item details.
@@ -27,7 +23,10 @@ export interface AllocationItem {
 export class InventoryService {
   private readonly logger = new Logger(InventoryService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SystemSettingService,
+  ) {}
 
   /**
    * Checks the availability of a variant in the specified warehouse or globally.
@@ -37,12 +36,12 @@ export class InventoryService {
     quantity: number,
     warehouseId?: string,
   ): Promise<{ available: boolean; totalAvailable: number }> {
-    const where: Prisma.InventoryItemWhereInput = {
+    const where: Prisma.InventoryBalanceWhereInput = {
       productVariantId: variantId,
       ...(warehouseId && { warehouseId }),
     };
 
-    const items = await this.prisma.inventoryItem.findMany({ where });
+    const items = await this.prisma.inventoryBalance.findMany({ where });
 
     const totalAvailable = items.reduce(
       (sum, item) =>
@@ -69,17 +68,50 @@ export class InventoryService {
   ): Promise<string[]> {
     return SystemContextStore.asInternal('InventoryService', async () => {
       const execute = async (tx: Prisma.TransactionClient) => {
+        const existingReservations = await tx.inventoryReservation.findMany({
+          where: { orderId },
+        });
+        const idempotentReserveStatuses: readonly ReservationStatus[] = [
+          ReservationStatus.active,
+          ReservationStatus.confirmed,
+        ];
+        const terminalReserveStatuses: readonly ReservationStatus[] = [
+          ReservationStatus.released,
+          ReservationStatus.expired,
+        ];
+        const alreadyReserved = existingReservations.filter((reservation) =>
+          idempotentReserveStatuses.includes(reservation.status),
+        );
+
+        if (alreadyReserved.length > 0) {
+          return alreadyReserved.map((reservation) => reservation.id);
+        }
+
+        const terminalReservations = existingReservations.filter((reservation) =>
+          terminalReserveStatuses.includes(reservation.status),
+        );
+
+        if (terminalReservations.length > 0) {
+          throw new ConflictException({
+            code: 'RESERVATION_TERMINAL',
+            message: `Cannot reserve inventory again for terminal reservation order=${orderId}`,
+          });
+        }
+
         const reservationIds: string[] = [];
 
         for (const alloc of allocations) {
-          const inventoryItem = await lockInventoryItem(tx, {
+          const inventoryBalance = await lockInventoryBalance(tx, {
             variantId: alloc.variantId,
             warehouseId: alloc.warehouseId,
             logger: this.logger,
             context: 'InventoryReserve',
           });
 
-          const available = inventoryItem.quantity - inventoryItem.reservedQuantity;
+          const available =
+            inventoryBalance.quantity -
+            inventoryBalance.reservedQuantity -
+            inventoryBalance.damagedQuantity;
 
           if (available < alloc.quantity) {
             throw new ConflictException({
@@ -90,10 +122,10 @@ export class InventoryService {
             });
           }
 
-          const beforeQuantity = inventoryItem.quantity;
+          const beforeQuantity = inventoryBalance.quantity;
 
-          await tx.inventoryItem.update({
-            where: { id: inventoryItem.id },
+          await tx.inventoryBalance.update({
+            where: { id: inventoryBalance.id },
             data: {
               reservedQuantity: { increment: alloc.quantity },
             },
@@ -102,7 +134,7 @@ export class InventoryService {
           const reservation = await tx.inventoryReservation.create({
             data: {
               orderId,
-              variantId: alloc.variantId,
+              productVariantId: alloc.variantId,
               warehouseId: alloc.warehouseId,
               quantity: alloc.quantity,
               expiresAt,
@@ -117,7 +149,7 @@ export class InventoryService {
 
           await tx.inventoryLog.create({
             data: {
-              inventoryItemId: inventoryItem.id,
+              inventoryBalanceId: inventoryBalance.id,
               productVariantId: alloc.variantId,
               warehouseId: alloc.warehouseId,
               actionType: ActionType.SALE,
@@ -144,22 +176,63 @@ export class InventoryService {
   async deduct(orderId: string, txClient?: Prisma.TransactionClient): Promise<void> {
     return SystemContextStore.asInternal('InventoryService', async () => {
       const execute = async (tx: Prisma.TransactionClient) => {
-        const reservations = await tx.inventoryReservation.findMany({
-          where: { orderId, status: ReservationStatus.active },
-        });
+        const reservations = await tx.inventoryReservation.findMany({ where: { orderId } });
+        const activeReservations = reservations.filter(
+          (reservation) => reservation.status === ReservationStatus.active,
+        );
 
-        for (const res of reservations) {
-          const inventoryItem = await lockInventoryItem(tx, {
-            variantId: res.variantId,
+        if (activeReservations.length === 0) {
+          if (
+            reservations.some((reservation) => reservation.status === ReservationStatus.confirmed)
+          ) {
+            return;
+          }
+
+          const nonCommittableStatuses: readonly ReservationStatus[] = [
+            ReservationStatus.released,
+            ReservationStatus.expired,
+          ];
+
+          if (
+            reservations.some((reservation) => nonCommittableStatuses.includes(reservation.status))
+          ) {
+            throw new ConflictException({
+              code: 'RESERVATION_NOT_COMMITTABLE',
+              message: `Cannot commit released or expired reservation for order=${orderId}`,
+            });
+          }
+
+          return;
+        }
+
+        const now = new Date();
+
+        if (activeReservations.some((reservation) => reservation.expiresAt < now)) {
+          throw new ConflictException({
+            code: 'RESERVATION_EXPIRED',
+            message: `Cannot commit expired reservation for order=${orderId}`,
+          });
+        }
+
+        for (const res of activeReservations) {
+          const inventoryBalance = await lockInventoryBalance(tx, {
+            variantId: res.productVariantId,
             warehouseId: res.warehouseId,
             logger: this.logger,
             context: 'InventoryDeduct',
           });
 
-          const beforeQuantity = inventoryItem.quantity;
+          const beforeQuantity = inventoryBalance.quantity;
 
-          await tx.inventoryItem.update({
-            where: { id: inventoryItem.id },
+          if (inventoryBalance.reservedQuantity < res.quantity) {
+            throw new ConflictException({
+              code: 'RESERVATION_INCONSISTENT',
+              message: `Reserved quantity is lower than reservation quantity for order=${orderId}`,
+            });
+          }
+
+          await tx.inventoryBalance.update({
+            where: { id: inventoryBalance.id },
             data: {
               quantity: { decrement: res.quantity },
               reservedQuantity: { decrement: res.quantity },
@@ -173,8 +246,8 @@ export class InventoryService {
 
           await tx.inventoryLog.create({
             data: {
-              inventoryItemId: inventoryItem.id,
-              productVariantId: res.variantId,
+              inventoryBalanceId: inventoryBalance.id,
+              productVariantId: res.productVariantId,
               warehouseId: res.warehouseId,
               actionType: ActionType.SALE,
               quantityChange: -res.quantity,
@@ -198,22 +271,43 @@ export class InventoryService {
   async release(orderId: string, txClient?: Prisma.TransactionClient): Promise<void> {
     return SystemContextStore.asInternal('InventoryService', async () => {
       const execute = async (tx: Prisma.TransactionClient) => {
-        const reservations = await tx.inventoryReservation.findMany({
-          where: { orderId, status: ReservationStatus.active },
-        });
+        const reservations = await tx.inventoryReservation.findMany({ where: { orderId } });
+        const activeReservations = reservations.filter(
+          (reservation) => reservation.status === ReservationStatus.active,
+        );
 
-        for (const res of reservations) {
-          const inventoryItem = await lockInventoryItem(tx, {
-            variantId: res.variantId,
+        if (activeReservations.length === 0) {
+          if (
+            reservations.some((reservation) => reservation.status === ReservationStatus.confirmed)
+          ) {
+            throw new ConflictException({
+              code: 'RESERVATION_ALREADY_COMMITTED',
+              message: `Cannot release committed reservation for order=${orderId}`,
+            });
+          }
+
+          return;
+        }
+
+        for (const res of activeReservations) {
+          const inventoryBalance = await lockInventoryBalance(tx, {
+            variantId: res.productVariantId,
             warehouseId: res.warehouseId,
             logger: this.logger,
             context: 'InventoryRelease',
           });
 
-          const beforeQuantity = inventoryItem.quantity;
+          const beforeQuantity = inventoryBalance.quantity;
 
-          await tx.inventoryItem.update({
-            where: { id: inventoryItem.id },
+          if (inventoryBalance.reservedQuantity < res.quantity) {
+            throw new ConflictException({
+              code: 'RESERVATION_INCONSISTENT',
+              message: `Reserved quantity is lower than reservation quantity for order=${orderId}`,
+            });
+          }
+
+          await tx.inventoryBalance.update({
+            where: { id: inventoryBalance.id },
             data: {
               reservedQuantity: { decrement: res.quantity },
             },
@@ -226,8 +320,8 @@ export class InventoryService {
 
           await tx.inventoryLog.create({
             data: {
-              inventoryItemId: inventoryItem.id,
-              productVariantId: res.variantId,
+              inventoryBalanceId: inventoryBalance.id,
+              productVariantId: res.productVariantId,
               warehouseId: res.warehouseId,
               actionType: ActionType.SALE,
               quantityChange: 0,
@@ -257,7 +351,7 @@ export class InventoryService {
   ) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
-        const inventoryItem = await tx.inventoryItem.upsert({
+        const inventoryBalance = await tx.inventoryBalance.upsert({
           where: {
             productVariantId_warehouseId: { productVariantId: variantId, warehouseId },
           },
@@ -272,23 +366,22 @@ export class InventoryService {
         });
 
         const beforeQuantity =
-          inventoryItem.quantity - (inventoryItem.quantity === quantity ? 0 : quantity);
+          inventoryBalance.quantity - (inventoryBalance.quantity === quantity ? 0 : quantity);
 
         await tx.inventoryLog.create({
           data: {
-            inventoryItemId: inventoryItem.id,
+            inventoryBalanceId: inventoryBalance.id,
             productVariantId: variantId,
             warehouseId,
             actionType: ActionType.IMPORT,
             quantityChange: quantity,
             beforeQuantity,
-            afterQuantity: inventoryItem.quantity,
-            actorId,
+            afterQuantity: inventoryBalance.quantity,
             note: note || 'Stock received',
           },
         });
 
-        return inventoryItem;
+        return inventoryBalance;
       });
     });
   }
@@ -299,25 +392,24 @@ export class InventoryService {
   async adjustStock(variantId: string, warehouseId: string, newQuantity: number, reason?: string) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
-        const inventoryItem = await lockInventoryItem(tx, {
+        const inventoryBalance = await lockInventoryBalance(tx, {
           variantId,
           warehouseId,
           logger: this.logger,
           context: 'InventoryAdjust',
-          notFoundMessage:
-            `Inventory item not found for variant=${variantId} in warehouse=${warehouseId}`,
+          notFoundMessage: `Inventory balance not found for variant=${variantId} in warehouse=${warehouseId}`,
         });
 
-        const beforeQuantity = inventoryItem.quantity;
+        const beforeQuantity = inventoryBalance.quantity;
 
-        const updated = await tx.inventoryItem.update({
-          where: { id: inventoryItem.id },
+        const updated = await tx.inventoryBalance.update({
+          where: { id: inventoryBalance.id },
           data: { quantity: newQuantity },
         });
 
         await tx.inventoryLog.create({
           data: {
-            inventoryItemId: inventoryItem.id,
+            inventoryBalanceId: inventoryBalance.id,
             productVariantId: variantId,
             warehouseId,
             actionType: ActionType.ADJUSTMENT,
@@ -345,22 +437,22 @@ export class InventoryService {
   ) {
     return SystemContextStore.asInternal('InventoryService', async () => {
       return this.prisma.$transaction(async (tx) => {
-        const inventoryItem = await lockInventoryItem(tx, {
+        const inventoryBalance = await lockInventoryBalance(tx, {
           variantId,
           warehouseId,
           logger: this.logger,
           context: 'InventoryDamage',
-          notFoundMessage: 'Inventory item not found',
+          notFoundMessage: 'Inventory balance not found',
         });
 
-        if (!inventoryItem || inventoryItem.quantity < quantity) {
+        if (!inventoryBalance || inventoryBalance.quantity < quantity) {
           throw new BadRequestException('Insufficient stock to report damage');
         }
 
-        const beforeQuantity = inventoryItem.quantity;
+        const beforeQuantity = inventoryBalance.quantity;
 
-        const updated = await tx.inventoryItem.update({
-          where: { id: inventoryItem.id },
+        const updated = await tx.inventoryBalance.update({
+          where: { id: inventoryBalance.id },
           data: {
             quantity: { decrement: quantity },
             damagedQuantity: { increment: quantity },
@@ -369,14 +461,13 @@ export class InventoryService {
 
         await tx.inventoryLog.create({
           data: {
-            inventoryItemId: inventoryItem.id,
+            inventoryBalanceId: inventoryBalance.id,
             productVariantId: variantId,
             warehouseId,
             actionType: ActionType.DAMAGE,
             quantityChange: -quantity,
             beforeQuantity,
             afterQuantity: beforeQuantity - quantity,
-            actorId,
             note: reason || 'Damage reported (Moved to damaged pool)',
           },
         });
@@ -387,10 +478,181 @@ export class InventoryService {
   }
 
   /**
+   * Retrieves dashboard overview statistics.
+   */
+  async getOverviewStats() {
+    const [physicalItems, inTransitTransfers, discrepanciesCount] = await Promise.all([
+      this.prisma.physicalItem.findMany({
+        include: {
+          productVariant: {
+            select: { price: true },
+          },
+        },
+      }),
+      this.prisma.inventoryTransfer.count({
+        where: { status: 'SHIPPED' },
+      }),
+      this.prisma.physicalItem.count({
+        where: {
+          status: { in: ['LOST', 'MISSING'] as any },
+        },
+      }),
+    ]);
+
+    const totalItems = physicalItems.length;
+    const rfidTaggedCount = physicalItems.filter((item) => item.rfidTag !== null).length;
+    const rfidTaggedPercentage = totalItems > 0 ? (rfidTaggedCount / totalItems) * 100 : 100;
+
+    const totalInsuranceValue = physicalItems
+      .filter((item) => ['AVAILABLE', 'RESERVED'].includes(item.status))
+      .reduce((sum, item) => sum + Number(item.productVariant.price), 0);
+
+    // Calculate inventory health
+    const lowStockThreshold = await this.settings.getNumber('inventory.lowStockThreshold');
+    const balances = await this.prisma.inventoryBalance.findMany();
+    const totalVariants = balances.length;
+    const healthyCount = balances.filter((b) => b.quantity >= lowStockThreshold).length;
+    const lowStockCount = balances.filter(
+      (b) => b.quantity > 0 && b.quantity < lowStockThreshold,
+    ).length;
+    const outOfStockCount = balances.filter((b) => b.quantity === 0).length;
+
+    const inventoryHealth = {
+      healthy: totalVariants > 0 ? Math.round((healthyCount / totalVariants) * 100) : 100,
+      lowStock: totalVariants > 0 ? Math.round((lowStockCount / totalVariants) * 100) : 0,
+      deadStock: totalVariants > 0 ? Math.round((outOfStockCount / totalVariants) * 100) : 0,
+    };
+
+    return {
+      totalInsuranceValue,
+      rfidTaggedPercentage: parseFloat(rfidTaggedPercentage.toFixed(1)),
+      inTransitCount: inTransitTransfers,
+      discrepancyCount: discrepanciesCount,
+      serializedItems: totalItems,
+      inventoryHealth,
+    };
+  }
+
+  /**
+   * Resolves inventory discrepancies by updating a physical item's status
+   * and adjusting the materialized InventoryBalance if necessary.
+   */
+  async resolveDiscrepancy(
+    physicalItemId: string,
+    action: 'DEDUCT_LOSS' | 'ADD_SURPLUS' | 'RE_SCANNED',
+    targetStatus: 'LOST' | 'MISSING' | 'FOUND' | 'WRITTEN_OFF' | 'AVAILABLE',
+    actorId?: string,
+    note?: string,
+  ) {
+    return SystemContextStore.asInternal('InventoryService', async () => {
+      return this.prisma.$transaction(async (tx) => {
+        const item = await tx.physicalItem.findUnique({
+          where: { id: physicalItemId },
+        });
+
+        if (!item) {
+          throw new BadRequestException('Physical item not found');
+        }
+
+        const oldStatus = item.status;
+
+        // 1. Update PhysicalItem status
+        const updatedItem = await tx.physicalItem.update({
+          where: { id: physicalItemId },
+          data: { status: targetStatus as any },
+        });
+
+        // 2. Adjust InventoryBalance if the status change affects available stock counts
+        // AVAILABLE -> LOST/MISSING/WRITTEN_OFF: decrement available quantity
+        // LOST/MISSING/WRITTEN_OFF -> AVAILABLE/FOUND: increment available quantity
+        const wasAvailable = oldStatus === 'AVAILABLE';
+        const isAvailableNow = targetStatus === 'AVAILABLE' || targetStatus === 'FOUND';
+
+        if (wasAvailable && !isAvailableNow) {
+          const balance = await lockInventoryBalance(tx, {
+            variantId: item.productVariantId,
+            warehouseId: item.warehouseId,
+            logger: this.logger,
+            context: 'ResolveDiscrepancyDeduct',
+          });
+
+          await tx.inventoryBalance.update({
+            where: { id: balance.id },
+            data: { quantity: { decrement: 1 } },
+          });
+
+          await tx.inventoryLog.create({
+            data: {
+              inventoryBalanceId: balance.id,
+              productVariantId: item.productVariantId,
+              warehouseId: item.warehouseId,
+              actionType: ActionType.DAMAGE,
+              quantityChange: -1,
+              beforeQuantity: balance.quantity,
+              afterQuantity: balance.quantity - 1,
+              referenceId: physicalItemId,
+              referenceType: 'DISCREPANCY',
+              note: note || `Discrepancy resolved: moved to ${targetStatus}`,
+            },
+          });
+        } else if (!wasAvailable && isAvailableNow) {
+          const balance = await tx.inventoryBalance.upsert({
+            where: {
+              productVariantId_warehouseId: {
+                productVariantId: item.productVariantId,
+                warehouseId: item.warehouseId,
+              },
+            },
+            create: {
+              productVariantId: item.productVariantId,
+              warehouseId: item.warehouseId,
+              quantity: 1,
+            },
+            update: {
+              quantity: { increment: 1 },
+            },
+          });
+
+          const beforeQuantity = balance.quantity - 1;
+
+          await tx.inventoryLog.create({
+            data: {
+              inventoryBalanceId: balance.id,
+              productVariantId: item.productVariantId,
+              warehouseId: item.warehouseId,
+              actionType: ActionType.ADJUSTMENT,
+              quantityChange: 1,
+              beforeQuantity,
+              afterQuantity: balance.quantity,
+              referenceId: physicalItemId,
+              referenceType: 'DISCREPANCY',
+              note: note || `Discrepancy resolved: restored to AVAILABLE (status: ${targetStatus})`,
+            },
+          });
+        }
+
+        // 3. Log Audit
+        await tx.inventoryAuditLog.create({
+          data: {
+            actorId: actorId || '00000000-0000-0000-0000-000000000000',
+            action: 'RESOLVE_DISCREPANCY',
+            entityName: 'PhysicalItem',
+            entityId: physicalItemId,
+            beforeState: { status: oldStatus },
+            afterState: { status: targetStatus, action, note },
+          },
+        });
+
+        return updatedItem;
+      });
+    });
+  }
+
+  /**
    * Retrieves all stock levels matching optional filters.
    */
   async getAllStockLevels(filters: { warehouseId?: string; variantId?: string }) {
-    return this.prisma.inventoryItem.findMany({
+    return this.prisma.inventoryBalance.findMany({
       where: {
         ...(filters.warehouseId && { warehouseId: filters.warehouseId }),
         ...(filters.variantId && { productVariantId: filters.variantId }),
@@ -406,7 +668,7 @@ export class InventoryService {
    * Retrieves stock levels for a specific variant across warehouses.
    */
   async getStockLevels(variantId: string) {
-    return this.prisma.inventoryItem.findMany({
+    return this.prisma.inventoryBalance.findMany({
       where: { productVariantId: variantId },
       include: { warehouse: true },
     });

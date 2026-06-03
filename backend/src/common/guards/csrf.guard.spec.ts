@@ -7,7 +7,11 @@ describe('CsrfGuard', () => {
     getAllAndOverride: jest.fn(),
   } as unknown as Reflector;
 
-  const guard = new CsrfGuard(reflector);
+  const securityEvents = {
+    emit: jest.fn(),
+  };
+
+  const guard = new CsrfGuard(reflector, securityEvents as any);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -18,8 +22,21 @@ describe('CsrfGuard', () => {
     expect(guard.canActivate(context({ method: 'GET' }))).toBe(true);
   });
 
+  it('allows public mutating requests without csrf token', () => {
+    (reflector.getAllAndOverride as jest.Mock).mockReturnValue(true);
+
+    expect(guard.canActivate(context({ method: 'POST' }))).toBe(true);
+  });
+
+  it('still requires csrf token when a route only skips global jwt auth', () => {
+    (reflector.getAllAndOverride as jest.Mock).mockReturnValue(false);
+
+    expect(() => guard.canActivate(context({ method: 'POST' }))).toThrow(ForbiddenException);
+  });
+
   it('rejects mutating requests without csrf token', () => {
     expect(() => guard.canActivate(context({ method: 'POST' }))).toThrow(ForbiddenException);
+    expect(securityEvents.emit).toHaveBeenCalled();
   });
 
   it('rejects mutating requests with a mismatched csrf token', () => {

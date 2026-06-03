@@ -8,7 +8,7 @@ describe('StockMovementService', () => {
   let prisma: PrismaService;
 
   const mockPrismaService = {
-    inventoryItem: {
+    inventoryBalance: {
       findUnique: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
@@ -16,19 +16,13 @@ describe('StockMovementService', () => {
     },
     inventoryTransfer: {
       create: jest.fn().mockResolvedValue({ id: 'trf1' }),
-      findUnique: jest.fn().mockResolvedValue({
-        id: 'trf1',
-        variantId: 'v1',
-        fromWarehouseId: 'w1',
-        toWarehouseId: 'w2',
-        quantity: 10,
-        status: 'PENDING',
-        fromWarehouse: { name: 'Warehouse 1' },
-        toWarehouse: { name: 'Warehouse 2' },
-      }),
+      findUnique: jest.fn(),
       update: jest.fn(),
     },
     inventoryLog: {
+      create: jest.fn(),
+    },
+    inventoryAuditLog: {
       create: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
@@ -57,13 +51,30 @@ describe('StockMovementService', () => {
       // Source warehouse has enough stock
       mockPrismaService.$queryRaw
         .mockResolvedValueOnce([
-          { id: 'inv1', quantity: 50, reservedQuantity: 0, damagedQuantity: 0, inTransitQuantity: 0 },
+          {
+            id: 'inv1',
+            quantity: 50,
+            reservedQuantity: 0,
+            damagedQuantity: 0,
+            inTransitQuantity: 0,
+          },
         ]) // from
         .mockResolvedValueOnce([
-          { id: 'inv2', quantity: 20, reservedQuantity: 0, damagedQuantity: 0, inTransitQuantity: 10 },
+          {
+            id: 'inv2',
+            quantity: 20,
+            reservedQuantity: 0,
+            damagedQuantity: 0,
+            inTransitQuantity: 10,
+          },
         ]); // to
 
       mockPrismaService.inventoryTransfer.create.mockResolvedValue({ id: 'trf1' });
+
+      // Sequence of findUnique calls for the transfer flow:
+      // 1. approveTransfer (expects PENDING)
+      // 2. shipTransfer (expects APPROVED)
+      // 3. receiveTransfer (expects SHIPPED)
       mockPrismaService.inventoryTransfer.findUnique
         .mockResolvedValueOnce({
           id: 'trf1',
@@ -72,6 +83,14 @@ describe('StockMovementService', () => {
           toWarehouseId: 'w2',
           quantity: 10,
           status: 'PENDING',
+        })
+        .mockResolvedValueOnce({
+          id: 'trf1',
+          variantId: 'v1',
+          fromWarehouseId: 'w1',
+          toWarehouseId: 'w2',
+          quantity: 10,
+          status: 'APPROVED',
           fromWarehouse: { name: 'Warehouse 1' },
           toWarehouse: { name: 'Warehouse 2' },
         })
@@ -87,7 +106,7 @@ describe('StockMovementService', () => {
         });
 
       mockPrismaService.inventoryTransfer.update.mockResolvedValue({ id: 'trf1' });
-      mockPrismaService.inventoryItem.upsert.mockResolvedValue({ id: 'inv2' });
+      mockPrismaService.inventoryBalance.upsert.mockResolvedValue({ id: 'inv2' });
 
       await service.transfer(
         transferParams.variantId,
@@ -97,13 +116,13 @@ describe('StockMovementService', () => {
       );
 
       // Verify source deduction
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith({
+      expect(mockPrismaService.inventoryBalance.update).toHaveBeenCalledWith({
         where: { id: 'inv1' },
         data: { quantity: { decrement: 10 } },
       });
 
       // Verify destination addition
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith({
+      expect(mockPrismaService.inventoryBalance.update).toHaveBeenCalledWith({
         where: { id: 'inv2' },
         data: {
           inTransitQuantity: { decrement: 10 },
@@ -123,6 +142,7 @@ describe('StockMovementService', () => {
 
       // Verify logs
       expect(mockPrismaService.inventoryLog.create).toHaveBeenCalledTimes(2);
+      expect(mockPrismaService.inventoryAuditLog.create).toHaveBeenCalledTimes(1);
     });
 
     it('should throw BadRequestException if source and destination are same', async () => {
@@ -133,11 +153,41 @@ describe('StockMovementService', () => {
       mockPrismaService.$queryRaw.mockResolvedValueOnce([
         { id: 'inv1', quantity: 5, reservedQuantity: 0, damagedQuantity: 0, inTransitQuantity: 0 },
       ]);
+      mockPrismaService.inventoryTransfer.findUnique
+        .mockResolvedValueOnce({
+          id: 'trf1',
+          status: 'PENDING',
+        })
+        .mockResolvedValueOnce({
+          id: 'trf1',
+          variantId: 'v1',
+          fromWarehouseId: 'w1',
+          toWarehouseId: 'w2',
+          quantity: 10,
+          status: 'APPROVED',
+          fromWarehouse: { name: 'Warehouse 1' },
+          toWarehouse: { name: 'Warehouse 2' },
+        });
 
       await expect(service.transfer('v1', 'w1', 'w2', 10)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if internal record not found', async () => {
+      mockPrismaService.inventoryTransfer.findUnique
+        .mockResolvedValueOnce({
+          id: 'trf1',
+          status: 'PENDING',
+        })
+        .mockResolvedValueOnce({
+          id: 'trf1',
+          variantId: 'v1',
+          fromWarehouseId: 'w1',
+          toWarehouseId: 'w2',
+          quantity: 10,
+          status: 'APPROVED',
+          fromWarehouse: { name: 'Warehouse 1' },
+          toWarehouse: { name: 'Warehouse 2' },
+        });
       mockPrismaService.$queryRaw.mockResolvedValueOnce([]); // from not found
 
       await expect(service.transfer('v1', 'w1', 'w2', 10)).rejects.toThrow(NotFoundException);

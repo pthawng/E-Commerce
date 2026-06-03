@@ -1,6 +1,8 @@
-import { CreditCard, ArrowRight, RefreshCw, Loader2 } from 'lucide-react';
+import { CreditCard, ArrowRight, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Order } from '../types';
+import { OrderStatus, PaymentStatus } from '@shared';
+import { hasPaymentFailureTimeline } from '@/features/profile/utils/orderStatus';
 
 interface OrderPaymentSummaryProps {
   order: Order;
@@ -9,8 +11,11 @@ interface OrderPaymentSummaryProps {
 export const OrderPaymentSummary: React.FC<OrderPaymentSummaryProps> = ({ order }) => {
   const { t, formatPrice } = useTranslation();
 
-  const isPendingPayment = order.paymentStatus === 'unpaid' && order.status !== 'cancelled' && order.status !== 'failed';
-  const isFailedPayment = order.status === 'failed' || (order.paymentStatus === 'unpaid' && order.status === 'pending_payment');
+  const isPendingPayment =
+    order.paymentStatus === PaymentStatus.UNPAID && order.status !== OrderStatus.CANCELLED;
+  const isFailedPayment =
+    hasPaymentFailureTimeline(order.timelines) ||
+    (order.paymentStatus === PaymentStatus.UNPAID && order.status === OrderStatus.PENDING_PAYMENT);
 
   return (
     <div className="bg-surface-container-lowest border border-primary/5 shadow-luxury p-8 sm:p-10 space-y-10">
@@ -45,7 +50,7 @@ export const OrderPaymentSummary: React.FC<OrderPaymentSummaryProps> = ({ order 
               {t('account.orders.method', { method: order.paymentMethod || t('account.orders.creditPortfolio') })}
             </span>
           </div>
-          <span className={`text-[9px] uppercase tracking-widest ${order.paymentStatus === 'paid' ? 'text-emerald-500' : 'text-gold-light'}`}>
+          <span className={`text-[9px] uppercase tracking-widest ${order.paymentStatus === PaymentStatus.PAID ? 'text-emerald-500' : 'text-gold-light'}`}>
             {t(`account.orders.paymentStatus.${order.paymentStatus}`)}
           </span>
         </div>

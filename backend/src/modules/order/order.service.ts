@@ -1,3 +1,4 @@
+import { RequestContextService } from '@modules/observability/request-context.service';
 import { OwnershipRegistry } from '@modules/security/ownership.registry';
 import {
   BadRequestException,
@@ -30,6 +31,7 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly ownershipRegistry: OwnershipRegistry,
     private readonly eventEmitter: EventEmitter2,
+    private readonly requestContext: RequestContextService,
   ) {}
 
   // ============================================
@@ -350,14 +352,18 @@ export class OrderService {
       });
 
       // 5. Transactional Event Outbox (Decoupling)
+      const correlationId = this.requestContext.getCorrelationId();
       await tx.domainEventOutbox.create({
         data: {
           eventType: 'order.status.changed',
+          aggregateId: id,
+          correlationId,
           payload: {
             orderId: id,
             oldStatus: order.status,
             newStatus: nextStatus,
             actorId,
+            correlationId,
             stateMetadata: (updatedOrder as any).stateMetadata,
           },
           status: 'PENDING',
@@ -423,16 +429,16 @@ export class OrderService {
     const variantIds = cart.items.map((i) => i.productVariantId);
     const variants = await this.prisma.productVariant.findMany({
       where: { id: { in: variantIds } },
-      include: { inventoryItems: true, product: true },
+      include: { inventoryBalances: true, product: true },
     });
 
     return { cart, variants };
   }
 
   private validateCartItems(
-    cartItems: Prisma.CartItemGetPayload<{}>[],
+    cartItems: Prisma.CartItemGetPayload<Record<string, never>>[],
     variants: Prisma.ProductVariantGetPayload<{
-      include: { inventoryItems: true; product: true };
+      include: { inventoryBalances: true; product: true };
     }>[],
   ) {
     const priceMismatches: {
@@ -452,7 +458,7 @@ export class OrderService {
       }
 
       // Check Stock
-      const totalStock = variant.inventoryItems.reduce(
+      const totalStock = variant.inventoryBalances.reduce(
         (acc, inv) => acc + inv.quantity - inv.reservedQuantity,
         0,
       );
@@ -477,7 +483,7 @@ export class OrderService {
   }
 
   private calculateOrderTotals(
-    cartItems: Prisma.CartItemGetPayload<{}>[],
+    cartItems: Prisma.CartItemGetPayload<Record<string, never>>[],
     variants: Prisma.ProductVariantGetPayload<{ include: { product: true } }>[],
   ) {
     let subTotal = 0;
@@ -508,8 +514,8 @@ export class OrderService {
 
   private async processInventoryDeduction(
     tx: Prisma.TransactionClient,
-    cartItems: Prisma.CartItemGetPayload<{}>[],
-    variants: Prisma.ProductVariantGetPayload<{ include: { inventoryItems: true } }>[],
+    cartItems: Prisma.CartItemGetPayload<Record<string, never>>[],
+    variants: Prisma.ProductVariantGetPayload<{ include: { inventoryBalances: true } }>[],
     orderId: string,
     orderCode: string,
   ) {
@@ -517,12 +523,16 @@ export class OrderService {
     // We completely decouple the Order Domain from the Inventory Domain.
     // Instead of inline N+1 Postgres locks, we emit a domain event that the Inventory Service will consume.
 
+    const correlationId = this.requestContext.getCorrelationId();
     await tx.domainEventOutbox.create({
       data: {
         eventType: 'inventory.reserve_requested',
+        aggregateId: orderId,
+        correlationId,
         payload: {
           orderId,
           orderCode,
+          correlationId,
           items: cartItems.map((item) => ({
             productVariantId: item.productVariantId,
             quantity: item.quantity,

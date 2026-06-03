@@ -12,7 +12,7 @@ export class LedgerService {
    * Get balances for all items in the 'materials' category.
    */
   async getMaterialBalances() {
-    const materialItems = await this.prisma.inventoryItem.findMany({
+    const materialItems = await this.prisma.inventoryBalance.findMany({
       where: {
         productVariant: {
           product: {
@@ -102,7 +102,7 @@ export class LedgerService {
    */
   async getLedgerKPIs() {
     // 1. Total Material Asset Value
-    const materialItems = await this.prisma.inventoryItem.findMany({
+    const materialItems = await this.prisma.inventoryBalance.findMany({
       where: {
         productVariant: {
           product: {

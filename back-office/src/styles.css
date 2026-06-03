@@ -1,0 +1,182 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Ray Paradis — Luxury Operations Design System
+ * Dark, graphite, platinum with restrained gold accent.
+ * All colors in oklch. Never hardcode color in components.
+ */
+
+@theme inline {
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-sans: "Inter", "SF Pro Text", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-platinum: var(--platinum);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* Default to dark luxury — light fallback below */
+  --background: oklch(0.16 0.005 270);
+  --foreground: oklch(0.94 0.005 90);
+  --surface: oklch(0.185 0.005 270);
+  --surface-raised: oklch(0.21 0.006 270);
+  --surface-sunken: oklch(0.135 0.004 270);
+
+  --card: oklch(0.195 0.005 270);
+  --card-foreground: oklch(0.94 0.005 90);
+  --popover: oklch(0.21 0.006 270);
+  --popover-foreground: oklch(0.94 0.005 90);
+
+  --primary: oklch(0.96 0.006 90);
+  --primary-foreground: oklch(0.16 0.005 270);
+  --secondary: oklch(0.24 0.006 270);
+  --secondary-foreground: oklch(0.92 0.005 90);
+  --muted: oklch(0.22 0.005 270);
+  --muted-foreground: oklch(0.62 0.01 80);
+  --accent: oklch(0.26 0.008 270);
+  --accent-foreground: oklch(0.94 0.005 90);
+
+  --gold: oklch(0.78 0.11 82);
+  --gold-foreground: oklch(0.16 0.005 270);
+  --platinum: oklch(0.82 0.008 250);
+
+  --destructive: oklch(0.62 0.18 22);
+  --destructive-foreground: oklch(0.98 0.003 90);
+  --success: oklch(0.72 0.12 155);
+  --warning: oklch(0.78 0.13 75);
+  --info: oklch(0.7 0.08 230);
+
+  --border: oklch(0.26 0.005 270);
+  --border-strong: oklch(0.34 0.006 270);
+  --input: oklch(0.24 0.005 270);
+  --ring: oklch(0.78 0.11 82);
+
+  --chart-1: oklch(0.78 0.11 82);
+  --chart-2: oklch(0.72 0.08 200);
+  --chart-3: oklch(0.62 0.06 320);
+  --chart-4: oklch(0.7 0.1 155);
+  --chart-5: oklch(0.65 0.12 30);
+
+  --sidebar: oklch(0.135 0.004 270);
+  --sidebar-foreground: oklch(0.86 0.005 90);
+  --sidebar-primary: oklch(0.78 0.11 82);
+  --sidebar-primary-foreground: oklch(0.16 0.005 270);
+  --sidebar-accent: oklch(0.21 0.006 270);
+  --sidebar-accent-foreground: oklch(0.94 0.005 90);
+  --sidebar-border: oklch(0.22 0.005 270);
+  --sidebar-ring: oklch(0.78 0.11 82);
+
+  --radius: 8px;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html, body, #root {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    font-weight: 500;
+  }
+
+  /* Subtle noise/grain on body for luxury feel */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background-image:
+      radial-gradient(circle at 15% 0%, color-mix(in oklab, var(--gold) 5%, transparent), transparent 45%),
+      radial-gradient(circle at 100% 100%, color-mix(in oklab, var(--info) 4%, transparent), transparent 55%);
+    opacity: 0.6;
+  }
+}
+
+@layer utilities {
+  .text-display { font-family: var(--font-display); letter-spacing: -0.015em; }
+  .text-mono { font-family: var(--font-mono); font-feature-settings: "tnum"; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .hairline { border-color: color-mix(in oklab, var(--foreground) 8%, transparent); }
+  .surface-1 { background-color: var(--surface); }
+  .surface-2 { background-color: var(--surface-raised); }
+  .glow-gold {
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 30%, transparent),
+                0 8px 32px -12px color-mix(in oklab, var(--gold) 40%, transparent);
+  }
+  .gold-gradient {
+    background-image: linear-gradient(135deg,
+      oklch(0.82 0.12 82) 0%,
+      oklch(0.72 0.1 70) 50%,
+      oklch(0.85 0.1 90) 100%);
+  }
+  .luxury-divider {
+    background-image: linear-gradient(90deg,
+      transparent, color-mix(in oklab, var(--gold) 40%, transparent), transparent);
+    height: 1px;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+}
+

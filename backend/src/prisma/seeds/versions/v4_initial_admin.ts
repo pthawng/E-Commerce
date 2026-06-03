@@ -46,5 +46,17 @@ export const v4_initial_admin: SeedScript = {
       update: {},
       create: { userId: admin.id, roleId: superAdminRole.id },
     });
+
+    // Ensure Super Admin has a StaffProfile so they can log in to back-office
+    await prisma.staffProfile.upsert({
+      where: { userId: admin.id },
+      update: {},
+      create: {
+        userId: admin.id,
+        staffStatus: 'MFA_SETUP_REQUIRED',
+        mfaEnabled: false,
+        department: 'Management',
+      },
+    });
   },
 };

@@ -4,6 +4,7 @@ import { OrderPaymentService } from '@modules/order/services/order-payment.servi
 import { ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  OrderStatusEnum,
   PaymentMethodEnum,
   PaymentProcessingStatus,
   TransactionStatusEnum,
@@ -42,12 +43,13 @@ describe('PaymentService', () => {
     orderTimeline: {
       create: jest.fn(),
     },
-    inventoryItem: {
+    inventoryBalance: {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
     inventoryLog: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
     },
     cart: {
@@ -133,6 +135,7 @@ describe('PaymentService', () => {
     mockIdempotencyService.getResult.mockResolvedValue(null);
     mockIdempotencyService.acquireLock.mockResolvedValue('token');
     mockWebhookIdempotencyService.startProcessing.mockResolvedValue(true);
+    mockPrismaService.inventoryLog.findFirst.mockResolvedValue(null);
   });
 
   describe('createPayment', () => {
@@ -276,6 +279,66 @@ describe('PaymentService', () => {
       await expect(service.processCallback(PaymentMethodEnum.PAYPAL, {})).rejects.toThrow(
         'Amount mismatch detected.',
       );
+      expect(mockOrderPaymentService.confirmOrder).not.toHaveBeenCalled();
+      expect(mockPrismaService.payment.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects callback when provider order reference does not match internal transaction', async () => {
+      mockVNPayProvider.verifyCallback.mockResolvedValue({
+        orderId: 'wrong-order',
+        transactionId: 'vnpay-tx-1',
+        amount: 1000,
+        status: TransactionStatus.SUCCESS,
+        paymentMethod: PaymentMethodEnum.VNPAY,
+        gatewayResponse: {},
+      });
+      mockPrismaService.paymentTransaction.findFirst.mockResolvedValue({
+        id: 'tx-internal',
+        orderId: 'o1',
+        amount: 1000,
+        currency: 'VND',
+        providerTransactionId: 'vnpay-tx-1',
+        payment: {
+          id: 'p1',
+          orderId: 'o1',
+          status: PaymentProcessingStatus.INIT,
+        },
+      });
+
+      await expect(service.processCallback(PaymentMethodEnum.VNPAY, {})).rejects.toThrow(
+        'Order reference mismatch detected.',
+      );
+      expect(mockOrderPaymentService.confirmOrder).not.toHaveBeenCalled();
+      expect(mockPrismaService.paymentTransaction.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects callback when gateway currency does not match internal transaction currency', async () => {
+      mockVNPayProvider.verifyCallback.mockResolvedValue({
+        orderId: 'o1',
+        transactionId: 'vnpay-tx-1',
+        amount: 1000,
+        status: TransactionStatus.SUCCESS,
+        paymentMethod: PaymentMethodEnum.VNPAY,
+        gatewayResponse: { currency: 'USD' },
+      });
+      mockPrismaService.paymentTransaction.findFirst.mockResolvedValue({
+        id: 'tx-internal',
+        orderId: 'o1',
+        amount: 1000,
+        currency: 'VND',
+        providerTransactionId: 'vnpay-tx-1',
+        payment: {
+          id: 'p1',
+          orderId: 'o1',
+          status: PaymentProcessingStatus.INIT,
+        },
+      });
+
+      await expect(service.processCallback(PaymentMethodEnum.VNPAY, {})).rejects.toThrow(
+        'Currency mismatch detected.',
+      );
+      expect(mockOrderPaymentService.confirmOrder).not.toHaveBeenCalled();
+      expect(mockPrismaService.paymentTransaction.update).not.toHaveBeenCalled();
     });
 
     it('does not process a replayed webhook that is already complete', async () => {
@@ -294,6 +357,49 @@ describe('PaymentService', () => {
       expect(result.transactionId).toBe('vnpay-tx-1');
       expect(mockIdempotencyService.acquireLock).not.toHaveBeenCalled();
       expect(mockPrismaService.paymentTransaction.findFirst).not.toHaveBeenCalled();
+      expect(mockOrderPaymentService.confirmOrder).not.toHaveBeenCalled();
+      expect(mockLedgerIntegration.recordOrderPayment).not.toHaveBeenCalled();
+    });
+
+    it('rolls back orchestration when payment success targets a non-payable order', async () => {
+      mockVNPayProvider.verifyCallback.mockResolvedValue({
+        orderId: 'o1',
+        transactionId: 'vnpay-tx-1',
+        amount: 1000,
+        status: TransactionStatus.SUCCESS,
+        paymentMethod: PaymentMethodEnum.VNPAY,
+        gatewayResponse: {},
+      });
+      mockPrismaService.paymentTransaction.findFirst.mockResolvedValue({
+        id: 'tx-internal',
+        orderId: 'o1',
+        amount: 1000,
+        currency: 'VND',
+        providerTransactionId: 'vnpay-tx-1',
+        gatewayResponse: {},
+        payment: {
+          id: 'p1',
+          orderId: 'o1',
+          status: PaymentProcessingStatus.INIT,
+        },
+      });
+      mockPrismaService.paymentTransaction.findMany.mockResolvedValue([
+        { status: TransactionStatusEnum.success },
+      ]);
+      mockPrismaService.order.findUnique.mockResolvedValue({
+        id: 'o1',
+        status: OrderStatusEnum.CANCELLED,
+        retryCount: 0,
+      });
+      mockOrderPaymentService.confirmOrder.mockRejectedValueOnce(
+        new ConflictException('Cannot confirm payment for order=o1 in status=CANCELLED'),
+      );
+
+      await expect(service.processCallback(PaymentMethodEnum.VNPAY, {})).rejects.toThrow(
+        ConflictException,
+      );
+      expect(mockLedgerIntegration.recordOrderPayment).not.toHaveBeenCalled();
+      expect(mockWebhookIdempotencyService.fail).toHaveBeenCalled();
     });
   });
 
@@ -349,8 +455,18 @@ describe('PaymentService', () => {
       };
 
       const mockLogs = [
-        { inventoryItemId: 'inv1', productVariantId: 'v1', warehouseId: 'w1', quantityChange: -1 },
-        { inventoryItemId: 'inv2', productVariantId: 'v1', warehouseId: 'w2', quantityChange: -1 },
+        {
+          inventoryBalanceId: 'bal1',
+          productVariantId: 'v1',
+          warehouseId: 'w1',
+          quantityChange: -1,
+        },
+        {
+          inventoryBalanceId: 'bal2',
+          productVariantId: 'v1',
+          warehouseId: 'w2',
+          quantityChange: -1,
+        },
       ];
 
       mockPrismaService.order.findUnique.mockResolvedValue(order);
@@ -363,19 +479,58 @@ describe('PaymentService', () => {
         refundTransactionId: 'ref-1',
       });
       mockPrismaService.inventoryLog.findMany.mockResolvedValue(mockLogs);
-      mockPrismaService.inventoryItem.findUnique
-        .mockResolvedValueOnce({ id: 'inv1', quantity: 10, warehouseId: 'w1' })
-        .mockResolvedValueOnce({ id: 'inv2', quantity: 5, warehouseId: 'w2' });
+      mockPrismaService.inventoryBalance.findUnique
+        .mockResolvedValueOnce({ id: 'bal1', quantity: 10, warehouseId: 'w1' })
+        .mockResolvedValueOnce({ id: 'bal2', quantity: 5, warehouseId: 'w2' });
 
       const result = await service.processRefund('o1', 1000, 'test refund', true);
 
       expect(result.success).toBe(true);
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledTimes(2);
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'inv1' } }),
+      expect(mockPrismaService.inventoryBalance.update).toHaveBeenCalledTimes(2);
+      expect(mockPrismaService.inventoryBalance.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'bal1' } }),
       );
-      expect(mockPrismaService.inventoryItem.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'inv2' } }),
+      expect(mockPrismaService.inventoryBalance.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'bal2' } }),
+      );
+    });
+
+    it('does not restore inventory twice when a prior restoration log exists', async () => {
+      const order = {
+        id: 'o1',
+        totalAmount: 1000,
+        transactions: [
+          {
+            type: TransactionTypeEnum.payment,
+            status: TransactionStatusEnum.success,
+            provider: PaymentMethodEnum.VNPAY,
+            method: PaymentMethodEnum.VNPAY,
+            transactionCode: 'tx-old',
+          },
+        ],
+        items: [{ productVariantId: 'v1', quantity: 2 }],
+      };
+
+      mockPrismaService.order.findUnique.mockResolvedValue(order);
+      mockPrismaService.payment.findFirst.mockResolvedValue({
+        id: 'p1',
+        status: PaymentProcessingStatus.SUCCESS,
+      });
+      mockVNPayProvider.processRefund.mockResolvedValue({
+        success: true,
+        refundTransactionId: 'ref-1',
+      });
+      mockPrismaService.inventoryLog.findFirst.mockResolvedValue({ id: 'return-log-1' });
+
+      const result = await service.processRefund('o1', 1000, 'duplicate restore guard', true);
+
+      expect(result.success).toBe(true);
+      expect(mockPrismaService.inventoryLog.findMany).not.toHaveBeenCalled();
+      expect(mockPrismaService.inventoryBalance.update).not.toHaveBeenCalled();
+      expect(mockPrismaService.inventoryLog.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ actionType: 'RETURN' }),
+        }),
       );
     });
   });

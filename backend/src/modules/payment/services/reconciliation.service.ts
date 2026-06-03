@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { OrderStatusEnum, PaymentProcessingStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { OrderService } from '../../order/order.service';
+import { SystemSettingService } from '../../system/system-setting.service';
 import { PaymentService } from '../payment.service';
 import { PaymentStateMachine } from './payment-state.machine';
 
@@ -20,6 +21,7 @@ export class PaymentReconciliationService {
     private readonly stateMachine: PaymentStateMachine,
     private readonly paymentService: PaymentService,
     private readonly orderService: OrderService,
+    private readonly settings: SystemSettingService,
   ) {}
 
   /**
@@ -29,7 +31,7 @@ export class PaymentReconciliationService {
   async reconcileStalePayments() {
     this.logger.log('Starting stale payment reconciliation job...');
 
-    const timeoutMinutes = 15;
+    const timeoutMinutes = await this.settings.getNumber('order.paymentTimeoutMinutes');
     const expirationThreshold = new Date();
     expirationThreshold.setMinutes(expirationThreshold.getMinutes() - timeoutMinutes);
 
@@ -79,6 +81,8 @@ export class PaymentReconciliationService {
         return;
       }
 
+      const timeoutMinutes = await this.settings.getNumber('order.paymentTimeoutMinutes');
+
       await this.prisma.$transaction(async (tx) => {
         this.stateMachine.validateTransition(
           payment.id,
@@ -91,7 +95,7 @@ export class PaymentReconciliationService {
           data: {
             status: PaymentProcessingStatus.FAILED,
             errorLog: JSON.stringify({
-              reconciliationNote: 'Marked as FAILED due to timeout (15 mins)',
+              reconciliationNote: `Marked as FAILED due to timeout (${timeoutMinutes} mins)`,
             }),
           },
         });

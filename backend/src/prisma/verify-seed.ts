@@ -22,7 +22,7 @@ async function verify() {
     products: await prisma.product.count(),
     variants: await prisma.productVariant.count(),
     warehouses: await prisma.warehouse.count(),
-    inventory: await prisma.inventoryItem.count(),
+    inventory: await prisma.inventoryBalance.count(),
     shipping: await prisma.shippingMethod.count(),
   };
 

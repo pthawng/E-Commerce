@@ -44,8 +44,8 @@ export class PermissionGuard implements CanActivate {
       throw new UnauthorizedException('User not found in request');
     }
 
-    // Bypass checks for system/internal operations
-    if (user.isSystem) return true;
+    // Bypass checks for system/internal operations or super admin
+    if (user.isSystem || user.userType === 'SUPER_ADMIN') return true;
 
     // User status is checked during cache misses, avoiding redundant active checks
 

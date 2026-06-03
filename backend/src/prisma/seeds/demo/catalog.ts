@@ -24,7 +24,7 @@ export async function seedCatalog(prisma: PrismaClient) {
   await prisma.physicalItem.deleteMany({});
   await prisma.inventoryReservation.deleteMany({});
   await prisma.inventoryLog.deleteMany({});
-  await prisma.inventoryItem.deleteMany({});
+  await prisma.inventoryBalance.deleteMany({});
   await prisma.orderItem.deleteMany({});
   await prisma.order.deleteMany({});
 

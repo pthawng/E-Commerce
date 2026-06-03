@@ -137,7 +137,7 @@ export class CartService {
         where: { id: dto.variantId },
         include: {
           product: { select: { isActive: true } },
-          inventoryItems: true,
+          inventoryBalances: true,
         },
       });
 
@@ -146,7 +146,7 @@ export class CartService {
         throw new BadRequestException('Product is currently unavailable');
       }
 
-      const availableStock = variant.inventoryItems.reduce(
+      const availableStock = variant.inventoryBalances.reduce(
         (acc, inv) => acc + inv.quantity - inv.reservedQuantity,
         0,
       );
@@ -278,11 +278,11 @@ export class CartService {
 
       const variant = await this.prisma.productVariant.findUnique({
         where: { id: variantId },
-        include: { inventoryItems: true },
+        include: { inventoryBalances: true },
       });
       if (!variant) throw new NotFoundException('Variant not found');
 
-      const availableStock = variant.inventoryItems.reduce(
+      const availableStock = variant.inventoryBalances.reduce(
         (acc, inv) => acc + inv.quantity - inv.reservedQuantity,
         0,
       );
@@ -416,11 +416,11 @@ export class CartService {
 
         const guestItems = await tx.cartItem.findMany({
           where: { cartId: guestCart.id },
-          include: { productVariant: { include: { inventoryItems: true } } },
+          include: { productVariant: { include: { inventoryBalances: true } } },
         });
 
         for (const gItem of guestItems) {
-          const availableStock = (gItem.productVariant.inventoryItems || []).reduce(
+          const availableStock = (gItem.productVariant.inventoryBalances || []).reduce(
             (acc, inv) => acc + (inv.quantity || 0) - (inv.reservedQuantity || 0),
             0,
           );
@@ -568,7 +568,7 @@ export class CartService {
             media: { where: { isThumbnail: true }, take: 1 },
           },
         },
-        inventoryItems: { select: { quantity: true, reservedQuantity: true } },
+        inventoryBalances: { select: { quantity: true, reservedQuantity: true } },
         media: { where: { isThumbnail: true }, take: 1 },
         attributes: {
           include: {
@@ -603,7 +603,7 @@ export class CartService {
       const lineTotal = currentPrice * item.quantity;
       subtotal += lineTotal;
 
-      const totalStock = (v.inventoryItems || []).reduce(
+      const totalStock = (v.inventoryBalances || []).reduce(
         (acc: number, inv: any) => acc + (inv.quantity || 0) - (inv.reservedQuantity || 0),
         0,
       );

@@ -90,6 +90,9 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: '/api/auth/reset-password',
     RESET_PASSWORD_VERIFY: '/api/auth/reset-password/verify',
     VERIFY_EMAIL: '/api/auth/verify-email',
+    RESEND_VERIFY: '/api/auth/resend-verification',
+    GUEST_VERIFY_REQUEST: '/api/auth/guest/verify-request',
+    GUEST_VERIFY_CONFIRM: '/api/auth/guest/verify-confirm',
     CHANGE_PASSWORD: '/api/auth/change-password',
   },
 
@@ -98,6 +101,67 @@ export const API_ENDPOINTS = {
     AUTH: {
       LOGIN: '/api/admin/auth/login',
     },
+  },
+
+  BACK_OFFICE: {
+    AUTH: {
+      LOGIN: '/api/back-office/auth/login',
+      GOOGLE: '/api/back-office/auth/google',
+      VERIFY_MFA: '/api/back-office/auth/verify-mfa',
+      RECOVERY_CODE: '/api/back-office/auth/recovery-code',
+      LOGOUT: '/api/back-office/auth/logout',
+      ME: '/api/back-office/auth/me',
+      MFA_SETUP: '/api/back-office/auth/mfa/setup',
+      MFA_VERIFY_SETUP: '/api/back-office/auth/mfa/verify-setup',
+    },
+    STAFF: {
+      BASE: '/api/back-office/staff',
+      AVAILABLE_ROLES: '/api/back-office/staff/roles/available',
+      INVITATIONS: '/api/back-office/staff/invitations',
+      INVITATION_VERIFY: '/api/back-office/staff/invitations/verify',
+      INVITATION_ACCEPT: '/api/back-office/staff/invitations/accept',
+      STATUS: (id: string) => `/api/back-office/staff/${id}/status`,
+      ROLES: (id: string) => `/api/back-office/staff/${id}/roles`,
+    },
+    SESSIONS: {
+      BASE: '/api/back-office/sessions',
+      BY_ID: (id: string) => `/api/back-office/sessions/${id}`,
+      BY_STAFF: (staffId: string) => `/api/back-office/sessions/staff/${staffId}`,
+    },
+    CATALOG: {
+      PRODUCTS: '/api/back-office/catalog/products',
+      PRODUCT_BY_ID: (id: string) => `/api/back-office/catalog/products/${id}`,
+      PRODUCT_STATUS: (id: string) => `/api/back-office/catalog/products/${id}/status`,
+      OVERVIEW: '/api/back-office/catalog/overview',
+      FILTERS: '/api/back-office/catalog/filters',
+      PRICING_FORMULA: '/api/back-office/catalog/pricing-formula',
+      IMPORT: '/api/back-office/catalog/import',
+    },
+    DASHBOARD: {
+      STATS: '/api/back-office/dashboard/stats',
+      REVENUE: '/api/back-office/dashboard/revenue',
+      TOP_PRODUCTS: '/api/back-office/dashboard/top-products',
+      RECENT_ORDERS: '/api/back-office/dashboard/recent-orders',
+      LOW_STOCK: '/api/back-office/dashboard/low-stock',
+    },
+    SETTINGS: {
+      BASE: '/api/back-office/system/settings',
+      REGISTRY: '/api/back-office/system/settings/registry',
+    },
+  },
+
+  INVENTORY: {
+    OVERVIEW: '/api/inventory/overview',
+    WAREHOUSES: '/api/inventory/warehouses',
+    STOCK: '/api/inventory/stock',
+    STOCK_BY_VARIANT: (variantId: string) => `/api/inventory/stock/${variantId}`,
+    LOGS: '/api/inventory/logs',
+    TRANSFERS: '/api/inventory/transfers',
+    TRANSFER_APPROVE: (id: string) => `/api/inventory/transfers/${id}/approve`,
+    TRANSFER_REJECT: (id: string) => `/api/inventory/transfers/${id}/reject`,
+    TRANSFER_SHIP: (id: string) => `/api/inventory/transfers/${id}/ship`,
+    TRANSFER_RECEIVE: (id: string) => `/api/inventory/transfers/${id}/receive`,
+    DISCREPANCY_RESOLVE: (id: string) => `/api/inventory/discrepancies/${id}/resolve`,
   },
 
   // Users

@@ -71,38 +71,43 @@ model UserPermission {
 }
 
 model User {
-  id                  String               @id @default(uuid()) @db.Uuid
-  email               String               @unique
-  phone               String?              @unique
-  passwordHash        String?
-  fullName            String
-  isActive            Boolean              @default(true)
-  isEmailVerified     Boolean              @default(false)
-  lastLoginAt         DateTime?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  deletedAt           DateTime?
-  userType            UserType             @default(CUSTOMER)
-  avatarUrl           String?
-  bio                 String?
-  nickName            String?
-  segment             LuxurySegment?       @default(PROSPECT)
-  auditLogs           AuditLog[]
-  preferences         ClientPreference[]
-  discountUsages      DiscountUsage[]
-  orders              Order[]
-  posts               Post[]
-  refreshTokens       RefreshToken[]
-  resetPasswordTokens ResetPasswordToken[]
-  reviews             Review[]
-  lifeEvents          UserLifeEvent[]
-  userPermissions     UserPermission[]
-  userRoles           UserRole[]
-  verifyEmailTokens   VerifyEmailToken[]
-  requestedApprovals  ApprovalRequest[]    @relation("RequestedApprovals")
-  approvedApprovals   ApprovalRequest[]    @relation("ApprovedApprovals")
-  notifications       Notification[]
-  oauthAccounts       OAuthAccount[]
+  id                        String               @id @default(uuid()) @db.Uuid
+  email                     String               @unique
+  phone                     String?              @unique
+  passwordHash              String?
+  fullName                  String
+  isActive                  Boolean              @default(true)
+  isEmailVerified           Boolean              @default(false)
+  lastLoginAt               DateTime?
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  deletedAt                 DateTime?
+  userType                  UserType             @default(CUSTOMER)
+  avatarUrl                 String?
+  bio                       String?
+  nickName                  String?
+  segment                   LuxurySegment?       @default(PROSPECT)
+  auditLogs                 AuditLog[]
+  preferences               ClientPreference[]
+  discountUsages            DiscountUsage[]
+  orders                    Order[]
+  posts                     Post[]
+  refreshTokens             RefreshToken[]
+  resetPasswordTokens       ResetPasswordToken[]
+  reviews                   Review[]
+  lifeEvents                UserLifeEvent[]
+  userPermissions           UserPermission[]
+  userRoles                 UserRole[]
+  verifyEmailTokens         VerifyEmailToken[]
+  requestedApprovals        ApprovalRequest[]    @relation("RequestedApprovals")
+  approvedApprovals         ApprovalRequest[]    @relation("ApprovedApprovals")
+  notifications             Notification[]
+  oauthAccounts             OAuthAccount[]
+  staffProfile              StaffProfile?
+  backOfficeSessions        BackOfficeSession[]
+  backOfficeAuditLogsActor  BackOfficeAuditLog[] @relation("AuditActor")
+  backOfficeAuditLogsTarget BackOfficeAuditLog[] @relation("AuditTarget")
+  productAuditLogs          ProductAuditLog[]    @relation("ProductAuditActor")
 
   @@index([email], map: "idx_users_active_email")
 }
@@ -154,6 +159,7 @@ model SystemSetting {
   key         String   @unique
   value       Json
   description String?
+  version     Int      @default(1)
   updatedAt   DateTime @updatedAt
   updatedBy   String?  @db.Uuid
 
@@ -197,18 +203,19 @@ model ResetPasswordToken {
 }
 
 model Category {
-  id           String            @id @default(uuid()) @db.Uuid
-  parentId     String?           @db.Uuid
-  name         Json
-  slug         String            @unique
-  isActive     Boolean           @default(true)
-  isInternal   Boolean           @default(false)
-  order        Int               @default(0)
-  path         String?
-  level        Int?
-  parent       Category?         @relation("CategoryToCategory", fields: [parentId], references: [id])
-  children     Category[]        @relation("CategoryToCategory")
-  productLinks ProductCategory[]
+  id              String            @id @default(uuid()) @db.Uuid
+  parentId        String?           @db.Uuid
+  name            Json
+  slug            String            @unique
+  isActive        Boolean           @default(true)
+  isInternal      Boolean           @default(false)
+  order           Int               @default(0)
+  path            String?
+  level           Int?
+  parent          Category?         @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children        Category[]        @relation("CategoryToCategory")
+  productLinks    ProductCategory[]
+  catalogProducts Product[]         @relation("ProductPrimaryCategory")
 
   @@index([parentId])
   @@index([slug])
@@ -240,25 +247,43 @@ model AttributeValue {
 }
 
 model Product {
-  id              String            @id @default(uuid()) @db.Uuid
-  name            Json
-  slug            String            @unique
-  description     Json?
-  displayPriceMin Decimal?          @db.Decimal(19, 2)
-  displayPriceMax Decimal?          @db.Decimal(19, 2)
-  hasVariants     Boolean           @default(true)
-  isActive        Boolean           @default(true)
-  isFeatured      Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @default(now())
-  deletedAt       DateTime?
-  media           ProductMedia[]
-  variants        ProductVariant[]
-  reviews         Review[]
-  categories      ProductCategory[]
+  id                 String               @id @default(uuid()) @db.Uuid
+  name               Json
+  slug               String               @unique
+  description        Json?
+  collectionId       String?              @db.Uuid
+  primaryCategoryId  String?              @db.Uuid
+  catalogStatus      ProductCatalogStatus @default(DRAFT)
+  preorderEnabled    Boolean              @default(false)
+  pricingApproved    Boolean              @default(false)
+  publishedAt        DateTime?
+  archivedAt         DateTime?
+  displayPriceMin    Decimal?             @db.Decimal(19, 2)
+  displayPriceMax    Decimal?             @db.Decimal(19, 2)
+  hasVariants        Boolean              @default(true)
+  isActive           Boolean              @default(true)
+  isFeatured         Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @default(now())
+  deletedAt          DateTime?
+  media              ProductMedia[]
+  variants           ProductVariant[]
+  reviews            Review[]
+  categories         ProductCategory[]
+  collection         Collection?          @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  primaryCategory    Category?            @relation("ProductPrimaryCategory", fields: [primaryCategoryId], references: [id], onDelete: SetNull)
+  certificates       ProductCertificate[]
+  pricing            ProductPricing?
+  publishingWorkflow PublishingWorkflow?
+  auditLogs          ProductAuditLog[]
+  importJobItems     ImportJobItem[]
 
   @@index([slug], map: "idx_products_slug")
   @@index([name], type: Gin)
+  @@index([collectionId], map: "idx_products_collection")
+  @@index([primaryCategoryId], map: "idx_products_primary_category")
+  @@index([catalogStatus], map: "idx_products_catalog_status")
+  @@index([createdAt], map: "idx_products_created_at")
   @@map("products")
 }
 
@@ -276,35 +301,205 @@ model ProductCategory {
 }
 
 model ProductVariant {
-  id             String                  @id @default(uuid()) @db.Uuid
-  productId      String                  @db.Uuid
-  sku            String                  @unique
-  variantTitle   Json?
-  price          Decimal                 @db.Decimal(19, 2)
-  compareAtPrice Decimal?                @db.Decimal(19, 2)
-  costPrice      Decimal?                @db.Decimal(19, 2)
-  weightGram     Decimal?                @db.Decimal(19, 2)
-  isDefault      Boolean                 @default(false)
-  isActive       Boolean                 @default(true)
-  position       Int                     @default(0)
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @default(now())
-  deletedAt      DateTime?
-  thumbnailUrl   String?
-  inventoryItems InventoryItem[]
-  inventoryLogs  InventoryLog[]
-  transfers      InventoryTransfer[]
-  orderItems     OrderItem[]
-  physicalItems  PhysicalItem[]
-  product        Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
-  attributes     VariantAttributeValue[]
-  cartItems      CartItem[]
-  media          ProductMedia[]          @relation("ProductMediaToProductVariant")
+  id               String                  @id @default(uuid()) @db.Uuid
+  productId        String                  @db.Uuid
+  sku              String                  @unique
+  variantTitle     Json?
+  price            Decimal                 @db.Decimal(19, 2)
+  compareAtPrice   Decimal?                @db.Decimal(19, 2)
+  costPrice        Decimal?                @db.Decimal(19, 2)
+  weightGram       Decimal?                @db.Decimal(19, 2)
+  isDefault        Boolean                 @default(false)
+  isActive         Boolean                 @default(true)
+  position         Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @default(now())
+  deletedAt        DateTime?
+  thumbnailUrl     String?
+  inventoryBalances InventoryBalance[]
+  inventoryLogs    InventoryLog[]
+  transfers        InventoryTransfer[]
+  orderItems       OrderItem[]
+  physicalItems    PhysicalItem[]
+  reservations     InventoryReservation[]
+  product          Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributes       VariantAttributeValue[]
+  cartItems        CartItem[]
+  media            ProductMedia[]          @relation("ProductMediaToProductVariant")
+  certificates     ProductCertificate[]
+  catalogInventory ProductInventory?
 
   @@index([productId], map: "idx_variants_product_id")
   @@index([sku], map: "idx_variants_sku")
   @@index([price], map: "idx_variants_price")
   @@index([variantTitle], type: Gin)
+}
+
+model Collection {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  products    Product[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("collections")
+}
+
+model ProductCertificate {
+  id            String          @id @default(uuid()) @db.Uuid
+  productId     String          @db.Uuid
+  variantId     String?         @db.Uuid
+  certificateNo String
+  authority     String
+  type          CertificateType @default(PRODUCT)
+  gemstone      String?
+  fileUrl       String?
+  issuedAt      DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  product       Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant       ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([variantId])
+  @@index([certificateNo])
+  @@map("product_certificates")
+}
+
+model PricingFormula {
+  id                  String   @id @default(uuid()) @db.Uuid
+  version             Int      @default(1)
+  materialCost        Decimal  @default(0) @db.Decimal(19, 2)
+  laborCost           Decimal  @default(0) @db.Decimal(19, 2)
+  marginMultiplier    Decimal  @default(4.2) @db.Decimal(10, 2)
+  boutiqueCoefficient Decimal  @default(0) @db.Decimal(19, 2)
+  currency            String   @default("EUR")
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([isActive, version])
+  @@map("pricing_formulas")
+}
+
+model ProductPricing {
+  id                  String    @id @default(uuid()) @db.Uuid
+  productId           String    @unique @db.Uuid
+  materialCost        Decimal   @default(0) @db.Decimal(19, 2)
+  laborCost           Decimal   @default(0) @db.Decimal(19, 2)
+  marginMultiplier    Decimal   @default(4.2) @db.Decimal(10, 2)
+  boutiqueCoefficient Decimal   @default(0) @db.Decimal(19, 2)
+  retailPrice         Decimal   @db.Decimal(19, 2)
+  currency            String    @default("EUR")
+  overrideReason      String?
+  approvedAt          DateTime?
+  approvedBy          String?   @db.Uuid
+  formulaVersion      Int       @default(1)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  product             Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([retailPrice])
+  @@map("product_pricing")
+}
+
+model ProductInventory {
+  id               String         @id @default(uuid()) @db.Uuid
+  productVariantId String         @unique @db.Uuid
+  stock            Int            @default(0)
+  reservedStock    Int            @default(0)
+  preorderLimit    Int?
+  stockStatus      StockStatus    @default(IN_STOCK)
+  updatedAt        DateTime       @updatedAt
+  variant          ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([stockStatus])
+  @@map("product_inventory")
+}
+
+model PublishingWorkflow {
+  id          String                   @id @default(uuid()) @db.Uuid
+  productId   String                   @unique @db.Uuid
+  status      PublishingWorkflowStatus @default(DRAFT)
+  currentStep PublishingStepType       @default(DRAFT)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  product     Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  steps       PublishingWorkflowStep[]
+
+  @@index([status])
+  @@map("publishing_workflows")
+}
+
+model PublishingWorkflowStep {
+  id           String             @id @default(uuid()) @db.Uuid
+  workflowId   String             @db.Uuid
+  step         PublishingStepType
+  status       WorkflowStepStatus @default(PENDING)
+  assignedRole String?
+  completedAt  DateTime?
+  note         String?
+  workflow     PublishingWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, step])
+  @@index([workflowId])
+  @@map("publishing_workflow_steps")
+}
+
+model ProductAuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @db.Uuid
+  actorId   String?  @db.Uuid
+  action    String
+  before    Json?
+  after     Json?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  actor     User?    @relation("ProductAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@index([actorId])
+  @@map("product_audit_logs")
+}
+
+model ImportJob {
+  id          String          @id @default(uuid()) @db.Uuid
+  fileName    String
+  status      ImportJobStatus @default(PENDING)
+  totalRows   Int             @default(0)
+  successRows Int             @default(0)
+  failedRows  Int             @default(0)
+  errorReport Json?
+  createdBy   String?         @db.Uuid
+  createdAt   DateTime        @default(now())
+  completedAt DateTime?
+  items       ImportJobItem[]
+
+  @@index([status, createdAt])
+  @@map("import_jobs")
+}
+
+model ImportJobItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  importJobId String    @db.Uuid
+  productId   String?   @db.Uuid
+  rowNumber   Int
+  status      String
+  errors      Json?
+  importJob   ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([importJobId])
+  @@index([productId])
+  @@map("import_job_items")
 }
 
 model VariantAttributeValue {
@@ -338,11 +533,13 @@ model Warehouse {
   code          String              @unique
   address       Json?
   isActive      Boolean             @default(true)
-  inventory     InventoryItem[]
+  balances      InventoryBalance[]
   locations     InventoryLocation[]
   inventoryLogs InventoryLog[]
   transfersFrom InventoryTransfer[] @relation("TransferFrom")
   transfersTo   InventoryTransfer[] @relation("TransferTo")
+  physicalItems PhysicalItem[]
+  reservations  InventoryReservation[]
 }
 
 model InventoryLocation {
@@ -363,6 +560,7 @@ model InventoryLocation {
 model PhysicalItem {
   id               String             @id @default(uuid()) @db.Uuid
   productVariantId String             @db.Uuid
+  warehouseId      String             @db.Uuid
   locationId       String?            @db.Uuid
   serialNumber     String?            @unique
   rfidTag          String?            @unique
@@ -375,69 +573,97 @@ model PhysicalItem {
   location         InventoryLocation? @relation(fields: [locationId], references: [id])
   orderItem        OrderItem?         @relation(fields: [orderItemId], references: [id])
   productVariant   ProductVariant     @relation(fields: [productVariantId], references: [id])
+  warehouse        Warehouse          @relation(fields: [warehouseId], references: [id])
+  reservations     InventoryReservation[]
 
   @@index([productVariantId])
-  @@index([status])
+  @@index([warehouseId, status])
 }
 
-model InventoryItem {
-  id               String         @id @default(uuid()) @db.Uuid
-  productVariantId String         @db.Uuid
-  warehouseId      String         @db.Uuid
-  quantity         Int            @default(0)
-  reservedQuantity Int            @default(0)
-  damagedQuantity  Int            @default(0)
+model InventoryBalance {
+  id                String         @id @default(uuid()) @db.Uuid
+  productVariantId  String         @db.Uuid
+  warehouseId       String         @db.Uuid
+  quantity          Int            @default(0)
+  reservedQuantity  Int            @default(0)
+  damagedQuantity   Int            @default(0)
   inTransitQuantity Int            @default(0)
-  shelfLocation    String?
-  updatedAt        DateTime       @default(now())
-  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
-  warehouse        Warehouse      @relation(fields: [warehouseId], references: [id])
-  logs             InventoryLog[]
+  shelfLocation     String?
+  updatedAt         DateTime       @default(now()) @updatedAt
+  productVariant    ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  warehouse         Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  logs              InventoryLog[]
 
   @@unique([productVariantId, warehouseId])
-  @@index([productVariantId], map: "idx_inventory_variant")
+  @@index([productVariantId, warehouseId])
+  @@map("inventory_balances")
 }
 
 model InventoryLog {
-  id               String          @id @default(uuid()) @db.Uuid
-  inventoryItemId  String          @db.Uuid
-  productVariantId String?         @db.Uuid
-  warehouseId      String?         @db.Uuid
-  actionType       ActionType
-  quantityChange   Int
-  referenceId      String?
-  actorId          String?         @db.Uuid
-  note             String?
-  createdAt        DateTime        @default(now())
-  afterQuantity    Int
-  beforeQuantity   Int
-  referenceType    String?
-  inventoryItem    InventoryItem   @relation(fields: [inventoryItemId], references: [id])
-  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
-  warehouse        Warehouse?      @relation(fields: [warehouseId], references: [id])
+  id                 String           @id @default(uuid()) @db.Uuid
+  inventoryBalanceId String           @db.Uuid
+  productVariantId   String?          @db.Uuid
+  warehouseId        String?          @db.Uuid
+  actionType         ActionType
+  quantityChange     Int
+  referenceId        String?
+  actorId            String?          @db.Uuid
+  note               String?
+  createdAt          DateTime         @default(now())
+  afterQuantity      Int
+  beforeQuantity     Int
+  referenceType      String?
+  inventoryBalance   InventoryBalance @relation(fields: [inventoryBalanceId], references: [id], onDelete: Cascade)
+  productVariant     ProductVariant?  @relation(fields: [productVariantId], references: [id])
+  warehouse          Warehouse?       @relation(fields: [warehouseId], references: [id])
 
   @@index([productVariantId, createdAt], map: "idx_inv_logs_variant")
   @@index([referenceId], map: "idx_inv_logs_ref")
+  @@index([createdAt])
+  @@map("inventory_logs")
 }
 
 model InventoryReservation {
-  id          String            @id @default(uuid()) @db.Uuid
-  orderId     String            @db.Uuid
-  variantId   String            @db.Uuid
-  quantity    Int
-  expiresAt   DateTime
-  status      ReservationStatus @default(active)
-  createdAt   DateTime          @default(now())
-  warehouseId String            @db.Uuid
-  sessionId   String?           @db.VarChar(100)
-  userId      String?           @db.Uuid
-  cartItemId  String?           @db.Uuid
-  order       Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id               String            @id @default(uuid()) @db.Uuid
+  orderId          String            @db.Uuid
+  productVariantId String            @db.Uuid
+  warehouseId      String            @db.Uuid
+  physicalItemId   String?           @db.Uuid
+  quantity         Int
+  expiresAt        DateTime
+  status           ReservationStatus @default(active)
+  createdAt        DateTime          @default(now())
+  sessionId        String?           @db.VarChar(100)
+  userId           String?           @db.Uuid
+  cartItemId       String?           @db.Uuid
+  idempotencyKey   String?           @unique @db.VarChar(100)
+  order            Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant    @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  warehouse         Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  physicalItem     PhysicalItem?     @relation(fields: [physicalItemId], references: [id], onDelete: SetNull)
 
   @@index([expiresAt, status], map: "idx_reservation_cleanup")
   @@index([orderId], map: "idx_reservation_order")
   @@index([userId, sessionId], map: "idx_reservation_owner")
   @@map("inventory_reservations")
+}
+
+model InventoryAuditLog {
+  id             String    @id @default(uuid()) @db.Uuid
+  actorId        String    @db.Uuid
+  action         String    @db.VarChar(100)
+  entityName     String    @db.VarChar(50)
+  entityId       String    @db.Uuid
+  beforeState    Json?
+  afterState     Json?
+  ipAddress      String?   @db.VarChar(50)
+  userAgent      String?   @db.VarChar(255)
+  sessionId      String?   @db.VarChar(100)
+  createdAt      DateTime  @default(now())
+
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("inventory_audit_logs")
 }
 
 model InventoryTransfer {
@@ -711,19 +937,28 @@ model Post {
 }
 
 model AuditLog {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String?  @db.Uuid
-  action      String
-  entityTable String
-  entityId    String
-  createdAt   DateTime @default(now())
-  after       Json?
-  before      Json?
-  metadata    Json?
-  user        User?    @relation(fields: [userId], references: [id])
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String?  @db.Uuid
+  actorType     String   @default("user")
+  action        String
+  entityTable   String
+  entityId      String
+  resourceType  String?
+  resourceId    String?
+  reason        String?
+  ipAddress     String?
+  userAgent     String?
+  correlationId String?
+  requestId     String?
+  createdAt     DateTime @default(now())
+  after         Json?
+  before        Json?
+  metadata      Json?
+  user          User?    @relation(fields: [userId], references: [id])
 
   @@index([entityTable, entityId], map: "idx_audit_entity")
   @@index([createdAt], map: "idx_audit_created")
+  @@index([correlationId], map: "idx_audit_correlation")
 }
 
 model Refund {
@@ -794,17 +1029,42 @@ model EmailOutbox {
 }
 
 model DomainEventOutbox {
-  id          String            @id @default(uuid()) @db.Uuid
-  eventType   String
-  payload     Json
-  status      EventOutboxStatus @default(PENDING)
-  retryCount  Int               @default(0)
-  lastError   String?
-  createdAt   DateTime          @default(now())
-  processedAt DateTime?
+  id               String            @id @default(uuid()) @db.Uuid
+  eventType        String
+  aggregateId      String?
+  correlationId    String?
+  payload          Json
+  status           EventOutboxStatus @default(PENDING)
+  retryCount       Int               @default(0)
+  lastError        String?
+  failureReason    String?
+  createdAt        DateTime          @default(now())
+  processedAt      DateTime?
+  firstProcessedAt DateTime?
+  lastProcessedAt  DateTime?
 
   @@index([status, createdAt])
+  @@index([eventType, aggregateId])
+  @@index([correlationId])
   @@map("domain_event_outbox")
+}
+
+model SecurityEventLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  type          String
+  principalId   String?
+  principalType String?
+  severity      String   @default("medium")
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([principalId, createdAt])
+  @@index([correlationId])
+  @@map("security_event_logs")
 }
 
 model LedgerAccount {
@@ -832,13 +1092,13 @@ model JournalEntry {
 }
 
 model ProcessedWebhook {
-  id              String   @id @default(uuid()) @db.Uuid
-  provider        String   @db.VarChar(50)
-  externalTxnId   String   @db.VarChar(100)
-  status          String   @default("PROCESSING") @db.VarChar(20)
-  payloadHash     String?
-  processedAt     DateTime @default(now())
-  metadata        Json?
+  id            String   @id @default(uuid()) @db.Uuid
+  provider      String   @db.VarChar(50)
+  externalTxnId String   @db.VarChar(100)
+  status        String   @default("PROCESSING") @db.VarChar(20)
+  payloadHash   String?
+  processedAt   DateTime @default(now())
+  metadata      Json?
 
   @@unique([provider, externalTxnId])
   @@index([externalTxnId, provider], map: "idx_webhooks_lookup")
@@ -846,21 +1106,21 @@ model ProcessedWebhook {
 }
 
 model ApprovalRequest {
-  id            String         @id @default(uuid()) @db.Uuid
-  type          ApprovalType
-  resourceId    String         @db.VarChar(100)
-  requestorId   String         @db.Uuid
-  approverId    String?        @db.Uuid
-  status        ApprovalStatus @default(PENDING)
-  reason        String?
+  id              String         @id @default(uuid()) @db.Uuid
+  type            ApprovalType
+  resourceId      String         @db.VarChar(100)
+  requestorId     String         @db.Uuid
+  approverId      String?        @db.Uuid
+  status          ApprovalStatus @default(PENDING)
+  reason          String?
   approverComment String?
-  metadata      Json?
-  reviewedAt    DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  
-  requestor     User           @relation("RequestedApprovals", fields: [requestorId], references: [id])
-  approver      User?          @relation("ApprovedApprovals", fields: [approverId], references: [id])
+  metadata        Json?
+  reviewedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  requestor User  @relation("RequestedApprovals", fields: [requestorId], references: [id])
+  approver  User? @relation("ApprovedApprovals", fields: [approverId], references: [id])
 
   @@index([type, resourceId])
   @@index([status])
@@ -1032,15 +1292,71 @@ enum ReservationStatus {
 enum TransferStatus {
   DRAFT
   PENDING
+  APPROVED
+  REJECTED
   SHIPPED
   RECEIVED
   COMPLETED
   CANCELLED
 }
 
+enum ProductCatalogStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  OUT_OF_STOCK
+  PRE_ORDER
+  WORKSHOP_REVIEW
+  ARCHIVED
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+  PRE_ORDER
+}
+
+enum CertificateType {
+  PRODUCT
+  GEMSTONE
+  WARRANTY
+}
+
+enum PublishingWorkflowStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  LIVE
+  REJECTED
+}
+
+enum PublishingStepType {
+  DRAFT
+  MEDIA_CONTENT_REVIEW
+  PRICING_REVIEW
+  BOUTIQUE_DISTRIBUTION
+  ONLINE
+}
+
+enum WorkflowStepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
+
+enum ImportJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum PermissionModule {
   AUTH
   PRODUCT
+  CATALOG
   ORDER
   DISCOUNT
   CMS
@@ -1102,6 +1418,9 @@ enum ItemStatus {
   SOLD
   DAMAGED
   LOST
+  MISSING
+  FOUND
+  WRITTEN_OFF
   QC_HOLD
   CONSULTATION
 }
@@ -1166,4 +1485,79 @@ enum NotificationPriority {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum StaffStatus {
+  ACTIVE
+  MFA_SETUP_REQUIRED
+  SUSPENDED
+  DISABLED
+}
+
+enum StaffInvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model StaffProfile {
+  id                 String      @id @default(uuid()) @db.Uuid
+  userId             String      @unique @db.Uuid
+  staffStatus        StaffStatus @default(MFA_SETUP_REQUIRED)
+  mfaEnabled         Boolean     @default(false)
+  mfaSecretEncrypted String?
+  mfaRecoveryCodes   String? // Argon2-hashed recovery codes
+  department         String?
+  invitedBy          String?     @db.Uuid
+  joinedAt           DateTime    @default(now())
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StaffInvitation {
+  id         String                @id @default(uuid()) @db.Uuid
+  email      String
+  tokenHash  String                @unique
+  status     StaffInvitationStatus @default(PENDING)
+  expiresAt  DateTime
+  createdAt  DateTime              @default(now())
+  acceptedAt DateTime?
+}
+
+model BackOfficeSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model BackOfficeAuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUserId  String?  @db.Uuid
+  targetUserId String?  @db.Uuid
+  action       String
+  resource     String
+  resourceId   String?
+  oldValue     String?  @db.Text
+  newValue     String?  @db.Text
+  reason       String?
+  ipAddress    String?
+  userAgent    String?
+  correlationId String?
+  createdAt    DateTime @default(now())
+
+  actor  User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  target User? @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@index([correlationId])
 }

@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { RequestContextService } from '../../observability/request-context.service';
 import { OrderService } from '../order.service';
 
 describe('OrderService', () => {
@@ -33,6 +34,7 @@ describe('OrderService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: OwnershipRegistry, useValue: mockOwnershipRegistry },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: RequestContextService, useValue: { getCorrelationId: jest.fn() } },
       ],
     }).compile();
 

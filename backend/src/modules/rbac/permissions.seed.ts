@@ -44,6 +44,37 @@ export const PERMISSION_SEEDS: PermissionSeed[] = [
   { action: PERMISSIONS.PRODUCT.VARIANT.DELETE, name: 'Xóa variant', module: 'PRODUCT' },
   { action: PERMISSIONS.PRODUCT.VARIANT.MANAGE, name: 'Quản lý variant', module: 'PRODUCT' },
 
+  // CATALOG - BACK OFFICE
+  { action: PERMISSIONS.CATALOG.PRODUCT.READ, name: 'Xem catalog back-office', module: 'CATALOG' },
+  { action: PERMISSIONS.CATALOG.PRODUCT.CREATE, name: 'Tạo sản phẩm catalog', module: 'CATALOG' },
+  {
+    action: PERMISSIONS.CATALOG.PRODUCT.UPDATE,
+    name: 'Cập nhật sản phẩm catalog',
+    module: 'CATALOG',
+  },
+  {
+    action: PERMISSIONS.CATALOG.PRODUCT.PUBLISH,
+    name: 'Xuất bản sản phẩm catalog',
+    module: 'CATALOG',
+  },
+  {
+    action: PERMISSIONS.CATALOG.PRODUCT.DELETE,
+    name: 'Lưu trữ sản phẩm catalog',
+    module: 'CATALOG',
+  },
+  {
+    action: PERMISSIONS.CATALOG.PRICING.READ,
+    name: 'Xem công thức định giá catalog',
+    module: 'CATALOG',
+  },
+  {
+    action: PERMISSIONS.CATALOG.PRICING.UPDATE,
+    name: 'Cập nhật công thức định giá catalog',
+    module: 'CATALOG',
+  },
+  { action: PERMISSIONS.CATALOG.IMPORT.CREATE, name: 'Nhập dữ liệu catalog', module: 'CATALOG' },
+  { action: PERMISSIONS.CATALOG.AUDIT.READ, name: 'Xem audit catalog', module: 'CATALOG' },
+
   // COMMERCE - ORDER
   { action: PERMISSIONS.ORDER.READ, name: 'Xem đơn hàng', module: 'ORDER' },
   { action: PERMISSIONS.ORDER.UPDATE, name: 'Cập nhật đơn hàng', module: 'ORDER' },
@@ -60,6 +91,8 @@ export const PERMISSION_SEEDS: PermissionSeed[] = [
   { action: PERMISSIONS.LEDGER.MANAGE, name: 'Quản lý sổ cái', module: 'LEDGER' },
   // CRM
   { action: PERMISSIONS.CRM.GUEST.READ, name: 'Xem khách vãng lai', module: 'CRM' },
+  { action: PERMISSIONS.CRM.VIP_CARE.READ, name: 'Xem VIP Care', module: 'CRM' },
+  { action: PERMISSIONS.CRM.VIP_CARE.MANAGE, name: 'Quản lý VIP Care', module: 'CRM' },
   // DASHBOARD
   { action: PERMISSIONS.DASHBOARD.VIEW, name: 'Xem Dashboard', module: 'SYSTEM' },
 ];

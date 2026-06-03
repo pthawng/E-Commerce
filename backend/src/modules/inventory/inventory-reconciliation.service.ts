@@ -8,10 +8,10 @@ import { PrismaService } from '../../prisma/prisma.service';
  * InventoryReconciliationService
  *
  * Scheduled job to detect drift between PhysicalItem counts
- * and InventoryItem quantities. Alerts on any mismatch.
+ * and InventoryBalance quantities. Alerts on any mismatch.
  *
  * PhysicalItem = single source of truth
- * InventoryItem = materialized cache
+ * InventoryBalance = materialized cache
  */
 @Injectable()
 export class InventoryReconciliationService {
@@ -24,7 +24,7 @@ export class InventoryReconciliationService {
     return SystemContextStore.asInternal(InventoryReconciliationService.name, async () => {
       this.logger.log('Starting inventory reconciliation...');
 
-      const inventoryItems = await this.prisma.inventoryItem.findMany({
+      const inventoryBalances = await this.prisma.inventoryBalance.findMany({
         select: {
           id: true,
           productVariantId: true,
@@ -36,20 +36,20 @@ export class InventoryReconciliationService {
 
       let driftCount = 0;
 
-      for (const item of inventoryItems) {
+      for (const item of inventoryBalances) {
         const [availableCount, reservedCount] = await Promise.all([
           this.prisma.physicalItem.count({
             where: {
               productVariantId: item.productVariantId,
               status: ItemStatus.AVAILABLE,
-              location: { warehouseId: item.warehouseId },
+              warehouseId: item.warehouseId,
             },
           }),
           this.prisma.physicalItem.count({
             where: {
               productVariantId: item.productVariantId,
               status: ItemStatus.RESERVED,
-              location: { warehouseId: item.warehouseId },
+              warehouseId: item.warehouseId,
             },
           }),
         ]);
@@ -58,12 +58,12 @@ export class InventoryReconciliationService {
           driftCount++;
           this.logger.warn(
             `DRIFT DETECTED: variant=${item.productVariantId}, wh=${item.warehouseId} | ` +
-              `InventoryItem(qty=${item.quantity}, res=${item.reservedQuantity}) vs ` +
+              `InventoryBalance(qty=${item.quantity}, res=${item.reservedQuantity}) vs ` +
               `PhysicalItem(available=${availableCount}, reserved=${reservedCount})`,
           );
 
-          // Auto-heal: update InventoryItem to match PhysicalItem
-          await this.prisma.inventoryItem.update({
+          // Auto-heal: update InventoryBalance to match PhysicalItem
+          await this.prisma.inventoryBalance.update({
             where: { id: item.id },
             data: {
               quantity: availableCount,

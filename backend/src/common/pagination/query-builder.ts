@@ -49,7 +49,7 @@ export class QueryBuilder {
               [field]: { contains: finalValue, mode: mode === 'default' ? undefined : mode },
             });
             break;
-          case 'in':
+          case 'in': {
             // Ensure array
             const arrValue = Array.isArray(finalValue)
               ? finalValue
@@ -58,6 +58,7 @@ export class QueryBuilder {
                 : [finalValue];
             conditions.push({ [field]: { in: arrValue } });
             break;
+          }
           case 'gt':
           case 'lt':
           case 'gte':

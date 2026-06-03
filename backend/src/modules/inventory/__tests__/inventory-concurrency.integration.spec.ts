@@ -18,7 +18,7 @@ describe('[Integration] Inventory Concurrency', () => {
 
   let variantId: string;
   let warehouseId: string;
-  let inventoryItemId: string;
+  let inventoryBalanceId: string;
   const INITIAL_STOCK = 5;
 
   beforeAll(async () => {
@@ -55,7 +55,7 @@ describe('[Integration] Inventory Concurrency', () => {
     });
     variantId = variant.id;
 
-    const item = await prisma.inventoryItem.create({
+    const item = await prisma.inventoryBalance.create({
       data: {
         productVariantId: variantId,
         warehouseId,
@@ -63,11 +63,11 @@ describe('[Integration] Inventory Concurrency', () => {
         reservedQuantity: 0,
       },
     });
-    inventoryItemId = item.id;
+    inventoryBalanceId = item.id;
   });
 
   afterEach(async () => {
-    await prisma.inventoryItem.deleteMany({ where: { productVariantId: variantId } });
+    await prisma.inventoryBalance.deleteMany({ where: { productVariantId: variantId } });
     await prisma.productVariant.deleteMany({ where: { id: variantId } });
   });
 
@@ -80,10 +80,10 @@ describe('[Integration] Inventory Concurrency', () => {
       await client.query('BEGIN');
 
       const lockResult = await client.query(
-        `SELECT quantity, "reservedQuantity" FROM "InventoryItem"
+        `SELECT quantity, "reservedQuantity" FROM "inventory_balances"
          WHERE id = $1
          FOR UPDATE NOWAIT`,
-        [inventoryItemId],
+        [inventoryBalanceId],
       );
 
       if (!lockResult.rows[0]) {
@@ -100,8 +100,8 @@ describe('[Integration] Inventory Concurrency', () => {
       }
 
       await client.query(
-        `UPDATE "InventoryItem" SET "reservedQuantity" = "reservedQuantity" + 1 WHERE id = $1`,
-        [inventoryItemId],
+        `UPDATE "inventory_balances" SET "reservedQuantity" = "reservedQuantity" + 1 WHERE id = $1`,
+        [inventoryBalanceId],
       );
 
       await client.query('COMMIT');
@@ -135,7 +135,7 @@ describe('[Integration] Inventory Concurrency', () => {
     expect(succeeded.length + locked.length + insufficient.length).toBe(PARALLEL);
 
     // INVARIANT: DB matches
-    const final = await prisma.inventoryItem.findUnique({ where: { id: inventoryItemId } });
+    const final = await prisma.inventoryBalance.findUnique({ where: { id: inventoryBalanceId } });
     expect(final!.reservedQuantity).toBe(succeeded.length);
     expect(final!.reservedQuantity).toBeLessThanOrEqual(INITIAL_STOCK);
 
@@ -146,7 +146,7 @@ describe('[Integration] Inventory Concurrency', () => {
   });
 
   it('should maintain DB invariant after contention (quantity unchanged)', async () => {
-    const item = await prisma.inventoryItem.findUnique({ where: { id: inventoryItemId } });
+    const item = await prisma.inventoryBalance.findUnique({ where: { id: inventoryBalanceId } });
     // Quantity is only decremented on deduct, not on reserve
     expect(item!.quantity).toBe(INITIAL_STOCK);
     expect(item!.reservedQuantity).toBe(0); // Fresh beforeEach with no active reservations

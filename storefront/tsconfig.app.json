@@ -28,10 +28,10 @@
         "./src/*"
       ],
       "@shared": [
-        "../shared"
+        "../shared/src"
       ],
       "@shared/*": [
-        "../shared/*"
+        "../shared/src/*"
       ],
       "zod": [
         "./node_modules/zod"

@@ -29,7 +29,7 @@ export class InventoryAllocatorService {
     const allocations: AllocationItem[] = [];
 
     for (const item of items) {
-      const inventoryItems = await this.prisma.inventoryItem.findMany({
+      const inventoryBalances = await this.prisma.inventoryBalance.findMany({
         where: { productVariantId: item.variantId },
         include: {
           warehouse: { select: { id: true, name: true } },
@@ -38,7 +38,7 @@ export class InventoryAllocatorService {
       });
 
       // Calculate available per warehouse
-      const warehouseStocks = inventoryItems.map((inv) => ({
+      const warehouseStocks = inventoryBalances.map((inv) => ({
         warehouseId: inv.warehouseId,
         warehouseName: inv.warehouse.name,
         available: inv.quantity - inv.reservedQuantity,
